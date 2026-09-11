@@ -1,0 +1,10 @@
+import express from "express";
+import cors from "cors";
+const app = express();
+const PORT = process.env.PORT || 4000;
+app.use(cors());
+app.use(express.json());
+app.get("/api/health", (_req,res) => res.json({ok:true,app:"SP-Manager",version:"0.1.0"}));
+app.get("/api/dashboard", (_req,res) => res.json({todaySales:0,todayOrders:0,lowStock:0,outstanding:0}));
+app.get("/api/products", (_req,res) => res.json([]));
+app.listen(PORT, () => console.log(`SP-Manager API running on http://localhost:${PORT}`));
