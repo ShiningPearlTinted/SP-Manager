@@ -163,7 +163,7 @@ function Products({products,addProduct,updateProduct,editing,setEditing,categori
  const[showCategory,setShowCategory]=useState(false);
  const[newCategory,setNewCategory]=useState("");
  const[filter,setFilter]=useState("");
- const openEdit=p=>{setEditing(p);setForm({...blank,...p,category:p.category||p.group||"")};
+ const openEdit=p=>{setEditing(p);setForm({...blank,...p,category:p.category||p.group||""});};
  const addCat=()=>{const name=newCategory.trim();if(!name)return; if(categories.includes(name)){setNotice("This category already exists.");return} const next=[...categories,name];save("categories",next);setCategories(next);setForm(f=>({...f,category:name,group:name}));setNewCategory("");setShowCategory(false);setNotice("Category added successfully.")};
  const submit=e=>{e.preventDefault();if(!form.name.trim()){setNotice("Product name is required.");return}if(!form.category){setNotice("Please select a product category.");return}const payload={...form,group:form.group||form.category,category:form.category,price:Number(form.price),cost:Number(form.cost),stock:Number(form.stock),reorder:Number(form.reorder)};editing?updateProduct(payload):addProduct(payload);setForm(blank)};
  const visible=products.filter(p=>(p.name+" "+p.code+" "+(p.barcode||"")+" "+(p.category||p.group||"")).toLowerCase().includes(filter.toLowerCase()));
