@@ -175,3 +175,48 @@
 .modal .category-list>div{padding:12px 14px!important}
 .modal .iconbtn{width:34px;height:34px;border-radius:8px!important;background:#f1f4f7!important;color:#475467!important}
 .modal .iconbtn:hover{background:#e7edf2!important}
+
+/* FINAL FIX: PRODUCT MASTER TREE MUST NOT INHERIT THE GLOBAL FIXED SIDEBAR */
+.product-master-modern .product-master-shell > .product-tree{
+  position:relative!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  width:auto!important;
+  height:auto!important;
+  min-width:0!important;
+  float:none!important;
+  margin:0!important;
+  z-index:1!important;
+  box-sizing:border-box!important;
+}
+.product-master-modern .product-master-shell{
+  position:relative!important;
+  z-index:1!important;
+}
+.product-master-modern .product-master-main{
+  position:relative!important;
+  z-index:2!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.product-master-modern .product-table-wrap{
+  position:relative!important;
+  z-index:2!important;
+  min-height:360px!important;
+  background:#fff!important;
+}
+.product-master-modern .product-master-table,
+.product-master-modern .product-master-table tbody,
+.product-master-modern .product-master-table tr,
+.product-master-modern .product-master-table td{
+  visibility:visible!important;
+  opacity:1!important;
+}
+.product-master-modern .product-master-table td{
+  color:#334155!important;
+  background:#fff!important;
+}
+.product-master-modern .product-master-table td b{color:#101828!important}
+.product-master-modern .product-master-table td small{color:#94a3b8!important}
