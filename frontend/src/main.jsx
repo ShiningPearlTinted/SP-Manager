@@ -39,6 +39,7 @@ function App(){
  const[page,setPage]=useState("POS / Sales");
  const[posMenu,setPosMenu]=useState(false);
  const[products,setProducts]=useState(()=>load("products",seedProducts));
+ const[stockHistory,setStockHistory]=useState(()=>load("stockHistory",[]));
  const[categories,setCategories]=useState(()=>load("categories",["Tinted Film","Windscreen","Glass","Security","Protection"]));
  const[customers,setCustomers]=useState(()=>load("customers",seedCustomers));
  const[suppliers,setSuppliers]=useState(()=>load("suppliers",seedSuppliers));
@@ -72,6 +73,7 @@ function App(){
  const grand=taxable+tax;
 
  const persist=(key,val,setter)=>{save(key,val);setter(val)};
+ const recordStockHistory=(entries)=>{if(!entries.length)return;const next=[...entries,...stockHistory].slice(0,2000);persist("stockHistory",next,setStockHistory)};
  const add=p=>setCart(c=>c.some(x=>x.id===p.id)?c.map(x=>x.id===p.id?{...x,qty:x.qty+1}:x):[...c,{...p,qty:1}]);
  const changeQty=(id,d)=>setCart(c=>c.flatMap(x=>x.id===id?((x.qty+d)>0?[{...x,qty:x.qty+d}]:[]):[x]));
 
@@ -80,7 +82,7 @@ function App(){
   const sale={id:uid(),no:"INV-"+String(uid()).slice(-8),date:new Date().toISOString(),customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment,voided:false,refunded:false};
   const ns=[...sales,sale];
   const np=products.map(p=>{const i=cart.find(x=>x.id===p.id);return i?{...p,stock:Math.max(0,p.stock-i.qty)}:p});
-  persist("sales",ns,setSales);persist("products",np,setProducts);
+  persist("sales",ns,setSales);persist("products",np,setProducts);recordStockHistory(cart.map(i=>({id:uid(),date:new Date().toISOString(),productId:i.id,productName:i.name,code:i.code||"",type:"Sale",change:-Number(i.qty),quantityAfter:Number(products.find(p=>p.id===i.id)?.stock||0)-Number(i.qty),reference:sale.no})));
   const nc=customers.map(c=>c.id===customer?{...c,visits:c.visits+1,spend:c.spend+grand}:c);
   persist("customers",nc,setCustomers);
   setLastSale(sale);
@@ -90,13 +92,13 @@ function App(){
   const s=sales.find(x=>x.id===id);if(!s||s.refunded||s.voided)return;
   const ns=sales.map(x=>x.id===id?{...x,refunded:true}:x);
   const np=products.map(p=>{const i=s.items.find(x=>x.id===p.id);return i?{...p,stock:p.stock+i.qty}:p});
-  persist("sales",ns,setSales);persist("products",np,setProducts);setNotice("Refund completed successfully for "+s.no);
+  persist("sales",ns,setSales);persist("products",np,setProducts);recordStockHistory(s.items.map(i=>({id:uid(),date:new Date().toISOString(),productId:i.id,productName:i.name,code:i.code||"",type:"Refund",change:Number(i.qty),quantityAfter:Number(products.find(p=>p.id===i.id)?.stock||0)+Number(i.qty),reference:s.no})));setNotice("Refund completed successfully for "+s.no);
  };
  const voidSale=id=>{
   const s=sales.find(x=>x.id===id);if(!s||s.voided||s.refunded)return;
   const ns=sales.map(x=>x.id===id?{...x,voided:true}:x);
   const np=products.map(p=>{const i=s.items.find(x=>x.id===p.id);return i?{...p,stock:p.stock+i.qty}:p});
-  persist("sales",ns,setSales);persist("products",np,setProducts);setNotice("Transaction "+s.no+" has been voided.");
+  persist("sales",ns,setSales);persist("products",np,setProducts);recordStockHistory(s.items.map(i=>({id:uid(),date:new Date().toISOString(),productId:i.id,productName:i.name,code:i.code||"",type:"Void",change:Number(i.qty),quantityAfter:Number(products.find(p=>p.id===i.id)?.stock||0)+Number(i.qty),reference:s.no})));setNotice("Transaction "+s.no+" has been voided.");
  };
  const addProduct=p=>{
   const np=[...products,{...p,id:uid(),price:Number(p.price),cost:Number(p.cost),stock:Number(p.stock),reorder:Number(p.reorder)}];
@@ -111,7 +113,7 @@ function App(){
  const receivePurchase=(supplierId,items,total)=>{
   const po={id:uid(),no:"PO-"+String(uid()).slice(-7),date:new Date().toISOString(),supplierId,items,total,status:"Received"};
   const np=products.map(p=>{const i=items.find(x=>x.productId===p.id);return i?{...p,stock:p.stock+Number(i.qty)}:p});
-  persist("purchases",[...purchases,po],setPurchases);persist("products",np,setProducts);setNotice("Purchase received and stock updated successfully.");
+  persist("purchases",[...purchases,po],setPurchases);persist("products",np,setProducts);recordStockHistory(items.map(i=>{const p=products.find(x=>x.id===i.productId);return {id:uid(),date:new Date().toISOString(),productId:i.productId,productName:p?.name||"",code:p?.code||"",type:"Purchase",change:Number(i.qty),quantityAfter:Number(p?.stock||0)+Number(i.qty),reference:po.no}}));setNotice("Purchase received and stock updated successfully.");
  };
  const savePromo=p=>{const np=p.id?promos.map(x=>x.id===p.id?{...p}:x):[...promos,{...p,id:uid()}];persist("promos",np,setPromos);setNotice("Promotion saved successfully.")};
  const toggleBusiness=()=>{
@@ -128,7 +130,7 @@ function App(){
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} payment={payment} setPayment={setPayment} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} categories={categories} posCategory={posCategory} setPosCategory={setPosCategory} products={products} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
    {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} setNotice={setNotice}/>}
-   {page==="Inventory"&&<Inventory products={products} setProducts={setProducts}/>}
+   {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} sales={sales}/>}
    {page==="Suppliers"&&<Suppliers suppliers={suppliers} setSuppliers={setSuppliers}/>}
    {page==="Purchases"&&<Purchases products={products} suppliers={suppliers} receivePurchase={receivePurchase} purchases={purchases}/>}
@@ -265,9 +267,50 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
   {showGroup&&<div className="modal-backdrop" onMouseDown={()=>setShowGroup(false)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Product Groups</h3><button className="iconbtn" onClick={()=>setShowGroup(false)}>×</button></div><p className="muted">One product group can contain any number of products. Select the same group when creating multiple items.</p><div className="category-list">{groups.map(g=><div key={g}><span>{g}</span><small>{products.filter(p=>(p.group||p.category)===g).length} product(s)</small></div>)}</div><div className="inline-field"><input value={newGroup} placeholder="New product group name" onChange={e=>setNewGroup(e.target.value)}/><button onClick={saveGroup}>Add Group</button></div></div></div>}
  </section>
 }
-function Inventory({products,setProducts}){
- const adjust=(id,d)=>{const np=products.map(p=>p.id===id?{...p,stock:Math.max(0,p.stock+d)}:p);save("products",np);setProducts(np)};
- return <section className="content"><div className="panel"><h3>Inventory / Stock Control</h3><Table cols={["Code","Product","Warehouse","On Hand","Reorder","Status","Adjustment"]} rows={products.map(p=>[p.code,p.name,"Main Warehouse",p.stock,p.reorder,p.stock<=p.reorder?"Low":"OK",<span className="actions"><button onClick={()=>adjust(p.id,-1)}>−</button><button onClick={()=>adjust(p.id,1)}>+</button></span>])}/></div></section>
+function Inventory({products,setProducts,stockHistory,setStockHistory,categories}){
+ const [category,setCategory]=useState("All Products");
+ const [search,setSearch]=useState("");
+ const [negative,setNegative]=useState(false);
+ const [nonZero,setNonZero]=useState(false);
+ const [zero,setZero]=useState(false);
+ const [modal,setModal]=useState(null);
+ const [selectedId,setSelectedId]=useState(null);
+ const [desired,setDesired]=useState(0);
+ const [countRows,setCountRows]=useState({});
+ const filtered=products.filter(p=>{
+  const text=[p.code,p.name,p.category,p.group,p.barcode].filter(Boolean).join(" ").toLowerCase();
+  if(category!=="All Products"&&(p.category||p.group)!==category)return false;
+  if(search&&!text.includes(search.toLowerCase()))return false;
+  if(negative&&Number(p.stock)>=0)return false;
+  if(nonZero&&Number(p.stock)===0)return false;
+  if(zero&&Number(p.stock)!==0)return false;
+  return true;
+ });
+ const neg=products.filter(p=>Number(p.stock)<0).length;
+ const zeroCount=products.filter(p=>Number(p.stock)===0).length;
+ const positive=products.filter(p=>Number(p.stock)>0).length;
+ const totalCost=filtered.reduce((a,p)=>a+Number(p.stock||0)*Number(p.cost||0),0);
+ const totalValue=filtered.reduce((a,p)=>a+Number(p.stock||0)*Number(p.price||0),0);
+ const selected=products.find(p=>p.id===selectedId);
+ const openQuick=p=>{setSelectedId(p.id);setDesired(Number(p.stock||0));setModal("quick")};
+ const applyQuick=()=>{if(!selected)return;const qty=Number(desired)||0;const old=Number(selected.stock||0);const next=products.map(p=>p.id===selected.id?{...p,stock:qty,updatedAt:new Date().toISOString()}:p);save("products",next);setProducts(next);const entry={id:uid(),date:new Date().toISOString(),productId:selected.id,productName:selected.name,code:selected.code||"",type:"Inventory Count",change:qty-old,quantityAfter:qty,reference:"IC-"+String(uid()).slice(-7)};const hs=[entry,...stockHistory].slice(0,2000);save("stockHistory",hs);setStockHistory(hs);setModal(null);setNoticeText("Stock quantity changed successfully. Inventory count document "+entry.reference+" created.")};
+ const [noticeText,setNoticeText]=useState("");
+ const applyCount=()=>{const updates=[];const next=products.map(p=>{if(countRows[p.id]===undefined||countRows[p.id]==="")return p;const q=Number(countRows[p.id]);const old=Number(p.stock||0);if(q===old)return p;const ref="IC-"+String(uid()).slice(-7);updates.push({id:uid(),date:new Date().toISOString(),productId:p.id,productName:p.name,code:p.code||"",type:"Inventory Count",change:q-old,quantityAfter:q,reference:ref});return {...p,stock:q,updatedAt:new Date().toISOString()}});if(!updates.length){setModal(null);return}save("products",next);setProducts(next);const hs=[...updates,...stockHistory].slice(0,2000);save("stockHistory",hs);setStockHistory(hs);setCountRows({});setModal(null);setNoticeText("Inventory count completed successfully. "+updates.length+" product(s) updated.")};
+ const recalc=()=>{const next=products.map(p=>({...p,stock:Number(p.stock||0),updatedAt:new Date().toISOString()}));save("products",next);setProducts(next);setNoticeText("Stock quantities recalculated successfully.")};
+ const exportCsv=()=>{const head=["Code","Name","Category","Quantity","Unit","Cost price","Cost","Sale price","Value"];const body=filtered.map(p=>[p.code||"",p.name,p.category||p.group||"",p.stock,p.unit||"pcs",Number(p.cost||0).toFixed(2),(Number(p.stock||0)*Number(p.cost||0)).toFixed(2),Number(p.price||0).toFixed(2),(Number(p.stock||0)*Number(p.price||0)).toFixed(2)]);const csv=[head,...body].map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='inventory.csv';a.click();URL.revokeObjectURL(a.href)};
+ return <section className="inventory-modern">
+  {noticeText&&<div className="inventory-inline-notice">{noticeText}<button onClick={()=>setNoticeText("")}>×</button></div>}
+  <div className="inventory-topbar"><div><div className="eyebrow">INVENTORY MANAGEMENT</div><h2>Stock</h2><p>Stock quantities, inventory counts, stock history and stock control.</p></div><div className="inventory-actions"><button onClick={()=>{setSearch("");setNegative(false);setNonZero(false);setZero(false)}}>↻<span>Refresh</span></button><button onClick={()=>setModal("history")}>◷<span>Stock history</span></button><button onClick={()=>window.print()}>▣<span>Print</span></button><button onClick={()=>downloadReportPDF("Inventory",["Code","Name","Quantity","Cost","Value"],filtered.map(p=>[p.code||"",p.name,p.stock,money(p.cost),money(p.stock*p.price)]))}>PDF<span>Save as PDF</span></button><button onClick={exportCsv}>▦<span>Excel</span></button><button onClick={()=>setModal("count")}>☷<span>Inventory count report</span></button><button onClick={()=>selected?openQuick(selected):setModal("quick")}>↯<span>Quick inventory</span></button><button onClick={()=>setNoticeText("Inventory supports stock history, quick inventory, inventory counts, negative/zero quantity filters, cost/value totals and low stock control.")}>?<span>Help</span></button></div></div>
+  <div className="inventory-summary"><div className="inventory-stat negative"><b>{neg}</b><span>Negative quantity</span></div><div className="inventory-stat positive"><b>{positive}</b><span>Positive quantity</span></div><div className="inventory-stat zero"><b>{zeroCount}</b><span>Zero quantity</span></div><div className="inventory-total"><span>Cost price</span><b>Total cost: {money(totalCost)}</b><b>Total value: {money(totalValue)}</b></div></div>
+  <div className="inventory-shell">
+   <aside className="inventory-tree"><div className="tree-title">Products</div><button className={category==="All Products"?"tree-item selected":"tree-item"} onClick={()=>setCategory("All Products")}>▣ <span>Products</span><em>{products.length}</em></button>{categories.map(c=><button key={c} className={category===c?"tree-item selected":"tree-item"} onClick={()=>setCategory(c)}>▾ <span>{c}</span><em>{products.filter(p=>(p.category||p.group)===c).length}</em></button>)}</aside>
+   <div className="inventory-main"><div className="inventory-filterbar"><div className="inventory-search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search product name, code, barcode..."/></div><label><input type="checkbox" checked={negative} onChange={e=>{setNegative(e.target.checked);if(e.target.checked){setNonZero(false);setZero(false)}}}/> Negative quantity</label><label><input type="checkbox" checked={nonZero} onChange={e=>{setNonZero(e.target.checked);if(e.target.checked){setNegative(false);setZero(false)}}}/> Non zero quantity</label><label><input type="checkbox" checked={zero} onChange={e=>{setZero(e.target.checked);if(e.target.checked){setNegative(false);setNonZero(false)}}}/> Zero quantity</label></div>
+    <div className="inventory-table-wrap"><table className="inventory-table"><thead><tr><th></th><th>Code</th><th>Name</th><th>Quantity</th><th>Unit</th><th>Cost price</th><th>Cost</th><th>Sale price</th><th>Value</th><th>Status</th><th></th></tr></thead><tbody>{filtered.map(p=>{const q=Number(p.stock||0);return <tr key={p.id} className={selectedId===p.id?"selected":""} onClick={()=>setSelectedId(p.id)} onDoubleClick={()=>openQuick(p)}><td><i className={q<0?"stock-dot red":q===0?"stock-dot blue":"stock-dot green"}></i></td><td>{p.code||"—"}</td><td><b>{p.name}</b><small>{p.category||p.group||""}</small></td><td className={q<0?"qty-negative":q===0?"qty-zero":""}>{q}</td><td>{p.unit||"pcs"}</td><td>{money(p.cost)}</td><td>{money(q*Number(p.cost||0))}</td><td>{money(p.price)}</td><td>{money(q*Number(p.price||0))}</td><td><span className={q<0?"inventory-badge danger":q===0?"inventory-badge zero":"inventory-badge ok"}>{q<0?"Negative":q===0?"Zero":"OK"}</span></td><td><button className="inventory-row-btn" onClick={e=>{e.stopPropagation();openQuick(p)}}>Adjust</button></td></tr>})}</tbody></table>{!filtered.length&&<div className="inventory-empty">No products found.</div>}</div><div className="inventory-footer"><span>Products count: <b>{filtered.length}</b></span><span>Cost price <b>{money(totalCost)}</b></span><span>Sale price <b>{money(totalValue)}</b></span></div></div>
+  </div>
+  {modal==="quick"&&<div className="inventory-modal-backdrop" onMouseDown={()=>setModal(null)}><div className="inventory-modal small" onMouseDown={e=>e.stopPropagation()}><div className="inventory-modal-head"><div><span className="eyebrow">QUICK INVENTORY</span><h3>Update stock quantity</h3></div><button onClick={()=>setModal(null)}>×</button></div><div className="inventory-modal-body"><label>Product<select value={selectedId||""} onChange={e=>{const id=Number(e.target.value);const p=products.find(x=>x.id===id);setSelectedId(id);setDesired(Number(p?.stock||0))}}>{products.map(p=><option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}</select></label>{selected&&<div className="inventory-current"><span>Current quantity</span><b>{selected.stock}</b></div>}<label>New quantity<input type="number" step="1" value={desired} onChange={e=>setDesired(e.target.value)}/></label><p className="inventory-help">An inventory count document will be created automatically.</p></div><div className="inventory-modal-foot"><button className="secondary" onClick={()=>setModal(null)}>Cancel</button><button onClick={applyQuick}>Update quantity</button></div></div></div>}
+  {modal==="count"&&<div className="inventory-modal-backdrop" onMouseDown={()=>setModal(null)}><div className="inventory-modal count" onMouseDown={e=>e.stopPropagation()}><div className="inventory-modal-head"><div><span className="eyebrow">INVENTORY COUNT</span><h3>Inventory count report</h3></div><button onClick={()=>setModal(null)}>×</button></div><div className="inventory-count-table"><table><thead><tr><th>Code</th><th>Product</th><th>Current</th><th>Actual quantity</th></tr></thead><tbody>{filtered.map(p=><tr key={p.id}><td>{p.code}</td><td>{p.name}</td><td>{p.stock}</td><td><input type="number" step="1" value={countRows[p.id]??""} placeholder={String(p.stock)} onChange={e=>setCountRows({...countRows,[p.id]:e.target.value})}/></td></tr>)}</tbody></table></div><div className="inventory-modal-foot"><button className="secondary" onClick={()=>setModal(null)}>Cancel</button><button onClick={applyCount}>Complete inventory count</button></div></div></div>}
+  {modal==="history"&&<div className="inventory-modal-backdrop" onMouseDown={()=>setModal(null)}><div className="inventory-modal history" onMouseDown={e=>e.stopPropagation()}><div className="inventory-modal-head"><div><span className="eyebrow">STOCK HISTORY</span><h3>Stock history</h3></div><button onClick={()=>setModal(null)}>×</button></div><div className="inventory-history-list">{stockHistory.length?<table><thead><tr><th>Date</th><th>Type</th><th>Product</th><th>Change</th><th>In stock</th><th>Reference</th></tr></thead><tbody>{stockHistory.slice(0,300).map(h=><tr key={h.id}><td>{new Date(h.date).toLocaleString("en-GB")}</td><td>{h.type}</td><td>{h.code} · {h.productName}</td><td className={h.change<0?"qty-negative":"qty-positive"}>{h.change>0?"+":""}{h.change}</td><td>{h.quantityAfter}</td><td>{h.reference||"—"}</td></tr>)}</tbody></table>:<div className="inventory-empty">No stock history yet.</div>}</div><div className="inventory-modal-foot"><button onClick={recalc}>Recalculate stock quantities</button><button className="secondary" onClick={()=>setModal(null)}>Close</button></div></div></div>}
+ </section>
 }
 function Customers({customers,addCustomer,setCustomers,sales}){
  const empty={name:"",code:"",taxNumber:"",streetName:"",buildingNumber:"",additionalStreetName:"",plotIdentification:"",district:"",postalCode:"",city:"",state:"",country:"Malaysia",phone:"",email:"",enabled:true,isCustomer:true,isSupplier:false,taxExempt:false,dueDatePeriod:0,discount:0,loyaltyCard:""};
