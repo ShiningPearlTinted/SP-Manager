@@ -1,0 +1,1 @@
+{"name":"sp-manager-local-agent","version":"1.0.0","private":true,"description":"Local Windows hardware bridge for SP-Manager","main":"server.js","scripts":{"start":"node server.js"}}
