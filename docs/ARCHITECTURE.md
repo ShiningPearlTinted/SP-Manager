@@ -1,8 +1,9 @@
 # SP-Manager Architecture
 
-Core entities identified during functional analysis:
-Product, Barcode, Customer, Supplier, User, Document, DocumentItem, Payment, PaymentType, Stock, Warehouse, Tax, Promotion, LoyaltyCard, PosOrder, PosOrderItem, ZReport, StartingCash and PosVoid.
+Frontend: React + Vite
+Backend: Node.js + Express
+API: REST-style JSON endpoints
 
-Business rules should remain in the backend. The frontend should consume a stable API.
+The current test build keeps data in server memory so it can be tested immediately without database setup.
 
-Production direction: PostgreSQL + authenticated API + audit trail + printing + backup/restore.
+Production phase should replace the in-memory repository with a real database and add authentication, audit trail, transaction handling, printing, backup/restore and full business rules.

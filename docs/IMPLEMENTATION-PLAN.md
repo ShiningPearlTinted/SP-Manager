@@ -1,10 +1,14 @@
 # Implementation Plan
 
-1. Foundation — complete
-2. POS / Sales Phase 1 — current
-3. Product / barcode / customer / supplier master data
-4. POS persistence, cash/change, split payments, receipt and stock deduction
-5. Stock, warehouses, purchases and inventory count
-6. Users, permissions, void, refund, starting cash and X/Z reports
-7. Sales, stock and financial reports
-8. Printing, audit trail, backup and production deployment
+1. POS / Sales foundation
+2. Products, groups, barcode
+3. Customers and suppliers
+4. Purchases and stock movement
+5. Payments, refunds and void
+6. Promotions, discounts and tax
+7. Loyalty
+8. Users and permissions
+9. Reports and X/Z
+10. Printing, receipt templates and settings
+11. Database migration and production deployment
+12. Final functional parity testing
