@@ -153,7 +153,7 @@ function App(){
   </aside>
   <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className="day">● {businessDay.open?"Business Day Open":"Closed"}</span><span>● Online</span></div></header>
    {notice&&<div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
-   {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
+   {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} categories={categories} posCategory={posCategory} setPosCategory={setPosCategory} products={products} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
    {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} setNotice={setNotice}/>}
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
@@ -175,28 +175,61 @@ function App(){
  </div>
 }
 
-function Dashboard({sales,total,products,lowStock,setPage,businessDay,toggleBusiness}){
- const monthly=Array.from({length:12},(_,i)=>sales.filter(s=>new Date(s.date).getMonth()===i&&new Date(s.date).getFullYear()===new Date().getFullYear()).reduce((a,s)=>a+s.total,0));
+function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,toggleBusiness}){
+ const now=new Date();
+ const currentYear=now.getFullYear();
+ const[dashboardYear,setDashboardYear]=useState(currentYear);
+ const[showPreviousYear,setShowPreviousYear]=useState(true);
+ const[hourOption,setHourOption]=useState("Amount");
+ const[periodStart,setPeriodStart]=useState(()=>new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10));
+ const[periodEnd,setPeriodEnd]=useState(()=>new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().slice(0,10));
+ const activeSales=sales.filter(s=>!s.voided&&!s.refunded);
+ const inPeriod=s=>{const d=new Date(s.date);return d>=new Date(periodStart+"T00:00:00")&&d<=new Date(periodEnd+"T23:59:59")};
+ const periodSales=activeSales.filter(inPeriod);
+ const monthly=Array.from({length:12},(_,i)=>activeSales.filter(s=>{const d=new Date(s.date);return d.getFullYear()===dashboardYear&&d.getMonth()===i}).reduce((a,s)=>a+s.total,0));
+ const previousMonthly=Array.from({length:12},(_,i)=>activeSales.filter(s=>{const d=new Date(s.date);return d.getFullYear()===dashboardYear-1&&d.getMonth()===i}).reduce((a,s)=>a+s.total,0));
  const yearTotal=monthly.reduce((a,v)=>a+v,0);
- const max=Math.max(1,...monthly);
- const topProducts=[...products].sort((a,b)=>b.stock-a.stock).slice(0,6);
- const topSelling=[...products].map(p=>({p,qty:sales.reduce((n,s)=>n+s.items.filter(i=>i.id===p.id).reduce((q,i)=>q+i.qty,0),0)})).sort((a,b)=>b.qty-a.qty).slice(0,5);
- const recent=[...sales].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,6);
- return <section className="content dashboard-modern">
+ const previousYearTotal=previousMonthly.reduce((a,v)=>a+v,0);
+ const max=Math.max(1,...monthly,...(showPreviousYear?previousMonthly:[]));
+ const topMonthValue=Math.max(...monthly,0);
+ const topMonthIndex=monthly.indexOf(topMonthValue);
+ const topMonth=topMonthValue?new Date(dashboardYear,topMonthIndex,1).toLocaleString("en-GB",{month:"short"}).toUpperCase():"-";
+ const topProducts=[...products].map(p=>({p,total:periodSales.reduce((sum,s)=>sum+s.items.filter(i=>i.id===p.id).reduce((q,i)=>q+Number(i.price||0)*Number(i.qty||0),0),0)})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total).slice(0,5);
+ const topGroups=Object.entries(periodSales.flatMap(s=>s.items).reduce((acc,item)=>{const p=products.find(x=>x.id===item.id);const g=item.group||p?.group||item.category||p?.category||"Uncategorised";acc[g]=(acc[g]||0)+Number(item.price||0)*Number(item.qty||0);return acc},{})).sort((a,b)=>b[1]-a[1]);
+ const groupTotal=topGroups.reduce((a,[,v])=>a+v,0);
+ const groupColors=["#1b9fd1","#4b9bc8","#8bc34a","#76a843","#a8c66c","#f28aa8","#f47f7f","#7890a8","#46a7df","#d18ac4","#48a6a0","#7a8dd8"];
+ const donutGradient=groupTotal?(()=>{let cursor=0;return topGroups.slice(0,12).map(([,v],i)=>{const next=cursor+(v/groupTotal)*100;const part=`${groupColors[i%groupColors.length]} ${cursor}% ${next}%`;cursor=next;return part}).join(","):"#e2e8f0 0 100%"})();
+ const customerTotals=Object.entries(periodSales.reduce((acc,s)=>{const customer=customers.find(c=>c.id===s.customerId);const name=s.customerName||s.customer||customer?.name||"Walk-in Customer";acc[name]=(acc[name]||0)+Number(s.total||0);return acc},{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const customerMax=Math.max(1,...customerTotals.map(([,v])=>v));
+ const hourly=Array.from({length:24},(_,h)=>periodSales.filter(s=>new Date(s.date).getHours()===h));
+ const hourlyValues=hourly.map(items=>hourOption==="Count"?items.length:items.reduce((a,s)=>a+s.total,0));
+ const hourlyMax=Math.max(1,...hourlyValues);
+ const formatDate=d=>new Date(d).toLocaleDateString("en-GB");
+ return <section className="content dashboard-modern aronium-dashboard">
   <div className="dashboard-head"><div><small>MANAGEMENT</small><h2>Dashboard</h2><p>Business overview and sales performance</p></div><div className="dashboard-actions"><button className="secondary" onClick={()=>setPage("Reports")}>View Reports</button><button onClick={()=>setPage("POS / Sales")}>Open POS</button></div></div>
   <div className="dashboard-cards">
    <Card t="Today's Sales" v={money(total)}/><Card t="Total Sales" v={money(yearTotal)}/><Card t="Products" v={products.length}/><Card t="Low Stock" v={lowStock}/>
   </div>
-  <div className="dashboard-layout">
-   <div className="panel dashboard-chart-panel"><div className="panel-title"><div><h3>Monthly Sales - {new Date().getFullYear()}</h3><small>Sales data grouped by month</small></div><strong>{money(yearTotal)}</strong></div><div className="sales-chart">{monthly.map((v,i)=><div className="sales-bar-wrap" key={i}><div className="sales-bar" style={{height:Math.max(3,(v/max)*100)+"%"}}><span>{v?Math.round(v):""}</span></div><small>{new Date(2026,i,1).toLocaleString("en-GB",{month:"short"})}</small></div>)}</div></div>
-   <div className="panel dashboard-day-panel"><div className="panel-title"><div><h3>Business Day</h3><small>Current register status</small></div><span className={businessDay.open?"status-pill ok":"status-pill"}>{businessDay.open?"Open":"Closed"}</span></div><div className="day-value">{businessDay.open?"Business day is open":"Business day is closed"}</div><button onClick={toggleBusiness}>{businessDay.open?"Close Business Day":"Open Business Day"}</button></div>
+  <div className="ar-dashboard-monthly">
+   <div className="panel monthly-main">
+    <div className="panel-title monthly-title"><div><h3>Monthly Sales - {dashboardYear}</h3><small>Sales data grouped by month</small></div><div className="monthly-tools"><button className="icon-btn" title="Previous year" onClick={()=>setDashboardYear(y=>y-1)}>‹</button><button className="icon-btn" title="Next year" onClick={()=>setDashboardYear(y=>y+1)}>›</button></div></div>
+    <div className="monthly-chart">
+     <div className="monthly-gridlines"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0</span></div>
+     <div className="monthly-bars">{monthly.map((v,i)=><div className="month-col" key={i}><div className="month-bar-pair"><div className="month-bar current" style={{height:Math.max(v?4:0,(v/max)*100)+"%"}}><span>{v?Math.round(v):""}</span></div>{showPreviousYear&&<div className="month-bar previous" style={{height:Math.max(previousMonthly[i]?4:0,(previousMonthly[i]/max)*100)+"%"}}><span>{previousMonthly[i]?Math.round(previousMonthly[i]):""}</span></div>}</div><small>{new Date(dashboardYear,i,1).toLocaleString("en-GB",{month:"short"})}</small></div>)}</div>
+    </div>
+    <div className="monthly-legend"><label><input type="checkbox" checked={showPreviousYear} onChange={e=>setShowPreviousYear(e.target.checked)}/> Previous year ({dashboardYear-1})</label><span><i className="legend-dot current-dot"></i>{dashboardYear}</span><span><i className="legend-dot previous-dot"></i>{dashboardYear-1}</span></div>
+   </div>
+   <div className="panel monthly-total"><div><h3>Total Sales</h3><strong>{money(yearTotal)}</strong></div><div className="top-month-label">Top performing month:<b>{topMonth}</b><strong>{money(topMonthValue)}</strong></div></div>
   </div>
-  <div className="dashboard-grid">
-   <div className="panel"><div className="panel-title"><div><h3>Top Products</h3><small>Products currently carrying the most stock</small></div><button className="linkbtn" onClick={()=>setPage("Products")}>View all</button></div>{topProducts.length?topProducts.map(p=><div className="dash-row" key={p.id}><div><b>{p.name}</b><small>{p.category||p.group||"Uncategorised"}</small></div><strong>{p.stock}</strong></div>):<Empty text="No data to display"/>}</div>
-   <div className="panel"><div className="panel-title"><div><h3>Top Selling Products</h3><small>Based on completed sales</small></div></div>{topSelling.some(x=>x.qty)?topSelling.map(x=><div className="dash-row" key={x.p.id}><div><b>{x.p.name}</b><small>{x.p.category||x.p.group||"Uncategorised"}</small></div><strong>{x.qty}</strong></div>):<Empty text="No sales data to display"/>}</div>
-   <div className="panel"><div className="panel-title"><div><h3>Recent Sales</h3><small>Latest completed transactions</small></div><button className="linkbtn" onClick={()=>setPage("Payments")}>View history</button></div>{recent.length?recent.map(s=><div className="dash-row" key={s.id}><div><b>{s.no}</b><small>{new Date(s.date).toLocaleString("en-GB")} · {s.payment}</small></div><strong>{money(s.total)}</strong></div>):<Empty text="No transactions yet."/>}</div>
-   <div className="panel quick-panel"><div className="panel-title"><div><h3>Quick Actions</h3><small>Common management tasks</small></div></div><div className="quick-actions"><button onClick={()=>setPage("Products")}>Products</button><button onClick={()=>setPage("Inventory")}>Stock</button><button onClick={()=>setPage("Customers")}>Customers</button><button onClick={()=>setPage("Purchases")}>Purchases</button><button onClick={()=>setPage("Reports")}>Reporting</button><button onClick={()=>setPage("Settings")}>Settings</button></div></div>
+  <div className="periodic-heading"><h3>Periodic Reports ({formatDate(periodStart)} - {formatDate(periodEnd)})</h3><div className="period-controls"><label>From <input type="date" value={periodStart} onChange={e=>setPeriodStart(e.target.value)}/></label><label>To <input type="date" value={periodEnd} onChange={e=>setPeriodEnd(e.target.value)}/></label></div></div>
+  <div className="ar-dashboard-grid">
+   <div className="panel ar-panel top-products-panel"><div className="panel-title"><div><h3>Top Products</h3></div><span className="report-limit">5</span></div>{topProducts.length?topProducts.map(x=><div className="report-row" key={x.p.id}><div><b>{x.p.name}</b></div><strong>{money(x.total).replace("RM ","")}</strong></div>):<Empty text="No data to display"/>}</div>
+   <div className="panel ar-panel hourly-panel"><div className="panel-title"><div><h3>Hourly Sales</h3><small>Sales data grouped by hours</small></div><select value={hourOption} onChange={e=>setHourOption(e.target.value)}><option>Amount</option><option>Count</option></select></div><div className="hourly-chart">{hourlyValues.map((v,h)=><div className="hour-col" key={h}><div className="hour-bar" style={{height:(v/hourlyMax)*100+"%"}}><span>{v?hourOption==="Count"?v:Math.round(v):""}</span></div><small>{String(h).padStart(2,"0")}</small></div>)}</div></div>
+   <div className="panel ar-panel total-sales-panel"><div className="panel-title"><h3>Total Sales (Amount)</h3></div><div className="big-sales-value">{money(periodSales.reduce((a,s)=>a+s.total,0)).replace("RM ","")}</div></div>
+   <div className="panel ar-panel groups-panel"><div className="panel-title"><div><h3>Top Product Groups</h3><small>Top selling product groups in selected period</small></div></div><div className="groups-content"><div className="donut" style={{background:`conic-gradient(${donutGradient})`}}><div className="donut-hole"></div></div><div className="group-legend">{topGroups.slice(0,12).map(([g,v],i)=><div key={g}><i style={{background:groupColors[i%groupColors.length]}}></i><span>{g}</span><b>{money(v).replace("RM ","")}</b></div>)}</div></div></div>
+   <div className="panel ar-panel customers-panel"><div className="panel-title"><div><h3>Top Customers</h3><small>Lead customers in selected period (top 5)</small></div></div><div className="customer-bars">{customerTotals.length?customerTotals.map(([name,v])=><div className="customer-bar-row" key={name}><span title={name}>{name}</span><div><i style={{width:(v/customerMax)*100+"%"}}></i><b>{Math.round(v)}</b></div></div>):<Empty text="No data to display"/>}</div></div>
   </div>
+  <div className="ar-dashboard-footer"><div>Previous year total: <b>{money(previousYearTotal)}</b></div><div>Selected period transactions: <b>{periodSales.length}</b></div><button className="linkbtn" onClick={()=>setPage("Reports")}>Open Reporting</button></div>
  </section>
 }
 function Card({t,v}){return <div className="card"><small>{t}</small><strong>{v}</strong></div>}
