@@ -279,10 +279,6 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  const hourlyMax=Math.max(1,...hourlyValues);
  const formatDate=d=>new Date(d).toLocaleDateString("en-GB");
  return <section className="content dashboard-modern aronium-dashboard">
-  <div className="dashboard-head"><div><small>MANAGEMENT</small><h2>Dashboard</h2><p>Business overview and sales performance</p></div><div className="dashboard-actions"><button className="secondary" onClick={()=>setPage("Reports")}>View Reports</button><button onClick={()=>setPage("POS / Sales")}>Open POS</button></div></div>
-  <div className="dashboard-cards">
-   <Card t="Today's Sales" v={money(total)}/><Card t="Total Sales" v={money(yearTotal)}/><Card t="Products" v={products.length}/><Card t="Low Stock" v={lowStock}/>
-  </div>
   <div className="ar-dashboard-monthly">
    <div className="panel monthly-main">
     <div className="panel-title monthly-title"><div><h3>Monthly Sales - {dashboardYear}</h3><small>Sales data grouped by month</small></div><div className="monthly-tools"><button className="icon-btn" title="Previous year" onClick={()=>setDashboardYear(y=>y-1)}>‹</button><button className="icon-btn" title="Next year" onClick={()=>setDashboardYear(y=>y+1)}>›</button></div></div>
