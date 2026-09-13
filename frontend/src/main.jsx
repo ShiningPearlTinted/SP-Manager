@@ -243,7 +243,7 @@ function App(){
    {page==="X / Z Report"&&<XZ sales={sales} businessDay={businessDay} paymentTypes={paymentTypes}/> }
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={o=>{persist("orders",o,setOrders);setNotice("Order saved successfully.")}} customers={customers}/>}
    {page==="My company"&&<MyCompany company={company} setCompany={v=>{persist("company",v,setCompany);setNotice("Company data saved successfully.")}}/>}
-   {page==="Settings"&&<Settings settings={settings} setSettings={updateSettings} businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}} company={company}/>}
+   {page==="Settings"&&<Settings settings={settings} setSettings={updateSettings} businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}} company={company} onCancel={()=>setPage("POS / Sales")}/>}
   </main>
  </div>
 }
@@ -783,7 +783,7 @@ function MyCompany({company,setCompany}){
   </div>
  </section>
 }
-function Settings({settings,setSettings,businessDay,toggleBusiness,taxRate,setTaxRate,company}){
+function Settings({settings,setSettings,businessDay,toggleBusiness,taxRate,setTaxRate,company,onCancel}){
  const [tab,setTab]=useState("General");
  const [draft,setDraft]=useState(settings);
  const [notice,setNotice]=useState("");
@@ -822,7 +822,8 @@ function Settings({settings,setSettings,businessDay,toggleBusiness,taxRate,setTa
     {tab==="Database"&&<><h2>Database</h2><div className="settings-database-actions"><button onClick={backup}>▣ Backup database</button><label className="settings-upload">↥ Restore database<input type="file" accept="application/json,.json" onChange={restore}/></label></div><h2>Automatic backups</h2><div className="settings-grid"><Field label="Enable automatic backups"><Toggle checked={db.autoBackup} onChange={v=>patch("database","autoBackup",v)}/></Field><Field label="Backup database on application start"><Toggle checked={db.backupOnStart} onChange={v=>patch("database","backupOnStart",v)}/></Field><Field label="Backup database on application close"><Toggle checked={db.backupOnClose} onChange={v=>patch("database","backupOnClose",v)}/></Field><Field label="Back up automatically every (hours)"><input type="number" min="1" value={db.backupEveryHours} onChange={e=>patch("database","backupEveryHours",Number(e.target.value))}/></Field><Field label="Delete old backups automatically"><Toggle checked={db.deleteOldBackups} onChange={v=>patch("database","deleteOldBackups",v)}/></Field><Field label="Delete backups older than (days)"><input type="number" min="1" value={db.deleteAfterDays} onChange={e=>patch("database","deleteAfterDays",Number(e.target.value))}/></Field></div><div className="settings-business"><b>Last backup:</b> {db.lastBackup?new Date(db.lastBackup).toLocaleString("en-MY"):"Never"}</div><h2>Maintenance</h2><button onClick={()=>{localStorage.setItem("sp_settings",JSON.stringify(draft));setNotice("Database/settings cache saved successfully.")}}>⚙ Optimize / save local database</button><p className="settings-help">SP-Manager is browser-based, so database backup is exported as a portable JSON backup of local application data.</p></>}
     {tab==="License"&&<><h2>License</h2><div className="settings-info-card"><b>SP-Manager</b><span>Business Management System</span><p>License and subscription controls can be connected here when a production licensing service is enabled.</p><div className="license-status">● Local / Development mode</div></div></>}
     {tab==="About"&&<><h2>About SP-Manager</h2><div className="settings-info-card"><b>SP-Manager</b><span>Shining Pearl Tinted</span><p>Aronium-inspired business management functions with a modern web interface.</p><p>Version: 1.0.0</p><p>Company: {company?.name||"Shining Pearl Tinted"}</p><button onClick={()=>window.open("https://help.aronium.com/hc/en-us/","_blank")}>Open help center</button></div></>}
-    <div className="settings-footer"><span>{notice}</span><div><button className="secondary" onClick={()=>setDraft(settings)}>Cancel</button><button className="settings-save" onClick={saveAll}>✓ Save</button></div></div>
+    <div className={"settings-inline-notice "+(notice&&/failed|invalid|error/i.test(notice)?"error":"success")} aria-live="polite">{notice}</div>
+    <div className="settings-footer"><span>{tab}</span><div><button className="secondary" type="button" onClick={()=>{setDraft(settings);if(onCancel)onCancel()}}>Cancel</button><button className="settings-save" type="button" onClick={saveAll}>✓ Save</button></div></div>
    </div>
   </div>
  </section>
