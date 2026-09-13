@@ -827,6 +827,7 @@ function Settings({settings,setSettings,businessDay,toggleBusiness,taxRate,setTa
       <button type="button" className="settings-save" onClick={()=>{setSettings(draft);setNotice("Settings saved successfully.")}}>✓ Save</button>
    </div>
   </div>
+  </div>
  </section>
 }
 function Table({cols,rows}){return <div className="table"><table><thead><tr>{cols.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i}>{r.map((x,j)=><td key={j}>{x}</td>)}</tr>)}</tbody></table></div>}
