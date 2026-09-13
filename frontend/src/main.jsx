@@ -198,7 +198,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  const topGroups=Object.entries(periodSales.flatMap(s=>s.items).reduce((acc,item)=>{const p=products.find(x=>x.id===item.id);const g=item.group||p?.group||item.category||p?.category||"Uncategorised";acc[g]=(acc[g]||0)+Number(item.price||0)*Number(item.qty||0);return acc},{})).sort((a,b)=>b[1]-a[1]);
  const groupTotal=topGroups.reduce((a,[,v])=>a+v,0);
  const groupColors=["#1b9fd1","#4b9bc8","#8bc34a","#76a843","#a8c66c","#f28aa8","#f47f7f","#7890a8","#46a7df","#d18ac4","#48a6a0","#7a8dd8"];
- const donutGradient=groupTotal?(()=>{let cursor=0;return topGroups.slice(0,12).map(([,v],i)=>{const next=cursor+(v/groupTotal)*100;const part=`${groupColors[i%groupColors.length]} ${cursor}% ${next}%`;cursor=next;return part}).join(","):"#e2e8f0 0 100%"})();
+ const donutGradient=groupTotal?(()=>{let cursor=0;return topGroups.slice(0,12).map(([,v],i)=>{const next=cursor+(v/groupTotal)*100;const part=`${groupColors[i%groupColors.length]} ${cursor}% ${next}%`;cursor=next;return part}).join(",")})():"#e2e8f0 0 100%";
  const customerTotals=Object.entries(periodSales.reduce((acc,s)=>{const customer=customers.find(c=>c.id===s.customerId);const name=s.customerName||s.customer||customer?.name||"Walk-in Customer";acc[name]=(acc[name]||0)+Number(s.total||0);return acc},{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
  const customerMax=Math.max(1,...customerTotals.map(([,v])=>v));
  const hourly=Array.from({length:24},(_,h)=>periodSales.filter(s=>new Date(s.date).getHours()===h));
