@@ -29,3 +29,7 @@ The default pulse is `27,112,0,25,250`. Some printers/drawers require a differen
 ## Installation status indicator
 
 The SP-Manager Settings > Hardware page polls the local agent every 5 seconds. It shows **CONNECTED** when the agent responds. If it cannot reach localhost:18765, it shows **AGENT NOT DETECTED** and explains that the agent may be uninstalled or not running. A browser cannot reliably distinguish those two states when the local process is stopped.
+
+
+## Installer note (v1.0.6)
+`install-windows.bat` now detects Node.js outside PATH and attempts to install Node.js LTS automatically with Windows Package Manager (`winget`) when Node.js is missing. It also performs a bounded health check against `http://127.0.0.1:18765/status`.
