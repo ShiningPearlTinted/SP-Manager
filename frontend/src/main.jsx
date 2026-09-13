@@ -273,6 +273,7 @@ function POS({filtered,q,setQ,add,cart,changeQty,customers,customer,setCustomer,
  const[discountValue,setDiscountValue]=useState(discount||0);
  const[transferSelection,setTransferSelection]=useState(()=>new Set());
  const[noticeLocal,setNoticeLocal]=useState("");
+ useEffect(()=>{if(!noticeLocal)return;const t=setTimeout(()=>setNoticeLocal(""),2500);return()=>clearTimeout(t)},[noticeLocal]);
  const defaultPayment=paymentTypes.filter(x=>x.enabled).sort((a,b)=>a.position-b.position)[0];
  const enabledPayments=paymentTypes.filter(x=>x.enabled).sort((a,b)=>a.position-b.position);
  const totalPaid=splitPayments.reduce((a,x)=>a+Number(x.amount||0),0);

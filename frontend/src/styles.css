@@ -349,3 +349,58 @@
 .ar-local-notice{z-index:200!important;border-radius:8px!important;background:#f2c230!important;padding:11px 18px!important;font-weight:700!important}
 @media(max-width:1000px){.ar-payment-body{grid-template-columns:190px minmax(0,1fr)!important}.payment-numpad{display:none}.payment-screen-actions button{min-width:auto!important;padding:0 10px!important}.payment-main{padding:24px!important}}
 @media(max-width:700px){.ar-payment-header{height:auto!important;min-height:58px;flex-wrap:wrap}.payment-screen-actions{height:auto!important;flex-wrap:wrap;padding-bottom:8px}.payment-screen-actions button{margin-top:0!important;height:40px!important}.ar-payment-body{grid-template-columns:1fr!important}.payment-type-column{border-right:0;border-bottom:1px solid #3d4348;display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.payment-type-column h3{grid-column:1/-1}.payment-type-column button{margin:0!important}.receipt-choice-grid{grid-template-columns:1fr 1fr!important}}
+
+
+/* PAYMENT LAYOUT FINAL LOCK FIX
+   Keep Aronium payment workflow while preventing controls from overlapping. */
+.ar-payment-body{
+  grid-template-columns:230px minmax(520px,1fr) 360px!important;
+  min-width:0!important;
+}
+.payment-type-column{min-width:0!important;box-sizing:border-box!important;}
+.payment-main{
+  min-width:0!important;
+  width:auto!important;
+  box-sizing:border-box!important;
+  padding:30px 36px 28px!important;
+  overflow:auto!important;
+}
+.payment-total-line{width:100%!important;max-width:none!important;justify-content:space-between!important;}
+.paid-entry{width:100%!important;max-width:none!important;box-sizing:border-box!important;justify-content:flex-start!important;}
+.paid-entry input{margin-left:18px!important;margin-right:0!important;}
+.payment-rule-line{width:100%!important;max-width:none!important;box-sizing:border-box!important;}
+.change-display{width:100%!important;max-width:none!important;box-sizing:border-box!important;justify-content:space-between!important;margin:28px 0 20px!important;}
+.payment-items-preview{width:100%!important;max-width:none!important;box-sizing:border-box!important;}
+.payment-complete.ar-green{
+  margin:20px 0 0!important;
+  align-self:flex-start!important;
+  position:static!important;
+  z-index:auto!important;
+}
+.payment-numpad{
+  min-width:0!important;
+  width:auto!important;
+  box-sizing:border-box!important;
+  padding:14px!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+.payment-numpad button{min-width:0!important;width:100%!important;box-sizing:border-box!important;}
+.ar-local-notice{
+  position:fixed!important;
+  left:50%!important;
+  bottom:28px!important;
+  transform:translateX(-50%)!important;
+  z-index:9999!important;
+  pointer-events:none!important;
+  animation:spNoticeIn .16s ease-out,spNoticeOut .35s ease-in 2.15s forwards!important;
+}
+@keyframes spNoticeIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes spNoticeOut{from{opacity:1}to{opacity:0}}
+@media(max-width:1250px){
+  .ar-payment-body{grid-template-columns:205px minmax(430px,1fr) 310px!important;}
+  .payment-main{padding:26px 26px 24px!important;}
+  .payment-numpad button{height:62px!important;}
+}
+@media(max-width:1000px){
+  .ar-payment-body{grid-template-columns:190px minmax(0,1fr)!important;}
+}
