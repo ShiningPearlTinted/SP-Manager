@@ -38,7 +38,7 @@ const seedUsers=[
 {id:1,name:"Administrator",username:"admin",role:"Administrator",enabled:true},
 {id:2,name:"Cashier",username:"cashier",role:"Cashier",enabled:true}
 ];
-const nav=["Dashboard","POS / Sales","Products","Inventory","Customers","Purchases","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Reports","X / Z Report","Named Order / Takeaway","Settings"];
+const nav=["Dashboard","POS / Sales","Products","Inventory","Customers","Purchases","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"];
 const money=n=>"RM "+Number(n||0).toFixed(2);
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem("sp_"+k))??d}catch{return d}};
 const save=(k,v)=>localStorage.setItem("sp_"+k,JSON.stringify(v));
@@ -67,6 +67,7 @@ function App(){
  const[taxRate,setTaxRate]=useState(()=>load("taxRate",0));
  const[notice,setNotice]=useState("");
  const[businessDay,setBusinessDay]=useState(()=>load("businessDay",{open:true,openingCash:0}));
+ const[company,setCompany]=useState(()=>load("company",{name:"Shining Pearl Tinted",taxNumber:"",streetName:"",buildingNumber:"",additionalStreetName:"",plotIdentification:"",district:"",postalCode:"",city:"",state:"",country:"Malaysia",phoneNumber:"",email:"",bankAccountNumber:"",bankDetails:"",logo:""}));
  const[editing,setEditing]=useState(null);
  const[productGroups,setProductGroups]=useState(()=>load("productGroups",[...new Set(seedProducts.map(p=>p.group||p.category).filter(Boolean))]));
  const[lastSale,setLastSale]=useState(null);
@@ -169,6 +170,7 @@ function App(){
    {page==="Reports"&&<Reports sales={sales} products={products} customers={customers} purchases={purchases} businessDay={businessDay} users={users} suppliers={suppliers} paymentTypes={paymentTypes}/>}
    {page==="X / Z Report"&&<XZ sales={sales} businessDay={businessDay} paymentTypes={paymentTypes}/> }
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={o=>{persist("orders",o,setOrders);setNotice("Order saved successfully.")}} customers={customers}/>}
+   {page==="My company"&&<MyCompany company={company} setCompany={v=>{persist("company",v,setCompany);setNotice("Company data saved successfully.")}}/>}
    {page==="Settings"&&<Settings businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}}/>}
    {lastSale&&<div className="receipt-modal-backdrop"><div className="receipt-modal"><div className="receipt-head"><div><small>SHINING PEARL TINTED</small><h2>Sales Receipt</h2></div><button onClick={()=>setLastSale(null)}>×</button></div><div className="receipt-meta"><span>Receipt <b>{lastSale.no}</b></span><span>{new Date(lastSale.date).toLocaleString()}</span></div><Table cols={["Qty","Description","Amount"]} rows={lastSale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)])}/><div className="receipt-total"><span>Total <b>{money(lastSale.total)}</b></span><span>Payment <b>{lastSale.payment}</b></span></div><div className="receipt-actions"><button onClick={()=>downloadReportPDF("Receipt-"+lastSale.no,["Qty","Description","Amount"],lastSale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>Download PDF</button><button onClick={()=>emailReceipt(lastSale)}>Email Receipt</button><button className="secondary" onClick={()=>setLastSale(null)}>Close</button></div><p className="muted">Email Receipt opens the customer email application with the receipt details and creates the PDF for attachment.</p></div></div>}
   </main>
@@ -573,7 +575,33 @@ function Reports({sales,products,customers,purchases,businessDay,users,suppliers
 }
 function XZ({sales,businessDay,paymentTypes}){const valid=sales.filter(s=>!s.voided&&!s.refunded);const sum=t=>valid.filter(s=>s.payment===t).reduce((a,s)=>a+s.total,0);const total=valid.reduce((a,s)=>a+s.total,0);return <section className="content"><div className="cards"><Card t="Transactions" v={valid.length}/><Card t="Gross Sales" v={money(total)}/><Card t="Cash" v={money(sum("Cash"))}/><Card t="Card" v={money(sum("Card"))}/></div><div className="panel"><h3>X / Z Report</h3><p>Business day: <b>{businessDay.open?"Open":"Closed"}</b></p><Table cols={["Payment Type","Amount"]} rows={paymentTypes.filter(x=>x.enabled).sort((a,b)=>a.position-b.position).map(x=>[x.name,money(sum(x.name))])}/></div></section>}
 function NamedOrders({orders,setOrders,customers}){const[name,setName]=useState("");const[service,setService]=useState("Takeaway");return <section className="content"><div className="grid2"><div className="panel"><h3>Named Order / Takeaway</h3><div className="formgrid"><input placeholder="Order name / table / reference" value={name} onChange={e=>setName(e.target.value)}/><select value={service} onChange={e=>setService(e.target.value)}><option>Takeaway</option><option>Named Order</option><option>Table</option></select><select><option>Walk-in Customer</option>{customers.slice(1).map(c=><option key={c.id}>{c.name}</option>)}</select><button onClick={()=>{if(!name)return;setOrders([...orders,{id:uid(),name,service,date:new Date().toISOString(),status:"Open"}]);setName("")}}>Save Order</button></div></div><div className="panel"><h3>Open Orders</h3><Table cols={["Reference","Service","Date","Status"]} rows={orders.slice().reverse().map(o=>[o.name,o.service,new Date(o.date).toLocaleString(),o.status])}/></div></div></section>}
-function Settings({businessDay,toggleBusiness,taxRate,setTaxRate}){return <section className="content"><div className="grid2"><div className="panel"><h3>Business Day</h3><p>Opening cash: {money(businessDay.openingCash)}</p><p>Status: <b>{businessDay.open?"Open":"Closed"}</b></p><button onClick={toggleBusiness}>{businessDay.open?"Close Business Day":"Open Business Day"}</button></div><div className="panel"><h3>Application Settings</h3><label>Default Tax %</label><input type="number" value={taxRate} onChange={e=>{setTaxRate(+e.target.value);save("taxRate",+e.target.value)}}/><p className="muted">Data for this GitHub Pages test build is stored locally in the browser. Backend/database integration is the next deployment layer.</p></div></div></section>}
+function MyCompany({company,setCompany}){
+ const [tab,setTab]=useState("Company data");
+ const [draft,setDraft]=useState(company);
+ useEffect(()=>setDraft(company),[company]);
+ const set=(key,value)=>setDraft(d=>({...d,[key]:value}));
+ const saveDraft=()=>setCompany(draft);
+ const addLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){alert("Please select an image file.");return;}if(file.size>2*1024*1024){alert("Logo image must be 2 MB or smaller.");return;}const reader=new FileReader();reader.onload=()=>set("logo",reader.result);reader.readAsDataURL(file)};
+ const clearLogo=()=>set("logo","");
+ return <section className="content my-company-page">
+  <div className="company-shell">
+   <div className="company-tabs"><button className={tab==="Company data"?"active":""} onClick={()=>setTab("Company data")}>Company data</button><button className={tab==="My logo"?"active":""} onClick={()=>setTab("My logo")}>My logo</button></div>
+   {tab==="Company data"&&<>
+    <div className="company-toolbar"><div><h2>My company data</h2><p>Company information used across SP-Manager documents, receipts and reports.</p></div><button className="company-save" onClick={saveDraft}>✓ <span>Save</span></button></div>
+    <div className="company-form">
+     <div className="company-section-title">General information</div>
+     <div className="company-grid"><label>Name<input value={draft.name} onChange={e=>set("name",e.target.value)}/></label><label>Tax number<input value={draft.taxNumber} onChange={e=>set("taxNumber",e.target.value)}/></label></div>
+     <div className="company-section-title">Address</div>
+     <div className="company-grid full"><label>Street name<textarea value={draft.streetName} onChange={e=>set("streetName",e.target.value)}/></label></div>
+     <div className="company-grid"><label>Building number<input value={draft.buildingNumber} onChange={e=>set("buildingNumber",e.target.value)}/></label><label>Additional street name<input value={draft.additionalStreetName} onChange={e=>set("additionalStreetName",e.target.value)}/></label><label>Plot identification<input value={draft.plotIdentification} onChange={e=>set("plotIdentification",e.target.value)}/></label><label>District<input value={draft.district} onChange={e=>set("district",e.target.value)}/></label><label>Postal code<input value={draft.postalCode} onChange={e=>set("postalCode",e.target.value)}/></label><label>City<input value={draft.city} onChange={e=>set("city",e.target.value)}/></label><label>State / Province<input value={draft.state} onChange={e=>set("state",e.target.value)}/></label><label>Country<select value={draft.country} onChange={e=>set("country",e.target.value)}><option>Malaysia</option><option>Singapore</option><option>Thailand</option><option>Indonesia</option><option>Brunei</option><option>Other</option></select></label></div>
+     <div className="company-section-title">Contact</div><div className="company-grid"><label>Phone number<input value={draft.phoneNumber} onChange={e=>set("phoneNumber",e.target.value)}/></label><label>Email<input type="email" value={draft.email} onChange={e=>set("email",e.target.value)}/></label></div>
+     <div className="company-section-title">Bank account</div><div className="company-grid"><label>Bank acc. number<input value={draft.bankAccountNumber} onChange={e=>set("bankAccountNumber",e.target.value)}/></label><label>Bank details<textarea value={draft.bankDetails} onChange={e=>set("bankDetails",e.target.value)}/></label></div>
+    </div>
+   </>}
+   {tab==="My logo"&&<div className="company-logo-page"><div className="company-toolbar"><div><h2>My logo</h2><p>Add the company logo used for your SP-Manager branding and document presentation.</p></div><button className="company-save" onClick={saveDraft}>✓ <span>Save</span></button></div><div className="logo-card"><div className="logo-preview">{draft.logo?<img src={draft.logo} alt="Company logo"/>:<div className="logo-empty"><b>SP</b><span>No logo selected</span></div>}</div><div className="logo-actions"><label className="logo-add">＋ Add logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={addLogo}/></label><button className="secondary" onClick={clearLogo} disabled={!draft.logo}>Clear</button></div><p className="muted">Recommended: PNG or SVG with transparent background. Maximum 2 MB.</p></div></div>}
+  </div>
+ </section>
+}
 function Table({cols,rows}){return <div className="table"><table><thead><tr>{cols.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i}>{r.map((x,j)=><td key={j}>{x}</td>)}</tr>)}</tbody></table></div>}
 function Empty({text}){return <div className="empty">{text}</div>}
 createRoot(document.getElementById("root")).render(<App/>);
