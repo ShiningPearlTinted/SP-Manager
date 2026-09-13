@@ -7,6 +7,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+if not exist "%ProgramData%\SP-Manager" mkdir "%ProgramData%\SP-Manager" >nul 2>nul
+echo SP-Manager Local Agent 1.0.5 > "%ProgramData%\SP-Manager\agent-installed.flag"
 start "SP-Manager Local Agent" /min cmd /c "node server.js"
-echo SP-Manager Local Agent started on http://127.0.0.1:18765
+echo.
+echo SP-Manager Local Agent is installed/launched.
+echo Status endpoint: http://127.0.0.1:18765/status
+echo Installed marker: %ProgramData%\SP-Manager\agent-installed.flag
+echo.
 pause

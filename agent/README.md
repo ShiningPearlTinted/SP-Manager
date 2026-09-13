@@ -25,3 +25,7 @@ The default pulse is `27,112,0,25,250`. Some printers/drawers require a differen
 - Windows printer names come from the Windows Print Spooler.
 - Customer displays must expose a compatible serial COM port and baud rate.
 - This bridge does not bypass Windows security or printer drivers; the Windows account running it must have access to the printer.
+
+## Installation status indicator
+
+The SP-Manager Settings > Hardware page polls the local agent every 5 seconds. It shows **CONNECTED** when the agent responds. If it cannot reach localhost:18765, it shows **AGENT NOT DETECTED** and explains that the agent may be uninstalled or not running. A browser cannot reliably distinguish those two states when the local process is stopped.
