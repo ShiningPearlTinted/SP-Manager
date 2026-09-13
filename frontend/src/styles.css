@@ -426,3 +426,23 @@
 @media(max-width:1000px){
   .ar-payment-body{grid-template-columns:190px minmax(0,1fr)!important;}
 }
+
+
+/* LOCKED POS Payment UI - final isolation fixes */
+.ar-payment-screen main.payment-main{margin:0!important;width:auto!important;max-width:none!important;min-width:0!important;position:relative!important;display:flex!important;flex-direction:column!important;padding:28px 32px 30px!important;background:#303030!important;overflow:hidden!important;}
+.ar-payment-screen aside.payment-type-column{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;width:auto!important;height:auto!important;max-height:none!important;margin:0!important;z-index:1!important;box-sizing:border-box!important;}
+.ar-payment-screen .payment-screen-actions{position:relative!important;z-index:2!important;}
+.ar-payment-screen .payment-main .paid-entry{width:100%;max-width:520px;}
+.ar-payment-screen .payment-main .paid-entry input{width:280px!important;max-width:100%!important;box-sizing:border-box!important;}
+.ar-payment-screen .payment-main .payment-rule-line{width:100%;max-width:520px;}
+.ar-payment-screen .payment-main .change-display{width:100%;max-width:520px;justify-content:space-between;padding:14px 18px;margin:24px 0;border:1px solid #555;border-radius:8px;background:#292929;}
+.ar-payment-screen .payment-main .payment-items-preview{width:100%;max-width:520px;}
+.ar-payment-screen .payment-main .payment-complete.ar-green{align-self:flex-start;margin-top:auto;}
+.ar-payment-screen .payment-numpad{position:relative;z-index:1;min-width:250px;}
+.ar-payment-screen input[type=number]::-webkit-inner-spin-button,.ar-payment-screen input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.ar-payment-screen input[type=number]{-moz-appearance:textfield;appearance:textfield;}
+.ar-modal-backdrop{z-index:1000!important;}
+.ar-modal{position:relative;z-index:1001;}
+.ar-payment-screen .ar-modal-backdrop{z-index:1000!important;}
+@media(max-width:900px){.ar-payment-body{grid-template-columns:180px minmax(0,1fr) 220px;}.ar-payment-screen main.payment-main{padding:22px 20px!important;}.ar-payment-screen .payment-main .paid-entry input{width:220px!important;}}
+@media(max-width:700px){.ar-payment-body{grid-template-columns:1fr;overflow:auto;}.ar-payment-screen aside.payment-type-column{border-right:0;border-bottom:1px solid #555;max-height:none;}.ar-payment-screen main.payment-main{min-height:360px;}.ar-payment-screen .payment-numpad{min-height:260px;border-left:0;border-top:1px solid #555;}}
