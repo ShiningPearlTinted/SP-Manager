@@ -36,7 +36,8 @@ const save=(k,v)=>localStorage.setItem("sp_"+k,JSON.stringify(v));
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
 
 function App(){
- const[page,setPage]=useState("Dashboard");
+ const[page,setPage]=useState("POS / Sales");
+ const[posMenu,setPosMenu]=useState(false);
  const[products,setProducts]=useState(()=>load("products",seedProducts));
  const[categories,setCategories]=useState(()=>load("categories",["Tinted Film","Windscreen","Glass","Security","Protection"]));
  const[customers,setCustomers]=useState(()=>load("customers",seedCustomers));
@@ -56,11 +57,13 @@ function App(){
  const[notice,setNotice]=useState("");
  const[businessDay,setBusinessDay]=useState(()=>load("businessDay",{open:true,openingCash:0}));
  const[editing,setEditing]=useState(null);
+ const[lastSale,setLastSale]=useState(null);
 
  const activeSales=sales.filter(x=>!x.voided&&!x.refunded);
  const today=activeSales.reduce((a,x)=>a+x.total,0);
  const lowStock=products.filter(p=>p.stock<=p.reorder).length;
  const filtered=useMemo(()=>products.filter(p=>{const text=(p.name+" "+p.code+" "+(p.barcode||"")+" "+(p.group||"")+" "+(p.category||"")).toLowerCase();const cat=posCategory==="All Categories"||((p.category||p.group||"")===posCategory);return cat&&text.includes(q.toLowerCase())}),[products,q,posCategory]);
+ const emailReceipt=(sale)=>{const c=customers.find(x=>x.id===sale.customerId);const to=c?.email&&c.email!=="-"?c.email:"";const cols=["Qty","Description","Amount"];const rows=sale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]);downloadReportPDF("Receipt-"+sale.no,cols,rows);const body=["Dear "+(c?.name||"Customer")+",","","Please find your sales receipt details below.","Receipt: "+sale.no,"Date: "+new Date(sale.date).toLocaleString(),"Total: "+money(sale.total),"Payment: "+sale.payment,"","Thank you,","Shining Pearl Tinted"].join("\n");window.location.href="mailto:"+encodeURIComponent(to)+"?subject="+encodeURIComponent("Sales Receipt "+sale.no)+"&body="+encodeURIComponent(body);};
  const subtotal=cart.reduce((a,x)=>a+x.price*x.qty,0);
  const disc=subtotal*Number(discount||0)/100;
  const taxable=Math.max(0,subtotal-disc);
@@ -79,6 +82,7 @@ function App(){
   persist("sales",ns,setSales);persist("products",np,setProducts);
   const nc=customers.map(c=>c.id===customer?{...c,visits:c.visits+1,spend:c.spend+grand}:c);
   persist("customers",nc,setCustomers);
+  setLastSale(sale);
   setCart([]);setDiscount(0);setNotice("Sale completed successfully: "+sale.no+" — "+money(grand));setPage("POS / Sales");
  };
  const refund=id=>{
@@ -121,42 +125,71 @@ function App(){
   <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className="day">● {businessDay.open?"Business Day Open":"Closed"}</span><span>● Online</span></div></header>
    {notice&&<div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
-   {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} payment={payment} setPayment={setPayment} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} categories={categories} posCategory={posCategory} setPosCategory={setPosCategory}/>}
+   {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} payment={payment} setPayment={setPayment} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} categories={categories} posCategory={posCategory} setPosCategory={setPosCategory} products={products} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
    {page==="Products"&&<Products products={products} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} setNotice={setNotice}/>}
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer}/>}
    {page==="Suppliers"&&<Suppliers suppliers={suppliers} setSuppliers={setSuppliers}/>}
    {page==="Purchases"&&<Purchases products={products} suppliers={suppliers} receivePurchase={receivePurchase} purchases={purchases}/>}
-   {page==="Payments"&&<Payments sales={sales}/>}
+   {page==="Payments"&&<Payments sales={sales} customers={customers} emailReceipt={emailReceipt}/>}
    {page==="Refund / Void"&&<RefundVoid sales={sales} refund={refund} voidSale={voidSale}/>}
    {page==="Discount / Promotion"&&<Promotions promos={promos} savePromo={savePromo}/>}
    {page==="Tax"&&<Tax rate={taxRate} setRate={r=>{setTaxRate(r);save("taxRate",r);setNotice("Tax rate saved successfully.")}}/>}
    {page==="Loyalty"&&<Loyalty customers={customers}/>}
    {page==="Users & Permissions"&&<Users users={users} setUsers={u=>{persist("users",u,setUsers);setNotice("User updated successfully.")}}/>}
-   {page==="Reports"&&<Reports sales={sales} products={products} customers={customers} purchases={purchases} businessDay={businessDay} users={users}/>}
+   {page==="Reports"&&<Reports sales={sales} products={products} customers={customers} purchases={purchases} businessDay={businessDay} users={users} suppliers={suppliers}/>}
    {page==="X / Z Report"&&<XZ sales={sales} businessDay={businessDay}/>}
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={o=>{persist("orders",o,setOrders);setNotice("Order saved successfully.")}} customers={customers}/>}
    {page==="Settings"&&<Settings businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}}/>}
+   {lastSale&&<div className="receipt-modal-backdrop"><div className="receipt-modal"><div className="receipt-head"><div><small>SHINING PEARL TINTED</small><h2>Sales Receipt</h2></div><button onClick={()=>setLastSale(null)}>×</button></div><div className="receipt-meta"><span>Receipt <b>{lastSale.no}</b></span><span>{new Date(lastSale.date).toLocaleString()}</span></div><Table cols={["Qty","Description","Amount"]} rows={lastSale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)])}/><div className="receipt-total"><span>Total <b>{money(lastSale.total)}</b></span><span>Payment <b>{lastSale.payment}</b></span></div><div className="receipt-actions"><button onClick={()=>downloadReportPDF("Receipt-"+lastSale.no,["Qty","Description","Amount"],lastSale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>Download PDF</button><button onClick={()=>emailReceipt(lastSale)}>Email Receipt</button><button className="secondary" onClick={()=>setLastSale(null)}>Close</button></div><p className="muted">Email Receipt opens the customer email application with the receipt details and creates the PDF for attachment.</p></div></div>}
   </main>
  </div>
 }
 
 function Dashboard({sales,total,products,lowStock,setPage,businessDay,toggleBusiness}){
- const top=[...products].sort((a,b)=>b.stock-a.stock).slice(0,5);
- return <section className="content"><div className="hero"><div><small>WELCOME</small><h2>Manage smarter · Sell faster · Grow together</h2><p>SP-Manager business management system</p></div><div><button onClick={()=>setPage("POS / Sales")}>Open POS</button><button className="darkbtn" onClick={toggleBusiness}>{businessDay.open?"Close Business Day":"Open Business Day"}</button></div></div>
- <div className="cards"><Card t="Today's Sales" v={money(total)}/><Card t="Transactions" v={sales.length}/><Card t="Average Sale" v={sales.length?money(total/sales.length):money(0)}/><Card t="Low Stock" v={lowStock}/></div>
- <div className="grid2"><div className="panel"><h3>Recent Sales</h3>{sales.slice(-7).reverse().map(s=><div className="row" key={s.id}><span><b>{s.no}</b><small>{new Date(s.date).toLocaleString()}</small></span><strong>{money(s.total)}</strong></div>)}{!sales.length&&<Empty text="No transactions yet."/ >}</div>
- <div className="panel"><h3>Stock Snapshot</h3>{top.map(p=><div className="row" key={p.id}><span><b>{p.name}</b><small>{p.code} · {p.group}</small></span><strong>{p.stock}</strong></div>)}</div></div></section>
+ const monthly=Array.from({length:12},(_,i)=>sales.filter(s=>new Date(s.date).getMonth()===i&&new Date(s.date).getFullYear()===new Date().getFullYear()).reduce((a,s)=>a+s.total,0));
+ const yearTotal=monthly.reduce((a,v)=>a+v,0);
+ const max=Math.max(1,...monthly);const top=[...products].sort((a,b)=>b.stock-a.stock).slice(0,5);
+ return <section className="mgmt-shell"><aside className="mgmt-side"><div className="mgmt-title">Management</div>{["Dashboard","Documents","Products","Stock","Reporting","Customers & suppliers","Promotions","Users & security","Payment types","Countries","Tax rates","My company"].map((x,i)=><button className={i===0?"sel":""} key={x} onClick={()=>x==="Dashboard"?setPage("Dashboard"):x==="Products"?setPage("Products"):x==="Stock"?setPage("Inventory"):x==="Reporting"?setPage("Reports"):x.startsWith("Customers")?setPage("Customers"):x==="Promotions"?setPage("Discount / Promotion"):x.startsWith("Users")?setPage("Users & Permissions"):x==="Payment types"?setPage("Payments"):x==="Tax rates"?setPage("Tax"):x==="My company"?setPage("Settings"):null}>{x}</button>)}</aside><div className="mgmt-main"><div className="mgmt-top"><div><h2>Monthly Sales - {new Date().getFullYear()}</h2><small>Sales data grouped by month</small></div><div className="mgmt-total"><span>Total Sales</span><strong>{(yearTotal/1000).toFixed(2)}K</strong><small>Top performing month</small><b>{new Date().toLocaleString("en-GB",{month:"short"}).toUpperCase()}</b></div></div><div className="mgmt-chart">{monthly.map((v,i)=><div className="bar-wrap" key={i}><div className="bar" style={{height:(v/max*82)+"%"}}><span>{v.toFixed(0)}</span></div><small>{new Date(2026,i,1).toLocaleString("en-GB",{month:"short"})}</small></div>)}</div><div className="periodic">Periodic Reports ({new Date().toLocaleDateString("en-GB")} - {new Date().toLocaleDateString("en-GB")})</div><div className="mgmt-grid"><div className="mgmt-panel"><h3>Top Products</h3>{top.length?top.map(p=><div className="mgmt-row" key={p.id}><span>{p.name}</span><b>{p.stock}</b></div>):<Empty text="No data to display"/>}</div><div className="mgmt-panel"><h3>Hourly Sales</h3>{sales.length?<div className="hour-bars">{[9,10,11,12,13,14,15,16,17,18].map(h=>{const v=sales.filter(s=>new Date(s.date).getHours()===h).reduce((a,s)=>a+s.total,0);return <div key={h}><span style={{height:Math.min(100,Math.max(4,v/Math.max(1,total)*100))+'%'}}></span><small>{h}</small></div>})}</div>:<Empty text="No data to display"/>}</div><div className="mgmt-panel big-number"><h3>Total Sales (Amount)</h3><strong>{money(yearTotal).replace("RM ","")}</strong></div><div className="mgmt-panel"><h3>Top Product Groups</h3>{[...new Set(products.map(p=>p.group||p.category||"Other"))].slice(0,5).map(g=><div className="mgmt-row" key={g}><span>{g}</span><b>{products.filter(p=>(p.group||p.category||"Other")===g).length}</b></div>)}</div><div className="mgmt-panel wide"><h3>Top Customers</h3>{sales.length?[...new Set(sales.map(s=>s.customerId))].slice(0,5).map(id=><div className="mgmt-row" key={id}><span>Customer #{id}</span><b>{money(sales.filter(s=>s.customerId===id).reduce((a,s)=>a+s.total,0))}</b></div>):<Empty text="No data to display"/>}</div></div></div></section>
 }
 function Card({t,v}){return <div className="card"><small>{t}</small><strong>{v}</strong></div>}
-function POS({filtered,q,setQ,add,cart,changeQty,customers,customer,setCustomer,discount,setDiscount,payment,setPayment,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,categories,posCategory,setPosCategory}){
- return <section className="pos"><div className="panel"><input autoFocus className="search" value={q} onChange={e=>setQ(e.target.value)} placeholder="Scan barcode / search product code or name..."/><div className="pos-categories"><button className={posCategory==="All Categories"?"cat-active":""} onClick={()=>setPosCategory("All Categories")}>All Categories</button>{categories.map(c=><button key={c} className={posCategory===c?"cat-active":""} onClick={()=>setPosCategory(c)}>{c}</button>)}</div><div className="products">{filtered.map(p=><button className="product" onClick={()=>add(p)} key={p.id}><small>{p.code}{p.barcode?" · "+p.barcode:""}</small><b>{p.name}</b><span>{p.category||p.group}</span><strong>{money(p.price)}</strong><em>Stock {p.stock}</em></button>)}</div>{!filtered.length&&<Empty text="No products found in this category."/>}</div>
- <div className="panel cart"><h3>Current Order</h3><label>Customer</label><select value={customer} onChange={e=>setCustomer(+e.target.value)}>{customers.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select>
- {cart.map(i=><div className="cartrow" key={i.id}><span><b>{i.name}</b><small>{i.category||i.group||"-"} · {money(i.price)} × {i.qty}</small></span><div><button onClick={()=>changeQty(i.id,1)}>+</button><button onClick={()=>changeQty(i.id,-1)}>−</button></div><strong>{money(i.price*i.qty)}</strong></div>)}{!cart.length&&<Empty text="Cart is empty"/>}
- <label>Discount %</label><input type="number" value={discount} onChange={e=>setDiscount(Math.max(0,Math.min(100,+e.target.value)))} min="0" max="100"/>
- <label>Tax %</label><input type="number" value={taxRate} onChange={e=>setTaxRate(Math.max(0,+e.target.value))} min="0"/>
- <div className="payments">{["Cash","Card","Online Transfer","QR Payment"].map(x=><button className={payment===x?"sel":""} onClick={()=>setPayment(x)} key={x}>{x}</button>)}</div>
- <div className="totals"><span>Subtotal <b>{money(subtotal)}</b></span><span>Discount <b>- {money(disc)}</b></span><span>Tax <b>{money(tax)}</b></span><strong>Total <b>{money(grand)}</b></strong></div><button className="complete" onClick={sale}>Complete Sale · {money(grand)}</button></div></section>
+function POS({filtered,q,setQ,add,cart,changeQty,customers,customer,setCustomer,discount,setDiscount,payment,setPayment,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,categories,posCategory,setPosCategory,products,menuOpen,setMenuOpen,setPage,sales,emailReceipt}){
+ const[catLevel,setCatLevel]=useState("root");
+ const[group,setGroup]=useState("");
+ const categoryTree={
+  "Accessories":["Car Door Visor","Car Floor Mats","Car Perfume","Number Plates","Wiper Car"],
+  "Car Detailing":["Exterior Detailing","Interior Detailing","Polishing"],
+  "Coating":["Glass Coating","Paint Coating","Ceramic Coating"],
+  "Installation Service":["Tint Installation","PPF Installation","Accessory Installation"],
+  "PPF":["Full Body PPF","Partial PPF","Headlamp PPF"],
+  "Tint":["Car Door Visor","Tinted Film","Windscreen","Security Film"],
+  "Wrapping":["Car Wrapping","Roof Wrapping","Interior Wrapping"]
+ };
+ const rootCats=Object.keys(categoryTree);
+ const visibleGroups=categoryTree[posCategory]||[];
+ const categoryProducts=products.filter(p=>posCategory==="All Categories"||p.category===posCategory||p.group===posCategory||(posCategory==="Tint"&&p.category==="Tinted Film")||(categoryTree[posCategory]||[]).includes(p.group));
+ const groupProducts=group?categoryProducts.filter(p=>(p.group||p.category||"")===group):categoryProducts;
+ const shown=catLevel==="root"?[]:catLevel==="group"?groupProducts:groupProducts;
+ const categoryTile=(name,i)=><button className="ar-category-tile" key={name} onClick={()=>{setPosCategory(name);setGroup("");setCatLevel("group")}}><div className="ar-cat-icon">{["▣","◈","✦","⚒","◆","◉","◇"][i%7]}</div><strong>{name}</strong></button>;
+ const quickProducts=catLevel==="group"?groupProducts:categoryProducts;
+ return <section className="ar-pos-shell">
+  <div className="ar-topbar">
+   <button className="ar-action"><span>⌕</span><b>Search</b></button><button className="ar-action"><span>♙</span><b>Customer</b></button><button className="ar-action"><span>⇄</span><b>Transfer</b></button><button className="ar-action"><span>%</span><b>Discount</b></button><button className="ar-action"><span>＋</span><b>New sale</b></button><button className="ar-action"><span>↶</span><b>Refund</b></button><button className="ar-action"><span>▤</span><b>Cash drawer</b></button><button className="ar-action"><span>F9</span><b>Save sale</b></button><button className="ar-action selected"><span>F10</span><b>Payment</b></button><button className="ar-action"><span>F12</span><b>Cash</b></button><button className="ar-action"><span>▣</span><b>Card</b></button><button className="ar-action"><span>▣</span><b>QR</b></button><button className="ar-action"><span>⇄</span><b>Bank Transfers</b></button><button className="ar-action"><span>▣</span><b>Check</b></button><button className="ar-action"><span>▣</span><b>Deposit</b></button><button className="ar-action"><span>▣</span><b>Unpaid</b></button>
+   <button className="ar-menu-btn" onClick={()=>setMenuOpen(!menuOpen)}>☰</button>
+  </div>
+  <div className="ar-main">
+   <div className="ar-order-panel"><div className="ar-order-tools"><button>× Delete</button><button>Quantity</button><button>---</button></div><div className="ar-order-items">{cart.map(i=><div className="ar-order-item" key={i.id}><span>＋</span><div><b>{i.name}</b><small>{i.code||"#1"} · {money(i.price)} × {i.qty}</small></div><strong>{i.qty}</strong></div>)}{!cart.length&&<div className="ar-no-items">No items</div>}</div><div className="ar-order-total"><span>Subtotal <b>{money(subtotal)}</b></span><span>Tax <b>{money(tax)}</b></span><strong>Total <b>{money(grand)}</b></strong></div><div className="ar-bottom-actions"><button>▣<small>Void order</small></button><button>♙<small>Lock</small></button><button>⇄<small>Repeat round</small></button></div></div>
+   <div className="ar-product-panel">
+    <div className="ar-search-row"><button onClick={()=>{setCatLevel("root");setGroup("");setPosCategory("All Categories")}}>✦</button><button onClick={()=>setQ("")}>▥</button><button>#</button><button>◆</button><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search products by name"/><span>⌕</span><span>⌨</span></div>
+    {catLevel==="root"&&<div className="ar-category-grid">{rootCats.map(categoryTile)}</div>}
+    {catLevel==="group"&&<div className="ar-grid-wrap"><button className="ar-back-tile" onClick={()=>{setCatLevel("root");setGroup("")}}>←<small>{posCategory}</small></button>{visibleGroups.map(g=><button className="ar-category-tile" key={g} onClick={()=>{setGroup(g);setCatLevel("items")}}><div className="ar-cat-icon">▣</div><strong>{g}</strong></button>)}</div>}
+    {catLevel==="items"&&<div className="ar-grid-wrap"><button className="ar-back-tile" onClick={()=>setCatLevel("group")}>←<small>{group}</small></button>{shown.map(p=><button className="ar-product-tile" key={p.id} onClick={()=>add(p)}><div className="ar-product-image">{p.image?<img src={p.image} alt=""/>:<span>SP</span>}</div><strong>{p.name}</strong><small>{money(p.price)}</small></button>)}</div>}
+    {catLevel==="items"&&!shown.length&&<Empty text="No products found in this category."/>}
+    <div className="ar-page-footer"><span>Page 1 / 1</span><span>⌂</span><span>│‹　‹　›　›│</span></div>
+   </div>
+  </div>
+  {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - Administrator <b>→</b></div><div className="ar-update">◔<b>Update is available</b><small>Click here to install new version</small></div>{[["⚒","Management","Dashboard"],["✓","View sales history","Payments"],["▱","View open sales","Named Order / Takeaway"],["↕","Cash In / Out","Payments"],["▤","Credit payments","Payments"],["⚑","End of day","X / Z Report"],["♙","User info","Users & Permissions"],["⇥","Sign out","POS / Sales"],["◉","Feedback","Settings"]].map(([ic,label,target])=><button key={label} onClick={()=>{setMenuOpen(false);setPage(target)}}><span>{ic}</span>{label}</button>)}<div className="ar-menu-date">13/09/2026</div><div className="ar-menu-footer">☷　 ⛶　 ◉</div></div>}
+ </section>
 }
 function Products({products,addProduct,updateProduct,editing,setEditing,categories,setCategories,setNotice}){
  const blank={code:"",barcode:"",name:"",category:"",group:"",price:0,cost:0,stock:0,reorder:5};
@@ -203,7 +236,7 @@ function Purchases({products,suppliers,receivePurchase,purchases}){
  const receive=()=>{const p=products.find(x=>x.id===+form.productId);if(!p)return;const qty=Math.max(1,+form.qty);receivePurchase(+form.supplierId,[{productId:p.id,qty}],qty*p.cost);};
  return <section className="content"><div className="grid2"><div className="panel"><h3>Purchase / Goods Received</h3><div className="formgrid"><select value={form.supplierId} onChange={e=>setForm({...form,supplierId:e.target.value})}>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><select value={form.productId} onChange={e=>setForm({...form,productId:e.target.value})}>{products.map(p=><option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}</select><input type="number" min="1" value={form.qty} onChange={e=>setForm({...form,qty:e.target.value})}/><button onClick={receive}>Receive Stock</button></div></div><div className="panel"><h3>Purchase History</h3><Table cols={["Document","Date","Supplier","Total","Status"]} rows={items.slice().reverse().map(x=>[x.no,new Date(x.date).toLocaleString(),suppliers.find(s=>s.id===x.supplierId)?.name||"-",money(x.total),x.status])}/></div></div></section>
 }
-function Payments({sales}){return <section className="content"><div className="panel"><h3>Payments</h3><Table cols={["Document","Date","Payment Type","Amount","Status"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Paid"])}/></div></section>}
+function Payments({sales,emailReceipt}){return <section className="content"><div className="panel"><div className="toolbar"><div><h3>Payments / Receipt</h3><small>Sales history, receipt PDF and customer email</small></div></div><Table cols={["Document","Date","Payment Type","Amount","Status","Receipt"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Paid",<span className="actions"><button onClick={()=>downloadReportPDF("Receipt-"+s.no,["Qty","Description","Amount"],s.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>PDF</button><button onClick={()=>emailReceipt(s)}>Email</button></span>])}/></div></section>}
 function RefundVoid({sales,refund,voidSale}){return <section className="content"><div className="panel"><h3>Refund / Void</h3><Table cols={["Document","Date","Total","Status","Action"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Completed",<span className="actions">{!s.refunded&&!s.voided&&<><button onClick={()=>refund(s.id)}>Refund</button><button onClick={()=>voidSale(s.id)}>Void</button></>}</span>])}/></div></section>}
 function Promotions({promos,savePromo}){const[form,setForm]=useState({name:"",type:"percent",value:5,active:true});return <section className="content"><div className="grid2"><div className="panel"><h3>Promotion / Discount Rule</h3><form className="formgrid" onSubmit={e=>{e.preventDefault();savePromo({...form,value:+form.value});setForm({name:"",type:"percent",value:5,active:true})}}><input value={form.name} placeholder="Promotion name" onChange={e=>setForm({...form,name:e.target.value})} required/><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="percent">Percent</option><option value="fixed">Fixed RM</option></select><input type="number" value={form.value} onChange={e=>setForm({...form,value:e.target.value})}/><label><input type="checkbox" checked={form.active} onChange={e=>setForm({...form,active:e.target.checked})}/> Active</label><button>Save Promotion</button></form></div><div className="panel"><h3>Promotion List</h3><Table cols={["Name","Type","Value","Active"]} rows={promos.map(p=>[p.name,p.type,p.type==="percent"?p.value+"%":money(p.value),p.active?"Yes":"No"])}/></div></div></section>}
 function Tax({rate,setRate}){const[v,setV]=useState(rate);return <section className="content"><div className="panel narrow"><h3>Tax Configuration</h3><p>Set the default tax rate applied to POS sales.</p><input type="number" value={v} min="0" onChange={e=>setV(e.target.value)}/><button onClick={()=>setRate(+v)}>Save Tax Rate</button></div></section>}
@@ -231,7 +264,7 @@ function buildSimplePDF(title,cols,rows){
  return new Blob([pdf],{type:"application/pdf"});
 }
 function downloadReportPDF(title,cols,rows){const blob=buildSimplePDF(title,cols,rows);const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=title.replace(/[^a-z0-9]+/gi,"-").toLowerCase()+".pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
-function Reports({sales,products,customers,purchases,businessDay,users}){
+function Reports({sales,products,customers,purchases,businessDay,users,suppliers}){
  const[report,setReport]=useState("Sales Daily Totals");
  const[fromDate,setFromDate]=useState("");const[toDate,setToDate]=useState("");
  const allValid=sales.filter(s=>!s.voided&&!s.refunded);
@@ -262,7 +295,7 @@ function Reports({sales,products,customers,purchases,businessDay,users}){
   if(report==="Sales Invoice List")return {cols:["Invoice","Date","Customer","Payment","Total","Status"],rows:sales.filter(inRange).map(s=>[s.no,new Date(s.date).toLocaleString(),customerName(s.customerId),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Completed"])};
   if(report==="Sales By Order Number")return {cols:["Order Number","Date","Customer","Total"],rows:valid.map(s=>[s.no,new Date(s.date).toLocaleString(),customerName(s.customerId),money(s.total)])};
   if(report==="Sales Hourly"||report==="Sales Hourly By Product Groups"){const map={};valid.forEach(s=>{const h=new Date(s.date).getHours().toString().padStart(2,"0")+":00";if(!map[h])map[h]={n:0,v:0};map[h].n++;map[h].v+=s.total});return {cols:["Hour","Transactions","Sales"],rows:Object.entries(map).sort().map(([h,x])=>[h,x.n,money(x.v)])};}
-  if(report.startsWith("Purchase")){if(report==="Purchase Suppliers")return {cols:["Supplier","Purchases","Amount"],rows:[...new Set(purchases.map(p=>p.supplierId))].map(id=>[id,purchases.filter(p=>p.supplierId===id).length,money(purchases.filter(p=>p.supplierId===id).reduce((a,p)=>a+p.total,0))])};if(report==="Purchase Products")return {cols:["Document","Product","Qty","Cost"],rows:purchases.flatMap(po=>po.items.map(i=>[po.no,productName(i.productId),i.qty,money(i.qty*(products.find(p=>p.id===i.productId)?.cost||0))]))};return {cols:["Document","Date","Amount","Status"],rows:purchases.map(p=>[p.no,new Date(p.date).toLocaleString(),money(p.total),p.status])};}
+  if(report.startsWith("Purchase")){if(report==="Purchase Suppliers")return {cols:["Supplier","Purchases","Amount"],rows:[...new Set(purchases.map(p=>p.supplierId))].map(id=>[suppliers.find(x=>x.id===id)?.name||String(id),purchases.filter(p=>p.supplierId===id).length,money(purchases.filter(p=>p.supplierId===id).reduce((a,p)=>a+p.total,0))])};if(report==="Purchase Products")return {cols:["Document","Product","Qty","Cost"],rows:purchases.flatMap(po=>po.items.map(i=>[po.no,productName(i.productId),i.qty,money(i.qty*(products.find(p=>p.id===i.productId)?.cost||0))]))};return {cols:["Document","Date","Amount","Status"],rows:purchases.map(p=>[p.no,new Date(p.date).toLocaleString(),money(p.total),p.status])};}
   if(report==="Profit Margin")return {cols:["Product","Qty","Sales","Gross Profit","Margin"],rows:products.map(p=>{const q=qtyByProduct(p),sv=q*p.price,pv=q*(p.price-p.cost),m=sv?pv/sv*100:0;return[p.name,q,money(sv),money(pv),m.toFixed(2)+"%"]})};
   if(report==="Finance Transaction History")return {cols:["Date","Type","Reference","Amount"],rows:[...valid.map(s=>[new Date(s.date).toLocaleString(),"Sale",s.no,money(s.total)]),...purchases.map(p=>[new Date(p.date).toLocaleString(),"Purchase",p.no,"- "+money(p.total)])].sort((a,b)=>new Date(b[0])-new Date(a[0]))};
   if(report==="Starting Cash")return {cols:["Business Day","Opening Cash","Status","Closed At"],rows:[[new Date().toLocaleDateString(),money(businessDay.openingCash||0),businessDay.open?"Open":"Closed",businessDay.closedAt?new Date(businessDay.closedAt).toLocaleString():"-"]]};
