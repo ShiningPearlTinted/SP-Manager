@@ -16,9 +16,14 @@ if not exist "%PS_EXE%" (
 )
 for /f "tokens=5" %%P in ('netstat -ano ^| findstr ":18765 .*LISTENING"') do set "PID_IN_USE=%%P"
 if defined PID_IN_USE (
- "%PS_EXE%" -NoProfile -Command "try{$r=Invoke-RestMethod 'http://127.0.0.1:18765/status' -TimeoutSec 3;Write-Host ('[OK] Agent already running. Version: '+$r.version);exit 0}catch{Write-Host '[ERROR] Port 18765 is in use by another program.';exit 2}"
+ echo [INFO] Port 18765 is currently in use by PID %PID_IN_USE%.
+ "%PS_EXE%" -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%PID_IN_USE%'; if($p){Write-Host ('[INFO] Process: '+$p.Name); Write-Host ('[INFO] Command: '+$p.CommandLine)}"
+ "%PS_EXE%" -NoProfile -Command "try{$r=Invoke-RestMethod 'http://127.0.0.1:18765/status' -TimeoutSec 3;Write-Host ('[OK] Agent already running. Version: '+$r.version);exit 0}catch{exit 1}"
+ if not errorlevel 1 goto READY
+ "%PS_EXE%" -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%PID_IN_USE%'; if($p -and (($p.CommandLine -match 'agent\\.ps1') -or ($p.CommandLine -match 'SP-Manager.*Agent'))){Write-Host '[INFO] Stale SP-Manager Agent process detected. Stopping it...'; Stop-Process -Id %PID_IN_USE% -Force; exit 0}else{Write-Host '[ERROR] Port 18765 is in use by another program.'; exit 2}"
  if errorlevel 2 goto END
- goto READY
+ timeout /t 1 /nobreak >nul
+ set "PID_IN_USE="
 )
 echo [INFO] Starting SP-Manager Local Agent without Node.js...
 start "SP-Manager Local Agent" /min "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%AGENT_DIR%agent.ps1" > "%LOG_DIR%\agent-console.log" 2>&1

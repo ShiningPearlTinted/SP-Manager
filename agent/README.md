@@ -1,4 +1,4 @@
-# SP-Manager Local Agent 1.0.12
+# SP-Manager Local Agent 1.0.13
 
 This Windows Local Agent does **not require Node.js**. It uses built-in Windows PowerShell and listens only on `127.0.0.1:18765`.
 
@@ -10,3 +10,7 @@ Endpoints:
 - POST `/print`
 - POST `/cash-drawer`
 - POST `/display`
+
+
+## Diagnostic
+Run `diagnose-agent.bat` to identify what is using port 18765. The installer automatically recovers a stale SP-Manager Agent process, but it will not terminate unrelated programs.
