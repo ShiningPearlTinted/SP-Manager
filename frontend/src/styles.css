@@ -242,3 +242,44 @@
 .inventory-empty{padding:55px;text-align:center;color:#98a2b3;font-size:12px}
 .inventory-modal-backdrop{position:fixed;inset:0;z-index:100002;background:rgba(15,23,42,.58);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px}.inventory-modal{width:min(1000px,96vw);max-height:92vh;overflow:hidden;background:#f5f7f9;border:1px solid #d8e0e7;border-radius:16px;box-shadow:0 30px 90px rgba(15,23,42,.3);display:flex;flex-direction:column}.inventory-modal.small{width:min(560px,96vw)}.inventory-modal.history{width:min(1000px,96vw)}.inventory-modal-head{padding:17px 20px;background:#fff;border-bottom:1px solid #e2e8ef;display:flex;justify-content:space-between;align-items:center}.inventory-modal-head h3{margin:4px 0 0;font-size:19px}.inventory-modal-head>button{border:0;width:34px;height:34px;border-radius:9px;background:#f1f4f7;color:#475467;font-size:22px}.inventory-modal-body{padding:18px 20px;overflow:auto}.inventory-modal-body label{display:block;font-size:10px;font-weight:700;color:#667085;margin-bottom:12px}.inventory-modal-body input,.inventory-modal-body select{width:100%;box-sizing:border-box;height:40px;margin-top:6px;border:1px solid #d5dee7;border-radius:8px;padding:8px 10px;background:#fff;color:#172033}.inventory-current{display:flex;justify-content:space-between;align-items:center;background:#edf7fb;border:1px solid #cceaf5;border-radius:9px;padding:12px 14px;margin:4px 0 14px;color:#667085;font-size:11px}.inventory-current b{font-size:18px;color:#087bab}.inventory-help{font-size:10px;color:#7a8797}.inventory-modal-foot{padding:13px 18px;background:#fff;border-top:1px solid #e2e8ef;display:flex;justify-content:flex-end;gap:8px}.inventory-modal-foot button{border:0;border-radius:8px;padding:10px 14px;background:#102a43;color:#fff;font-weight:700;font-size:10px}.inventory-modal-foot .secondary{background:#fff;color:#475467;border:1px solid #d5dee7}.inventory-count-table,.inventory-history-list{overflow:auto;flex:1}.inventory-count-table table,.inventory-history-list table{width:100%;border-collapse:collapse;font-size:10px;min-width:700px}.inventory-count-table th,.inventory-history-list th{position:sticky;top:0;background:#f8fafc;color:#667085;text-align:left;padding:10px;border-bottom:1px solid #dfe6ed}.inventory-count-table td,.inventory-history-list td{padding:8px 10px;border-bottom:1px solid #edf1f4;color:#475467}.inventory-count-table input{width:110px;height:34px;border:1px solid #d5dee7;border-radius:7px;padding:5px 8px}.inventory-history-list{padding:0 18px 12px}.inventory-history-list table{min-width:800px}
 @media(max-width:1100px){.inventory-summary{grid-template-columns:repeat(3,1fr)}.inventory-total{grid-column:1/-1;align-items:flex-start;text-align:left}.inventory-shell{grid-template-columns:190px 1fr}.inventory-actions button{min-width:50px}}@media(max-width:750px){.inventory-modern{padding:12px}.inventory-topbar{display:block}.inventory-actions{margin-top:12px;justify-content:flex-start}.inventory-summary{grid-template-columns:1fr 1fr}.inventory-total{grid-column:1/-1}.inventory-shell{grid-template-columns:1fr}.inventory-tree{border-right:0;border-bottom:1px solid #e5eaf0;display:flex;overflow:auto}.inventory-tree .tree-title{display:none}.inventory-tree .tree-item{min-width:125px}.inventory-footer{justify-content:flex-start;overflow:auto;gap:18px}}
+
+/* INTERNAL MANAGEMENT TREE FIX - LOCKED
+   The global `aside` rule is reserved for the main SP-Manager navigation.
+   Product/Inventory trees are normal grid columns and must never become fixed overlays. */
+.inventory-shell > aside.inventory-tree,
+.product-master-shell > aside.product-tree{
+  position:static!important;
+  top:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  right:auto!important;
+  width:auto!important;
+  height:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  padding:10px 8px!important;
+  margin:0!important;
+  background:#f8fafc!important;
+  color:#344054!important;
+  overflow:auto!important;
+  z-index:auto!important;
+  box-shadow:none!important;
+}
+.inventory-shell > aside.inventory-tree{
+  border-right:1px solid #e5eaf0!important;
+}
+.product-master-shell > aside.product-tree{
+  border-right:1px solid #e1e7ee!important;
+}
+.inventory-shell > aside.inventory-tree button,
+.product-master-shell > aside.product-tree button{
+  position:static!important;
+  width:100%!important;
+  margin:2px 0!important;
+  box-sizing:border-box!important;
+}
+.inventory-shell > aside.inventory-tree .tree-title,
+.product-master-shell > aside.product-tree .tree-title{
+  width:auto!important;
+  margin:0!important;
+}
