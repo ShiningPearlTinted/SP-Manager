@@ -257,7 +257,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  </section>
 }
 function Card({t,v}){return <div className="card"><small>{t}</small><strong>{v}</strong></div>}
-function POS({filtered,q,setQ,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt}){
+function POS({filtered,q,setQ,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,discountFixed,setDiscountFixed,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt}){
  const[catLevel,setCatLevel]=useState("root");
  const[group,setGroup]=useState("");
  const[showCustomer,setShowCustomer]=useState(false);
