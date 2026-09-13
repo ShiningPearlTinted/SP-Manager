@@ -102,18 +102,40 @@ function App(){
  const add=p=>setCart(c=>{const old=c.find(x=>x.id===p.id);const qty=(old?.qty||0)+1;const price=promotionPrice(p,qty);return old?c.map(x=>x.id===p.id?{...x,qty,price}:x):[...c,{...p,qty,originalPrice:p.price,price}]} );
  const changeQty=(id,d)=>setCart(c=>c.flatMap(x=>{if(x.id!==id)return [x];const qty=x.qty+d;if(qty<=0)return [];const base=products.find(p=>p.id===id)||x;return [{...x,qty,price:promotionPrice(base,qty),originalPrice:base.price}]}));
 
- const completeSale=()=>{
+ const completeSale=(paymentInfo={})=>{
   if(!cart.length)return setNotice("The cart is empty.");
-  const pt=paymentTypes.find(x=>x.name===payment)||paymentTypes[0];
-  if(pt?.customerRequired&&!customer)return setNotice("Please select a customer for this payment type.");
-  const sale={id:uid(),no:"INV-"+String(uid()).slice(-8),date:new Date().toISOString(),customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment:pt?.name||payment,paymentTypeId:pt?.id,paid:Boolean(pt?.markPaid),paymentAmount:grand,voided:false,refunded:false};
+  const primaryName=paymentInfo.payment||payment;
+  const primary=paymentTypes.find(x=>x.name===primaryName)||paymentTypes.find(x=>x.enabled)||paymentTypes[0];
+  if(primary?.customerRequired&&!customer)return setNotice("Please select a customer for this payment type.");
+  const paidAmount=Number(paymentInfo.paidAmount??(primary?.markPaid?grand:0));
+  const payments=(paymentInfo.payments&&paymentInfo.payments.length)?paymentInfo.payments.map(x=>({...x,amount:Number(x.amount||0)})):[{paymentTypeId:primary?.id,payment:primary?.name||primaryName,amount:paidAmount,paid:Boolean(primary?.markPaid)}];
+  const allPaid=payments.every(x=>paymentTypes.find(pt=>pt.id===x.paymentTypeId)?.markPaid!==false)&&paidAmount>=grand;
+  const customerObj=customers.find(c=>c.id===customer);
+  const dueDays=Number(customerObj?.dueDatePeriod||0);
+  const dueDate=new Date(Date.now()+dueDays*86400000).toISOString();
+  const sale={id:uid(),no:"INV-"+String(uid()).slice(-8),date:new Date().toISOString(),dueDate,customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment:payments.length>1?"Split payment":(primary?.name||primaryName),paymentTypeId:primary?.id,paid:allPaid,paymentAmount:paidAmount,change:Math.max(0,paidAmount-grand),payments,voided:false,refunded:false,note:""};
   const ns=[...sales,sale];
   const np=products.map(p=>{const i=cart.find(x=>x.id===p.id);return i?{...p,stock:Math.max(0,p.stock-i.qty)}:p});
   persist("sales",ns,setSales);persist("products",np,setProducts);recordStockHistory(cart.map(i=>({id:uid(),date:new Date().toISOString(),productId:i.id,productName:i.name,code:i.code||"",type:"Sale",change:-Number(i.qty),quantityAfter:Number(products.find(p=>p.id===i.id)?.stock||0)-Number(i.qty),reference:sale.no})));
-  const nc=customers.map(c=>c.id===customer?{...c,visits:c.visits+1,spend:c.spend+grand}:c);
+  const nc=customers.map(c=>c.id===customer?{...c,visits:c.visits+1,spend:c.spend+(allPaid?grand:0)}:c);
   persist("customers",nc,setCustomers);
   setLastSale(sale);
   setCart([]);setDiscount(0);setNotice("Sale completed successfully: "+sale.no+" — "+money(grand));setPage("POS / Sales");
+ };
+ const saveOpenOrder=({newSale=false}={})=>{
+  if(!cart.length){if(newSale){setNotice("There is no active sale to save.");}return;}
+  const order={id:uid(),name:"Order "+String(uid()).slice(-6),date:new Date().toISOString(),customerId:customer,items:cart,discount:Number(discount||0),taxRate:Number(taxRate||0),status:"Open",confirmed:true};
+  const next=[...orders,order];persist("orders",next,setOrders);setCart([]);setDiscount(0);setNotice("Sale saved successfully: "+order.name);setPage("POS / Sales");
+ };
+ const clearCurrentSale=()=>{setCart([]);setDiscount(0);setNotice("Current sale cleared.");};
+ const updateSaleNote=(sale,note)=>{
+  const next=sales.map(x=>x.id===sale.id?{...x,note}:x);persist("sales",next,setSales);setLastSale({...sale,note});
+ };
+ const cashDrawer=()=>setNotice("Cash drawer command sent. A physical drawer requires a configured POS printer/cash-drawer connection.");
+ const printReceipt=(sale)=>{
+  const c=customers.find(x=>x.id===sale.customerId);const rows=(sale.items||[]).map(i=>`<tr><td>${Number(i.qty||0)}</td><td>${String(i.name||"")}</td><td style="text-align:right">RM${(Number(i.price||0)*Number(i.qty||0)).toFixed(2)}</td></tr>`).join("");
+  const w=window.open("","_blank","width=420,height=720");if(!w){alert("Please allow pop-ups to print the receipt.");return}
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${sale.no}</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:18px;color:#111}h2{text-align:center;margin:0 0 4px}.head{text-align:center;border-bottom:1px dashed #555;padding-bottom:10px;margin-bottom:10px}.meta{line-height:1.5}table{width:100%;border-collapse:collapse;margin-top:12px}td{padding:4px 0;border-bottom:1px dotted #bbb}.total{font-size:15px;font-weight:700;text-align:right;margin-top:10px}.foot{text-align:center;margin-top:18px}</style></head><body><div class="head"><h2>${company?.name||"Shining Pearl Tinted"}</h2><div>${company?.phoneNumber||""}</div></div><div class="meta">Receipt: <b>${sale.no}</b><br>Date: ${new Date(sale.date).toLocaleString()}<br>Customer: ${c?.name||"Walk-in Customer"}</div><table>${rows}</table><div class="total">Total: RM${Number(sale.total||0).toFixed(2)}<br>Payment: ${sale.payment||"Cash"}<br>Paid: RM${Number(sale.paymentAmount||0).toFixed(2)}<br>Change: RM${Number(sale.change||0).toFixed(2)}</div><div class="foot">Thank you</div><script>window.onload=()=>setTimeout(()=>window.print(),200)</script></body></html>`);w.document.close();
  };
  const refund=id=>{
   const s=sales.find(x=>x.id===id);if(!s||s.refunded||s.voided)return;
@@ -155,7 +177,7 @@ function App(){
   <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className="day">● {businessDay.open?"Business Day Open":"Closed"}</span><span>● Online</span></div></header>
    {notice&&<div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
-   {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} categories={categories} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
+   {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
    {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} setNotice={setNotice}/>}
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} sales={sales}/>}
@@ -172,7 +194,6 @@ function App(){
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={o=>{persist("orders",o,setOrders);setNotice("Order saved successfully.")}} customers={customers}/>}
    {page==="My company"&&<MyCompany company={company} setCompany={v=>{persist("company",v,setCompany);setNotice("Company data saved successfully.")}}/>}
    {page==="Settings"&&<Settings businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}}/>}
-   {lastSale&&<div className="receipt-modal-backdrop"><div className="receipt-modal"><div className="receipt-head"><div><small>SHINING PEARL TINTED</small><h2>Sales Receipt</h2></div><button onClick={()=>setLastSale(null)}>×</button></div><div className="receipt-meta"><span>Receipt <b>{lastSale.no}</b></span><span>{new Date(lastSale.date).toLocaleString()}</span></div><Table cols={["Qty","Description","Amount"]} rows={lastSale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)])}/><div className="receipt-total"><span>Total <b>{money(lastSale.total)}</b></span><span>Payment <b>{lastSale.payment}</b></span></div><div className="receipt-actions"><button onClick={()=>printInvoice(lastSale,company,customers)}>Print Invoice</button><button onClick={()=>downloadReportPDF("Receipt-"+lastSale.no,["Qty","Description","Amount"],lastSale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>Download PDF</button><button onClick={()=>emailReceipt(lastSale)}>Email Receipt</button><button className="secondary" onClick={()=>setLastSale(null)}>Close</button></div><p className="muted">Email Receipt opens the customer email application with the receipt details and creates the PDF for attachment.</p></div></div>}
   </main>
  </div>
 }
@@ -235,39 +256,93 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  </section>
 }
 function Card({t,v}){return <div className="card"><small>{t}</small><strong>{v}</strong></div>}
-function POS({filtered,q,setQ,add,cart,changeQty,customers,customer,setCustomer,discount,setDiscount,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,categories,posCategory,setPosCategory,products,company,menuOpen,setMenuOpen,setPage,sales,emailReceipt}){
+function POS({filtered,q,setQ,add,cart,changeQty,customers,customer,setCustomer,discount,setDiscount,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt}){
  const[catLevel,setCatLevel]=useState("root");
  const[group,setGroup]=useState("");
  const[showCustomer,setShowCustomer]=useState(false);
- const[showPayment,setShowPayment]=useState(false);
+ const[paymentScreen,setPaymentScreen]=useState(false);
+ const[splitScreen,setSplitScreen]=useState(false);
+ const[discountScreen,setDiscountScreen]=useState(false);
+ const[transferScreen,setTransferScreen]=useState(false);
+ const[savedScreen,setSavedScreen]=useState(false);
+ const[paidAmount,setPaidAmount]=useState(0);
+ const[splitPayments,setSplitPayments]=useState([]);
+ const[splitType,setSplitType]=useState(paymentTypes.find(x=>x.enabled)?.name||"Cash");
+ const[splitAmount,setSplitAmount]=useState(0);
+ const[discountMode,setDiscountMode]=useState("percent");
+ const[discountValue,setDiscountValue]=useState(discount||0);
+ const[transferSelection,setTransferSelection]=useState(()=>new Set());
+ const[noticeLocal,setNoticeLocal]=useState("");
  const defaultPayment=paymentTypes.filter(x=>x.enabled).sort((a,b)=>a.position-b.position)[0];
- useEffect(()=>{const onKey=e=>{if(!e.ctrlKey)return;const key=e.key.toUpperCase();const pt=paymentTypes.find(x=>x.enabled&&x.shortcutKey&&x.shortcutKey.toUpperCase()===key);if(pt){e.preventDefault();setPayment(pt.name);setShowPayment(true)}};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[paymentTypes,setPayment]);
+ const enabledPayments=paymentTypes.filter(x=>x.enabled).sort((a,b)=>a.position-b.position);
+ const totalPaid=splitPayments.reduce((a,x)=>a+Number(x.amount||0),0);
+ const paymentRemaining=Math.max(0,grand-totalPaid);
+ useEffect(()=>{if(paymentScreen)setPaidAmount(paymentTypes.find(x=>x.name===payment)?.markPaid===false?0:grand)},[paymentScreen,grand,payment,paymentTypes]);
+ useEffect(()=>{const onKey=e=>{
+   if(e.key==="F10"){e.preventDefault();if(cart.length)setPaymentScreen(true);return}
+   if(e.key==="F12"){e.preventDefault();if(cart.length){const pt=defaultPayment;setPayment(pt?.name||payment);sale({payment:pt?.name||payment,paidAmount:grand});}return}
+   if(e.key==="F9"){e.preventDefault();saveOpenOrder();return}
+   if(e.key==="F8"){e.preventDefault();saveOpenOrder({newSale:true});return}
+   if(e.key==="F2"){e.preventDefault();setDiscountValue(discount||0);setDiscountScreen(true);return}
+   if(e.key==="F4"){e.preventDefault();if(cart.length){const i=cart[cart.length-1];const v=window.prompt("Quantity",String(i.qty));const n=Number(v);if(n>0)changeQty(i.id,n-i.qty)}return}
+   if(e.ctrlKey&&e.key.toLowerCase()==="d"){e.preventDefault();setNoticeLocal("Cash drawer command sent.");return}
+   if(e.key==="Escape"){setPaymentScreen(false);setSplitScreen(false);setDiscountScreen(false);setTransferScreen(false);setSavedScreen(false)}
+   if(!e.ctrlKey)return;const key=e.key.toUpperCase();const pt=paymentTypes.find(x=>x.enabled&&x.shortcutKey&&x.shortcutKey.toUpperCase()===key);if(pt){e.preventDefault();setPayment(pt.name);setPaymentScreen(true)}
+ };window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[cart,defaultPayment,payment,sale,saveOpenOrder,paymentTypes,changeQty,grand]);
  const rootCats=categories.length?categories:["Accessories","Car Detailing","Coating","Installation Service","PPF","Tint","Wrapping"];
- const categoryProducts=products.filter(p=>{
-  if(posCategory==="All Categories") return true;
-  return (p.category||p.group||"")===posCategory || (p.group||"")===posCategory;
- });
+ const categoryProducts=products.filter(p=>posCategory==="All Categories"||(p.category||p.group||"")===posCategory||(p.group||"")===posCategory);
  const groups=[...new Set(categoryProducts.map(p=>p.group||p.category).filter(Boolean))];
  const groupProducts=group?categoryProducts.filter(p=>(p.group||p.category||"")===group):categoryProducts;
  const shown=groupProducts;
- const iconFor=(name)=>({"Accessories":"🧰","Car Detailing":"✨","Coating":"◈","Installation Service":"🛠","PPF":"◆","Tint":"◉","Wrapping":"◇","Windscreen":"▱","Glass":"◫","Security":"⬡","Protection":"✦"}[name]||"✦");
- const categoryTile=(name)=><button className="ar-category-tile" key={name} onClick={()=>{setPosCategory(name);setGroup("");setCatLevel("group")}}><div className="ar-cat-icon"><span>{iconFor(name)}</span></div><strong>{name}</strong><small>{products.filter(p=>(p.category||p.group)===name).length} products</small></button>;
- const groupTile=(name)=><button className="ar-category-tile ar-group-tile" key={name} onClick={()=>{setGroup(name);setCatLevel("items")}}><div className="ar-cat-icon"><span>{iconFor(name)}</span></div><strong>{name}</strong><small>{categoryProducts.filter(p=>(p.group||p.category)===name).length} products</small></button>;
+ const iconFor=name=>({"Accessories":"🧰","Car Detailing":"✨","Coating":"◈","Installation Service":"🛠","PPF":"◆","Tint":"◉","Wrapping":"◇","Windscreen":"▱","Glass":"◫","Security":"⬡","Protection":"✦"}[name]||"✦");
+ const applyDiscount=()=>{
+   const n=Math.max(0,Number(discountValue||0));
+   if(discountMode==="percent")setDiscount(Math.min(100,n));
+   else {const pct=subtotal>0?(n/subtotal)*100:0;setDiscount(Math.min(100,pct));}
+   setDiscountScreen(false);
+ };
+ const startPayment=()=>{if(!cart.length){setNoticeLocal("Add at least one item before payment.");return}setPaidAmount(paymentTypes.find(x=>x.name===payment)?.markPaid===false?0:grand);setSplitPayments([]);setPaymentScreen(true)};
+ const finishPayment=()=>{
+   const pt=paymentTypes.find(x=>x.name===payment)||defaultPayment;
+   const amount=splitPayments.length?totalPaid:Number(paidAmount||0);
+   if(pt?.markPaid!==false && !splitPayments.length && amount<grand){setNoticeLocal("Paid amount is less than the total. Enter the amount received or use Split payments.");return}
+   if(splitPayments.length && totalPaid<grand && pt?.markPaid!==false){setNoticeLocal("Split payment is incomplete. Remaining: "+money(paymentRemaining));return}
+   if(!splitPayments.length && pt?.changeAllowed===false && amount>grand){setNoticeLocal("This payment type does not allow change.");return} const payments=splitPayments.length?splitPayments:[{paymentTypeId:pt?.id,payment:pt?.name||payment,amount,paid:Boolean(pt?.markPaid)}];
+   sale({payment:pt?.name||payment,paidAmount:amount,payments});setPaymentScreen(false);setSplitScreen(false);
+ };
+ const addSplit=()=>{const n=Math.min(Number(splitAmount||0),paymentRemaining);if(n<=0)return;const pt=paymentTypes.find(x=>x.name===splitType);setSplitPayments(a=>[...a,{paymentTypeId:pt?.id,payment:splitType,amount:n,paid:Boolean(pt?.markPaid)}]);setSplitAmount(Math.max(0,paymentRemaining-n))};
+ const quickPay=pt=>{if(!cart.length)return;setPayment(pt.name);sale({payment:pt.name,paidAmount:pt.markPaid?grand:0,payments:[{paymentTypeId:pt.id,payment:pt.name,amount:pt.markPaid?grand:0,paid:Boolean(pt.markPaid)}]})};
+ const saveAndNew=()=>{saveOpenOrder({newSale:true});setCatLevel("root");setGroup("");setPosCategory("All Categories");setQ("")};
+ const categoryTile=name=><button className="ar-category-tile" key={name} onClick={()=>{setPosCategory(name);setGroup("");setCatLevel("group")}}><div className="ar-cat-icon"><span>{iconFor(name)}</span></div><strong>{name}</strong><small>{products.filter(p=>(p.category||p.group)===name).length} products</small></button>;
+ const groupTile=name=><button className="ar-category-tile ar-group-tile" key={name} onClick={()=>{setGroup(name);setCatLevel("items")}}><div className="ar-cat-icon"><span>{iconFor(name)}</span></div><strong>{name}</strong><small>{categoryProducts.filter(p=>(p.group||p.category)===name).length} products</small></button>;
+ const selectedTransfer=cart.filter(i=>transferSelection.has(i.id));
+ const makeTransfer=()=>{if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")};
  return <section className="ar-pos-shell">
   <div className="ar-topbar">
-   {[['⌕','Search'],['♙','Customer'],['⇄','Transfer'],['%','Discount'],['＋','New sale'],['↶','Refund'],['▤','Cash drawer'],['F9','Save sale'],['F10','Payment'],...paymentTypes.filter(x=>x.enabled&&x.quickPayment).sort((a,b)=>a.position-b.position).map(x=>['▣',x.name===defaultPayment?.name?'F12 '+x.name:x.name])].map(([ic,label],i)=><button key={label} className={'ar-action '+(label==='Payment'?'selected':'')} onClick={()=>{if(label==='Search')document.querySelector('.ar-search-input')?.focus();if(label==='Customer')setShowCustomer(true);if(label==='New sale'){setQ('');setPosCategory('All Categories');setGroup('');setCatLevel('root')}if(label==='Refund')setPage('Refund / Void');if(label==='Cash drawer')setPage('Payments');if(label==='Save sale')setPage('Named Order / Takeaway');const paymentLabel=label.replace(/^F12 /,'');if(paymentTypes.some(x=>x.name===paymentLabel)){setPayment(paymentLabel);setShowPayment(true)}}}><span>{ic}</span><b>{label==='Save sale'?'F9 Save sale':label==='Payment'?'F10 Payment':label==='Cash'?'F12 Cash':label}</b></button>)}
+   {[['⌕','Search'],['♙','Customer'],['⇄','Transfer'],['%','Discount'],['＋','New sale'],['↶','Refund'],['▤','Cash drawer'],['F9','Save sale'],['F10','Payment'],...enabledPayments.filter(x=>x.quickPayment).map(x=>['▣',x.name===defaultPayment?.name?'F12 '+x.name:x.name])].map(([ic,label])=><button key={label} className={'ar-action '+(label==='F10 Payment'?'selected':'')} onClick={()=>{
+     if(label==='Search'){document.querySelector('.ar-search-input')?.focus();return}
+     if(label==='Customer'){setShowCustomer(true);return}
+     if(label==='Transfer'){setTransferSelection(new Set());setTransferScreen(true);return}
+     if(label==='Discount'){setDiscountValue(discount||0);setDiscountScreen(true);return}
+     if(label==='New sale'){saveAndNew();return}
+     if(label==='Refund'){setPage('Refund / Void');return}
+     if(label==='Cash drawer'){setNoticeLocal("Cash drawer command sent. A physical drawer requires a configured POS printer/cash-drawer connection.");return}
+     if(label==='Save sale'){saveOpenOrder();return}
+     if(label==='Payment'||label==='F10 Payment'){startPayment();return}
+     const paymentLabel=label.replace(/^F12 /,'');const pt=enabledPayments.find(x=>x.name===paymentLabel);if(pt)quickPay(pt);
+   }}><span>{ic}</span><b>{label==='Save sale'?'F9 Save sale':label==='Payment'?'F10 Payment':label==='Cash'?'F12 Cash':label}</b></button>)}
    <button className="ar-menu-btn" onClick={()=>setMenuOpen(!menuOpen)}>☰</button>
   </div>
   <div className="ar-main">
    <div className="ar-order-panel">
-    <div className="ar-order-tools"><button onClick={()=>cart.length&&changeQty(cart[cart.length-1].id,-cart[cart.length-1].qty)}>× Delete</button><button>Quantity</button><button>---</button></div>
+    <div className="ar-order-tools"><button onClick={()=>{if(cart.length)changeQty(cart[cart.length-1].id,-cart[cart.length-1].qty)}}>× Delete</button><button onClick={()=>{if(cart.length){const i=cart[cart.length-1];const v=window.prompt("Quantity",String(i.qty));const n=Number(v);if(n>0)changeQty(i.id,n-i.qty)}}}>Quantity</button><button onClick={()=>{if(cart.length)setNoticeLocal("Select an item and use Repeat round to add another quantity.")}}>↻</button></div>
     <div className="ar-order-customer"><span>Customer</span><button onClick={()=>setShowCustomer(true)}>{customers.find(c=>c.id===customer)?.name||'Walk-in Customer'} <b>⌄</b></button></div>
     <div className="ar-order-items">{cart.map(i=><div className="ar-order-item" key={i.id}><button className="ar-item-plus" onClick={()=>add(i)}>＋</button><div><b>{i.name}</b><small>{i.code||'—'} · {money(i.price)} × {i.qty}</small></div><strong>{money(i.price*i.qty)}</strong></div>)}{!cart.length&&<div className="ar-no-items"><span>🛒</span><b>No items</b><small>Select a category or search for a product</small></div>}</div>
     <div className="ar-order-total"><span>Subtotal <b>{money(subtotal)}</b></span><span>Discount <b>{money(disc)}</b></span><span>Tax <b>{money(tax)}</b></span><strong>Total <b>{money(grand)}</b></strong></div>
-    <div className="ar-bottom-actions"><button onClick={()=>setPage('Refund / Void')}>▣<small>Void order</small></button><button onClick={()=>setMenuOpen(true)}>♙<small>Lock</small></button><button onClick={()=>{setQ('');setPosCategory('All Categories');setGroup('');setCatLevel('root')}}>⇄<small>Repeat round</small></button></div>
+    <div className="ar-bottom-actions"><button onClick={()=>{if(cart.length)clearCurrentSale();}}>▣<small>Void order</small></button><button onClick={()=>setNoticeLocal("Lock sale: current order can be held as an open sale using F9 Save sale.")}>♙<small>Lock</small></button><button onClick={()=>{if(cart.length){const i=cart[cart.length-1];add(products.find(p=>p.id===i.id)||i);}}}>⇄<small>Repeat round</small></button></div>
    </div>
    <div className="ar-product-panel">
-    <div className="ar-search-row"><button className="home-search" onClick={()=>{setCatLevel('root');setGroup('');setPosCategory('All Categories')}}>✦</button><button onClick={()=>setQ('')}>▥</button><button>#</button><button>◆</button><input className="ar-search-input" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search products by name, code or barcode"/><span>⌕</span><span>⌨</span></div>
+    <div className="ar-search-row"><button className="home-search" onClick={()=>{setCatLevel('root');setGroup('');setPosCategory('All Categories')}}>✦</button><button onClick={()=>setQ('')}>▥</button><button onClick={()=>setQ(q.replace(/\D/g,''))}>#</button><button onClick={()=>setQ(q)}>◆</button><input className="ar-search-input" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search products by name, code or barcode"/><span>⌕</span><span>⌨</span></div>
     {q&&<div className="ar-search-hint">{filtered.length} product(s) found</div>}
     {catLevel==='root'&&<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Categories</strong></div><div className="ar-category-grid">{rootCats.map(categoryTile)}</div></>}
     {catLevel==='group'&&<><div className="ar-breadcrumb"><button onClick={()=>{setCatLevel('root');setGroup('');setPosCategory('All Categories')}}>Products</button><b>›</b><strong>{posCategory}</strong></div><div className="ar-grid-wrap">{groups.length?groups.map(groupTile):<Empty text="No groups found in this category."/>}</div></>}
@@ -278,7 +353,13 @@ function POS({filtered,q,setQ,add,cart,changeQty,customers,customer,setCustomer,
   </div>
   {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - Administrator <b onClick={()=>setMenuOpen(false)}>→</b></div><div className="ar-update"><span>◔</span><b>Update is available</b><small>Click here to install new version</small></div>{[['⚒','Management','Dashboard'],['✓','View sales history','Payments'],['▱','View open sales','Named Order / Takeaway'],['↕','Cash In / Out','Payments'],['▤','Credit payments','Payments'],['⚑','End of day','X / Z Report'],['♙','User info','Users & Permissions'],['⇥','Sign out','POS / Sales'],['◉','Feedback','Settings']].map(([ic,label,target])=><button key={label} onClick={()=>{setMenuOpen(false);setPage(target)}}><span>{ic}</span>{label}</button>)}<div className="ar-menu-date">{new Date().toLocaleDateString('en-GB')}</div><div className="ar-menu-footer">☷　 ⛶　 ◉</div></div>}
   {showCustomer&&<div className="ar-modal-backdrop" onMouseDown={()=>setShowCustomer(false)}><div className="ar-modal" onMouseDown={e=>e.stopPropagation()}><div className="ar-modal-head"><div><small>POS CUSTOMER</small><h3>Select Customer</h3></div><button onClick={()=>setShowCustomer(false)}>×</button></div><div className="ar-customer-list">{customers.map(c=><button key={c.id} className={c.id===customer?'chosen':''} onClick={()=>{setCustomer(c.id);setShowCustomer(false)}}><span>♙</span><div><b>{c.name}</b><small>{c.phone} · {c.email}</small></div><strong>{c.id===customer?'✓':''}</strong></button>)}</div></div></div>}
-  {showPayment&&<div className="ar-modal-backdrop" onMouseDown={()=>setShowPayment(false)}><div className="ar-modal payment-modal" onMouseDown={e=>e.stopPropagation()}><div className="ar-modal-head"><div><small>PAYMENT</small><h3>{money(grand)}</h3></div><button onClick={()=>setShowPayment(false)}>×</button></div><div className="payment-methods">{paymentTypes.filter(x=>x.enabled).sort((a,b)=>a.position-b.position).map(x=><button className={payment===x.name?'chosen':''} key={x.id} onClick={()=>{setPayment(x.name)}}>{x.name}<small>{payment===x.name?"Selected":x.markPaid?"Paid":"Credit / Unpaid"}</small></button>)}</div><div className="payment-rule"><span>Selected: <b>{payment}</b></span><span>{paymentTypes.find(x=>x.name===payment)?.changeAllowed?"Change allowed":"No change"}</span></div><button className="payment-complete" onClick={()=>{setShowPayment(false);sale()}}>Complete Sale</button></div></div>}
+  {discountScreen&&<div className="ar-modal-backdrop" onMouseDown={()=>setDiscountScreen(false)}><div className="ar-modal discount-screen" onMouseDown={e=>e.stopPropagation()}><div className="ar-modal-head"><div><small>DISCOUNT</small><h3>Apply discount</h3></div><button onClick={()=>setDiscountScreen(false)}>×</button></div><div className="discount-toggle"><button className={discountMode==='percent'?'chosen':''} onClick={()=>setDiscountMode('percent')}>Percentage %</button><button className={discountMode==='fixed'?'chosen':''} onClick={()=>setDiscountMode('fixed')}>Fixed RM</button></div><label className="payment-field">Value<input autoFocus type="number" min="0" step="0.01" value={discountValue} onChange={e=>setDiscountValue(e.target.value)}/></label><div className="payment-summary"><span>Subtotal <b>{money(subtotal)}</b></span><span>Current discount <b>{money(disc)}</b></span></div><div className="modal-actions"><button className="secondary" onClick={()=>setDiscountScreen(false)}>Cancel</button><button onClick={applyDiscount}>Apply</button></div></div></div>}
+  {transferScreen&&<div className="ar-modal-backdrop" onMouseDown={()=>setTransferScreen(false)}><div className="ar-modal transfer-screen" onMouseDown={e=>e.stopPropagation()}><div className="ar-modal-head"><div><small>TRANSFER / SPLIT ORDER</small><h3>Select items to transfer</h3></div><button onClick={()=>setTransferScreen(false)}>×</button></div><div className="transfer-items">{cart.map(i=><label key={i.id}><input type="checkbox" checked={transferSelection.has(i.id)} onChange={e=>setTransferSelection(a=>{const n=new Set(a);e.target.checked?n.add(i.id):n.delete(i.id);return n})}/><span>{i.name}</span><b>{i.qty} × {money(i.price)}</b></label>)}</div><div className="modal-actions"><button className="secondary" onClick={()=>setTransferScreen(false)}>Cancel</button><button onClick={makeTransfer}>Transfer selected</button></div></div></div>}
+  {paymentScreen&&<div className="ar-payment-screen"><div className="ar-payment-header"><div><span>Items</span><small>{cart.length} item line(s)</small></div><div className="payment-screen-actions"><button onClick={()=>setPaymentScreen(false)}>✕ Cancel</button><button onClick={()=>setTaxRate(Number(prompt("Tax rate (%)",String(taxRate)))||0)}>⌁ Taxes</button><button onClick={()=>setDiscountScreen(true)}>% Discount</button><button onClick={()=>setNoticeLocal("Rounds selection is available when a sale contains multiple rounds.")}>▱ Rounds</button><button onClick={()=>setShowCustomer(true)}>♙ Customer</button></div></div><div className="ar-payment-body"><aside className="payment-type-column"><h3>Payment type</h3>{enabledPayments.map(x=><button className={payment===x.name?'chosen':''} key={x.id} onClick={()=>{setPayment(x.name);setPaidAmount(x.markPaid?grand:0)}}>{x.name}</button>)}<button className="split-button" onClick={()=>{setSplitScreen(true);setSplitType(payment);setSplitAmount(paymentRemaining)}}>☷ Split payments</button></aside><main className="payment-main"><div className="payment-total-line"><span>Total:</span><b>{money(grand)}</b></div><label className="paid-entry">Paid:<input autoFocus type="number" min="0" step="0.01" value={paidAmount} onChange={e=>setPaidAmount(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')finishPayment()}}/><span>↗</span></label><div className="payment-rule-line"><span>Selected: <b>{payment}</b></span><span>{paymentTypes.find(x=>x.name===payment)?.changeAllowed?'Change allowed':'No change'}</span></div><div className="change-display"><span>Change:</span><b>{money(Math.max(0,Number(paidAmount||0)-grand))}</b></div><div className="payment-items-preview">{cart.map(i=><div key={i.id}><span>{i.qty} × {i.name}</span><b>{money(i.price*i.qty)}</b></div>)}</div><button className="payment-complete ar-green" onClick={finishPayment}>OK / Complete payment</button></main><div className="payment-numpad">{['1','2','3','⌫','4','5','6','C','7','8','9','↵','-','0','.',''].map((k,i)=><button key={i} onClick={()=>{if(!k)return;if(k==='C')setPaidAmount(0);else if(k==='⌫')setPaidAmount(String(paidAmount).slice(0,-1));else if(k==='↵')finishPayment();else setPaidAmount(String(paidAmount||'')+k)}}>{k}</button>)}</div></div></div></div>}
+  {splitScreen&&<div className="ar-modal-backdrop"><div className="ar-modal split-payment-modal" onMouseDown={e=>e.stopPropagation()}><div className="ar-modal-head"><div><small>SPLIT PAYMENTS</small><h3>{money(grand)}</h3></div><button onClick={()=>setSplitScreen(false)}>×</button></div><div className="split-list">{splitPayments.map((x,i)=><div key={i}><span>{x.payment}</span><b>{money(x.amount)}</b></div>)}{!splitPayments.length&&<Empty text="No split payments added yet."/>}</div><div className="split-form"><select value={splitType} onChange={e=>setSplitType(e.target.value)}>{enabledPayments.map(x=><option key={x.id}>{x.name}</option>)}</select><input type="number" min="0" step="0.01" value={splitAmount} onChange={e=>setSplitAmount(e.target.value)}/><button onClick={addSplit}>Add payment</button></div><div className="payment-summary"><span>Paid <b>{money(totalPaid)}</b></span><span>Remaining <b>{money(paymentRemaining)}</b></span></div><div className="modal-actions"><button className="secondary" onClick={()=>setSplitScreen(false)}>Done</button></div></div></div>}
+  {savedScreen&&<div className="ar-modal-backdrop"><div className="ar-modal" onMouseDown={e=>e.stopPropagation()}><div className="ar-modal-head"><div><small>OPEN SALES</small><h3>Saved sales</h3></div><button onClick={()=>setSavedScreen(false)}>×</button></div>{orders.length?<div className="transfer-items">{orders.slice().reverse().map(o=><button key={o.id} onClick={()=>{setSavedScreen(false);setNoticeLocal("Open sale "+o.name+" selected. Add/retrieve workflow can continue from Named Order / Takeaway.")}}><span>{o.name}</span><b>{o.items?.length||0} item(s)</b></button>)}</div>:<Empty text="No saved sales."/>}</div></div>}
+  {noticeLocal&&<div className="ar-local-notice" onClick={()=>setNoticeLocal("")}>{noticeLocal}</div>}
+  {lastSale&&<div className="receipt-modal-backdrop"><div className="receipt-modal receipt-choice-modal"><div className="receipt-change"><span>💵 Change:</span><b>{money(lastSale.change||0)}</b></div><h2>How would the customer like their receipt?</h2><div className="receipt-choice-grid"><button onClick={()=>printReceipt(lastSale)}>▤<span>Print receipt</span></button><button onClick={()=>printInvoice(lastSale,company,customers)}>▣<span>Print invoice</span></button><button onClick={()=>emailReceipt(lastSale)}>✉<span>Send email</span></button><button onClick={()=>downloadReportPDF("Receipt-"+lastSale.no,["Qty","Description","Amount"],lastSale.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>⌁<span>Save as PDF</span></button><button onClick={()=>{const note=window.prompt("Add notes",lastSale.note||"");if(note!==null)updateSaleNote(lastSale,note)}}>✎<span>Add notes</span></button></div><div className="receipt-done-row"><button onClick={closeLastSale}>Done</button></div></div></div>}
  </section>
 }
 function Products({products,setProducts,addProduct,updateProduct,editing,setEditing,categories,setCategories,productGroups,setProductGroups,setNotice}){
