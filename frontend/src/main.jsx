@@ -73,8 +73,6 @@ function App(){
  const[users,setUsers]=useState(()=>load("users",seedUsers));
  const[orders,setOrders]=useState(()=>load("orders",[]));
  const[settings,setSettings]=useState(()=>deepMerge(defaultSettings,load("settings",{})));
- const[agentStatus,setAgentStatus]=useState({connected:false});
- useEffect(()=>{let alive=true;const check=async()=>{try{const base=String(settings?.hardware?.agentUrl||"http://127.0.0.1:18765").replace(/\/$/,"");const r=await fetch(base+"/status");if(!r.ok)throw Error();const x=await r.json();if(alive)setAgentStatus({connected:true,version:x.version||"1.0.5"});}catch{if(alive)setAgentStatus({connected:false});}};check();const id=setInterval(check,5000);return()=>{alive=false;clearInterval(id)}},[settings?.hardware?.agentUrl]);
  const[cart,setCart]=useState([]);
  const[q,setQ]=useState("");
  const[posCategory,setPosCategory]=useState("All Categories");
@@ -224,7 +222,7 @@ function App(){
   <aside><div className="brand"><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
    {nav.map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("")}} key={n}>▸ {n}</button>)}
   </aside>
-  <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className="head-status day"><i>●</i><b>{businessDay.open?"Business Day Open":"Closed"}</b></span><span className={agentStatus.connected?"head-status hardware-head-status connected":"head-status hardware-head-status disconnected"}><i>●</i><b>{agentStatus.connected?"Hardware Ready":"Agent Not Detected"}</b></span><span className="head-status online"><i>●</i><b>Online</b></span></div></header>
+  <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className="day">● {businessDay.open?"Business Day Open":"Closed"}</span><span>● Online</span></div></header>
    {notice&&<div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
