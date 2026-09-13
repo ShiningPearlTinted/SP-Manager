@@ -1,14 +1,24 @@
 # SP-Manager
 
-Web POS and business management system for Shining Pearl Tinted.
+Phase 2 expands the GitHub Pages test build with working browser-local business workflows.
 
-## GitHub Pages
-After deployment, open:
-https://shiningpearltinted.github.io/SP-Manager/
+Implemented:
+- Dashboard / business day
+- POS / Sales, barcode-ready search, cart, customer, discount, tax, payment types
+- Product master and editing
+- Inventory / stock adjustment
+- Customers
+- Suppliers
+- Purchases / goods received
+- Payments
+- Refund / Void
+- Discount / Promotion rules
+- Tax configuration
+- Loyalty ranking
+- Users & permissions
+- Reports
+- X / Z report
+- Named Order / Takeaway
+- Settings
 
-## Local test
-cd frontend
-npm install
-npm run dev
-
-This Pages build is a frontend demo. Sales, stock and customer changes are stored in the browser localStorage.
+LOCK RULE: existing functions and design are preserved unless explicitly requested. This phase adds functionality to the current SP-Manager build. GitHub Pages stores demo data in browser localStorage; production backend/database comes later.
