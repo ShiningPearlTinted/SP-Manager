@@ -825,7 +825,6 @@ function Settings({settings,setSettings,businessDay,toggleBusiness,taxRate,setTa
     <div className="settings-actions" aria-label="Settings actions">
       <button type="button" className="settings-cancel" onClick={onCancel}>Cancel</button>
       <button type="button" className="settings-save" onClick={()=>{setSettings(draft);setNotice("Settings saved successfully.")}}>✓ Save</button>
-    </div>
    </div>
   </div>
  </section>
