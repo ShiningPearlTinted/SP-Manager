@@ -84,10 +84,12 @@ function App(){
  const[notice,setNotice]=useState("");
  const[businessDay,setBusinessDay]=useState(()=>load("businessDay",{open:true,openingCash:0}));
  const[company,setCompany]=useState(()=>load("company",{name:"Shining Pearl Tinted",taxNumber:"",streetName:"",buildingNumber:"",additionalStreetName:"",plotIdentification:"",district:"",postalCode:"",city:"",state:"",country:"Malaysia",phoneNumber:"",email:"",bankAccountNumber:"",bankDetails:"",logo:""}));
+ const[agentHeaderStatus,setAgentHeaderStatus]=useState({connected:false});
  const[editing,setEditing]=useState(null);
  const[productGroups,setProductGroups]=useState(()=>load("productGroups",[...new Set(seedProducts.map(p=>p.group||p.category).filter(Boolean))]));
  const[lastSale,setLastSale]=useState(null);
 
+ useEffect(()=>{let alive=true;const check=async()=>{const base=String(settings?.hardware?.agentUrl||"http://127.0.0.1:18765").replace(/\/$/,"");try{const r=await fetch(base+"/status",{cache:"no-store"});if(!r.ok)throw Error();const x=await r.json();if(alive)setAgentHeaderStatus(x?.connected?x:{...x,connected:false});}catch{if(alive)setAgentHeaderStatus({connected:false});}};check();const id=setInterval(check,5000);return()=>{alive=false;clearInterval(id)}},[settings?.hardware?.agentUrl]);
  const activeSales=sales.filter(x=>!x.voided&&!x.refunded);
  const today=activeSales.reduce((a,x)=>a+x.total,0);
  const lowStock=products.filter(p=>p.stock<=p.reorder).length;
@@ -222,7 +224,7 @@ function App(){
   <aside><div className="brand"><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
    {nav.map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("")}} key={n}>▸ {n}</button>)}
   </aside>
-  <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className="day">● {businessDay.open?"Business Day Open":"Closed"}</span><span>● Online</span></div></header>
+  <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className={"header-status-pill header-status-business "+(businessDay.open?"is-open":"is-closed")}><i/> {businessDay.open?"Business Day Open":"Closed"}</span><span className={"header-status-pill header-status-agent "+(agentHeaderStatus?.connected?"is-connected":"is-offline")}><i/> {agentHeaderStatus?.connected?"Hardware Ready":"Agent Not Detected"}</span><span className="header-status-pill header-status-online"><i/> Online</span></div></header>
    {notice&&<div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="POS / Sales"&&<POS filtered={filtered} q={q} setQ={setQ} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
