@@ -460,3 +460,38 @@
 .discount-toggle button span{grid-row:1/3;width:38px;height:38px;border-radius:10px;background:#24292d;display:grid;place-items:center;font-size:15px;font-weight:800}
 .discount-toggle button b{font-size:14px}.discount-toggle button small{font-size:10px;color:#929da3}.discount-toggle button.chosen{background:#159bd0;border-color:#39b8e8;box-shadow:0 0 0 1px rgba(57,184,232,.25) inset}.discount-toggle button.chosen span{background:rgba(0,0,0,.16);color:#fff}.discount-value-field{display:block;color:#dfe5e8;font-size:12px;font-weight:700;margin-bottom:14px}.discount-input-wrap{height:58px;margin-top:7px;border:1px solid #596268;background:#1e2326;border-radius:10px;display:flex;align-items:center;overflow:hidden}.discount-input-wrap:focus-within{border-color:#19a9e2;box-shadow:0 0 0 2px rgba(25,169,226,.15)}.discount-input-wrap strong{min-width:60px;text-align:center;color:#8f9aa0;font-size:15px;border-right:1px solid #41484d}.discount-input-wrap input{width:100%;height:100%;border:0!important;outline:0;background:transparent!important;color:#fff!important;font-size:24px!important;font-weight:700!important;padding:0 14px!important}.discount-preview{border:1px solid #3f474c;border-radius:11px;background:#202528;padding:10px 14px}.discount-preview>div{display:flex;justify-content:space-between;align-items:center;padding:7px 0;color:#aab4b9;font-size:12px}.discount-preview b{color:#e8edef}.discount-preview .discount-after{margin-top:4px;padding-top:11px;border-top:1px solid #3b4247;color:#e5eaec}.discount-preview .discount-after strong{font-size:18px;color:#45d36a}.discount-actions{margin-top:17px}.discount-actions button{min-width:110px;border-radius:8px;font-weight:700}.discount-actions .discount-apply{background:#28a84a;border-color:#37c75c}.discount-actions .discount-apply:hover{background:#31b653}
 @media(max-width:560px){.discount-body{padding:15px}.discount-toggle{grid-template-columns:1fr}.discount-screen{width:calc(100vw - 20px)}}
+
+/* LOCKED POS customer + discount refinement */
+.ar-modal-backdrop{z-index:5000!important}
+.ar-modal{z-index:5001!important}
+.customer-modal-tools{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px;border-bottom:1px solid #41474b}
+.customer-modal-tools input{min-width:0;padding:11px 12px;border:1px solid #4d565c;border-radius:8px;background:#1e2326;color:#fff;outline:none}
+.customer-modal-tools input:focus{border-color:#20a8df;box-shadow:0 0 0 2px rgba(32,168,223,.14)}
+.customer-modal-tools button,.customer-add-modal .modal-actions button:not(.secondary){border:1px solid #20a8df;background:#159bd1;color:#fff;border-radius:8px;padding:10px 14px;font-weight:700}
+.customer-empty{padding:24px;text-align:center;color:#8d989f;font-size:12px}
+.customer-add-modal{width:min(460px,92vw)!important}
+.customer-add-form{display:grid;gap:12px;padding:18px 20px}
+.customer-add-form label{display:grid;gap:6px;font-size:11px;color:#aeb7bd;font-weight:700}
+.customer-add-form input{width:100%;padding:11px 12px;border:1px solid #4d565c;border-radius:8px;background:#1e2326;color:#fff;outline:none}
+.customer-add-form input:focus{border-color:#20a8df;box-shadow:0 0 0 2px rgba(32,168,223,.14)}
+.customer-add-modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px}
+.discount-screen{width:min(560px,calc(100vw - 32px))!important;border-radius:16px!important;overflow:hidden!important;background:#252a2e!important;border:1px solid #4b5358!important}
+.discount-head{padding:18px 22px!important;background:#252a2e!important}
+.discount-head h3{color:#f4f7f8!important;font-size:24px!important}
+.discount-head p{margin:5px 0 0;color:#8f9aa1;font-size:11px}
+.discount-body{padding:18px 22px 20px}
+.discount-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.discount-toggle button{border:1px solid #4c555a;background:#303538;color:#dce2e5;border-radius:10px;padding:13px;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center}
+.discount-toggle button.chosen{border-color:#20a8df;background:#153e50;box-shadow:inset 0 0 0 1px #20a8df}
+.discount-toggle button span{grid-row:span 2;width:34px;height:34px;border-radius:8px;background:#202629;display:grid;place-items:center;font-weight:800;color:#27afe4}
+.discount-toggle button b{font-size:13px}.discount-toggle button small{font-size:10px;color:#8d999f}
+.discount-value-field{display:grid;gap:7px;margin-bottom:14px;color:#aeb7bd;font-size:11px;font-weight:700}
+.discount-input-wrap{display:grid;grid-template-columns:44px 1fr;align-items:center;border:1px solid #4d565c;border-radius:9px;overflow:hidden;background:#1e2326}
+.discount-input-wrap strong{height:46px;display:grid;place-items:center;background:#303538;color:#24abe1;border-right:1px solid #4d565c}
+.discount-input-wrap input{height:46px;width:100%;border:0;outline:0;background:transparent;color:#fff;font-size:20px;font-weight:800;text-align:right;padding:0 14px}
+.discount-preview{border:1px solid #414a4f;border-radius:10px;background:#202528;padding:11px 13px;margin-bottom:16px}
+.discount-preview>div{display:flex;justify-content:space-between;align-items:center;padding:6px 0;color:#9da7ac;font-size:11px}
+.discount-preview b{color:#e9edef}.discount-preview .discount-after{border-top:1px solid #3b4448;margin-top:5px;padding-top:10px;color:#d9e0e3}.discount-preview .discount-after strong{font-size:17px;color:#50d06b}
+.discount-actions{display:flex;justify-content:flex-end;gap:8px!important;padding:0!important}
+.discount-actions button{min-width:110px!important;height:42px;border-radius:8px!important;font-weight:800!important}
+.discount-actions .discount-apply{background:#1fa7df!important;border:1px solid #31b4e8!important;color:#fff!important}
