@@ -1,7 +1,7 @@
 services:
   sp-manager-preview:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile.preview
     ports:
       - "8080:80"
