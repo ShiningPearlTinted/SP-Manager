@@ -1,0 +1,9 @@
+services:
+  sp-manager-preview:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.preview
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.preview.conf:/etc/nginx/conf.d/default.conf:ro
