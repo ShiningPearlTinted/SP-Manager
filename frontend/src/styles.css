@@ -1019,3 +1019,6 @@ main{margin-left:232px;width:calc(100% - 232px)}
 .management-grid{display:grid!important;visibility:visible!important;opacity:1!important}
 .management-card{display:grid!important;visibility:visible!important;opacity:1!important}
 .management-card:disabled{pointer-events:none}
+
+/* 1.0.22 LOGIN + NAVIGATION HARDENING */
+.login-password-wrap{position:relative;margin-top:7px}.login-password-wrap input{margin-top:0!important;padding-right:48px!important}.login-password-toggle{position:absolute;right:6px;top:5px;width:34px;height:33px;border:0!important;background:transparent!important;color:#9aa9ba!important;border-radius:7px!important;display:grid;place-items:center;padding:0!important;font-size:17px;cursor:pointer}.login-password-toggle:hover{background:rgba(255,255,255,.06)!important;color:#fff!important}.login-password-toggle:focus{outline:2px solid rgba(38,159,208,.35)}
