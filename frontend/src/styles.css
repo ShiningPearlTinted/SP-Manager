@@ -920,7 +920,7 @@ main{margin-left:232px;width:calc(100% - 232px)}
 
 .search-mode-active{color:#159bd7!important;border-color:#159bd7!important}
 
-/* POS UI FIX 1.0.14 - transfer dialog and virtual keyboard only */
+/* POS UI FIX 1.0.15 - Aronium search selector + inline virtual keyboard */
 .transfer-screen{width:min(520px,92vw);overflow:hidden;border-color:#4d565d;border-radius:11px;background:#272b2e}
 .transfer-screen .ar-modal-head{padding:16px 18px;background:linear-gradient(180deg,#2d3236,#272b2e)}
 .transfer-screen .ar-modal-head h3{font-size:19px;letter-spacing:-.01em}
@@ -941,15 +941,21 @@ main{margin-left:232px;width:calc(100% - 232px)}
 .transfer-modal-actions .transfer-primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
 .ar-keyboard-btn{height:48px!important;width:46px!important;border-left:1px solid #3d4144!important;border-right:0!important;background:#24282a!important;color:#aeb8be!important;font-size:16px!important}
 .ar-keyboard-btn:hover,.ar-keyboard-btn.active{background:#16394a!important;color:#5ec9f3!important}
-.virtual-keyboard-backdrop{z-index:6000!important}
-.virtual-keyboard-modal{width:min(620px,94vw);overflow:hidden}
-.virtual-keyboard-body{padding:12px;background:#202427;border-top:1px solid #343b40}
-.virtual-keyboard-row{display:flex;gap:7px;margin-bottom:7px}
+.ar-search-row .search-mode-active{background:#202b31!important;color:#19a9e8!important;box-shadow:inset 0 -2px #19a9e8}
+.ar-product-panel.keyboard-open .ar-category-grid,.ar-product-panel.keyboard-open .ar-grid-wrap{flex:1;min-height:0;overflow:auto}
+.virtual-keyboard-dock{flex:0 0 auto;background:#303030;border-top:1px solid #555;padding:10px 10px 12px;display:flex;justify-content:center}
+.virtual-keyboard-body{width:min(780px,94%)}
+.virtual-keyboard-row{display:flex;gap:8px;margin-bottom:8px;align-items:stretch}
 .virtual-keyboard-row:last-child{margin-bottom:0}
-.virtual-key{flex:1;min-width:0;height:48px;border:1px solid #454d53;border-radius:7px;background:linear-gradient(180deg,#343a3f,#2a2f33);color:#f0f3f5;font-weight:700;font-size:13px;box-shadow:inset 0 1px rgba(255,255,255,.05),0 2px 4px rgba(0,0,0,.2);transition:.12s ease}
-.virtual-key:hover{background:linear-gradient(180deg,#3e464c,#31383d);border-color:#68747c;transform:translateY(-1px)}
-.virtual-key:active{transform:translateY(0);filter:brightness(.92)}
-.virtual-key.space{flex:2.5;color:#bfc8ce}
-.virtual-key.backspace,.virtual-key.clear{flex:1.35;color:#8ed9f5}
-.virtual-key.enter{flex:1.5;background:linear-gradient(180deg,#20a9df,#168dcc);border-color:#36b8e9;color:#fff}
-@media(max-width:650px){.transfer-modal-actions{flex-direction:row}.transfer-modal-actions button{flex:1;min-width:0}.virtual-key{height:43px;font-size:12px}.virtual-keyboard-row{gap:5px}.virtual-keyboard-body{padding:8px}}
+.virtual-key{flex:1;min-width:42px;height:54px;border:1px solid #50565a;border-radius:0;background:#303030;color:#f1f1f1;font-size:13px;font-weight:400;box-shadow:none;transition:.1s ease}
+.virtual-key:hover{background:#3a3a3a;border-color:#6a6a6a;transform:none}
+.virtual-key:active{background:#454545;transform:none}
+.virtual-key.backspace{flex:1.45;font-size:20px}
+.virtual-key.enter{flex:1.35;text-transform:lowercase;font-size:13px}
+.virtual-key.space{flex:3.7}
+.virtual-key.shift{font-size:20px}
+.virtual-key.symbols{flex:1.25}
+.virtual-key.down{width:56px;flex:0 0 56px;font-size:18px}
+.virtual-key.nav{flex:1.05}
+.virtual-key.arrow{flex:.8;font-size:25px}
+@media(max-width:900px){.virtual-keyboard-body{width:100%}.virtual-key{min-width:28px;height:48px;font-size:11px}.virtual-keyboard-row{gap:5px}}
