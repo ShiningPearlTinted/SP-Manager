@@ -484,6 +484,34 @@
 .customer-add-form input{width:100%;padding:11px 12px;border:1px solid #4d565c;border-radius:8px;background:#1e2326;color:#fff;outline:none}
 .customer-add-form input:focus{border-color:#20a8df;box-shadow:0 0 0 2px rgba(32,168,223,.14)}
 .customer-add-modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px}
+/* Customer Add modal: Cancel button visual polish only. Functionality unchanged. */
+.customer-add-modal .modal-actions .secondary{
+  min-width:92px;
+  height:38px;
+  padding:0 16px;
+  border:1px solid #56616a;
+  border-radius:8px;
+  background:#30363a;
+  color:#e7ecef;
+  font-size:13px;
+  font-weight:600;
+  line-height:36px;
+  box-shadow:0 1px 2px rgba(0,0,0,.18);
+  transition:background .15s ease,border-color .15s ease,color .15s ease,transform .08s ease;
+}
+.customer-add-modal .modal-actions .secondary:hover{
+  background:#394147;
+  border-color:#69757e;
+  color:#fff;
+}
+.customer-add-modal .modal-actions .secondary:active{
+  transform:translateY(1px);
+}
+.customer-add-modal .modal-actions .secondary:focus-visible{
+  outline:2px solid rgba(32,168,223,.65);
+  outline-offset:2px;
+}
+
 .discount-screen{width:min(560px,calc(100vw - 32px))!important;border-radius:16px!important;overflow:hidden!important;background:#252a2e!important;border:1px solid #4b5358!important}
 .discount-head{padding:18px 22px!important;background:#252a2e!important}
 .discount-head h3{color:#f4f7f8!important;font-size:24px!important}
