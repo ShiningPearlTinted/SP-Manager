@@ -893,3 +893,23 @@ main{margin-left:232px;width:calc(100% - 232px)}
 .quantity-modal-actions button:not(.secondary){background:#168dcc!important;color:#fff!important;border:1px solid #168dcc!important;min-width:82px}
 .quantity-modal-actions button{border-radius:8px;padding:10px 18px;font-weight:700;transition:.15s ease}
 .quantity-modal-actions button:hover{transform:translateY(-1px);filter:brightness(1.08)}
+
+
+/* 1.0.11 — Requested UI-only refinements */
+.quantity-modal-head{padding-bottom:18px}
+.quantity-modal-head h3{margin:0!important}
+.quantity-modal-body input[type="number"]{-moz-appearance:textfield}
+.quantity-modal-body input[type="number"]::-webkit-inner-spin-button,
+.quantity-modal-body input[type="number"]::-webkit-outer-spin-button{margin:0;-webkit-appearance:none}
+.customer-delete-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(5,10,18,.68);backdrop-filter:blur(5px)}
+.customer-delete-modal{width:min(430px,calc(100vw - 32px));background:#252b30;border:1px solid #414b55;border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.5);overflow:hidden;color:#edf2f5}
+.customer-delete-content{padding:22px 22px 8px}
+.customer-delete-icon{width:42px;height:42px;margin:20px 22px 0;border-radius:10px;display:grid;place-items:center;background:#43282b;color:#ff8f95;font-size:20px;font-weight:800}
+.customer-delete-content h3{margin:0 0 7px;font-size:18px}
+.customer-delete-content p{margin:0 0 5px;color:#d6dde2;font-size:13px;line-height:1.5}
+.customer-delete-content small{color:#8f9aa4;font-size:11px}
+.customer-delete-actions{display:flex;justify-content:flex-end;gap:8px;padding:16px 22px 20px}
+.customer-delete-actions button{border-radius:8px;padding:9px 16px;font-weight:700;transition:.15s ease}
+.customer-delete-actions button:hover{transform:translateY(-1px)}
+.customer-delete-actions .delete-no{background:#30373e;color:#e7edf1;border:1px solid #4d5964}
+.customer-delete-actions .delete-yes{background:#c9363e;color:#fff;border:1px solid #c9363e}
