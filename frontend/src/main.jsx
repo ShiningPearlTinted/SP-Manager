@@ -2,7 +2,7 @@ import React,{useEffect,useMemo,useState}from"react";
 import{createRoot}from"react-dom/client";
 import"./styles.css";
 
-const AUTH_VERSION="1.0.27";
+const AUTH_VERSION="1.0.28";
 
 const seedProducts=[
 {id:1,code:"SP001",name:"Tinted Film Standard",group:"Tinted Film",category:"Tinted Film",price:180,cost:90,stock:12,reorder:5},
@@ -284,7 +284,21 @@ function NamedOrders({orders,setOrders,customers}){
  const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");
  const visible=orders.filter(o=>String(o.name||o.orderName||"").toLowerCase().includes(search.toLowerCase()));
  const add=()=>{if(!name.trim())return;setOrders([...orders,{id:uid(),name:name.trim(),customerId,date:new Date().toISOString(),status:"Open",items:[]}]);setName("")};
- return <section className="content"><div className="panel"><div className="panel-title"><div><div className="eyebrow">OPEN ORDERS</div><h2>Named Order / Takeaway</h2><small>Create, retrieve and manage open orders.</small></div></div><div className="form-row"><input placeholder="Order name" value={name} onChange={e=>setName(e.target.value)}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="primary" onClick={add}>＋ New order</button></div><input className="search-input" placeholder="Search open orders…" value={search} onChange={e=>setSearch(e.target.value)}/><Table cols={["Order","Customer","Date","Status","Action"]} rows={visible.map(o=>{const c=customers.find(x=>x.id===o.customerId);return [<b>{o.name}</b>,c?.name||"Walk-in Customer",new Date(o.date).toLocaleString("en-MY"),o.status||"Open",<button onClick={()=>setOrders(orders.filter(x=>x.id!==o.id))}>Close</button>]})}/>{!visible.length&&<Empty text="No named orders found."/>}</div></section>
+ const closeOrder=id=>setOrders(orders.filter(x=>x.id!==id));
+ return <section className="named-orders-page">
+  <div className="named-orders-topbar">
+   <div><div className="eyebrow">OPEN ORDERS</div><h2>Named Order / Takeaway</h2><p>Create, retrieve and manage open orders.</p></div>
+   <div className="named-orders-actions"><button type="button" onClick={()=>setSearch("")} title="Refresh">↻<span>Refresh</span></button><button type="button" onClick={add} title="New order">＋<span>New order</span></button></div>
+  </div>
+  <div className="named-orders-toolbar">
+   <div className="named-order-create"><input placeholder="Order name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add()}}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="primary" onClick={add}>＋ New order</button></div>
+   <div className="named-order-search"><span>⌕</span><input placeholder="Search open orders…" value={search} onChange={e=>setSearch(e.target.value)}/></div>
+  </div>
+  <div className="named-orders-card">
+   <div className="named-orders-card-head"><div><b>Open orders</b><small>{visible.length} order{visible.length===1?"":"s"}</small></div><span>Orders remain available until closed.</span></div>
+   <div className="named-orders-table-wrap"><table className="named-orders-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody>{visible.map(o=>{const c=customers.find(x=>x.id===o.customerId);return <tr key={o.id}><td><div className="order-name-cell"><span className="order-icon">▤</span><div><b>{o.name}</b><small>#{String(o.id).slice(-6)}</small></div></div></td><td>{c?.name||"Walk-in Customer"}</td><td>{new Date(o.date).toLocaleString("en-MY")}</td><td><span className="order-status">● {o.status||"Open"}</span></td><td><button className="table-action" onClick={()=>closeOrder(o.id)}>Close</button></td></tr>})}</tbody></table>{!visible.length&&<div className="named-orders-empty"><div>▤</div><b>No named orders</b><span>Create a new order above to see it here.</span></div>}</div>
+  </div>
+ </section>
 }
 function Reports({sales,products,customers,purchases,businessDay,users,suppliers,paymentTypes}){
  const total=sales.filter(s=>!s.voided&&!s.refunded).reduce((a,s)=>a+Number(s.total||0),0);const tx=sales.filter(s=>!s.voided&&!s.refunded).length;const unpaid=sales.filter(s=>s.payment==="Unpaid").reduce((a,s)=>a+Number(s.total||0),0);const profit=sales.filter(s=>!s.voided&&!s.refunded).reduce((a,s)=>a+s.items.reduce((q,i)=>{const p=products.find(x=>x.id===i.id);return q+(Number(i.price||0)-Number(p?.cost||0))*Number(i.qty||0)},0),0);
@@ -295,8 +309,62 @@ function XZ({sales,businessDay,paymentTypes}){
  return <section className="content"><div className="panel"><div className="eyebrow">END OF DAY</div><h2>X / Z Report</h2><p>Current business-day totals.</p><div className="cards"><Card t="Transactions" v={active.length}/><Card t="Total sales" v={money(total)}/><Card t="Cash sales" v={money(cash)}/><Card t="Business day" v={businessDay.open?"OPEN":"CLOSED"}/></div><Table cols={["Payment type","Transactions","Amount"]} rows={paymentTypes.map(p=>{const a=active.filter(s=>s.payment===p.name);return [p.name,a.length,money(a.reduce((x,s)=>x+Number(s.total||0),0))]})}/></div></section>
 }
 function MyCompany({company,setCompany}){
- const[draft,setDraft]=useState(company);useEffect(()=>setDraft(company),[company]);
- return <section className="content"><div className="panel"><div className="eyebrow">BUSINESS PROFILE</div><h2>My company</h2><p>Company information used by receipts and business documents.</p><div className="settings-grid"><label>Company name<input value={draft.name||""} onChange={e=>setDraft({...draft,name:e.target.value})}/></label><label>Phone<input value={draft.phoneNumber||""} onChange={e=>setDraft({...draft,phoneNumber:e.target.value})}/></label><label>Email<input value={draft.email||""} onChange={e=>setDraft({...draft,email:e.target.value})}/></label><label>Tax number<input value={draft.taxNumber||""} onChange={e=>setDraft({...draft,taxNumber:e.target.value})}/></label><label className="wide">Street<input value={draft.streetName||""} onChange={e=>setDraft({...draft,streetName:e.target.value})}/></label><label>City<input value={draft.city||""} onChange={e=>setDraft({...draft,city:e.target.value})}/></label><label>State<input value={draft.state||""} onChange={e=>setDraft({...draft,state:e.target.value})}/></label></div><button className="primary" onClick={()=>setCompany(draft)}>✓ Save company</button></div></section>
+ const[draft,setDraft]=useState(()=>({...company}));
+ const[tab,setTab]=useState("General");
+ const[logoName,setLogoName]=useState("");
+ const[message,setMessage]=useState("");
+ useEffect(()=>setDraft({...company}),[company]);
+ const update=(key,value)=>setDraft(v=>({...v,[key]:value}));
+ const saveCompany=()=>{setCompany({...draft});setMessage("Company information saved successfully.");setTimeout(()=>setMessage(""),2600)};
+ const removeLogo=()=>{update("logo","");setLogoName("")};
+ const handleLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setMessage("Please select an image file.");return}if(file.size>2*1024*1024){setMessage("Logo image must be 2 MB or smaller.");return}const reader=new FileReader();reader.onload=()=>{update("logo",String(reader.result||""));setLogoName(file.name)};reader.readAsDataURL(file)};
+ const addressFields=[
+  ["streetName","Street"],["buildingNumber","Building number"],["additionalStreetName","Additional street name"],["plotIdentification","Plot identification"],
+  ["district","District"],["postalCode","Postal code"],["city","City"],["state","State / Province"],["country","Country"]
+ ];
+ return <section className="my-company-page">
+  <div className="company-shell company-shell-ar">
+   <div className="company-topbar">
+    <div><div className="eyebrow">BUSINESS PROFILE</div><h2>My company</h2><p>Company information used on receipts, invoices and business documents.</p></div>
+    <div className="company-top-actions"><span className="company-status"><i></i> Local data</span><button className="company-save" onClick={saveCompany}>✓ Save</button></div>
+   </div>
+   <div className="company-tabs company-tabs-ar">
+    {["General","Address","Logo","Bank details"].map(x=><button key={x} type="button" className={tab===x?"active":""} onClick={()=>setTab(x)}>{x}</button>)}
+   </div>
+   {message&&<div className="company-message">✓ {message}</div>}
+   {tab==="General"&&<div className="company-body company-general-layout">
+    <div className="company-form-block">
+     <div className="company-section-title">Company information</div>
+     <div className="company-grid company-grid-ar">
+      <label>Company name<input value={draft.name||""} onChange={e=>update("name",e.target.value)} placeholder="Company name"/></label>
+      <label>Tax number<input value={draft.taxNumber||""} onChange={e=>update("taxNumber",e.target.value)} placeholder="Tax number"/></label>
+      <label>Phone<input value={draft.phoneNumber||""} onChange={e=>update("phoneNumber",e.target.value)} placeholder="Phone number"/></label>
+      <label>Email<input type="email" value={draft.email||""} onChange={e=>update("email",e.target.value)} placeholder="Email address"/></label>
+     </div>
+     <div className="company-section-title">Receipt / document identity</div>
+     <div className="company-grid company-grid-ar">
+      <label>Document company name<input value={draft.name||""} onChange={e=>update("name",e.target.value)}/></label>
+      <label>Country<select value={draft.country||"Malaysia"} onChange={e=>update("country",e.target.value)}><option>Malaysia</option><option>Singapore</option><option>Thailand</option><option>Indonesia</option><option>Other</option></select></label>
+     </div>
+     <div className="company-section-title">Address</div>
+     <div className="company-grid company-grid-ar">
+      {addressFields.slice(0,4).map(([k,l])=><label key={k}>{l}<input value={draft[k]||""} onChange={e=>update(k,e.target.value)}/></label>)}
+     </div>
+    </div>
+    <div className="company-side-card">
+     <div className="company-side-title">Company logo</div>
+     <div className="company-logo-mini">{draft.logo?<img src={draft.logo} alt="Company logo"/>:<div className="logo-placeholder"><b>SP</b><span>No logo added</span></div>}</div>
+     <label className="logo-add logo-add-ar">＋ Add logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogo}/></label>
+     <button type="button" className="logo-remove-ar" disabled={!draft.logo} onClick={removeLogo}>Remove logo</button>
+     <small>PNG, JPG, WEBP or SVG · Maximum 2 MB</small>
+    </div>
+   </div>}
+   {tab==="Address"&&<div className="company-body"><div className="company-section-title">Business address</div><div className="company-grid company-grid-ar">{addressFields.map(([k,l])=><label key={k}>{l}<input value={draft[k]||""} onChange={e=>update(k,e.target.value)} /></label>)}</div></div>}
+   {tab==="Logo"&&<div className="company-body company-logo-tab"><div className="company-section-title">Company logo</div><div className="company-logo-large">{draft.logo?<img src={draft.logo} alt="Company logo"/>:<div className="logo-placeholder large"><b>SP</b><span>Add your company logo</span></div>}</div><div className="logo-actions logo-actions-ar"><label className="logo-add logo-add-ar">＋ Add logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogo}/></label><button type="button" className="logo-remove-ar" disabled={!draft.logo} onClick={removeLogo}>Remove</button></div>{logoName&&<div className="logo-file-name">Selected: {logoName}</div>}<p className="company-help">The logo is stored locally with this SP-Manager installation and can be used on receipts and business documents.</p></div>}
+   {tab==="Bank details"&&<div className="company-body"><div className="company-section-title">Bank information</div><div className="company-grid company-grid-ar"><label className="wide">Bank account number<input value={draft.bankAccountNumber||""} onChange={e=>update("bankAccountNumber",e.target.value)} /></label><label className="wide">Bank details<textarea value={draft.bankDetails||""} onChange={e=>update("bankDetails",e.target.value)} placeholder="Bank name, branch and payment details"/></label></div></div>}
+   <div className="company-footer"><span>Changes are not applied to documents until you save.</span><button className="company-save" onClick={saveCompany}>✓ Save company</button></div>
+  </div>
+ </section>
 }
 function Management({activeUser,setPage}){
  const items=[
