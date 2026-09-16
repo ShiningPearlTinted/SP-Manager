@@ -969,3 +969,29 @@ main{margin-left:232px;width:calc(100% - 232px)}
 .ar-back-primary{background:linear-gradient(145deg,#2d3134,#242729)!important;border-color:#596168!important}
 .ar-back-primary span{font-size:46px;line-height:1;color:#f0f3f5}
 .ar-back-primary small{font-size:11px!important;color:#c3cbd0!important}
+
+/* SETTINGS / ARONIUM PARITY 1.0.17 */
+.app-theme-dimmed{background:#e6e8ea;color:#27313a}
+.app-theme-gray{background:#dfe2e5;color:#2b3136}
+.app-theme-night{background:#090d12;color:#d9e1e8}
+.app-theme-high-contrast{background:#000;color:#fff}
+.app-theme-dimmed main,.app-theme-gray main{background:inherit}
+.app-theme-night main,.app-theme-high-contrast main{background:inherit}
+.app-theme-night header,.app-theme-high-contrast header{background:#11161c;color:#fff;border-color:#39414a}
+.app-theme-high-contrast button,.app-theme-high-contrast input,.app-theme-high-contrast select,.app-theme-high-contrast textarea{border-width:2px}
+.app-theme-high-contrast .settings-field,.app-theme-high-contrast .settings-info-card,.app-theme-high-contrast .settings-business{background:#111;color:#fff;border-color:#fff}
+.settings-check-grid label{cursor:pointer}
+.settings-check-grid label:hover{border-color:#159bd4;background:#f3fbfe}
+
+/* Settings message behavior + Standard POS layout */
+.notice{position:relative;z-index:220}
+.notice-top{margin:16px 28px 0}.notice-bottom{position:fixed;left:calc(250px + 28px);right:28px;bottom:20px;margin:0;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.notice-slide-in{animation:spNoticeIn .18s ease-out}.notice-top.notice-slide-in{animation-name:spNoticeDown}.notice-bottom.notice-slide-in{animation-name:spNoticeUp}
+@keyframes spNoticeDown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes spNoticeUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+.ar-standard-list{height:100%;overflow:auto;background:#242424;padding:10px}
+.ar-standard-table{display:flex;flex-direction:column;gap:2px}
+.ar-standard-table button{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:58px;padding:9px 14px;background:#303030;border:1px solid #454545;color:#eee;text-align:left}
+.ar-standard-table button:hover{background:#3a3a3a;border-color:#159bd4}.ar-standard-table span{display:flex;flex-direction:column;gap:4px}.ar-standard-table small{color:#9ca7ae;font-size:11px}.ar-standard-table strong{color:#fff;white-space:nowrap}
+.app-theme-night .ar-standard-list{background:#080b0f}.app-theme-high-contrast .ar-standard-table button{background:#000;border-color:#fff;color:#fff}
+@media(max-width:700px){.notice-bottom{left:12px;right:12px}.ar-standard-list{padding:6px}}
