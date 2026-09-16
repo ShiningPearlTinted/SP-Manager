@@ -69,6 +69,7 @@ function App(){
  const[currentUser,setCurrentUser]=useState(()=>load("currentUser",null));
  const[page,setPage]=useState("POS / Sales");
  const[posMenu,setPosMenu]=useState(false);
+ useEffect(()=>{setPosMenu(false)},[page]);
  const[products,setProducts]=useState(()=>load("products",seedProducts));
  const[stockHistory,setStockHistory]=useState(()=>load("stockHistory",[]));
  const[categories,setCategories]=useState(()=>load("categories",["Tinted Film","Windscreen","Glass","Security","Protection"]));
@@ -277,8 +278,42 @@ function Login({users,onLogin}){
 }
 
 function Management({currentUser,hasPermission,setPage}){
- const items=[["▣","View sales history","Payments","viewSalesHistory"],["▱","View open sales","Named Order / Takeaway","viewOpenSales"],["↕","Cash In / Out","Payments","cashInOut"],["▤","Credit payments","Payments","creditPayments"],["⚑","End of day","X / Z Report","endOfDay"],["♙","User info","Users & Permissions","userInfo"],["⚙","Users & Permissions","Users & Permissions","manageUsers"],["◈","Products","Products","manageProducts"],["◫","Inventory","Inventory","manageInventory"],["♙","Customers","Customers","manageCustomers"],["▤","Purchases","Purchases","managePurchases"],["◉","Payments","Payments","managePayments"],["%","Discount / Promotion","Discount / Promotion","manageDiscount"],["#","Tax","Tax","manageTax"],["★","Loyalty","Loyalty","manageLoyalty"],["▥","Reports","Reports","manageReports"],["▰","Settings","Settings","manageSettings"]];
- return <section className="management-page"><div className="management-head"><div><div className="eyebrow">MANAGEMENT</div><h2>Management</h2><p>Manage business functions available to <b>{currentUser?.name||currentUser?.username||"User"}</b>.</p></div><span className="management-role">{currentUser?.role||"User"}</span></div><div className="management-grid">{items.map(([ic,label,target,perm])=>{const allowed=hasPermission(perm);return <button key={label} className={"management-card "+(allowed?"":"is-disabled")} disabled={!allowed} onClick={()=>allowed&&setPage(target)}><span>{ic}</span><div><b>{label}</b><small>{allowed?"Open function":"Permission required"}</small></div><strong>›</strong></button>})}</div></section>;
+ const items=[
+  ["▣","View sales history","Payments","viewSalesHistory"],
+  ["▱","View open sales","Named Order / Takeaway","viewOpenSales"],
+  ["↕","Cash In / Out","Payments","cashInOut"],
+  ["▤","Credit payments","Payments","creditPayments"],
+  ["⚑","End of day","X / Z Report","endOfDay"],
+  ["♙","User info","Users & Permissions","userInfo"],
+  ["⚙","Users & Permissions","Users & Permissions","manageUsers"],
+  ["◈","Products","Products","manageProducts"],
+  ["◫","Inventory","Inventory","manageInventory"],
+  ["♙","Customers","Customers","manageCustomers"],
+  ["▤","Purchases","Purchases","managePurchases"],
+  ["◉","Payments","Payments","managePayments"],
+  ["%","Discount / Promotion","Discount / Promotion","manageDiscount"],
+  ["#","Tax","Tax","manageTax"],
+  ["★","Loyalty","Loyalty","manageLoyalty"],
+  ["▥","Reports","Reports","manageReports"],
+  ["▰","Settings","Settings","manageSettings"]
+ ];
+ const safePermission=key=>{try{return typeof hasPermission==="function"&&hasPermission(key)===true}catch{return false}};
+ return (
+  <section className="management-page">
+   <div className="management-head">
+    <div><div className="eyebrow">MANAGEMENT</div><h2>Management</h2><p>Manage business functions available to <b>{currentUser?.name||currentUser?.username||"User"}</b>.</p></div>
+    <span className="management-role">{currentUser?.role||"User"}</span>
+   </div>
+   <div className="management-grid">
+    {items.map(([ic,label,target,perm])=>{
+     const allowed=safePermission(perm);
+     return <button type="button" key={label} className={"management-card "+(allowed?"":"is-disabled")} disabled={!allowed} onClick={()=>{if(allowed)setPage(target)}}>
+      <span>{ic}</span><div><b>{label}</b><small>{allowed?"Open function":"Permission required"}</small></div><strong>›</strong>
+     </button>;
+    })}
+   </div>
+  </section>
+ );
 }
 
 function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,toggleBusiness}){
