@@ -913,3 +913,9 @@ main{margin-left:232px;width:calc(100% - 232px)}
 .customer-delete-actions button:hover{transform:translateY(-1px)}
 .customer-delete-actions .delete-no{background:#30373e;color:#e7edf1;border:1px solid #4d5964}
 .customer-delete-actions .delete-yes{background:#c9363e;color:#fff;border:1px solid #c9363e}
+
+.ar-order-item.selected{outline:1px solid #159bd7;background:rgba(21,155,215,.10)}
+.ar-bottom-actions .locked{border-color:#159bd7!important;color:#159bd7!important}
+.ar-search-hint{padding:6px 10px;color:#8fa0ae;font-size:11px}
+
+.search-mode-active{color:#159bd7!important;border-color:#159bd7!important}
