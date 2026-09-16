@@ -919,3 +919,37 @@ main{margin-left:232px;width:calc(100% - 232px)}
 .ar-search-hint{padding:6px 10px;color:#8fa0ae;font-size:11px}
 
 .search-mode-active{color:#159bd7!important;border-color:#159bd7!important}
+
+/* POS UI FIX 1.0.14 - transfer dialog and virtual keyboard only */
+.transfer-screen{width:min(520px,92vw);overflow:hidden;border-color:#4d565d;border-radius:11px;background:#272b2e}
+.transfer-screen .ar-modal-head{padding:16px 18px;background:linear-gradient(180deg,#2d3236,#272b2e)}
+.transfer-screen .ar-modal-head h3{font-size:19px;letter-spacing:-.01em}
+.transfer-screen .ar-modal-head>button{width:34px;height:34px;border-radius:7px;display:grid;place-items:center;font-size:22px}
+.transfer-screen .ar-modal-head>button:hover{background:#343b40}
+.transfer-screen .transfer-items{padding:8px 10px;max-height:320px;background:#202427}
+.transfer-screen .transfer-items label{min-height:46px;margin:3px 0;padding:10px 11px;border:1px solid #3d454b;border-radius:7px;background:#2b3034;transition:.15s ease}
+.transfer-screen .transfer-items label:hover{background:#31383d;border-color:#59636b}
+.transfer-screen .transfer-items label:has(input:checked){border-color:#159bd7;background:rgba(21,155,215,.12);box-shadow:inset 3px 0 #159bd7}
+.transfer-screen .transfer-items input{width:17px;height:17px;accent-color:#159bd7}
+.transfer-screen .transfer-items span{font-size:12px;font-weight:600;color:#f1f4f6}
+.transfer-screen .transfer-items b{font-size:11px;color:#b8c1c7}
+.transfer-modal-actions{margin-top:0!important;padding:12px 14px 14px;background:#25292c;border-top:1px solid #3b4247;gap:8px}
+.transfer-modal-actions button{min-width:120px;height:38px;padding:0 16px!important;border-radius:7px!important;font-size:12px;font-weight:700;transition:.15s ease}
+.transfer-modal-actions .secondary{background:#30363b!important;color:#e8edf0!important;border:1px solid #505a62!important}
+.transfer-modal-actions .secondary:hover{background:#3a4248!important;border-color:#65717a!important}
+.transfer-modal-actions .transfer-primary{background:linear-gradient(180deg,#20a9df,#168dcc)!important;color:#fff!important;border:1px solid #36b8e9!important;box-shadow:0 4px 12px rgba(21,155,215,.22)}
+.transfer-modal-actions .transfer-primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.ar-keyboard-btn{height:48px!important;width:46px!important;border-left:1px solid #3d4144!important;border-right:0!important;background:#24282a!important;color:#aeb8be!important;font-size:16px!important}
+.ar-keyboard-btn:hover,.ar-keyboard-btn.active{background:#16394a!important;color:#5ec9f3!important}
+.virtual-keyboard-backdrop{z-index:6000!important}
+.virtual-keyboard-modal{width:min(620px,94vw);overflow:hidden}
+.virtual-keyboard-body{padding:12px;background:#202427;border-top:1px solid #343b40}
+.virtual-keyboard-row{display:flex;gap:7px;margin-bottom:7px}
+.virtual-keyboard-row:last-child{margin-bottom:0}
+.virtual-key{flex:1;min-width:0;height:48px;border:1px solid #454d53;border-radius:7px;background:linear-gradient(180deg,#343a3f,#2a2f33);color:#f0f3f5;font-weight:700;font-size:13px;box-shadow:inset 0 1px rgba(255,255,255,.05),0 2px 4px rgba(0,0,0,.2);transition:.12s ease}
+.virtual-key:hover{background:linear-gradient(180deg,#3e464c,#31383d);border-color:#68747c;transform:translateY(-1px)}
+.virtual-key:active{transform:translateY(0);filter:brightness(.92)}
+.virtual-key.space{flex:2.5;color:#bfc8ce}
+.virtual-key.backspace,.virtual-key.clear{flex:1.35;color:#8ed9f5}
+.virtual-key.enter{flex:1.5;background:linear-gradient(180deg,#20a9df,#168dcc);border-color:#36b8e9;color:#fff}
+@media(max-width:650px){.transfer-modal-actions{flex-direction:row}.transfer-modal-actions button{flex:1;min-width:0}.virtual-key{height:43px;font-size:12px}.virtual-keyboard-row{gap:5px}.virtual-keyboard-body{padding:8px}}
