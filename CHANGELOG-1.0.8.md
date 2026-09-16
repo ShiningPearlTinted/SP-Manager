@@ -11,3 +11,9 @@ Requested customer-only changes based on the 1.0.7 base:
 ### UI polish
 - Improved Customer Master Add Customer modal Cancel button styling only.
 - No customer logic, save logic, navigation, or other functions changed.
+
+## Customer code / uppercase input patch
+- Customer Code is auto-generated as CUS-000001, CUS-000002, etc.
+- Customer form text input is converted to uppercase while typing.
+- Existing customer functions and data fields are preserved.
+- Existing customer records with a blank Code are assigned the next available CUS-###### code automatically.
