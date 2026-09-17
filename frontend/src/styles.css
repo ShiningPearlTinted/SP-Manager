@@ -1226,3 +1226,15 @@
 .ar-low-stock-ok{height:40px;border:1px solid #159bd4;background:#303030;color:#fff;font-size:14px;cursor:pointer}
 .ar-low-stock-ok:hover{background:#159bd4}
 @media(max-width:720px){.ar-low-stock-dialog{grid-template-columns:64px 1fr;gap:14px;padding:22px}.ar-low-stock-ok{grid-column:2;width:120px}.ar-low-stock-icon{transform:scale(.72);transform-origin:center}}
+
+/* Aronium-style stock control fields — additive only. */
+.stock-control-editor-section .stock-control-info{display:flex;align-items:flex-start;gap:10px;margin:-2px 0 14px;padding:11px 12px;border:1px solid #b9e4f6;border-radius:7px;background:#eaf7fc;color:#38576a;font-size:10px;line-height:1.45}
+.stock-control-editor-section .stock-control-info>span{width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center;border-radius:50%;background:#159bd4;color:#fff;font-size:12px;font-weight:800}
+.stock-control-editor-section .stock-control-info a{color:#087fb4;text-decoration:none;font-weight:800}
+.stock-control-editor-section .stock-control-info a:hover{text-decoration:underline}
+.stock-control-editor-section .toggle-field{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:39px}
+.stock-control-editor-section .toggle-field span{display:block}
+.stock-control-editor-section .toggle-field input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:34px;height:18px;margin:6px 0 0;flex:0 0 34px;border:0;border-radius:999px;background:#cbd5df;position:relative;cursor:pointer;transition:background .15s ease}
+.stock-control-editor-section .toggle-field input[type="checkbox"]:before{content:"";position:absolute;width:14px;height:14px;left:2px;top:2px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s ease}
+.stock-control-editor-section .toggle-field input[type="checkbox"]:checked{background:#42c95b}
+.stock-control-editor-section .toggle-field input[type="checkbox"]:checked:before{transform:translateX(16px)}
