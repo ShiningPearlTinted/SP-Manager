@@ -880,494 +880,574 @@
   .named-orders-card-head{align-items:flex-start !important;flex-direction:column !important;gap:6px !important}
 }
 
+
 /* ============================================================
-   SP-MANAGER — GLOBAL UI SYSTEM / FORM CONTROL NORMALIZATION
-   UI ONLY — FUNCTION / DATA / EVENT HANDLERS LOCKED
-   Standard application controls now share one visual system.
-   Specialized POS, login and table controls intentionally retain
-   their dedicated layouts so their behaviour is not affected.
+   SP-MANAGER GLOBAL UI STANDARD v2
+   UI/LAYOUT ONLY — DO NOT CHANGE APPLICATION LOGIC
+   POS (.ar-pos-shell / .pos) is intentionally excluded.
    ============================================================ */
+
 :root{
-  --sp-ui-primary:#123b59;
-  --sp-ui-primary-hover:#0d3048;
-  --sp-ui-accent:#159bd4;
-  --sp-ui-text:#173b5b;
-  --sp-ui-muted:#718397;
-  --sp-ui-border:#cfdce6;
-  --sp-ui-border-soft:#dfe7ee;
-  --sp-ui-bg:#f4f7fa;
-  --sp-ui-surface:#fff;
-  --sp-ui-control-h:40px;
-  --sp-ui-control-radius:8px;
-  --sp-ui-control-pad:0 12px;
-  --sp-ui-control-font:12px;
-  --sp-ui-focus:0 0 0 3px rgba(21,155,212,.10);
+  --sp-bg:#f4f7fa;
+  --sp-surface:#ffffff;
+  --sp-border:#dce6ee;
+  --sp-border-soft:#e8eef3;
+  --sp-text:#173b5b;
+  --sp-muted:#6f8397;
+  --sp-primary:#123b59;
+  --sp-accent:#159bd4;
+  --sp-accent-soft:#eef8fc;
+  --sp-danger:#d92d20;
+  --sp-success:#079455;
+  --sp-radius:12px;
+  --sp-control-h:40px;
+  --sp-font:12px;
 }
 
-/* Standard text/select controls used throughout SP-Manager. */
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input),
-.app select,
-.app textarea{
+/* ---------- Global page canvas: full available screen ---------- */
+main > section:not(.ar-pos-shell):not(.content.pos):not(.pos){
+  width:100%;
+  max-width:none;
   box-sizing:border-box;
-  min-width:0;
-  border:1px solid var(--sp-ui-border);
-  border-radius:var(--sp-ui-control-radius);
-  background:var(--sp-ui-surface);
-  color:var(--sp-ui-text);
-  font-size:var(--sp-ui-control-font);
-  outline:none;
-  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+  background:var(--sp-bg);
+  color:var(--sp-text);
 }
 
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input),
-.app select{
-  height:var(--sp-ui-control-h);
-  padding:var(--sp-ui-control-pad);
-}
-
-.app textarea{
-  min-height:96px;
-  padding:11px 12px;
-  resize:vertical;
-}
-
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input)::placeholder,
-.app textarea::placeholder{
-  color:#9aa9b6;
-  opacity:1;
-}
-
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input):focus,
-.app select:focus,
-.app textarea:focus{
-  border-color:#5eb8dc;
-  box-shadow:var(--sp-ui-focus);
-}
-
-/* Standard compact search controls use the same 40px control height. */
-.app .search,
-.app .table-search,
-.app .report-filters input,
-.app .loyalty-panel-head input,
-.app .period-controls input{
-  height:var(--sp-ui-control-h);
-}
-
-/* Standard form labels. */
-.app .formgrid label,
-.app .product-form label,
-.app .report-filters label,
-.app .settings-field,
-.app .customer-form-grid label,
-.app .company-grid label{
-  color:#526b80;
-}
-
-/* Standard primary/secondary action sizing. */
-.app button.primary,
-.app .company-save,
-.app .users-add,
-.app .settings-save,
-.app .settings-cancel{
-  min-height:40px;
-  border-radius:8px;
-  font-size:12px;
-  font-weight:800;
-}
-
-/* Consistent disabled treatment without changing click/state logic. */
-.app button:disabled,
-.app input:disabled,
-.app select:disabled,
-.app textarea:disabled{
-  cursor:not-allowed;
-}
-
-/* Keep specialized POS/login/table widgets visually isolated. */
-.ar-pos-shell input,
-.ar-pos-shell select,
-.ar-pos-shell textarea,
-.login-screen input,
-.login-screen select,
-.login-screen textarea,
-.named-orders-table input,
-.named-orders-table select,
-.named-orders-table textarea,
-.table input,
-.table select,
-.table textarea{
-  /* Dedicated component styles remain authoritative. */
-}
-
-/* Global panel/card treatment for standard non-specialized modules. */
-.app .panel,
-.app .card{
-  border-color:var(--sp-ui-border-soft);
-  border-radius:12px;
-}
-
-/* Consistent focus visibility for keyboard navigation. */
-.app button:focus-visible,
-.app input:focus-visible,
-.app select:focus-visible,
-.app textarea:focus-visible{
-  outline:2px solid rgba(21,155,212,.28);
-  outline-offset:1px;
-}
-
-@media(max-width:760px){
-  .app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input),
-  .app select{
-    height:40px;
-  }
-}
-
-/* ============================================================
-   SP-MANAGER — GLOBAL UI STANDARD v1.0.36
-   UI ONLY / FUNCTION LOCK
-   ------------------------------------------------------------
-   One visual system for standard application pages.
-   Do not apply to AR POS, login or receipt/print-specific UI.
-   ============================================================ */
-:root{
-  --sp-global-primary:#123b59;
-  --sp-global-primary-hover:#0d3048;
-  --sp-global-accent:#159bd4;
-  --sp-global-text:#102a43;
-  --sp-global-body:#f4f7fa;
-  --sp-global-surface:#ffffff;
-  --sp-global-border:#dce5ed;
-  --sp-global-border-input:#cfdce6;
-  --sp-global-muted:#718397;
-  --sp-global-label:#526b80;
-  --sp-global-radius:12px;
-  --sp-global-control-radius:8px;
-  --sp-global-control-height:40px;
-  --sp-global-control-font:12px;
-  --sp-global-control-pad:0 12px;
-  --sp-global-focus:0 0 0 3px rgba(21,155,212,.10);
-  --sp-global-shadow:0 6px 20px rgba(16,42,67,.055);
-}
-
-/* ---------- Global page canvas ---------- */
-main > .content{
-  width:100%;
-  max-width:1180px;
-  margin:0 auto;
-  padding:24px 28px 50px;
-  background:transparent;
-}
-
-main > .content > .panel{
+/* Remove old centered/max-width constraints from SP-Manager pages */
+.content:not(.pos),
+.management-page,
+.product-master-modern,
+.customer-master,
+.inventory-modern,
+.loyalty-modern,
+.payment-types-modern,
+.purchase-modern,
+.promotion-modern,
+.named-orders-page,
+.users-modern,
+.my-company-page{
   width:100%;
   max-width:none;
-  margin:0;
-  padding:24px 18px 20px;
-  background:var(--sp-global-surface);
-  border:1px solid var(--sp-global-border);
-  border-radius:var(--sp-global-radius);
-  box-shadow:var(--sp-global-shadow);
+  box-sizing:border-box;
 }
 
-/* Tax used to be a special narrow card; make it use the same page shell. */
-main > .content > .panel.narrow{
-  width:100%;
+/* Standard page gutters */
+.content:not(.pos){padding:24px 28px 32px;}
+.management-page,
+.product-master-modern,
+.customer-master,
+.inventory-modern,
+.loyalty-modern,
+.payment-types-modern,
+.purchase-modern,
+.promotion-modern,
+.named-orders-page,
+.users-modern,
+.my-company-page{
+  padding:24px 28px 32px !important;
+}
+
+/* ---------- Standard full-width shells/cards ---------- */
+.content:not(.pos) .panel,
+.content:not(.pos) .card,
+.management-page .management-head,
+.management-page .management-grid,
+.product-master-modern .product-master-shell,
+.customer-master .customer-shell,
+.inventory-modern .inventory-shell,
+.loyalty-modern .loyalty-shell,
+.payment-types-modern .payment-types-shell,
+.purchase-modern .purchase-shell,
+.promotion-modern .promotion-toolbar,
+.promotion-modern .promotion-list-panel,
+.named-orders-page .named-orders-shell,
+.users-modern .users-shell,
+.my-company-page .company-shell{
   max-width:none;
+  width:100%;
+  box-sizing:border-box;
 }
 
-/* ---------- Global page headings ---------- */
-main > .content > .panel > h2,
-main > .content > .panel > h3{
-  margin:5px 0 7px;
-  color:var(--sp-global-text);
-  font-size:25px;
-  line-height:1.2;
-  font-weight:700;
+/* Keep ordinary content cards visually identical */
+.content:not(.pos) .panel,
+.content:not(.pos) .card{
+  background:var(--sp-surface);
+  border:1px solid var(--sp-border);
+  border-radius:var(--sp-radius);
+  box-shadow:0 4px 18px rgba(15,42,67,.06);
 }
 
-main > .content > .panel > p{
-  margin:0 0 18px;
-  color:var(--sp-global-muted);
-  font-size:12px;
-  line-height:1.5;
+/* ---------- Typography ---------- */
+main > section:not(.ar-pos-shell):not(.content.pos):not(.pos) h1,
+main > section:not(.ar-pos-shell):not(.content.pos):not(.pos) h2{
+  color:var(--sp-text);
 }
+main > section:not(.ar-pos-shell):not(.content.pos):not(.pos) h2{font-size:24px;line-height:1.2;}
+main > section:not(.ar-pos-shell):not(.content.pos):not(.pos) h3{font-size:16px;line-height:1.25;}
+main > section:not(.ar-pos-shell):not(.content.pos):not(.pos) p,
+main > section:not(.ar-pos-shell):not(.content.pos):not(.pos) small{color:var(--sp-muted);}
 
-main > .content > .panel > .eyebrow{
-  margin:0;
-  color:#6c8194;
-  font-size:10px;
-  line-height:1;
-  letter-spacing:1.5px;
-  font-weight:800;
-}
-
-/* ---------- One standard control ---------- */
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
-.app select,
-.app textarea{
+/* ---------- ONE standard form control ---------- */
+.content:not(.pos) input:not([type="checkbox"]):not([type="radio"]),
+.content:not(.pos) select,
+.content:not(.pos) textarea,
+.management-page input:not([type="checkbox"]):not([type="radio"]),
+.management-page select,
+.management-page textarea,
+.product-master-modern input:not([type="checkbox"]):not([type="radio"]),
+.product-master-modern select,
+.product-master-modern textarea,
+.customer-master input:not([type="checkbox"]):not([type="radio"]),
+.customer-master select,
+.customer-master textarea,
+.inventory-modern input:not([type="checkbox"]):not([type="radio"]),
+.inventory-modern select,
+.inventory-modern textarea,
+.loyalty-modern input:not([type="checkbox"]):not([type="radio"]),
+.loyalty-modern select,
+.loyalty-modern textarea,
+.payment-types-modern input:not([type="checkbox"]):not([type="radio"]),
+.payment-types-modern select,
+.payment-types-modern textarea,
+.purchase-modern input:not([type="checkbox"]):not([type="radio"]),
+.purchase-modern select,
+.purchase-modern textarea,
+.promotion-modern input:not([type="checkbox"]):not([type="radio"]),
+.promotion-modern select,
+.promotion-modern textarea,
+.named-orders-page input:not([type="checkbox"]):not([type="radio"]),
+.named-orders-page select,
+.named-orders-page textarea,
+.users-modern input:not([type="checkbox"]):not([type="radio"]),
+.users-modern select,
+.users-modern textarea,
+.my-company-page input:not([type="checkbox"]):not([type="radio"]),
+.my-company-page select,
+.my-company-page textarea{
   box-sizing:border-box;
   width:100%;
   min-width:0;
-  border:1px solid var(--sp-global-border-input);
-  border-radius:var(--sp-global-control-radius);
+  height:var(--sp-control-h);
+  padding:0 12px;
+  border:1px solid #cfdce6;
+  border-radius:9px;
   background:#fff;
-  color:#173b5b;
-  font-family:inherit;
-  font-size:var(--sp-global-control-font);
-  font-weight:500;
+  color:var(--sp-text);
+  font-size:var(--sp-font);
+  line-height:1.2;
   outline:none;
-  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+  box-shadow:none;
 }
 
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
-.app select{
-  height:var(--sp-global-control-height);
-  padding:var(--sp-global-control-pad);
-}
-
-.app textarea{
+.content:not(.pos) textarea,
+.management-page textarea,
+.product-master-modern textarea,
+.customer-master textarea,
+.inventory-modern textarea,
+.loyalty-modern textarea,
+.payment-types-modern textarea,
+.purchase-modern textarea,
+.promotion-modern textarea,
+.named-orders-page textarea,
+.users-modern textarea,
+.my-company-page textarea{
+  height:96px;
   min-height:96px;
   padding:10px 12px;
   resize:vertical;
 }
 
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"])::placeholder,
-.app textarea::placeholder{
+.content:not(.pos) input::placeholder,
+.content:not(.pos) textarea::placeholder,
+.management-page input::placeholder,
+.management-page textarea::placeholder,
+.product-master-modern input::placeholder,
+.customer-master input::placeholder,
+.inventory-modern input::placeholder,
+.loyalty-modern input::placeholder,
+.payment-types-modern input::placeholder,
+.purchase-modern input::placeholder,
+.promotion-modern input::placeholder,
+.named-orders-page input::placeholder,
+.users-modern input::placeholder,
+.my-company-page input::placeholder{
   color:#9aa9b6;
-  opacity:1;
 }
 
-.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
-.app select:focus,
-.app textarea:focus{
+.content:not(.pos) input:focus,
+.content:not(.pos) select:focus,
+.content:not(.pos) textarea:focus,
+.management-page input:focus,
+.management-page select:focus,
+.management-page textarea:focus,
+.product-master-modern input:focus,
+.product-master-modern select:focus,
+.product-master-modern textarea:focus,
+.customer-master input:focus,
+.customer-master select:focus,
+.customer-master textarea:focus,
+.inventory-modern input:focus,
+.inventory-modern select:focus,
+.inventory-modern textarea:focus,
+.loyalty-modern input:focus,
+.loyalty-modern select:focus,
+.loyalty-modern textarea:focus,
+.payment-types-modern input:focus,
+.payment-types-modern select:focus,
+.payment-types-modern textarea:focus,
+.purchase-modern input:focus,
+.purchase-modern select:focus,
+.purchase-modern textarea:focus,
+.promotion-modern input:focus,
+.promotion-modern select:focus,
+.promotion-modern textarea:focus,
+.named-orders-page input:focus,
+.named-orders-page select:focus,
+.named-orders-page textarea:focus,
+.users-modern input:focus,
+.users-modern select:focus,
+.users-modern textarea:focus,
+.my-company-page input:focus,
+.my-company-page select:focus,
+.my-company-page textarea:focus{
   border-color:#5eb8dc;
-  box-shadow:var(--sp-global-focus);
-  background:#fff;
+  box-shadow:0 0 0 3px rgba(21,155,212,.10);
 }
 
-/* ---------- Standard labels / simple forms ---------- */
-.app .panel > label,
-.app .formgrid label,
-.app .report-filters label{
-  color:var(--sp-global-label);
-  font-size:11px;
-  font-weight:700;
+/* Checkboxes/radios retain native function but use one visual size */
+.content:not(.pos) input[type="checkbox"],
+.content:not(.pos) input[type="radio"],
+.management-page input[type="checkbox"],
+.management-page input[type="radio"],
+.product-master-modern input[type="checkbox"],
+.product-master-modern input[type="radio"],
+.customer-master input[type="checkbox"],
+.customer-master input[type="radio"],
+.inventory-modern input[type="checkbox"],
+.inventory-modern input[type="radio"],
+.loyalty-modern input[type="checkbox"],
+.loyalty-modern input[type="radio"],
+.payment-types-modern input[type="checkbox"],
+.payment-types-modern input[type="radio"],
+.purchase-modern input[type="checkbox"],
+.purchase-modern input[type="radio"],
+.promotion-modern input[type="checkbox"],
+.promotion-modern input[type="radio"],
+.named-orders-page input[type="checkbox"],
+.named-orders-page input[type="radio"],
+.users-modern input[type="checkbox"],
+.users-modern input[type="radio"],
+.my-company-page input[type="checkbox"],
+.my-company-page input[type="radio"]{
+  width:16px;
+  height:16px;
+  min-width:16px;
+  padding:0;
+  accent-color:var(--sp-accent);
 }
 
-.app .panel > label input,
-.app .panel > label select,
-.app .panel > label textarea{
-  margin-top:7px;
-}
-
-.app .formgrid{gap:13px}
-
-.app .formgrid input,
-.app .formgrid select,
-.app .narrow input{
-  height:var(--sp-global-control-height);
-  padding:var(--sp-global-control-pad);
-  margin:0;
-}
-
-/* Tax form: same control size as every other standard form. */
-.app .narrow > input[type="number"]{
-  width:min(100%,520px);
-  height:var(--sp-global-control-height);
-  margin:8px 0 10px;
-}
-
-/* ---------- Standard buttons ---------- */
-.app .content button,
-.app .users-modern button,
-.app .management-page button,
-.app .my-company-page button,
-.app .named-orders-page button,
-.app .promotion-modern button,
-.app .loyalty-modern button,
-.app .customer-modern button,
-.app .payment-types-modern button,
-.app .purchase-modern button,
-.app .product-master-modern button{
-  font-family:inherit;
-}
-
-.app .content .panel > button:not(.iconbtn):not(.secondary),
-.app .content .formgrid button,
-.app .content .toolbar button:not(.icon-btn),
-.app .content .narrow button{
-  min-height:var(--sp-global-control-height);
-  padding:0 15px;
-  border:1px solid var(--sp-global-primary);
-  border-radius:var(--sp-global-control-radius);
-  background:var(--sp-global-primary);
-  color:#fff;
+/* ---------- Standard buttons / icons ---------- */
+.content:not(.pos) button,
+.management-page button,
+.product-master-modern button,
+.customer-master button,
+.inventory-modern button,
+.loyalty-modern button,
+.payment-types-modern button,
+.purchase-modern button,
+.promotion-modern button,
+.named-orders-page button,
+.users-modern button,
+.my-company-page button{
+  min-height:var(--sp-control-h);
+  border-radius:9px;
   font-size:12px;
-  font-weight:800;
-  box-shadow:0 5px 14px rgba(18,59,89,.12);
+  font-weight:700;
+  line-height:1;
+  padding:0 14px;
+  box-sizing:border-box;
 }
 
-.app .content .panel > button:not(.iconbtn):not(.secondary):hover,
-.app .content .formgrid button:hover,
-.app .content .toolbar button:not(.icon-btn):hover,
-.app .content .narrow button:hover{
-  background:var(--sp-global-primary-hover);
-  border-color:var(--sp-global-primary-hover);
+.content:not(.pos) button:not(.secondary):not(.danger),
+.management-page button:not(.secondary):not(.danger),
+.product-master-modern button:not(.secondary):not(.danger),
+.customer-master button:not(.secondary):not(.danger),
+.inventory-modern button:not(.secondary):not(.danger),
+.loyalty-modern button:not(.secondary):not(.danger),
+.payment-types-modern button:not(.secondary):not(.danger),
+.purchase-modern button:not(.secondary):not(.danger),
+.promotion-modern button:not(.secondary):not(.danger),
+.named-orders-page button:not(.secondary):not(.danger),
+.users-modern button:not(.secondary):not(.danger),
+.my-company-page button:not(.secondary):not(.danger){
+  background:var(--sp-primary);
+  color:#fff;
+  border:1px solid var(--sp-primary);
 }
 
-.app .secondary{
-  min-height:var(--sp-global-control-height);
-  padding:0 14px!important;
-  border:1px solid var(--sp-global-border-input)!important;
-  border-radius:var(--sp-global-control-radius)!important;
-  background:#fff!important;
-  color:#31546c!important;
-  font-size:12px!important;
-  font-weight:800!important;
-  box-shadow:none!important;
-}
-
-/* ---------- Standard cards / KPI cards ---------- */
-.app .content .cards{
-  gap:14px;
-  margin:18px 0 20px;
-}
-
-.app .content .card{
-  min-height:96px;
-  padding:18px;
-  border:1px solid var(--sp-global-border);
-  border-radius:var(--sp-global-radius);
+.content:not(.pos) button.secondary,
+.management-page button.secondary,
+.product-master-modern button.secondary,
+.customer-master button.secondary,
+.inventory-modern button.secondary,
+.loyalty-modern button.secondary,
+.payment-types-modern button.secondary,
+.purchase-modern button.secondary,
+.promotion-modern button.secondary,
+.named-orders-page button.secondary,
+.users-modern button.secondary,
+.my-company-page button.secondary{
   background:#fff;
-  box-shadow:none;
+  color:var(--sp-text);
+  border:1px solid #cfdce6;
 }
 
-.app .content .card small{
-  color:#718397;
-  font-size:11px;
+/* Make icon + label combinations use the same icon box */
+.content:not(.pos) button span:first-child,
+.management-page button span:first-child,
+.product-master-modern button span:first-child,
+.customer-master button span:first-child,
+.inventory-modern button span:first-child,
+.loyalty-modern button span:first-child,
+.payment-types-modern button span:first-child,
+.purchase-modern button span:first-child,
+.promotion-modern button span:first-child,
+.named-orders-page button span:first-child,
+.users-modern button span:first-child,
+.my-company-page button span:first-child{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:18px;
+  font-size:14px;
+  line-height:1;
 }
 
-.app .content .card strong{
-  margin-top:8px;
-  color:#102a43;
-  font-size:24px;
-  line-height:1.15;
-}
-
-/* ---------- Standard tables ---------- */
-.app .content .table{
-  width:100%;
-  overflow:auto;
-}
-
-.app .content .table table,
-.app .content > .panel > table{
+/* ---------- Standard table ---------- */
+.content:not(.pos) table,
+.management-page table,
+.product-master-modern table,
+.customer-master table,
+.inventory-modern table,
+.loyalty-modern table,
+.payment-types-modern table,
+.purchase-modern table,
+.promotion-modern table,
+.named-orders-page table,
+.users-modern table,
+.my-company-page table{
   width:100%;
   border-collapse:collapse;
   font-size:12px;
 }
 
-.app .content .table th,
-.app .content .table td,
-.app .content > .panel > table th,
-.app .content > .panel > table td{
-  height:40px;
-  padding:9px 12px;
-  border-bottom:1px solid #e7edf2;
-  color:#173b5b;
-  vertical-align:middle;
+.content:not(.pos) th,
+.management-page th,
+.product-master-modern th,
+.customer-master th,
+.inventory-modern th,
+.loyalty-modern th,
+.payment-types-modern th,
+.purchase-modern th,
+.promotion-modern th,
+.named-orders-page th,
+.users-modern th,
+.my-company-page th{
+  height:38px;
+  padding:0 12px;
+  background:#f5f8fb;
+  color:#587087;
+  border-bottom:1px solid var(--sp-border);
+  text-align:left;
+  font-size:10px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.35px;
   white-space:nowrap;
 }
 
-.app .content .table th,
-.app .content > .panel > table th{
-  height:38px;
-  background:#f4f8fb;
-  color:#526b80;
-  font-size:10px;
-  font-weight:800;
-  letter-spacing:.35px;
-  text-transform:uppercase;
-}
-
-.app .content .table tr:last-child td,
-.app .content > .panel > table tr:last-child td{border-bottom:0}
-
-.app .content .table tbody tr:hover td,
-.app .content > .panel > table tbody tr:hover td{background:#fbfdff}
-
-/* ---------- Standard toolbar ---------- */
-.app .content .toolbar{
+.content:not(.pos) td,
+.management-page td,
+.product-master-modern td,
+.customer-master td,
+.inventory-modern td,
+.loyalty-modern td,
+.payment-types-modern td,
+.purchase-modern td,
+.promotion-modern td,
+.named-orders-page td,
+.users-modern td,
+.my-company-page td{
   min-height:40px;
-  margin-bottom:16px;
-}
-
-/* ---------- Keep specialized modules isolated ---------- */
-.ar-pos-shell,
-.login-screen,
-.modal-backdrop,
-.users-modal-backdrop,
-.payment-type-modal-backdrop,
-.promotion-modal-backdrop{isolation:isolate}
-
-/* ---------- Make existing modern module shells share the same spacing ---------- */
-.users-modern,
-.management-page,
-.my-company-page,
-.named-orders-page,
-.promotion-modern,
-.loyalty-modern,
-.customer-modern,
-.payment-types-modern,
-.purchase-modern,
-.product-master-modern{
-  box-sizing:border-box;
+  padding:10px 12px;
+  border-bottom:1px solid #e9eff4;
   color:#173b5b;
+  vertical-align:middle;
 }
 
-/* Users / Management page content width and outer rhythm. */
-.users-modern,
-.management-page{
-  padding-top:28px;
-  padding-bottom:50px;
-}
-.users-topbar,
-.users-role-note,
-.users-table,
-.management-head,
-.management-grid{
-  width:min(1180px,100%);
-  margin-left:auto;
-  margin-right:auto;
+/* ---------- Full-screen form layouts ---------- */
+.content:not(.pos) .narrow{
+  width:100%;
+  max-width:none;
+  margin:0;
 }
 
-/* ---------- Responsive standard ---------- */
-@media(max-width:760px){
-  main > .content{
-    padding:16px 12px 32px;
+.content:not(.pos) .grid2,
+.management-page .grid2,
+.customer-master .grid2,
+.inventory-modern .grid2,
+.loyalty-modern .grid2,
+.payment-types-modern .grid2,
+.purchase-modern .grid2,
+.promotion-modern .grid2,
+.named-orders-page .grid2,
+.users-modern .grid2,
+.my-company-page .grid2{
+  width:100%;
+}
+
+.my-company-page .company-shell{
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+.my-company-page .company-form,
+.my-company-page .company-body{
+  width:100%;
+  max-width:none;
+  box-sizing:border-box;
+}
+.my-company-page .company-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+/* Product master: use full available area */
+.product-master-modern .product-master-shell{
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+.product-master-modern .product-master-main{min-width:0;}
+.product-master-modern .product-master-table{width:100%;}
+
+/* Management: full-width 3-column grid */
+.management-page .management-head,
+.management-page .management-grid{
+  max-width:none;
+  width:100%;
+}
+
+/* Users / reports / named orders: no centered narrow content */
+.users-modern > *,
+.named-orders-page > *,
+.content:not(.pos) > .panel,
+.content:not(.pos) > .card{
+  max-width:none;
+}
+
+/* ---------- Labels ---------- */
+.content:not(.pos) label,
+.management-page label,
+.product-master-modern label,
+.customer-master label,
+.inventory-modern label,
+.loyalty-modern label,
+.payment-types-modern label,
+.purchase-modern label,
+.promotion-modern label,
+.named-orders-page label,
+.users-modern label,
+.my-company-page label{
+  color:#526b80;
+  font-size:11px;
+  font-weight:700;
+}
+
+/* ---------- Search fields: standard Management UI ---------- */
+.content:not(.pos) .search,
+.content:not(.pos) input[type="search"],
+.product-master-modern input[type="search"],
+.customer-master input[type="search"],
+.inventory-modern input[type="search"],
+.loyalty-modern input[type="search"],
+.payment-types-modern input[type="search"],
+.purchase-modern input[type="search"],
+.promotion-modern input[type="search"],
+.named-orders-page input[type="search"],
+.users-modern input[type="search"]{
+  height:40px;
+  border-radius:9px;
+  padding:0 12px;
+  margin-bottom:0;
+}
+
+/* ---------- Responsive ---------- */
+@media(max-width:900px){
+  .content:not(.pos),
+  .management-page,
+  .product-master-modern,
+  .customer-master,
+  .inventory-modern,
+  .loyalty-modern,
+  .payment-types-modern,
+  .purchase-modern,
+  .promotion-modern,
+  .named-orders-page,
+  .users-modern,
+  .my-company-page{
+    padding:18px 16px 28px !important;
   }
-  main > .content > .panel{
-    padding:18px 14px;
-    border-radius:10px;
-  }
-  main > .content > .panel > h2,
-  main > .content > .panel > h3{
-    font-size:21px;
-  }
-  .app .content .cards{
-    grid-template-columns:1fr 1fr;
-  }
-  .app .narrow > input[type="number"]{
-    width:100%;
+
+  .my-company-page .company-grid{
+    grid-template-columns:1fr;
   }
 }
 
-@media(max-width:520px){
-  .app .content .cards{grid-template-columns:1fr}
-  .app .content .table th,
-  .app .content .table td,
-  .app .content > .panel > table th,
-  .app .content > .panel > table td{
-    padding:8px 10px;
+@media(max-width:640px){
+  .content:not(.pos),
+  .management-page,
+  .product-master-modern,
+  .customer-master,
+  .inventory-modern,
+  .loyalty-modern,
+  .payment-types-modern,
+  .purchase-modern,
+  .promotion-modern,
+  .named-orders-page,
+  .users-modern,
+  .my-company-page{
+    padding:14px 10px 24px !important;
   }
+
+  .content:not(.pos) .grid2,
+  .management-page .grid2{
+    grid-template-columns:1fr;
+  }
+
+  .content:not(.pos) button,
+  .management-page button,
+  .product-master-modern button,
+  .customer-master button,
+  .inventory-modern button,
+  .loyalty-modern button,
+  .payment-types-modern button,
+  .purchase-modern button,
+  .promotion-modern button,
+  .named-orders-page button,
+  .users-modern button,
+  .my-company-page button{
+    min-height:40px;
+  }
+}
+
+/* ============================================================
+   POS ISOLATION
+   Global form rules above MUST NOT redesign POS.
+   POS keeps its own dark toolbar/search/control system.
+   ============================================================ */
+.ar-pos-shell,
+.ar-pos-shell *,
+.pos,
+.pos *{
+  box-sizing:border-box;
 }
