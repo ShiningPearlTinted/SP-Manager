@@ -97,7 +97,7 @@ function App(){
  const[taxRate,setTaxRate]=useState(()=>load("taxRate",0));
  const[notice,setNotice]=useState("");
  const[businessDay,setBusinessDay]=useState(()=>load("businessDay",{open:true,openingCash:0,date:new Date().toISOString().slice(0,10)}));
- const[company,setCompany]=useState(()=>load("company",{name:"Shining Pearl Tinted",taxNumber:"",streetName:"",buildingNumber:"",additionalStreetName:"",plotIdentification:"",district:"",postalCode:"",city:"",state:"",country:"Malaysia",phoneNumber:"",email:"",bankAccountNumber:"",bankDetails:"",logo:""}));
+ const[company,setCompany]=useState(()=>load("company",{name:"Shining Pearl Tinted",taxNumber:"",streetName:"",buildingNumber:"",additionalStreetName:"",plotIdentification:"",district:"",postalCode:"",city:"",state:"",country:"Malaysia",phoneNumber:"",email:"",bankAccountNumber:"",bankDetails:"",logo:"",loginLogo:""}));
  const[agentHeaderStatus,setAgentHeaderStatus]=useState({connected:false});
  const[editing,setEditing]=useState(null);
  const[productGroups,setProductGroups]=useState(()=>load("productGroups",[...new Set(seedProducts.map(p=>p.group||p.category).filter(Boolean))]));
@@ -275,7 +275,7 @@ function App(){
 
 function Login({users,company,onLogin}){
  const[username,setUsername]=useState("");const[password,setPassword]=useState("");const[showPassword,setShowPassword]=useState(false);const[error,setError]=useState("");const[busy,setBusy]=useState(false);
- const companyLogo=company?.logo||"";
+ const companyLogo=company?.loginLogo||company?.logo||"";
  const submit=async e=>{e.preventDefault();setError("");setBusy(true);const u=users.find(x=>String(x.username||"").toLowerCase()===username.trim().toLowerCase()&&x.enabled);await new Promise(r=>setTimeout(r,180));if(!u||u.password!==password){setError("Invalid username or password.");setBusy(false);return}onLogin(u);setBusy(false)};
  return <div className="login-screen"><div className="login-glow login-glow-a"></div><div className="login-glow login-glow-b"></div><div className="login-card login-card-premium"><div className={"login-brand-mark "+(companyLogo?"login-brand-mark-image":"login-brand-mark-fallback")}>{companyLogo?<img src={companyLogo} alt="Company logo"/>:<span>SP</span>}</div><div className="login-brand-name login-company-title">SHINING PEARL TINTED</div><form onSubmit={submit}><label><span>Username</span><div className="login-input-wrap"><i>◉</i><input autoFocus value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" placeholder="Enter your username"/></div></label><label><span>Password</span><div className="login-password-wrap login-input-wrap"><i>●</i><input type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" placeholder="Enter your password"/><button type="button" className="login-password-toggle" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Hide password":"Show password"}>{showPassword?"Hide":"Show"}</button></div></label>{error&&<div className="login-error">⚠ {error}</div>}<button className="login-submit" type="submit" disabled={busy}>{busy?<><span className="login-spinner"></span>Signing in…</>:<>Sign in <span>→</span></>}</button></form><div className="login-footer"><span>●</span> Offline-ready business system</div></div></div>
 }
@@ -319,6 +319,8 @@ function MyCompany({company,setCompany}){
  const saveCompany=()=>{setCompany({...draft});setMessage("Company information saved successfully.");setTimeout(()=>setMessage(""),2600)};
  const removeLogo=()=>{update("logo","");setLogoName("")};
  const handleLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setMessage("Please select an image file.");return}if(file.size>2*1024*1024){setMessage("Logo image must be 2 MB or smaller.");return}const reader=new FileReader();reader.onload=()=>{update("logo",String(reader.result||""));setLogoName(file.name)};reader.readAsDataURL(file)};
+ const handleLoginLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setMessage("Please select an image file.");return}if(file.size>2*1024*1024){setMessage("Login logo must be 2 MB or smaller.");return}const reader=new FileReader();reader.onload=()=>{update("loginLogo",String(reader.result||""));setLogoName(file.name)};reader.readAsDataURL(file)};
+ const removeLoginLogo=()=>{update("loginLogo","");setLogoName("")};
  const addressFields=[
   ["streetName","Street"],["buildingNumber","Building number"],["additionalStreetName","Additional street name"],["plotIdentification","Plot identification"],
   ["district","District"],["postalCode","Postal code"],["city","City"],["state","State / Province"],["country","Country"]
@@ -330,7 +332,7 @@ function MyCompany({company,setCompany}){
     <div className="company-top-actions"><span className="company-status"><i></i> Local data</span><button className="company-save" onClick={saveCompany}>✓ Save</button></div>
    </div>
    <div className="company-tabs company-tabs-ar">
-    {["General","Address","Logo","Bank details"].map(x=><button key={x} type="button" className={tab===x?"active":""} onClick={()=>setTab(x)}>{x}</button>)}
+    {["General","Address","Logo","Login screen logo","Bank details"].map(x=><button key={x} type="button" className={tab===x?"active":""} onClick={()=>setTab(x)}>{x}</button>)}
    </div>
    {message&&<div className="company-message">✓ {message}</div>}
    {tab==="General"&&<div className="company-body company-general-layout">
@@ -362,6 +364,7 @@ function MyCompany({company,setCompany}){
    </div>}
    {tab==="Address"&&<div className="company-body"><div className="company-section-title">Business address</div><div className="company-grid company-grid-ar">{addressFields.map(([k,l])=><label key={k}>{l}<input value={draft[k]||""} onChange={e=>update(k,e.target.value)} /></label>)}</div></div>}
    {tab==="Logo"&&<div className="company-body company-logo-tab"><div className="company-section-title">Company logo</div><div className="company-logo-large">{draft.logo?<img src={draft.logo} alt="Company logo"/>:<div className="logo-placeholder large"><b>SP</b><span>Add your company logo</span></div>}</div><div className="logo-actions logo-actions-ar"><label className="logo-add logo-add-ar">＋ Add logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogo}/></label><button type="button" className="logo-remove-ar" disabled={!draft.logo} onClick={removeLogo}>Remove</button></div>{logoName&&<div className="logo-file-name">Selected: {logoName}</div>}<p className="company-help">The logo is stored locally with this SP-Manager installation and can be used on receipts and business documents.</p></div>}
+   {tab==="Login screen logo"&&<div className="company-body company-logo-tab login-logo-settings"><div className="company-section-title">Login screen logo</div><p className="company-help">Set a separate logo for the SP-Manager login screen. If no login logo is set, the Company logo will be used automatically.</p><div className="company-logo-large login-logo-preview">{draft.loginLogo?<img src={draft.loginLogo} alt="Login screen logo"/>:<div className="logo-placeholder large"><b>SP</b><span>Use company logo</span></div>}</div><div className="logo-actions logo-actions-ar"><label className="logo-add logo-add-ar">＋ Add login logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLoginLogo}/></label><button type="button" className="logo-remove-ar" disabled={!draft.loginLogo} onClick={removeLoginLogo}>Remove</button></div><div className="logo-file-name">Recommended: transparent PNG or SVG · Maximum 2 MB</div></div>}
    {tab==="Bank details"&&<div className="company-body"><div className="company-section-title">Bank information</div><div className="company-grid company-grid-ar"><label className="wide">Bank account number<input value={draft.bankAccountNumber||""} onChange={e=>update("bankAccountNumber",e.target.value)} /></label><label className="wide">Bank details<textarea value={draft.bankDetails||""} onChange={e=>update("bankDetails",e.target.value)} placeholder="Bank name, branch and payment details"/></label></div></div>}
    <div className="company-footer"><span>Changes are not applied to documents until you save.</span><button className="company-save" onClick={saveCompany}>✓ Save company</button></div>
   </div>

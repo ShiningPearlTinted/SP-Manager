@@ -196,3 +196,16 @@
    .login-brand-mark,.login-brand-mark.login-brand-mark-image{width:180px;height:110px;margin:0 auto 18px;border-radius:0;background:transparent;box-shadow:none;display:flex;place-items:center;overflow:visible}.login-brand-mark-image{width:180px!important;height:110px!important}.login-brand-mark-image img{display:block;width:auto!important;height:auto!important;max-width:180px!important;max-height:110px!important;object-fit:contain;border:0;border-radius:0;background:transparent;box-shadow:none;padding:0;margin:0}
   .login-brand-name.login-company-title{font-size:12px;letter-spacing:2.5px;margin-bottom:23px}
 }
+
+/* V1.0.37 — My Company logo sizing and dedicated Login Screen Logo tab. */
+.company-logo-tab{min-height:360px!important;padding:28px!important;box-sizing:border-box!important}
+.company-logo-large{width:min(100%,760px)!important;height:300px!important;min-height:300px!important;max-height:300px!important;margin:18px auto!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;overflow:hidden!important;border:1px solid #dce6ee!important;border-radius:14px!important;background:#f8fafc!important}
+.company-logo-large img{display:block!important;width:auto!important;height:auto!important;max-width:90%!important;max-height:250px!important;object-fit:contain!important;object-position:center!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;margin:0!important}
+.company-logo-mini{width:100%!important;height:150px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;border:1px solid #dce6ee!important;border-radius:12px!important;background:#f8fafc!important}
+.company-logo-mini img{display:block!important;width:auto!important;height:auto!important;max-width:90%!important;max-height:125px!important;object-fit:contain!important;object-position:center!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.login-logo-preview{height:260px!important;min-height:260px!important;max-height:260px!important}
+.login-logo-preview img{max-height:210px!important}
+.logo-placeholder.large{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:10px!important;width:100%!important;height:100%!important;color:#7a8da0!important}
+.logo-placeholder.large b{font-size:48px!important;color:#159bd4!important}
+.logo-placeholder.large span{font-size:12px!important}
+@media(max-width:700px){.company-logo-tab{padding:18px!important}.company-logo-large{height:230px!important;min-height:230px!important;max-height:230px!important}.company-logo-large img{max-height:190px!important}.login-logo-preview{height:220px!important;min-height:220px!important;max-height:220px!important}}
