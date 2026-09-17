@@ -101,6 +101,7 @@ function App(){
  const[payment,setPayment]=useState(()=>load("paymentTypes",seedPaymentTypes).filter(x=>x.enabled).sort((a,b)=>a.position-b.position)[0]?.name||"Cash");
  const[taxRate,setTaxRate]=useState(()=>load("taxRate",0));
  const[notice,setNotice]=useState("");
+ const[lowStockAlert,setLowStockAlert]=useState(null);
  const[businessDay,setBusinessDay]=useState(()=>load("businessDay",{open:true,openingCash:0,date:new Date().toISOString().slice(0,10)}));
  const[company,setCompany]=useState(()=>load("company",{name:"Shining Pearl Tinted",taxNumber:"",streetName:"",buildingNumber:"",additionalStreetName:"",plotIdentification:"",district:"",postalCode:"",city:"",state:"",country:"Malaysia",phoneNumber:"",email:"",bankAccountNumber:"",bankDetails:"",logo:""}));
  const[agentHeaderStatus,setAgentHeaderStatus]=useState({connected:false});
@@ -161,6 +162,10 @@ function App(){
   const sale={id:uid(),no:"INV-"+String(uid()).slice(-8),date:new Date().toISOString(),dueDate,customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment:payments.length>1?"Split payment":(primary?.name||primaryName),paymentTypeId:primary?.id,paid:allPaid,paymentAmount:paidAmount,change:Math.max(0,paidAmount-grand),payments,voided:false,refunded:false,note:""};
   const ns=[...sales,sale];
   const np=products.map(p=>{const i=cart.find(x=>x.id===p.id);return i?{...p,stock:Math.max(0,p.stock-i.qty)}:p});
+  const lowStockItems=cart.map(i=>{const product=products.find(p=>p.id===i.id);const before=Number(product?.stock||0);const after=Math.max(0,before-Number(i.qty||0));const reorder=Number(product?.reorder||0);return {product,before,after,reorder}}).filter(x=>x.product&&x.before>x.reorder&&x.after<=x.reorder);
+  const notifiedIds=(()=>{try{return JSON.parse(sessionStorage.getItem("sp_low_stock_notified")||"[]")}catch{return[]}})();
+  const freshLowStockItems=lowStockItems.filter(x=>!notifiedIds.includes(x.product.id));
+  if(freshLowStockItems.length){try{sessionStorage.setItem("sp_low_stock_notified",JSON.stringify([...new Set([...notifiedIds,...freshLowStockItems.map(x=>x.product.id)])]))}catch{};setLowStockAlert(freshLowStockItems.map(x=>x.product))}
   persist("sales",ns,setSales);persist("products",np,setProducts);recordStockHistory(cart.map(i=>({id:uid(),date:new Date().toISOString(),productId:i.id,productName:i.name,code:i.code||"",type:"Sale",change:-Number(i.qty),quantityAfter:Number(products.find(p=>p.id===i.id)?.stock||0)-Number(i.qty),reference:sale.no})));
   const nc=customers.map(c=>c.id===customer?{...c,visits:c.visits+1,spend:c.spend+(allPaid?grand:0)}:c);
   persist("customers",nc,setCustomers);
@@ -274,6 +279,7 @@ function App(){
    {page==="My company"&&<MyCompany company={company} setCompany={v=>{persist("company",v,setCompany);setNotice("Company data saved successfully.")}}/>}
    {page==="Settings"&&<Settings settings={settings} setSettings={updateSettings} businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}} company={company} onCancel={()=>setPage("POS / Sales")}/>}
    {!nav.includes(page)&&page!=="Management"&&<div className="panel"><div className="eyebrow">SP-MANAGER</div><h2>Page not available</h2><p>The selected module could not be loaded.</p><button className="primary" onClick={()=>setPage("POS / Sales")}>Back to POS / Sales</button></div>}
+   {lowStockAlert&&page==="POS / Sales"&&<div className="ar-low-stock-backdrop" role="dialog" aria-modal="true" aria-labelledby="ar-low-stock-title"><div className="ar-low-stock-dialog"><div className="ar-low-stock-icon" aria-hidden="true">!</div><div className="ar-low-stock-content"><h2 id="ar-low-stock-title">Products are reaching low stock quantity</h2><p>Some products have reached their reorder point.</p><p>Consider purchasing the following items: <b>{lowStockAlert.map(p=>p.name).join(", ")}</b>.</p></div><button className="ar-low-stock-ok" onClick={()=>setLowStockAlert(null)}>OK</button></div></div>}
   </main>
  </div>
 }
