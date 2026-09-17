@@ -879,3 +879,145 @@
   .named-order-create .primary{width:100% !important}
   .named-orders-card-head{align-items:flex-start !important;flex-direction:column !important;gap:6px !important}
 }
+
+/* ============================================================
+   SP-MANAGER — GLOBAL UI SYSTEM / FORM CONTROL NORMALIZATION
+   UI ONLY — FUNCTION / DATA / EVENT HANDLERS LOCKED
+   Standard application controls now share one visual system.
+   Specialized POS, login and table controls intentionally retain
+   their dedicated layouts so their behaviour is not affected.
+   ============================================================ */
+:root{
+  --sp-ui-primary:#123b59;
+  --sp-ui-primary-hover:#0d3048;
+  --sp-ui-accent:#159bd4;
+  --sp-ui-text:#173b5b;
+  --sp-ui-muted:#718397;
+  --sp-ui-border:#cfdce6;
+  --sp-ui-border-soft:#dfe7ee;
+  --sp-ui-bg:#f4f7fa;
+  --sp-ui-surface:#fff;
+  --sp-ui-control-h:40px;
+  --sp-ui-control-radius:8px;
+  --sp-ui-control-pad:0 12px;
+  --sp-ui-control-font:12px;
+  --sp-ui-focus:0 0 0 3px rgba(21,155,212,.10);
+}
+
+/* Standard text/select controls used throughout SP-Manager. */
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input),
+.app select,
+.app textarea{
+  box-sizing:border-box;
+  min-width:0;
+  border:1px solid var(--sp-ui-border);
+  border-radius:var(--sp-ui-control-radius);
+  background:var(--sp-ui-surface);
+  color:var(--sp-ui-text);
+  font-size:var(--sp-ui-control-font);
+  outline:none;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+}
+
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input),
+.app select{
+  height:var(--sp-ui-control-h);
+  padding:var(--sp-ui-control-pad);
+}
+
+.app textarea{
+  min-height:96px;
+  padding:11px 12px;
+  resize:vertical;
+}
+
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input)::placeholder,
+.app textarea::placeholder{
+  color:#9aa9b6;
+  opacity:1;
+}
+
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input):focus,
+.app select:focus,
+.app textarea:focus{
+  border-color:#5eb8dc;
+  box-shadow:var(--sp-ui-focus);
+}
+
+/* Standard compact search controls use the same 40px control height. */
+.app .search,
+.app .table-search,
+.app .report-filters input,
+.app .loyalty-panel-head input,
+.app .period-controls input{
+  height:var(--sp-ui-control-h);
+}
+
+/* Standard form labels. */
+.app .formgrid label,
+.app .product-form label,
+.app .report-filters label,
+.app .settings-field,
+.app .customer-form-grid label,
+.app .company-grid label{
+  color:#526b80;
+}
+
+/* Standard primary/secondary action sizing. */
+.app button.primary,
+.app .company-save,
+.app .users-add,
+.app .settings-save,
+.app .settings-cancel{
+  min-height:40px;
+  border-radius:8px;
+  font-size:12px;
+  font-weight:800;
+}
+
+/* Consistent disabled treatment without changing click/state logic. */
+.app button:disabled,
+.app input:disabled,
+.app select:disabled,
+.app textarea:disabled{
+  cursor:not-allowed;
+}
+
+/* Keep specialized POS/login/table widgets visually isolated. */
+.ar-pos-shell input,
+.ar-pos-shell select,
+.ar-pos-shell textarea,
+.login-screen input,
+.login-screen select,
+.login-screen textarea,
+.named-orders-table input,
+.named-orders-table select,
+.named-orders-table textarea,
+.table input,
+.table select,
+.table textarea{
+  /* Dedicated component styles remain authoritative. */
+}
+
+/* Global panel/card treatment for standard non-specialized modules. */
+.app .panel,
+.app .card{
+  border-color:var(--sp-ui-border-soft);
+  border-radius:12px;
+}
+
+/* Consistent focus visibility for keyboard navigation. */
+.app button:focus-visible,
+.app input:focus-visible,
+.app select:focus-visible,
+.app textarea:focus-visible{
+  outline:2px solid rgba(21,155,212,.28);
+  outline-offset:1px;
+}
+
+@media(max-width:760px){
+  .app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.table-input),
+  .app select{
+    height:40px;
+  }
+}
