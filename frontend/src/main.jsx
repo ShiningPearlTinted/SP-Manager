@@ -2,7 +2,7 @@ import React,{useEffect,useMemo,useState}from"react";
 import{createRoot}from"react-dom/client";
 import"./styles.css";
 
-const AUTH_VERSION="1.0.31";
+const AUTH_VERSION="1.0.33";
 
 const seedProducts=[
 {id:1,code:"SP001",name:"Tinted Film Standard",group:"Tinted Film",category:"Tinted Film",price:180,cost:90,stock:12,reorder:5},
@@ -240,7 +240,7 @@ function App(){
   persist("businessDay",b,setBusinessDay);setNotice(b.open?"Business day opened successfully.":"Business day closed successfully.");
  };
 
- if(!signedIn)return <Login users={users} onLogin={u=>{save("activeUser",u);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(u);setSignedIn(true);setPage("POS / Sales")}}/>;
+ if(!signedIn)return <Login users={users} company={company} onLogin={u=>{save("activeUser",u);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(u);setSignedIn(true);setPage("POS / Sales")}}/>;
  return <div className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
   <aside><div className="brand"><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
    {nav.filter(n=>{const map={"Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return !map[n]||isPermissionAllowed(activeUser,map[n])}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("")}} key={n}>▸ {n}</button>)}
@@ -273,10 +273,11 @@ function App(){
  </div>
 }
 
-function Login({users,onLogin}){
+function Login({users,company,onLogin}){
  const[username,setUsername]=useState("");const[password,setPassword]=useState("");const[showPassword,setShowPassword]=useState(false);const[error,setError]=useState("");const[busy,setBusy]=useState(false);
+ const companyLogo=company?.logo||"";
  const submit=async e=>{e.preventDefault();setError("");setBusy(true);const u=users.find(x=>String(x.username||"").toLowerCase()===username.trim().toLowerCase()&&x.enabled);await new Promise(r=>setTimeout(r,180));if(!u||u.password!==password){setError("Invalid username or password.");setBusy(false);return}onLogin(u);setBusy(false)};
- return <div className="login-screen"><div className="login-glow login-glow-a"></div><div className="login-glow login-glow-b"></div><div className="login-card login-card-premium"><div className="login-brand-mark"><span>SP</span></div><div className="login-brand-name">SHINING PEARL TINTED</div><h1>Welcome back</h1><p className="login-subtitle">Sign in to <b>SP-Manager</b> to continue</p><form onSubmit={submit}><label><span>Username</span><div className="login-input-wrap"><i>◉</i><input autoFocus value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" placeholder="Enter your username"/></div></label><label><span>Password</span><div className="login-password-wrap login-input-wrap"><i>●</i><input type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" placeholder="Enter your password"/><button type="button" className="login-password-toggle" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Hide password":"Show password"}>{showPassword?"Hide":"Show"}</button></div></label>{error&&<div className="login-error">⚠ {error}</div>}<button className="login-submit" type="submit" disabled={busy}>{busy?<><span className="login-spinner"></span>Signing in…</>:<>Sign in <span>→</span></>}</button></form><div className="login-footer"><span>●</span> Offline-ready business system</div><div className="login-version">SP-Manager · Secure local session</div></div></div>
+ return <div className="login-screen"><div className="login-glow login-glow-a"></div><div className="login-glow login-glow-b"></div><div className="login-card login-card-premium"><div className={"login-brand-mark "+(companyLogo?"login-brand-mark-image":"")}>{companyLogo?<img src={companyLogo} alt="Company logo"/>:<span>SP</span>}</div><div className="login-brand-name login-company-title">SHINING PEARL TINTED</div><form onSubmit={submit}><label><span>Username</span><div className="login-input-wrap"><i>◉</i><input autoFocus value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" placeholder="Enter your username"/></div></label><label><span>Password</span><div className="login-password-wrap login-input-wrap"><i>●</i><input type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" placeholder="Enter your password"/><button type="button" className="login-password-toggle" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Hide password":"Show password"}>{showPassword?"Hide":"Show"}</button></div></label>{error&&<div className="login-error">⚠ {error}</div>}<button className="login-submit" type="submit" disabled={busy}>{busy?<><span className="login-spinner"></span>Signing in…</>:<>Sign in <span>→</span></>}</button></form><div className="login-footer"><span>●</span> Offline-ready business system</div></div></div>
 }
 
 
