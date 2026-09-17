@@ -1117,3 +1117,21 @@
   border-color:#20a9e2 !important;
   box-shadow:0 0 0 1px rgba(32,169,226,.22) !important;
 }
+
+/* Product image extension — UI only; existing product/POS behavior remains unchanged. */
+.product-image-section{padding-bottom:14px}
+.product-image-editor{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:center}
+.product-image-preview{width:150px;height:104px;display:flex;align-items:center;justify-content:center;background:#f7f9fb;border:1px dashed #cbd8e3;border-radius:10px;overflow:hidden}
+.product-image-preview img{display:block;max-width:132px;max-height:88px;width:auto;height:auto;object-fit:contain;border:0;border-radius:0}
+.product-image-controls{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.product-image-controls b,.product-image-controls small{display:block}
+.product-image-controls b{font-size:12px;color:#173b5b;margin-bottom:4px}
+.product-image-controls small{font-size:10px;line-height:1.5;color:#7b8da0;max-width:520px}
+.product-image-buttons{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.image-upload-btn{position:relative;display:inline-flex!important;align-items:center;justify-content:center;height:38px;padding:0 13px!important;border:1px solid #cbd8e3!important;border-radius:8px!important;background:#fff!important;color:#27516f!important;font-size:11px!important;font-weight:700!important;cursor:pointer!important;white-space:nowrap}
+.image-upload-btn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.image-remove-btn{height:38px;padding:0 12px!important;font-size:11px!important;white-space:nowrap}
+.ar-product-image{width:auto;height:auto;min-height:0;display:flex;align-items:center;justify-content:center;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.ar-product-image img{display:block;width:auto;height:auto;max-width:118px;max-height:82px;object-fit:contain;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.ar-product-image span{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+@media(max-width:760px){.product-image-editor{grid-template-columns:1fr}.product-image-preview{width:100%;height:120px}.product-image-controls{align-items:flex-start;flex-direction:column}.product-image-buttons{width:100%}}
