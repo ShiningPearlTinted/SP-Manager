@@ -197,15 +197,53 @@
   .login-brand-name.login-company-title{font-size:12px;letter-spacing:2.5px;margin-bottom:23px}
 }
 
-/* V1.0.37 — My Company logo sizing and dedicated Login Screen Logo tab. */
-.company-logo-tab{min-height:360px!important;padding:28px!important;box-sizing:border-box!important}
-.company-logo-large{width:min(100%,760px)!important;height:300px!important;min-height:300px!important;max-height:300px!important;margin:18px auto!important;display:flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;overflow:hidden!important;border:1px solid #dce6ee!important;border-radius:14px!important;background:#f8fafc!important}
-.company-logo-large img{display:block!important;width:auto!important;height:auto!important;max-width:90%!important;max-height:250px!important;object-fit:contain!important;object-position:center!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;margin:0!important}
-.company-logo-mini{width:100%!important;height:150px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;border:1px solid #dce6ee!important;border-radius:12px!important;background:#f8fafc!important}
-.company-logo-mini img{display:block!important;width:auto!important;height:auto!important;max-width:90%!important;max-height:125px!important;object-fit:contain!important;object-position:center!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
-.login-logo-preview{height:260px!important;min-height:260px!important;max-height:260px!important}
-.login-logo-preview img{max-height:210px!important}
-.logo-placeholder.large{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:10px!important;width:100%!important;height:100%!important;color:#7a8da0!important}
-.logo-placeholder.large b{font-size:48px!important;color:#159bd4!important}
-.logo-placeholder.large span{font-size:12px!important}
-@media(max-width:700px){.company-logo-tab{padding:18px!important}.company-logo-large{height:230px!important;min-height:230px!important;max-height:230px!important}.company-logo-large img{max-height:190px!important}.login-logo-preview{height:220px!important;min-height:220px!important;max-height:220px!important}}
+/* SP-Manager 1.0.37 — My Company UI polish. Existing functions/layout behaviour remain locked. */
+.my-company-page{min-height:calc(100vh - 85px);padding:28px 30px 50px;background:#f4f7fa;color:#17324a;box-sizing:border-box}
+.company-shell{width:min(1180px,100%);margin:0 auto;background:#fff;border:1px solid #dce5ed;border-radius:16px;box-shadow:0 10px 32px rgba(16,42,67,.08);overflow:hidden}
+.company-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:26px 30px 22px;background:linear-gradient(180deg,#fff,#fbfdff);border-bottom:1px solid #e4ebf1}
+.company-topbar .eyebrow{font-size:10px;letter-spacing:1.5px;color:#6c8194;font-weight:800}
+.company-topbar h2{margin:5px 0 7px;font-size:27px;line-height:1.15;color:#102a43}
+.company-topbar p{margin:0;color:#718397;font-size:12px;line-height:1.5}
+.company-top-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.company-status{display:inline-flex;align-items:center;gap:7px;color:#607589;font-size:11px;font-weight:700;padding:9px 11px;border:1px solid #dce6ee;border-radius:9px;background:#f8fafc}
+.company-status i{width:7px;height:7px;border-radius:50%;background:#159bd4;display:block}
+.company-save{height:40px;padding:0 17px;border:1px solid #0d5b83;border-radius:9px;background:#123b59;color:#fff;font-size:12px;font-weight:800;box-shadow:0 5px 14px rgba(18,59,89,.16)}
+.company-save:hover{background:#0d3048}
+.company-tabs{display:flex;align-items:stretch;gap:0;padding:0 16px;background:#f7fafc;border-bottom:1px solid #dce6ee;overflow:auto}
+.company-tabs button{position:relative;min-height:50px;padding:0 18px;border:0;background:transparent;color:#587087;font-size:11px;font-weight:700;white-space:nowrap}
+.company-tabs button:hover{color:#0b6f9d;background:#f0f7fb}
+.company-tabs button.active{color:#0b83b8;background:#fff}
+.company-tabs button.active:after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:3px;background:#159bd4;border-radius:3px 3px 0 0}
+.company-body{padding:25px 30px 30px}
+.company-general-layout{display:block}
+.company-form-block{width:100%}
+.company-section-title{display:flex;align-items:center;gap:9px;margin:0 0 14px;padding-bottom:9px;border-bottom:1px solid #e8eef3;color:#173b5b;font-size:12px;font-weight:800;letter-spacing:.1px}
+.company-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;margin-bottom:24px}
+.company-grid label{display:flex;flex-direction:column;gap:7px;color:#526b80;font-size:11px;font-weight:700}
+.company-grid input,.company-grid select,.company-grid textarea{width:100%;min-width:0;height:42px;padding:0 12px;border:1px solid #cfdce6;border-radius:9px;background:#fff;color:#173b5b;font-size:12px;outline:none;transition:border-color .15s,box-shadow .15s}
+.company-grid textarea{height:96px;padding:11px 12px;resize:vertical}
+.company-grid input::placeholder,.company-grid textarea::placeholder{color:#9aa9b6}
+.company-grid input:focus,.company-grid select:focus,.company-grid textarea:focus{border-color:#5eb8dc;box-shadow:0 0 0 3px rgba(21,155,212,.10)}
+.company-side-card{display:none}
+.company-logo-tab{padding-top:25px}
+.company-logo-large{width:min(720px,100%);height:300px;margin:0 auto 16px;border:1px solid #d6e2eb;border-radius:12px;background:linear-gradient(180deg,#fbfdff,#f6f9fb);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.company-logo-large img{display:block;width:auto;height:auto;max-width:82%;max-height:78%;object-fit:contain}
+.logo-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#8394a3}
+.logo-placeholder b{font-size:32px;color:#123b59}
+.logo-placeholder span{font-size:11px}
+.logo-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.logo-add-ar,.logo-remove-ar{height:38px!important;padding:0 14px!important;border-radius:8px!important;font-size:11px!important;font-weight:800!important}
+.logo-add-ar{display:inline-flex!important;align-items:center;justify-content:center;background:#123b59!important;color:#fff!important;border:1px solid #123b59!important;cursor:pointer}
+.logo-add-ar:hover{background:#0d3048!important}
+.logo-remove-ar{background:#fff!important;color:#b42318!important;border:1px solid #efc5c2!important}
+.logo-remove-ar:disabled{opacity:.45;cursor:not-allowed}
+.logo-add-ar input{display:none}
+.logo-file-name{margin-top:9px;color:#526b80;font-size:11px}
+.company-help{margin:10px 0 0;color:#718397;font-size:11px;line-height:1.55}
+.company-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 30px;border-top:1px solid #e4ebf1;background:#fbfdff;color:#718397;font-size:10px}
+.company-save-note{color:#8b9aa8}
+.company-message{margin:14px 30px 0;padding:10px 12px;border:1px solid #cfe8d9;border-radius:8px;background:#effaf3;color:#167a43;font-size:11px;font-weight:700}
+.company-login-intro{margin:-3px 0 16px}
+.company-login-logo-preview{height:270px;max-width:660px}
+.company-login-logo-preview img{max-width:70%;max-height:70%}
+@media(max-width:760px){.my-company-page{padding:14px 10px 30px}.company-topbar{padding:20px 18px;flex-direction:column}.company-top-actions{width:100%;justify-content:space-between}.company-tabs{padding:0 4px}.company-tabs button{padding:0 13px}.company-body{padding:20px 16px}.company-grid{grid-template-columns:1fr;gap:13px;margin-bottom:20px}.company-logo-large{height:230px}.company-footer{padding:12px 16px;align-items:flex-start;flex-direction:column}}
