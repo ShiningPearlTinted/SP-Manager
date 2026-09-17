@@ -70,23 +70,34 @@ const EAN_L=["0001101","0011001","0010011","0111101","0100011","0110001","010111
 const EAN_G=["0100111","0110011","0011011","0100001","0011101","0111001","0000101","0010001","0001001","0010111"];
 const EAN_R=["1110010","1100110","1101100","1000010","1011100","1001110","1010000","1000100","1001000","1110100"];
 const EAN_PARITY=["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL"];
-function BarcodeSvg({value,type="EAN13",height=26}){
- const raw=String(value||"").replace(/\D/g,"");
- let bits="";
- if(type==="EAN13"&&/^\d{12,13}$/.test(raw)){
-  const digits=raw.length===13?raw:raw+String((10-(raw.slice(0,12).split("").reduce((sum,d,i)=>sum+Number(d)*(i%2?3:1))%10))%10);
+const CODE128_PATTERNS=[
+"212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"
+];
+function BarcodeSvg({value,type="EAN13",height=28}){
+ const raw=String(value||"").trim();
+ const numeric=raw.replace(/\D/g,"");
+ if(type==="EAN13"&&/^\d{12,13}$/.test(numeric)){
+  const digits=numeric.length===13?numeric:numeric+String((10-(numeric.slice(0,12).split("").reduce((sum,d,i)=>sum+Number(d)*(i%2?3:1))%10))%10);
   const first=Number(digits[0]);
-  bits="101";
+  let bits="101";
   EAN_PARITY[first].split("").forEach((p,i)=>{const d=Number(digits[i+1]);bits+=p==="L"?EAN_L[d]:EAN_G[d]});
   bits+="01010";
   digits.slice(7).split("").forEach(d=>{bits+=EAN_R[Number(d)]});
   bits+="101";
- }else{
-  const seed=String(value||"-");
-  bits="1011"+Array.from(seed).map((ch,i)=>((ch.charCodeAt(0)+i*17)%7+2).toString(2).padStart(4,"0")).join("10")+"1101";
+  return <div className="pt-barcode"><svg viewBox={`0 0 ${bits.length} 95`} preserveAspectRatio="none" style={{height:`${Math.max(12,Number(height)||28)}px`}} role="img" aria-label={`Barcode ${digits}`}><rect width="100%" height="100%" fill="#fff"/>{bits.split("").map((b,i)=>b==="1"?<rect key={i} x={i} y="0" width="1" height="95" fill="#000"/>:null)}</svg><small>{digits}</small></div>;
  }
- return <div className="pt-barcode"><svg viewBox={`0 0 ${bits.length} ${height}`} preserveAspectRatio="none" role="img" aria-label={`Barcode ${value||""}`}>{bits.split("").map((b,i)=>b==="1"?<rect key={i} x={i} y="0" width="1" height={height}/>:null)}</svg><small>{value||""}</small></div>;
+ // Product codes such as SP004 are not valid EAN-13 values. Code 128B is used
+ // automatically so an alphanumeric product code still produces a real barcode.
+ const text=raw||"-";
+ const values=[104,...Array.from(text).map(ch=>{const code=ch.charCodeAt(0);return code>=32&&code<=127?code-32:0})];
+ const checksum=values.reduce((sum,v,i)=>sum+v*(i===0?1:i),0)%103;
+ values.push(checksum,106);
+ let total=0;values.forEach(v=>CODE128_PATTERNS[v].split("").forEach(w=>{total+=Number(w)}));
+ let x=0;const bars=[];
+ values.forEach(v=>CODE128_PATTERNS[v].split("").forEach((w,i)=>{const width=Number(w);if(i%2===0)bars.push(<rect key={`${v}-${i}-${x}`} x={x} y="0" width={width} height="95" fill="#000"/>);x+=width}));
+ return <div className="pt-barcode"><svg viewBox={`0 0 ${total} 95`} preserveAspectRatio="none" style={{height:`${Math.max(12,Number(height)||28)}px`}} role="img" aria-label={`Barcode ${text}`}><rect width="100%" height="100%" fill="#fff"/>{bars}</svg><small>{text}</small></div>;
 }
+
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem("sp_"+k))??d}catch{return d}};
 const save=(k,v)=>localStorage.setItem("sp_"+k,JSON.stringify(v));
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
@@ -685,6 +696,8 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
  const[priceTagSearch,setPriceTagSearch]=useState("");
  const[selectedPriceTags,setSelectedPriceTags]=useState(()=>new Set());
  const[priceTagConfig,setPriceTagConfig]=useState({paperSize:"A4",pageWidth:210,pageHeight:297,roll:false,marginTop:0,marginLeft:0,marginRight:0,marginBottom:0,columns:2,labelWidth:105,labelHeight:148.5,rowSpacing:0,columnSpacing:0,showName:true,showPrice:true,showCode:true,showBarcode:true,showTax:true,showBorders:true,barcodeType:"EAN13",nameSize:13,priceSize:18,barcodeHeight:28,copies:1});
+ const[priceTagPreviewScale,setPriceTagPreviewScale]=useState(1);
+ useEffect(()=>{const update=()=>{const pxPerMm=96/25.4;const availW=Math.max(320,window.innerWidth-318-36);const availH=Math.max(420,window.innerHeight-42-36);const sx=availW/(Number(priceTagConfig.pageWidth||210)*pxPerMm);const sy=availH/(Number(priceTagConfig.pageHeight||297)*pxPerMm);setPriceTagPreviewScale(Math.min(1,sx,sy));};update();window.addEventListener("resize",update);return()=>window.removeEventListener("resize",update)},[priceTagConfig.pageWidth,priceTagConfig.pageHeight]);
  const groups=[...new Set(productGroups.length?productGroups:products.map(p=>p.group||p.category).filter(Boolean))];
  const assignedGroups=new Set(products.map(p=>p.group||p.category).filter(Boolean));
  const unassignedGroups=groups.filter(g=>!assignedGroups.has(g)&&!groupCategories[g]);
@@ -761,7 +774,7 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
     <div className="pt-side-section"><b>Products</b><input className="pt-product-search" value={priceTagSearch} onChange={e=>setPriceTagSearch(e.target.value)} placeholder="Search products..."/><div className="pt-selection-note">{selectedPriceTags.size?`${selectedPriceTags.size} product(s) selected`:`No products selected`}<small>{selectedPriceTags.size?"Only selected products will be printed.":"All visible products will be printed."}</small></div><div className="pt-product-list">{priceTagCandidates.map(p=><label key={p.id}><input type="checkbox" checked={selectedPriceTags.has(p.id)} onChange={()=>togglePriceTagProduct(p.id)}/><span>{p.name}</span><em>{money(p.price)}</em></label>)}</div><label>Number of copies<input type="number" min="1" max="100" value={priceTagConfig.copies} onChange={e=>setPriceTagConfig(c=>({...c,copies:e.target.value}))}/></label></div>
     <button className="pt-print-preview" onClick={printPriceTags}>⌕ Print preview</button>
    </div>
-   <div className="price-tags-preview"><div className="pt-preview-toolbar"><span>Print preview</span><small>{priceTagItems.length*priceTagCopies} label(s)</small><button onClick={()=>setPriceTagsOpen(false)}>×</button></div><div className="pt-preview-scroll"><div className="price-tags-sheet" style={{"--pt-cols":priceTagConfig.columns,"--pt-page-w":`${priceTagConfig.pageWidth}mm`,"--pt-page-h":`${priceTagConfig.pageHeight}mm`,"--pt-label-w":`${priceTagConfig.labelWidth}mm`,"--pt-label-h":`${priceTagConfig.labelHeight}mm`,"--pt-row-gap":`${priceTagConfig.rowSpacing}mm`,"--pt-col-gap":`${priceTagConfig.columnSpacing}mm`,"--pt-margin-top":`${priceTagConfig.marginTop}mm`,"--pt-margin-left":`${priceTagConfig.marginLeft}mm`,"--pt-margin-right":`${priceTagConfig.marginRight}mm`,"--pt-margin-bottom":`${priceTagConfig.marginBottom}mm`}}>{Array.from({length:priceTagCopies}).flatMap(()=>priceTagItems).map((p,i)=><div className={priceTagConfig.showBorders?"price-tag-label":"price-tag-label no-border"} key={`${p.id}-${i}`}><div className="pt-tag-top">{priceTagConfig.showName&&<div className="pt-name" style={{fontSize:`${priceTagConfig.nameSize}px`}}>{p.name}</div>}{priceTagConfig.showPrice&&<div className="pt-price" style={{fontSize:`${priceTagConfig.priceSize}px`}}>{money(p.price)}</div>}</div>{priceTagConfig.showBarcode&&<BarcodeSvg value={p.barcode||p.barcodes?.[0]||p.code||p.id} type={priceTagConfig.barcodeType} height={priceTagConfig.barcodeHeight}/>}<div className="pt-tag-meta">{priceTagConfig.showCode&&<span>SKU: {p.code||p.id}</span>}{priceTagConfig.showTax&&<span>{p.taxInclusive===false?"Tax exclusive":"Tax inclusive"}</span>}</div></div>)}</div></div></div>
+   <div className="price-tags-preview"><div className="pt-preview-toolbar"><span>Print preview</span><small>{priceTagItems.length*priceTagCopies} label(s)</small><button onClick={()=>setPriceTagsOpen(false)}>×</button></div><div className="pt-preview-scroll"><div className="pt-sheet-stage" style={{width:`${priceTagConfig.pageWidth*(96/25.4)*priceTagPreviewScale}px`,height:`${priceTagConfig.pageHeight*(96/25.4)*priceTagPreviewScale}px`}}><div className="price-tags-sheet" style={{transform:`scale(${priceTagPreviewScale})`,transformOrigin:"top left","--pt-cols":priceTagConfig.columns,"--pt-page-w":`${priceTagConfig.pageWidth}mm`,"--pt-page-h":`${priceTagConfig.pageHeight}mm`,"--pt-label-w":`${priceTagConfig.labelWidth}mm`,"--pt-label-h":`${priceTagConfig.labelHeight}mm`,"--pt-row-gap":`${priceTagConfig.rowSpacing}mm`,"--pt-col-gap":`${priceTagConfig.columnSpacing}mm`,"--pt-margin-top":`${priceTagConfig.marginTop}mm`,"--pt-margin-left":`${priceTagConfig.marginLeft}mm`,"--pt-margin-right":`${priceTagConfig.marginRight}mm`,"--pt-margin-bottom":`${priceTagConfig.marginBottom}mm`}}>{Array.from({length:priceTagCopies}).flatMap(()=>priceTagItems).map((p,i)=><div className={priceTagConfig.showBorders?"price-tag-label":"price-tag-label no-border"} key={`${p.id}-${i}`}><div className="pt-tag-top">{priceTagConfig.showName&&<div className="pt-name" style={{fontSize:`${priceTagConfig.nameSize}px`}}>{p.name}</div>}{priceTagConfig.showPrice&&<div className="pt-price" style={{fontSize:`${priceTagConfig.priceSize}px`}}>{money(p.price)}</div>}</div>{priceTagConfig.showBarcode&&<BarcodeSvg value={p.barcode||p.barcodes?.[0]||p.code||p.id} type={priceTagConfig.barcodeType} height={priceTagConfig.barcodeHeight}/>}<div className="pt-tag-meta">{priceTagConfig.showCode&&<span>SKU: {p.code||p.id}</span>}{priceTagConfig.showTax&&<span>{p.taxInclusive===false?"Tax exclusive":"Tax inclusive"}</span>}</div></div>)}</div></div></div></div>
   </div></div>}
   {showCategory&&<div className="modal-backdrop" onMouseDown={()=>setShowCategory(false)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Product Categories</h3><button className="iconbtn" onClick={()=>setShowCategory(false)}>×</button></div><div className="category-list">{categories.map(c=><div key={c}><span>{c}</span><small>{products.filter(p=>(p.category||p.group)===c).length} product(s)</small></div>)}</div><div className="inline-field"><input value={newCategory} placeholder="New category name" onChange={e=>setNewCategory(e.target.value)}/><button onClick={addCat}>Add Category</button></div></div></div>}
   {showGroup&&<div className="modal-backdrop" onMouseDown={()=>setShowGroup(false)}><form className="modal" onSubmit={saveGroup} onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Product Groups</h3><button type="button" className="iconbtn" onClick={()=>setShowGroup(false)}>×</button></div><p className="muted">One product group can contain any number of products. Select the same group when creating multiple items.</p><div className="category-list">{groups.map(g=><div key={g}><span>{g}</span><small>{products.filter(p=>(p.group||p.category)===g).length} product(s)</small></div>)}</div><div className="inline-field"><input autoFocus value={newGroup} placeholder="New product group name" onChange={e=>{setNewGroup(e.target.value);setGroupError("")}}/><button type="submit">Add Group</button></div>{groupError&&<p className="modal-inline-error">{groupError}</p>}</form></div>}
