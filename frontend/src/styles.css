@@ -880,561 +880,391 @@
   .named-orders-card-head{align-items:flex-start !important;flex-direction:column !important;gap:6px !important}
 }
 
-/* =====================================================================
-   SP-MANAGER GLOBAL UI STANDARD — FINAL VISUAL NORMALIZATION
-   UI/CSS ONLY. No application logic is changed.
-   ===================================================================== */
-:root{
-  --sp-bg:#f4f7fa;
-  --sp-surface:#ffffff;
-  --sp-surface-soft:#f7fafc;
-  --sp-border:#d8e3ec;
-  --sp-border-soft:#e8eef3;
-  --sp-text:#123b59;
-  --sp-muted:#71869a;
-  --sp-primary:#123b59;
-  --sp-accent:#159bd4;
-  --sp-danger:#d92d20;
-  --sp-success:#168447;
-  --sp-radius:10px;
-  --sp-control-h:40px;
-  --sp-btn-h:40px;
-}
+/* ==========================================================
+   SP-MANAGER — POS SEARCH + DASHBOARD POLISH
+   UI ONLY — DO NOT CHANGE FUNCTIONALITY
+   ========================================================== */
 
-/* ---------- Global desktop page frame ---------- */
-main > .content:not(.ar-pos-shell),
-main > .management-page,
-main > .users-modern,
-main > .my-company-page{
-  width:100% !important;
-  max-width:none !important;
-  box-sizing:border-box !important;
+/* POS product search — keep POS dark theme, make the search field
+   visually consistent with the POS toolbar and easier to read. */
+.ar-search-row{
+  height:52px !important;
+  min-height:52px !important;
+  padding:5px 7px !important;
+  gap:0 !important;
+  background:#1f2428 !important;
+  border-bottom:1px solid #3b444b !important;
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.03) !important;
 }
-
-main > .content:not(.ar-pos-shell){
-  padding:22px 24px 36px !important;
-  background:var(--sp-bg) !important;
-  min-height:calc(100vh - 85px) !important;
+.ar-search-row > button:not(.ar-keyboard-btn){
+  height:42px !important;
+  width:44px !important;
+  flex:0 0 44px !important;
+  margin:0 !important;
+  border:1px solid #465058 !important;
+  border-right:0 !important;
+  background:#252b2f !important;
+  color:#dbe3e8 !important;
 }
-
-.management-page,
-.users-modern,
-.my-company-page{
-  padding:22px 24px 36px !important;
-  background:var(--sp-bg) !important;
+.ar-search-row > button:not(.ar-keyboard-btn):first-child{
+  border-radius:7px 0 0 7px !important;
 }
-
-.management-head,
-.management-grid,
-.users-topbar,
-.users-role-note,
-.users-table,
-.company-shell,
-.narrow{
-  max-width:none !important;
-  width:100% !important;
-}
-
-/* ---------- Typography ---------- */
-main h1, main h2, main h3, main h4{
-  color:var(--sp-text);
-}
-
-main .eyebrow,
-main > .content .eyebrow,
-.management-page .eyebrow,
-.users-modern .eyebrow,
-.my-company-page .eyebrow{
-  color:#5d7a92 !important;
-  font-size:10px !important;
-  line-height:1.2 !important;
-  letter-spacing:1.6px !important;
-}
-
-main > .content p,
-.management-page p,
-.users-modern p,
-.my-company-page p{
-  color:var(--sp-muted) !important;
-  font-size:11px !important;
-  line-height:1.35 !important;
-}
-
-/* Reduce descriptive text directly below titles without removing useful content. */
-.management-head p,
-.users-topbar p,
-.company-toolbar p,
-.dashboard-modern .panel-title small,
-.dashboard-modern .periodic-heading small{
-  font-size:10px !important;
-  line-height:1.25 !important;
-}
-
-/* ---------- One control language ---------- */
-main > .content:not(.ar-pos-shell) input:not([type="checkbox"]):not([type="radio"]),
-main > .content:not(.ar-pos-shell) select,
-main > .content:not(.ar-pos-shell) textarea,
-.management-page input:not([type="checkbox"]):not([type="radio"]),
-.management-page select,
-.management-page textarea,
-.users-modern input:not([type="checkbox"]):not([type="radio"]),
-.users-modern select,
-.users-modern textarea,
-.my-company-page input:not([type="checkbox"]):not([type="radio"]),
-.my-company-page select,
-.my-company-page textarea{
-  box-sizing:border-box !important;
-  width:100%;
-  min-height:var(--sp-control-h) !important;
-  height:var(--sp-control-h) !important;
-  padding:0 12px !important;
-  border:1px solid var(--sp-border) !important;
-  border-radius:8px !important;
-  background:#fff !important;
-  color:var(--sp-text) !important;
-  font-size:12px !important;
-  line-height:1.2 !important;
+.ar-search-row .ar-search-input{
+  height:42px !important;
+  min-height:42px !important;
+  margin:0 0 0 0 !important;
+  padding:0 13px !important;
+  flex:1 1 auto !important;
+  min-width:80px !important;
+  border:1px solid #aebbc5 !important;
+  border-left:1px solid #aebbc5 !important;
+  border-radius:0 7px 7px 0 !important;
   outline:none !important;
+  background:#f8fafc !important;
+  color:#16232d !important;
+  font-size:13px !important;
+  line-height:42px !important;
   box-shadow:none !important;
 }
-
-main > .content:not(.ar-pos-shell) textarea,
-.management-page textarea,
-.users-modern textarea,
-.my-company-page textarea{
-  height:auto !important;
-  min-height:96px !important;
-  padding:10px 12px !important;
-  line-height:1.45 !important;
-  resize:vertical;
-}
-
-main > .content:not(.ar-pos-shell) input::placeholder,
-main > .content:not(.ar-pos-shell) textarea::placeholder,
-.management-page input::placeholder,
-.users-modern input::placeholder,
-.my-company-page input::placeholder{
-  color:#9aaabd !important;
+.ar-search-row .ar-search-input::placeholder{
+  color:#8493a0 !important;
   opacity:1 !important;
 }
-
-main > .content:not(.ar-pos-shell) input:focus,
-main > .content:not(.ar-pos-shell) select:focus,
-main > .content:not(.ar-pos-shell) textarea:focus,
-.management-page input:focus,
-.management-page select:focus,
-.management-page textarea:focus,
-.users-modern input:focus,
-.users-modern select:focus,
-.users-modern textarea:focus,
-.my-company-page input:focus,
-.my-company-page select:focus,
-.my-company-page textarea:focus{
-  border-color:#8fcce5 !important;
-  box-shadow:0 0 0 3px rgba(21,155,212,.10) !important;
+.ar-search-row .ar-search-input:focus{
+  border-color:#159bd4 !important;
+  box-shadow:0 0 0 2px rgba(21,155,212,.18) !important;
 }
-
-/* Keep native checkbox/radio controls functional and visually compact. */
-main > .content input[type="checkbox"],
-main > .content input[type="radio"],
-.management-page input[type="checkbox"],
-.management-page input[type="radio"],
-.users-modern input[type="checkbox"],
-.users-modern input[type="radio"],
-.my-company-page input[type="checkbox"],
-.my-company-page input[type="radio"]{
-  width:auto !important;
-  min-height:0 !important;
-  height:auto !important;
+.ar-search-row > span{
+  width:32px !important;
   padding:0 !important;
-  box-shadow:none !important;
+  display:grid !important;
+  place-items:center !important;
+  color:#9eabb4 !important;
+  font-size:16px !important;
+}
+.ar-search-row .ar-keyboard-btn{
+  height:42px !important;
+  width:42px !important;
+  flex:0 0 42px !important;
+  margin-left:4px !important;
+  border:1px solid #465058 !important;
+  border-radius:7px !important;
+  background:#252b2f !important;
+  color:#c4ced5 !important;
+}
+.ar-search-row .ar-keyboard-btn:hover,
+.ar-search-row .ar-keyboard-btn.active{
+  background:#16394a !important;
+  border-color:#159bd4 !important;
+  color:#63cdf4 !important;
+}
+.ar-search-row .search-mode-active{
+  background:#16394a !important;
+  color:#5ec9f3 !important;
+  border-color:#159bd4 !important;
+  box-shadow:inset 0 -2px #159bd4 !important;
 }
 
-/* ---------- Standard buttons ---------- */
-main > .content:not(.ar-pos-shell) button,
-.management-page button,
-.users-modern button,
-.my-company-page button{
-  min-height:var(--sp-btn-h);
-  border-radius:8px;
-  font-size:11px;
-  font-weight:700;
-  line-height:1;
-  box-sizing:border-box;
-}
-
-main > .content:not(.ar-pos-shell) button.primary,
-main > .content:not(.ar-pos-shell) .complete,
-.management-page .users-add,
-.users-modern .users-add,
-.my-company-page .settings-save{
-  min-height:var(--sp-btn-h) !important;
-  height:var(--sp-btn-h) !important;
-  padding:0 15px !important;
-  background:var(--sp-primary) !important;
-  border:1px solid var(--sp-primary) !important;
-  color:#fff !important;
-  box-shadow:0 5px 14px rgba(18,59,89,.12) !important;
-}
-
-main > .content:not(.ar-pos-shell) button.secondary,
-.management-page button.secondary,
-.users-modern button.secondary,
-.my-company-page button.secondary{
-  background:#fff !important;
-  border:1px solid var(--sp-border) !important;
-  color:var(--sp-text) !important;
-  box-shadow:none !important;
-}
-
-main > .content:not(.ar-pos-shell) button:hover,
-.management-page button:hover,
-.users-modern button:hover,
-.my-company-page button:hover{
-  transform:none !important;
-}
-
-/* Outline action-button language: only the small icon is emphasized. */
-.management-card > span,
-.users-table td button,
-.company-toolbar button,
-.dashboard-modern .icon-btn,
-.dashboard-modern .report-limit{
-  border:1px solid var(--sp-border) !important;
-  background:#fff !important;
-  color:var(--sp-text) !important;
-}
-
-.management-card > span{
-  width:38px !important;
-  height:38px !important;
-  border-radius:9px !important;
-  background:#f3f9fc !important;
-  color:var(--sp-accent) !important;
-  font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Arial Unicode MS",sans-serif !important;
-  font-variant-emoji:text !important;
-  font-size:17px !important;
-}
-
-/* ---------- Full-width cards/panels ---------- */
-.content .panel,
-.content .card,
-.management-page .users-role-note,
-.management-page .users-table,
-.users-modern .users-role-note,
-.users-modern .users-table,
-.my-company-page .company-shell{
-  border-color:var(--sp-border) !important;
-  border-radius:var(--sp-radius) !important;
-  box-shadow:0 5px 20px rgba(18,59,89,.045) !important;
-}
-
-/* ---------- Tables ---------- */
-main > .content:not(.ar-pos-shell) table,
-.management-page table,
-.users-modern table,
-.my-company-page table{
+/* Dashboard — full available content width, stronger visual hierarchy,
+   readable panels and compact subtitles. */
+.dashboard-modern.aronium-dashboard{
   width:100% !important;
-  border-collapse:collapse !important;
+  max-width:none !important;
+  min-height:calc(100vh - 85px) !important;
+  padding:18px 24px 30px !important;
+  background:#f4f7fa !important;
 }
-
-main > .content:not(.ar-pos-shell) th,
-.management-page th,
-.users-modern th,
-.my-company-page th{
-  height:38px !important;
-  padding:0 12px !important;
-  background:#f4f8fb !important;
-  color:#52708a !important;
-  border-bottom:1px solid var(--sp-border) !important;
-  font-size:10px !important;
-  font-weight:700 !important;
-  letter-spacing:.45px !important;
-  text-transform:uppercase !important;
-}
-
-main > .content:not(.ar-pos-shell) td,
-.management-page td,
-.users-modern td,
-.my-company-page td{
-  min-height:42px;
-  padding:10px 12px !important;
-  color:#34546d !important;
-  border-bottom:1px solid var(--sp-border-soft) !important;
-  font-size:11px !important;
-  vertical-align:middle !important;
-}
-
-/* ---------- Management ---------- */
-.management-head{
-  margin-bottom:16px !important;
-}
-.management-head h2{
-  font-size:24px !important;
-  margin:4px 0 2px !important;
-}
-.management-grid{
-  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+.dashboard-modern.aronium-dashboard .ar-dashboard-monthly{
+  grid-template-columns:minmax(0,4.25fr) minmax(280px,1fr) !important;
   gap:12px !important;
-}
-.management-card{
-  min-height:76px !important;
-  padding:12px 14px !important;
-  border-color:var(--sp-border) !important;
-  border-radius:10px !important;
-  box-shadow:0 3px 12px rgba(18,59,89,.05) !important;
-}
-.management-card b{font-size:12px !important;color:var(--sp-text) !important}
-.management-card small{font-size:9px !important;color:#8396a8 !important}
-.management-role{font-size:10px !important}
-
-/* ---------- Users ---------- */
-.users-topbar h2{font-size:24px !important;margin:4px 0 2px !important}
-.users-role-note{
-  min-height:44px !important;
-  padding:10px 14px !important;
   margin-bottom:12px !important;
 }
-.users-table{
-  padding:14px !important;
+.dashboard-modern.aronium-dashboard .monthly-main,
+.dashboard-modern.aronium-dashboard .monthly-total,
+.dashboard-modern.aronium-dashboard .ar-panel{
+  border:1px solid #d8e2eb !important;
+  border-radius:10px !important;
+  box-shadow:0 4px 14px rgba(15,42,67,.08) !important;
 }
-.users-form-grid{
-  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+.dashboard-modern.aronium-dashboard .monthly-main{
+  min-width:0 !important;
+  padding:13px 14px 9px !important;
+  background:linear-gradient(145deg,#182b3e,#142333) !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-title{
+  margin-bottom:5px !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-title h3{
+  margin:0 !important;
+  font-size:18px !important;
+  line-height:1.2 !important;
+  font-weight:700 !important;
+  color:#f8fafc !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-title small{
+  display:block !important;
+  margin-top:2px !important;
+  font-size:9px !important;
+  line-height:1.2 !important;
+  color:#9eb0c1 !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-tools{
+  gap:5px !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-tools .icon-btn{
+  width:30px !important;
+  height:30px !important;
+  border:1px solid #526679 !important;
+  border-radius:7px !important;
+  background:#26394b !important;
+  color:#f1f5f9 !important;
+  font-size:19px !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-tools .icon-btn:hover{
+  background:#31516a !important;
+  border-color:#6b8ca5 !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-chart{
+  height:166px !important;
+  padding:8px 8px 0 42px !important;
+  border-bottom:1px solid #34495c !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-gridlines{
+  inset:8px 8px 24px 0 !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-gridlines span{
+  font-size:8px !important;
+  color:#7890a4 !important;
+  border-bottom:1px solid rgba(148,163,184,.20) !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-bars{
+  gap:5px !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-legend{
+  margin-top:6px !important;
   gap:14px !important;
-  padding:18px 22px 10px !important;
+  font-size:9px !important;
+  color:#9eb0c1 !important;
 }
-.users-form-grid input:not([type="checkbox"]),
-.users-form-grid select{
-  height:var(--sp-control-h) !important;
+.dashboard-modern.aronium-dashboard .monthly-legend label{
+  gap:5px !important;
 }
-.users-table td button{
-  height:32px !important;
-  min-height:32px !important;
-  padding:0 11px !important;
+.dashboard-modern.aronium-dashboard .monthly-total{
+  min-height:228px !important;
+  padding:18px !important;
+  background:linear-gradient(145deg,#1d3449,#182a3c) !important;
+  color:#f8fafc !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-total h3{
+  font-size:16px !important;
+  color:#e7f0f7 !important;
+  margin:0 !important;
+}
+.dashboard-modern.aronium-dashboard .monthly-total > div:first-child strong{
+  margin-top:8px !important;
+  font-size:34px !important;
+  line-height:1 !important;
+  color:#fff !important;
+}
+.dashboard-modern.aronium-dashboard .top-month-label{
+  padding-top:12px !important;
+  border-top:1px solid rgba(148,163,184,.28) !important;
+  color:#9eb0c1 !important;
+  font-size:9px !important;
+}
+.dashboard-modern.aronium-dashboard .top-month-label b{
+  display:block !important;
+  margin-top:4px !important;
+  color:#58d4ef !important;
+  font-size:12px !important;
+}
+.dashboard-modern.aronium-dashboard .top-month-label strong{
+  display:block !important;
+  margin-top:1px !important;
+  color:#fff !important;
+  font-size:18px !important;
 }
 
-/* ---------- Tax / narrow legacy forms ---------- */
-.narrow{
-  max-width:none !important;
-  padding:22px 24px !important;
-  background:#fff !important;
-  border:1px solid var(--sp-border) !important;
-  border-radius:var(--sp-radius) !important;
-  box-shadow:0 5px 20px rgba(18,59,89,.045) !important;
+.dashboard-modern.aronium-dashboard .periodic-heading{
+  min-height:38px !important;
+  margin:2px 0 8px !important;
+  padding:0 !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:14px !important;
 }
-.narrow h2{font-size:24px !important;margin:0 0 6px !important}
-.narrow input{margin:10px 0 14px !important}
-.narrow button{margin-top:0 !important}
-
-/* ---------- Dashboard: use the same control language, keep chart visuals intact ---------- */
-.dashboard-modern{
-  width:100% !important;
-  max-width:none !important;
-  padding:22px 24px 36px !important;
+.dashboard-modern.aronium-dashboard .periodic-heading h3{
+  margin:0 !important;
+  color:#173b5b !important;
+  font-size:15px !important;
+  font-weight:700 !important;
 }
-.dashboard-modern .ar-dashboard-monthly{
-  width:100% !important;
-  grid-template-columns:minmax(0,4fr) minmax(280px,1fr) !important;
-  gap:12px !important;
+.dashboard-modern.aronium-dashboard .period-controls{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  flex-wrap:nowrap !important;
 }
-.dashboard-modern .periodic-heading{
-  min-height:40px !important;
-  margin:6px 0 10px !important;
+.dashboard-modern.aronium-dashboard .period-controls label{
+  display:flex !important;
+  align-items:center !important;
+  gap:5px !important;
+  color:#607589 !important;
+  font-size:10px !important;
+  white-space:nowrap !important;
 }
-.dashboard-modern .period-controls input,
-.dashboard-modern .period-controls select,
-.dashboard-modern .hourly-panel select{
-  height:var(--sp-control-h) !important;
-  min-height:var(--sp-control-h) !important;
-  border:1px solid var(--sp-border) !important;
+.dashboard-modern.aronium-dashboard .period-controls input{
+  width:122px !important;
+  height:36px !important;
+  padding:0 9px !important;
+  border:1px solid #cbd9e5 !important;
   border-radius:8px !important;
   background:#fff !important;
-  color:var(--sp-text) !important;
+  color:#173b5b !important;
+  color-scheme:light !important;
   font-size:11px !important;
-  padding:0 10px !important;
+  outline:none !important;
+  cursor:pointer !important;
 }
-.dashboard-modern .hourly-panel select{
-  width:180px !important;
+.dashboard-modern.aronium-dashboard .period-controls input:hover{
+  border-color:#9fc9de !important;
 }
-.dashboard-modern .ar-panel .panel-title{
-  min-height:52px !important;
-  padding:11px 12px 8px !important;
-}
-.dashboard-modern .ar-panel .panel-title h3{font-size:16px !important}
-.dashboard-modern .ar-panel .panel-title small{font-size:9px !important}
-
-/* ---------- My Company ---------- */
-.company-shell{
-  max-width:none !important;
-  width:100% !important;
-}
-.company-toolbar{
-  padding:18px 24px !important;
-}
-.company-toolbar h2{font-size:24px !important}
-.company-tabs button{
-  min-height:40px !important;
-  height:40px !important;
-  padding:0 18px !important;
-  font-size:11px !important;
-}
-.company-scope,
-.company-content{
-  width:100% !important;
-}
-
-/* ---------- Named Orders ---------- */
-.named-orders-page,
-.named-orders-card,
-.named-orders-topbar,
-.named-orders-toolbar,
-.named-orders-table-wrap{
-  max-width:none !important;
-  width:100% !important;
-}
-.named-orders-page{padding:22px 24px 36px !important}
-.named-orders-topbar{padding:18px 22px !important}
-.named-orders-topbar h2{font-size:24px !important}
-.named-orders-toolbar{padding:14px !important}
-.named-order-create{grid-template-columns:minmax(0,1.35fr) minmax(220px,.75fr) 150px !important}
-.named-order-create input,
-.named-order-create select,
-.named-order-search{height:var(--sp-control-h) !important}
-
-/* =====================================================================
-   POS ISOLATION — dark POS controls stay on POS style and never inherit
-   the Management/global light-form rules.
-   ===================================================================== */
-.ar-pos-shell{
-  font-family:Arial,sans-serif !important;
-}
-.ar-pos-shell .ar-search-row{
-  height:47px !important;
-  background:#1b1d1f !important;
-  border-bottom:1px solid #3d4246 !important;
-}
-.ar-pos-shell .ar-search-row input.ar-search-input{
-  height:39px !important;
-  min-height:39px !important;
-  margin:0 7px !important;
-  padding:0 12px !important;
-  border:1px solid #4a5055 !important;
-  border-radius:7px !important;
-  background:#f8fafc !important;
-  color:#17212b !important;
-  font-size:13px !important;
-  box-shadow:none !important;
-}
-.ar-pos-shell .ar-search-row input.ar-search-input:focus{
+.dashboard-modern.aronium-dashboard .period-controls input:focus{
   border-color:#159bd4 !important;
-  box-shadow:0 0 0 2px rgba(21,155,212,.16) !important;
+  box-shadow:0 0 0 3px rgba(21,155,212,.10) !important;
 }
-.ar-pos-shell .ar-search-row button{
-  height:47px !important;
-  min-height:47px !important;
-  width:45px !important;
-  padding:0 !important;
-  border-radius:0 !important;
-  background:#242729 !important;
-  border-color:#454b50 !important;
-  color:#e8edf0 !important;
-  font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Arial Unicode MS",sans-serif !important;
-  font-variant-emoji:text !important;
-}
-.ar-pos-shell .ar-search-row span{
-  color:#9aa4ab !important;
-}
-.ar-pos-shell .ar-keyboard-btn{
-  border-left:1px solid #454b50 !important;
-}
-.ar-pos-shell .ar-action,
-.ar-pos-shell .ar-order-tools button,
-.ar-pos-shell .ar-bottom-actions button,
-.ar-pos-shell .ar-menu-btn{
-  font-family:Arial,"Segoe UI Symbol",sans-serif !important;
-  font-variant-emoji:text !important;
-}
-.ar-pos-shell .ar-action span{
-  color:#e8edf0 !important;
-  font-variant-emoji:text !important;
-}
-.ar-pos-shell .ar-menu-btn{
-  color:#ff3040 !important;
+.dashboard-modern.aronium-dashboard .period-controls input::-webkit-calendar-picker-indicator{
+  opacity:.75 !important;
+  cursor:pointer !important;
 }
 
-/* Remove the bottom Administrator user-selection control from POS.
-   User access remains available through the POS menu; this only hides the
-   visual selector requested by the user. */
-.ar-pos-shell .ar-user-footer-btn{
-  display:none !important;
+.dashboard-modern.aronium-dashboard .ar-dashboard-grid{
+  grid-template-columns:minmax(260px,1.08fr) minmax(320px,1.34fr) minmax(230px,.86fr) !important;
+  grid-template-areas:"products hourly total" "groups customers customers" !important;
+  gap:10px !important;
 }
-.ar-pos-shell .ar-page-footer{
-  justify-content:flex-end !important;
+.dashboard-modern.aronium-dashboard .ar-panel{
+  background:linear-gradient(180deg,#182638,#152333) !important;
+  color:#e8f0f6 !important;
+}
+.dashboard-modern.aronium-dashboard .ar-panel .panel-title{
+  min-height:45px !important;
+  padding:9px 11px 7px !important;
+  border-bottom:1px solid rgba(148,163,184,.20) !important;
+}
+.dashboard-modern.aronium-dashboard .ar-panel .panel-title h3{
+  margin:0 !important;
+  color:#eef5fa !important;
+  font-size:15px !important;
+  line-height:1.2 !important;
+  font-weight:700 !important;
+}
+.dashboard-modern.aronium-dashboard .ar-panel .panel-title small{
+  display:block !important;
+  margin-top:2px !important;
+  color:#8fa5b7 !important;
+  font-size:8px !important;
+  line-height:1.2 !important;
+}
+.dashboard-modern.aronium-dashboard .top-products-panel,
+.dashboard-modern.aronium-dashboard .hourly-panel,
+.dashboard-modern.aronium-dashboard .total-sales-panel{
+  min-height:278px !important;
+}
+.dashboard-modern.aronium-dashboard .groups-panel,
+.dashboard-modern.aronium-dashboard .customers-panel{
+  min-height:260px !important;
+}
+.dashboard-modern.aronium-dashboard .hourly-panel select{
+  width:136px !important;
+  height:34px !important;
+  padding:0 9px !important;
+  border:1px solid #cbd9e5 !important;
+  border-radius:8px !important;
+  background:#fff !important;
+  color:#173b5b !important;
+  color-scheme:light !important;
+  font-size:10px !important;
+  outline:none !important;
+}
+.dashboard-modern.aronium-dashboard .hourly-panel select:focus{
+  border-color:#159bd4 !important;
+  box-shadow:0 0 0 3px rgba(21,155,212,.10) !important;
+}
+.dashboard-modern.aronium-dashboard .report-row{
+  padding:8px 11px !important;
+  border-top:1px solid rgba(148,163,184,.16) !important;
+}
+.dashboard-modern.aronium-dashboard .report-row b{
+  color:#eaf2f7 !important;
+  font-size:10px !important;
+}
+.dashboard-modern.aronium-dashboard .report-row strong{
+  color:#59d4ef !important;
+  font-size:10px !important;
+}
+.dashboard-modern.aronium-dashboard .big-sales-value{
+  color:#f4fbff !important;
+  font-size:clamp(54px,5vw,92px) !important;
+  line-height:1 !important;
+  text-shadow:0 3px 18px rgba(34,211,238,.14) !important;
+}
+.dashboard-modern.aronium-dashboard .ar-dashboard-footer{
+  padding:7px 2px 0 !important;
+  color:#7e95a8 !important;
+  font-size:9px !important;
+}
+.dashboard-modern.aronium-dashboard .ar-dashboard-footer b{
+  color:#58758d !important;
+}
+.dashboard-modern.aronium-dashboard .ar-dashboard-footer .linkbtn{
+  color:#159bd4 !important;
 }
 
-/* POS hamburger menu is a proper overlay, not a bottom selection strip. */
-.ar-pos-shell .ar-menu-panel{
-  position:absolute !important;
-  right:0 !important;
-  top:0 !important;
-  width:280px !important;
-  height:100% !important;
-  background:#25282b !important;
-  border-left:1px solid #464c51 !important;
-  box-shadow:-18px 0 40px rgba(0,0,0,.35) !important;
-  padding-top:6px !important;
-}
-.ar-pos-shell .ar-menu-panel>button{
-  min-height:42px !important;
-  height:42px !important;
-  padding:0 16px !important;
-  background:#25282b !important;
-  border-bottom:1px solid #3b4044 !important;
-  color:#eef2f4 !important;
-  font-size:12px !important;
-  font-weight:600 !important;
-}
-.ar-pos-shell .ar-menu-panel>button span{
-  color:#9fd9ef !important;
-  font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Arial Unicode MS",sans-serif !important;
-  font-variant-emoji:text !important;
-}
-.ar-pos-shell .ar-menu-panel button.permission-disabled{
-  opacity:.35 !important;
-}
-
-/* POS outline icon treatment */
-.ar-pos-shell .ar-action span,
-.ar-pos-shell .ar-order-tools button,
-.ar-pos-shell .ar-bottom-actions button,
-.ar-pos-shell .ar-menu-btn{
-  text-shadow:none !important;
-}
-
-/* ---------- Responsive ---------- */
-@media(max-width:900px){
-  main > .content:not(.ar-pos-shell),
-  .management-page,
-  .users-modern,
-  .my-company-page,
-  .dashboard-modern,
-  .named-orders-page{
-    padding:16px 14px 28px !important;
+@media(max-width:1100px){
+  .dashboard-modern.aronium-dashboard .ar-dashboard-monthly{
+    grid-template-columns:1fr !important;
   }
-  .management-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
-  .dashboard-modern .ar-dashboard-monthly{grid-template-columns:1fr !important}
-  .named-order-create{grid-template-columns:1fr 1fr !important}
-  .named-order-create .primary{width:100% !important}
+  .dashboard-modern.aronium-dashboard .ar-dashboard-grid{
+    grid-template-columns:1fr 1fr !important;
+    grid-template-areas:"products total" "hourly hourly" "groups customers" !important;
+  }
 }
-@media(max-width:680px){
-  .management-grid,
-  .users-form-grid,
-  .named-order-create{grid-template-columns:1fr !important}
-  .periodic-heading{align-items:stretch !important;flex-direction:column !important}
-  .period-controls{width:100% !important}
-  .period-controls label{flex:1 !important}
-  .period-controls input{width:100% !important}
-  .dashboard-modern .hourly-panel select{width:100% !important}
-  .company-toolbar{padding:14px !important}
-  .company-tabs{overflow-x:auto !important}
+@media(max-width:760px){
+  .ar-search-row{
+    padding:4px !important;
+  }
+  .ar-search-row > button:not(.ar-keyboard-btn){
+    width:40px !important;
+    flex-basis:40px !important;
+  }
+  .ar-search-row .ar-search-input{
+    font-size:12px !important;
+  }
+  .dashboard-modern.aronium-dashboard{
+    padding:12px 10px 22px !important;
+  }
+  .dashboard-modern.aronium-dashboard .periodic-heading{
+    align-items:stretch !important;
+    flex-direction:column !important;
+    gap:7px !important;
+    min-height:0 !important;
+  }
+  .dashboard-modern.aronium-dashboard .period-controls{
+    width:100% !important;
+    flex-wrap:wrap !important;
+  }
+  .dashboard-modern.aronium-dashboard .period-controls label{
+    flex:1 1 160px !important;
+  }
+  .dashboard-modern.aronium-dashboard .period-controls input{
+    flex:1 !important;
+    width:auto !important;
+  }
+  .dashboard-modern.aronium-dashboard .ar-dashboard-grid{
+    grid-template-columns:1fr !important;
+    grid-template-areas:"products" "hourly" "total" "groups" "customers" !important;
+  }
 }
