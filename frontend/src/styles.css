@@ -1021,3 +1021,353 @@
     height:40px;
   }
 }
+
+/* ============================================================
+   SP-MANAGER — GLOBAL UI STANDARD v1.0.36
+   UI ONLY / FUNCTION LOCK
+   ------------------------------------------------------------
+   One visual system for standard application pages.
+   Do not apply to AR POS, login or receipt/print-specific UI.
+   ============================================================ */
+:root{
+  --sp-global-primary:#123b59;
+  --sp-global-primary-hover:#0d3048;
+  --sp-global-accent:#159bd4;
+  --sp-global-text:#102a43;
+  --sp-global-body:#f4f7fa;
+  --sp-global-surface:#ffffff;
+  --sp-global-border:#dce5ed;
+  --sp-global-border-input:#cfdce6;
+  --sp-global-muted:#718397;
+  --sp-global-label:#526b80;
+  --sp-global-radius:12px;
+  --sp-global-control-radius:8px;
+  --sp-global-control-height:40px;
+  --sp-global-control-font:12px;
+  --sp-global-control-pad:0 12px;
+  --sp-global-focus:0 0 0 3px rgba(21,155,212,.10);
+  --sp-global-shadow:0 6px 20px rgba(16,42,67,.055);
+}
+
+/* ---------- Global page canvas ---------- */
+main > .content{
+  width:100%;
+  max-width:1180px;
+  margin:0 auto;
+  padding:24px 28px 50px;
+  background:transparent;
+}
+
+main > .content > .panel{
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:24px 18px 20px;
+  background:var(--sp-global-surface);
+  border:1px solid var(--sp-global-border);
+  border-radius:var(--sp-global-radius);
+  box-shadow:var(--sp-global-shadow);
+}
+
+/* Tax used to be a special narrow card; make it use the same page shell. */
+main > .content > .panel.narrow{
+  width:100%;
+  max-width:none;
+}
+
+/* ---------- Global page headings ---------- */
+main > .content > .panel > h2,
+main > .content > .panel > h3{
+  margin:5px 0 7px;
+  color:var(--sp-global-text);
+  font-size:25px;
+  line-height:1.2;
+  font-weight:700;
+}
+
+main > .content > .panel > p{
+  margin:0 0 18px;
+  color:var(--sp-global-muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+main > .content > .panel > .eyebrow{
+  margin:0;
+  color:#6c8194;
+  font-size:10px;
+  line-height:1;
+  letter-spacing:1.5px;
+  font-weight:800;
+}
+
+/* ---------- One standard control ---------- */
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+.app select,
+.app textarea{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  border:1px solid var(--sp-global-border-input);
+  border-radius:var(--sp-global-control-radius);
+  background:#fff;
+  color:#173b5b;
+  font-family:inherit;
+  font-size:var(--sp-global-control-font);
+  font-weight:500;
+  outline:none;
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+}
+
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+.app select{
+  height:var(--sp-global-control-height);
+  padding:var(--sp-global-control-pad);
+}
+
+.app textarea{
+  min-height:96px;
+  padding:10px 12px;
+  resize:vertical;
+}
+
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"])::placeholder,
+.app textarea::placeholder{
+  color:#9aa9b6;
+  opacity:1;
+}
+
+.app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+.app select:focus,
+.app textarea:focus{
+  border-color:#5eb8dc;
+  box-shadow:var(--sp-global-focus);
+  background:#fff;
+}
+
+/* ---------- Standard labels / simple forms ---------- */
+.app .panel > label,
+.app .formgrid label,
+.app .report-filters label{
+  color:var(--sp-global-label);
+  font-size:11px;
+  font-weight:700;
+}
+
+.app .panel > label input,
+.app .panel > label select,
+.app .panel > label textarea{
+  margin-top:7px;
+}
+
+.app .formgrid{gap:13px}
+
+.app .formgrid input,
+.app .formgrid select,
+.app .narrow input{
+  height:var(--sp-global-control-height);
+  padding:var(--sp-global-control-pad);
+  margin:0;
+}
+
+/* Tax form: same control size as every other standard form. */
+.app .narrow > input[type="number"]{
+  width:min(100%,520px);
+  height:var(--sp-global-control-height);
+  margin:8px 0 10px;
+}
+
+/* ---------- Standard buttons ---------- */
+.app .content button,
+.app .users-modern button,
+.app .management-page button,
+.app .my-company-page button,
+.app .named-orders-page button,
+.app .promotion-modern button,
+.app .loyalty-modern button,
+.app .customer-modern button,
+.app .payment-types-modern button,
+.app .purchase-modern button,
+.app .product-master-modern button{
+  font-family:inherit;
+}
+
+.app .content .panel > button:not(.iconbtn):not(.secondary),
+.app .content .formgrid button,
+.app .content .toolbar button:not(.icon-btn),
+.app .content .narrow button{
+  min-height:var(--sp-global-control-height);
+  padding:0 15px;
+  border:1px solid var(--sp-global-primary);
+  border-radius:var(--sp-global-control-radius);
+  background:var(--sp-global-primary);
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
+  box-shadow:0 5px 14px rgba(18,59,89,.12);
+}
+
+.app .content .panel > button:not(.iconbtn):not(.secondary):hover,
+.app .content .formgrid button:hover,
+.app .content .toolbar button:not(.icon-btn):hover,
+.app .content .narrow button:hover{
+  background:var(--sp-global-primary-hover);
+  border-color:var(--sp-global-primary-hover);
+}
+
+.app .secondary{
+  min-height:var(--sp-global-control-height);
+  padding:0 14px!important;
+  border:1px solid var(--sp-global-border-input)!important;
+  border-radius:var(--sp-global-control-radius)!important;
+  background:#fff!important;
+  color:#31546c!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  box-shadow:none!important;
+}
+
+/* ---------- Standard cards / KPI cards ---------- */
+.app .content .cards{
+  gap:14px;
+  margin:18px 0 20px;
+}
+
+.app .content .card{
+  min-height:96px;
+  padding:18px;
+  border:1px solid var(--sp-global-border);
+  border-radius:var(--sp-global-radius);
+  background:#fff;
+  box-shadow:none;
+}
+
+.app .content .card small{
+  color:#718397;
+  font-size:11px;
+}
+
+.app .content .card strong{
+  margin-top:8px;
+  color:#102a43;
+  font-size:24px;
+  line-height:1.15;
+}
+
+/* ---------- Standard tables ---------- */
+.app .content .table{
+  width:100%;
+  overflow:auto;
+}
+
+.app .content .table table,
+.app .content > .panel > table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+
+.app .content .table th,
+.app .content .table td,
+.app .content > .panel > table th,
+.app .content > .panel > table td{
+  height:40px;
+  padding:9px 12px;
+  border-bottom:1px solid #e7edf2;
+  color:#173b5b;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+
+.app .content .table th,
+.app .content > .panel > table th{
+  height:38px;
+  background:#f4f8fb;
+  color:#526b80;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.35px;
+  text-transform:uppercase;
+}
+
+.app .content .table tr:last-child td,
+.app .content > .panel > table tr:last-child td{border-bottom:0}
+
+.app .content .table tbody tr:hover td,
+.app .content > .panel > table tbody tr:hover td{background:#fbfdff}
+
+/* ---------- Standard toolbar ---------- */
+.app .content .toolbar{
+  min-height:40px;
+  margin-bottom:16px;
+}
+
+/* ---------- Keep specialized modules isolated ---------- */
+.ar-pos-shell,
+.login-screen,
+.modal-backdrop,
+.users-modal-backdrop,
+.payment-type-modal-backdrop,
+.promotion-modal-backdrop{isolation:isolate}
+
+/* ---------- Make existing modern module shells share the same spacing ---------- */
+.users-modern,
+.management-page,
+.my-company-page,
+.named-orders-page,
+.promotion-modern,
+.loyalty-modern,
+.customer-modern,
+.payment-types-modern,
+.purchase-modern,
+.product-master-modern{
+  box-sizing:border-box;
+  color:#173b5b;
+}
+
+/* Users / Management page content width and outer rhythm. */
+.users-modern,
+.management-page{
+  padding-top:28px;
+  padding-bottom:50px;
+}
+.users-topbar,
+.users-role-note,
+.users-table,
+.management-head,
+.management-grid{
+  width:min(1180px,100%);
+  margin-left:auto;
+  margin-right:auto;
+}
+
+/* ---------- Responsive standard ---------- */
+@media(max-width:760px){
+  main > .content{
+    padding:16px 12px 32px;
+  }
+  main > .content > .panel{
+    padding:18px 14px;
+    border-radius:10px;
+  }
+  main > .content > .panel > h2,
+  main > .content > .panel > h3{
+    font-size:21px;
+  }
+  .app .content .cards{
+    grid-template-columns:1fr 1fr;
+  }
+  .app .narrow > input[type="number"]{
+    width:100%;
+  }
+}
+
+@media(max-width:520px){
+  .app .content .cards{grid-template-columns:1fr}
+  .app .content .table th,
+  .app .content .table td,
+  .app .content > .panel > table th,
+  .app .content > .panel > table td{
+    padding:8px 10px;
+  }
+}
