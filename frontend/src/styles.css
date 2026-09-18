@@ -1934,3 +1934,106 @@
   .ar-cat-icon{font-size:29px !important;line-height:29px !important}
   .ar-order-total strong{font-size:15px !important}
 }
+
+/* ============================================================
+   SP-MANAGER POS — MOBILE POLISH + FULLSCREEN FIT V4
+   MOBILE PHONE ONLY — UI/LAYOUT ONLY — FUNCTION LOCK
+   PC/Desktop layout and POS application logic are untouched.
+   ============================================================ */
+@media (max-width:700px){
+  /* Search-mode buttons: replace the heavy blue square with a cleaner
+     selected state while keeping the same active button/function. */
+  .ar-search-row > button:not(.ar-keyboard-btn).search-mode-active{
+    background:linear-gradient(180deg,#26343c,#20292e) !important;
+    color:#55c8f5 !important;
+    border-color:#238fbb !important;
+    box-shadow:inset 0 -2px 0 #24a9dc, inset 0 1px rgba(255,255,255,.08) !important;
+    position:relative;
+  }
+  .ar-search-row > button:not(.ar-keyboard-btn).search-mode-active::after{
+    content:"";
+    position:absolute;
+    left:7px;
+    right:7px;
+    bottom:2px;
+    height:2px;
+    border-radius:2px;
+    background:#35b9eb;
+    opacity:.95;
+  }
+  .ar-search-row > button:not(.ar-keyboard-btn):active{
+    transform:translateY(1px);
+  }
+
+  /* Give the phone a little more vertical room for the order without
+     sacrificing the product/category picker. */
+  .ar-main{
+    grid-template-rows:minmax(0,55dvh) minmax(0,45dvh) !important;
+    height:calc(100dvh - 58px) !important;
+  }
+  .ar-product-panel,
+  .ar-order-panel{
+    min-height:0 !important;
+  }
+
+  /* Fullscreen button: when the document enters browser fullscreen,
+     use the complete available viewport instead of retaining any
+     browser-page sizing assumptions. */
+  html:fullscreen .ar-pos-shell,
+  html:-webkit-full-screen .ar-pos-shell{
+    width:100% !important;
+    height:100dvh !important;
+    min-height:100dvh !important;
+    max-height:100dvh !important;
+  }
+  html:fullscreen .ar-main,
+  html:-webkit-full-screen .ar-main{
+    height:calc(100dvh - 58px) !important;
+    min-height:0 !important;
+    grid-template-rows:minmax(0,55dvh) minmax(0,45dvh) !important;
+  }
+  html:fullscreen .ar-topbar,
+  html:-webkit-full-screen .ar-topbar{
+    flex-basis:58px !important;
+    height:58px !important;
+  }
+}
+
+/* Landscape phone/fullscreen: use the wider screen to show both POS
+   work areas at the same time. This activates only on mobile widths. */
+@media (max-width:700px) and (orientation:landscape){
+  .ar-main{
+    grid-template-columns:minmax(0,1.45fr) minmax(235px,.8fr) !important;
+    grid-template-rows:minmax(0,1fr) !important;
+    grid-template-areas:"products order" !important;
+    height:calc(100dvh - 58px) !important;
+  }
+  .ar-product-panel{
+    border-bottom:0 !important;
+    border-right:1px solid #3b3f42 !important;
+  }
+  .ar-order-panel{
+    border-top:0 !important;
+    border-right:0 !important;
+    min-height:0 !important;
+    height:100% !important;
+  }
+  .ar-category-grid,
+  .ar-grid-wrap{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+  .ar-category-tile,
+  .ar-product-tile,
+  .ar-back-tile{
+    height:94px !important;
+    min-height:94px !important;
+  }
+  .ar-order-tools button{font-size:9px !important}
+  .ar-order-total strong{font-size:15px !important}
+
+  html:fullscreen .ar-main,
+  html:-webkit-full-screen .ar-main{
+    grid-template-columns:minmax(0,1.45fr) minmax(235px,.8fr) !important;
+    grid-template-rows:minmax(0,1fr) !important;
+  }
+}
