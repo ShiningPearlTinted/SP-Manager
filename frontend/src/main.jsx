@@ -509,6 +509,7 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
   const[selectedLineId,setSelectedLineId]=useState(null);
   const[saleLocked,setSaleLocked]=useState(false);
   const[virtualKeyboard,setVirtualKeyboard]=useState(!!settings.general.virtualKeyboard);
+ const[posFullscreen,setPosFullscreen]=useState(false);
  const[showUserMenu,setShowUserMenu]=useState(false);
  const[permissionError,setPermissionError]=useState(null);
  useEffect(()=>setVirtualKeyboard(!!settings.general.virtualKeyboard),[settings.general.virtualKeyboard]);
@@ -570,7 +571,25 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
  const groupTile=name=><button className="ar-category-tile ar-group-tile" key={name} onClick={()=>{setGroup(name);setCatLevel("items")}}><div className="ar-cat-icon"><span>{iconFor(name)}</span></div><strong>{name}</strong><small>{categoryProducts.filter(p=>(p.group||p.category)===name).length} products</small></button>;
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")};
- const togglePosFullscreen=async()=>{try{if(document.fullscreenElement){await document.exitFullscreen?.()}else{await document.documentElement.requestFullscreen?.()}}catch(e){setNoticeLocal("Full screen is not available in this browser.")}};
+ useEffect(()=>{
+   const syncFullscreen=()=>setPosFullscreen(Boolean(document.fullscreenElement));
+   document.addEventListener("fullscreenchange",syncFullscreen);
+   document.addEventListener("webkitfullscreenchange",syncFullscreen);
+   syncFullscreen();
+   return()=>{document.removeEventListener("fullscreenchange",syncFullscreen);document.removeEventListener("webkitfullscreenchange",syncFullscreen)};
+ },[]);
+ const togglePosFullscreen=async()=>{
+   try{
+     const shell=document.querySelector(".ar-pos-shell");
+     if(document.fullscreenElement){await document.exitFullscreen?.();setPosFullscreen(false);return}
+     if(shell?.requestFullscreen){await shell.requestFullscreen({navigationUI:"hide"});setPosFullscreen(true);return}
+     if(shell?.webkitRequestFullscreen){shell.webkitRequestFullscreen();setPosFullscreen(true);return}
+     setPosFullscreen(v=>!v);
+   }catch(e){
+     setPosFullscreen(v=>!v);
+     setNoticeLocal("Full screen is not available in this browser.");
+   }
+ };
  const exitPosApplication=()=>{try{if(document.fullscreenElement)document.exitFullscreen?.();window.close()}catch(e){}setTimeout(()=>{if(!window.closed)setNoticeLocal("The browser does not allow this tab to close automatically.")},120)};
  const openPosSettings=()=>{setShowUserMenu(false);setMenuOpen(false);setPage("Settings")};
  const virtualKey=(key)=>{if(key==="BACKSPACE"){setQ(v=>v.slice(0,-1));return}if(key==="SPACE"){setQ(v=>v+" ");return}if(key==="ENTER"){const exact=filtered.length===1?filtered[0]:null;if(exact){addPos(exact);setQ("");setNoticeLocal("Added "+exact.name+" to the sale.")}else if(filtered.length>1){setNoticeLocal("Select a product from the search results.")}else{setNoticeLocal("No matching product found.")}return}if(key==="SHIFT"||key==="&123"){return}if(key==="DOWN"||key==="PREV"||key==="NEXT"||key==="LEFT"||key==="RIGHT"){return}setQ(v=>v+key)};
@@ -586,7 +605,7 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
      : "M4 5h16v14H4zM7 9h10M7 13h6";
    return <svg className="ar-payment-icon" viewBox="0 0 24 24" aria-hidden="true"><path d={paths}/></svg>;
  };
- return <section className="ar-pos-shell">
+ return <section className={"ar-pos-shell "+(posFullscreen?"pos-browser-fullscreen":"")}>
   <div className="ar-topbar">
    {[['⌕','Search'],['♙','Customer'],['⇄','Transfer'],['%','Discount'],['＋','New sale'],['↶','Refund'],['▤','Cash drawer'],['F9','Save sale'],['F10','Payment'],...enabledPayments.filter(x=>x.quickPayment).map(x=>['PAYMENT_ICON',String(x.name).toLowerCase()==='cash'?'F12 Cash':x.name])].filter(([,label])=>{const m={Search:"search",Customer:"customer",Transfer:"transfer",Discount:"discount","New sale":"newSale",Refund:"refund","Cash drawer":"cashDrawer","Save sale":"newSale",Payment:"payment"};const key=label.replace(/^F10 /,"").replace(/^F12 .*/,"Cash");return m[key]===undefined||settings.general.buttonBar[m[key]]!==false||label.includes(" ")}).map(([ic,label])=><button key={label} className={'ar-action '+(label==='F10 Payment'?'selected':'')} onClick={()=>{
      if(label==='Search'){document.querySelector('.ar-search-input')?.focus();return}
