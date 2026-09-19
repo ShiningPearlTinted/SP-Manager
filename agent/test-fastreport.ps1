@@ -1,0 +1,43 @@
+$ErrorActionPreference='Stop'
+$root=Split-Path -Parent $PSScriptRoot
+$fr='http://127.0.0.1:18766'
+$agent='http://127.0.0.1:18765'
+Write-Host '[1] Checking FastReport bridge...'
+try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 5; Write-Host "    OK - $($s.engine) / $($s.template)" } catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
+$payload=[ordered]@{
+ paper='A4'; pageW=210; pageH=297; roll=$false; rollHeight=297
+ margins=[ordered]@{top=5;left=5;right=5;bottom=5}; columns=2; labelW=100; labelH=60; rowGap=2; colGap=2
+ showName=$true; showPrice=$true; showCode=$true; showBarcode=$true; taxInclusive=$true; borders=$true
+ barcodeType='EAN13'; nameSize=10; priceSize=16; barcodeHeight=28; copies=1
+ products=@([ordered]@{id=1;name='TEST PRODUCT';unit='pcs';code='TEST001';barcode='4006381333931';price=12.50})
+}
+$json=$payload | ConvertTo-Json -Depth 12 -Compress
+$tmp=Join-Path $env:TEMP 'SP-Manager-FastReport-Test.pdf'
+try { Remove-Item $tmp -Force -ErrorAction SilentlyContinue } catch {}
+function Post-Pdf($url,$body){
+ $req=[Net.HttpWebRequest][Net.WebRequest]::Create($url);$req.Method='POST';$req.ContentType='application/json; charset=utf-8';$req.Timeout=120000;$req.ReadWriteTimeout=120000
+ $bytes=[Text.Encoding]::UTF8.GetBytes($body);$req.ContentLength=$bytes.Length
+ $st=$req.GetRequestStream();$st.Write($bytes,0,$bytes.Length);$st.Close()
+ try {$resp=$req.GetResponse()} catch {$r=$_.Exception.Response;if($r){$reader=New-Object IO.StreamReader($r.GetResponseStream());$msg=$reader.ReadToEnd();throw "HTTP $([int]$r.StatusCode): $msg"};throw}
+ $ms=New-Object IO.MemoryStream;$resp.GetResponseStream().CopyTo($ms);$resp.Close();return $ms.ToArray()
+}
+Write-Host '[2] Sending valid JSON to REAL FastReport...'
+try {
+ $pdf=Post-Pdf "$fr/price-tags/pdf" $json
+ [IO.File]::WriteAllBytes($tmp,$pdf)
+ Write-Host "    PDF bytes: $($pdf.Length)"
+ if($pdf.Length -lt 1000){throw 'PDF output is unexpectedly small'}
+ Write-Host "    PASS - $tmp"
+ Start-Process $tmp
+} catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
+Write-Host '[3] Testing Local Agent FastReport proxy...'
+try {
+ $as=Invoke-RestMethod "$agent/status" -TimeoutSec 5
+ Write-Host "    Agent: $($as.version), Proxy: $($as.fastReportProxy)"
+ $pdf2=Post-Pdf "$agent/price-tags/pdf" $json
+ Write-Host "    Proxy PDF bytes: $($pdf2.Length)"
+ if($pdf2.Length -lt 1000){throw 'Proxy PDF output is unexpectedly small'}
+ Write-Host '    PASS - Local Agent proxy works.'
+} catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
+Write-Host ''
+Write-Host 'ALL FASTREPORT TESTS PASSED.'
