@@ -724,7 +724,11 @@ function BarcodeGraphic({value,type,height=48}){
   </svg>;
  }
  const bits=barcodeBits(value,type),w=bits.length,barW=100/w;
- return <svg className="pt-barcode-svg" style={{height:`${h}px`}} viewBox={`0 0 100 ${h}`} preserveAspectRatio="none" role="img" aria-label={`${type} ${value}`}>{[...bits].map((b,i)=>b==="1"?<rect key={i} x={i*barW} y="0" width={barW+0.05} height={h} fill="#000"/>:null)}</svg>
+ const displayValue=type==="EAN13"?checksumEAN13(value):type==="EAN8"?checksumEAN8(value):type==="UPC A"?String(value||"").replace(/\D/g,"").slice(-12).padStart(12,"0"):String(value||"");
+ return <div className="pt-barcode-block">
+  <svg className="pt-barcode-svg" style={{height:`${h}px`}} viewBox={`0 0 100 ${h}`} preserveAspectRatio="none" role="img" aria-label={`${type} ${displayValue}`}>{[...bits].map((b,i)=>b==="1"?<rect key={i} x={i*barW} y="0" width={barW+0.05} height={h} fill="#000"/>:null)}</svg>
+  <div className="pt-barcode-text">{displayValue}</div>
+ </div>
 }
 const PRICE_TAGS_STORAGE_KEY="sp-manager-pos-price-tags-settings-v16";
 const loadPriceTagSetting=(key,fallback)=>{try{const raw=localStorage.getItem(PRICE_TAGS_STORAGE_KEY);if(!raw)return fallback;const saved=JSON.parse(raw);return Object.prototype.hasOwnProperty.call(saved,key)?saved[key]:fallback}catch(_){return fallback}};
@@ -749,7 +753,7 @@ function PriceTagsModal({products,groups,money,onClose,setNotice}){
     const right=d.slice(7).split("").map((x,i)=>`<text x="${56+i*7}" y="97">${x}</text>`).join("");
     return `<svg class="print-barcode print-ean13" viewBox="0 0 ${w} 100" preserveAspectRatio="none" aria-label="EAN13 ${d}">${bars}<g fill="#000" text-anchor="middle" font-family="OCR-B,Arial Narrow,Arial,sans-serif" font-size="10"><text x="2.5" y="97" text-anchor="start">${d[0]}</text>${left}${right}</g></svg>`;
    }
-   const bits=barcodeBits(value,type)||"";const bars=bits.split("").map((b,i)=>b==="1"?`<rect x="${i}" y="0" width="1" height="100"/>`:"").join("");return `<svg class="print-barcode" viewBox="0 0 ${Math.max(bits.length,1)} 100" preserveAspectRatio="none" aria-label="Barcode">${bars}</svg>`
+   const bits=barcodeBits(value,type)||"";const bars=bits.split("").map((b,i)=>b==="1"?`<rect x="${i}" y="0" width="1" height="100"/>`:"").join("");const displayValue=type==="EAN13"?checksumEAN13(value):type==="EAN8"?checksumEAN8(value):type==="UPC A"?String(value||"").replace(/\D/g,"").slice(-12).padStart(12,"0"):String(value||"");return `<div class="print-barcode-block"><svg class="print-barcode" viewBox="0 0 ${Math.max(bits.length,1)} 100" preserveAspectRatio="none" aria-label="Barcode">${bars}</svg><div class="print-barcode-text">${escapeHtml(displayValue)}</div></div>`
   };
   const chunks=roll?[labels]:Array.from({length:pages},(_,pi)=>labels.slice(pi*perPage,(pi+1)*perPage));
   const pageHtml=chunks.map((chunk,pi)=>{

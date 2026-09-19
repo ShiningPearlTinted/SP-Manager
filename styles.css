@@ -2501,3 +2501,26 @@
     z-index:1;
   }
 }
+
+/* PRICE TAGS — barcode human-readable value, matching Aronium-style labels */
+.pt-barcode-block,
+.print-barcode-block{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  width:100%;
+  line-height:1;
+}
+.pt-barcode-text,
+.print-barcode-text{
+  margin-top:2px;
+  font-family:'OCR-B','Arial Narrow',Arial,sans-serif;
+  font-size:10px;
+  line-height:1;
+  letter-spacing:.15px;
+  color:#111;
+  white-space:nowrap;
+}
+.pt-barcode-block .pt-barcode-svg{display:block;width:100%;}
+.print-barcode-block .print-barcode{display:block;width:100%;height:var(--print-barcode-height,42px);}
