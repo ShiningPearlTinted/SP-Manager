@@ -3928,3 +3928,17 @@
 .price-tags-overlay .pt-barcode-svg{display:block;width:92%;max-width:100%;margin:4px auto 0;overflow:visible}
 .price-tags-overlay .pt-ean13-svg{height:auto;min-height:46px}
 .price-tags-overlay .pt-ean13-text{font-weight:400;letter-spacing:0}
+
+/* PRICE TAGS — final Aronium-style slider layout */
+.price-tags-overlay .pt-three{display:block!important}
+.price-tags-overlay .pt-range-stack{display:block!important}
+.price-tags-overlay .pt-range-stack label{display:flex!important;flex-direction:column!important;gap:3px!important;margin-bottom:8px!important;width:100%!important}
+.price-tags-overlay .pt-range-layout{width:100%!important}
+.price-tags-overlay .pt-range{appearance:none!important;-webkit-appearance:none!important;width:100%!important;height:18px!important;min-height:18px!important;padding:0!important;border:0!important;background:transparent!important;accent-color:#2aaee8;cursor:pointer}
+.price-tags-overlay .pt-range::-webkit-slider-runnable-track{height:4px;background:#666;border-radius:2px}
+.price-tags-overlay .pt-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:8px;height:16px;margin-top:-6px;border-radius:0;background:#2aaee8;border:0}
+.price-tags-overlay .pt-range::-moz-range-track{height:4px;background:#666;border-radius:2px}
+.price-tags-overlay .pt-range::-moz-range-thumb{width:8px;height:16px;border-radius:0;background:#2aaee8;border:0}
+.price-tags-overlay .pt-ean13-svg{width:92%!important;min-height:0!important;max-height:none!important;height:auto}
+.price-tags-overlay .pt-barcode-svg{max-height:none!important}
+@media(max-width:800px){.price-tags-overlay .pt-range-stack{display:block!important}.price-tags-overlay .pt-range-stack label{width:100%!important}}
