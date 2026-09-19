@@ -3922,5 +3922,9 @@
 .price-tags-overlay .pt-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:8px;height:16px;margin-top:-6px;border-radius:0;background:#27aee4;border:0}
 .price-tags-overlay .pt-range::-moz-range-track{height:4px;background:#606060;border-radius:0}
 .price-tags-overlay .pt-range::-moz-range-thumb{width:8px;height:16px;border-radius:0;background:#27aee4;border:0}
-.price-tags-overlay .pt-three output{position:absolute;right:0;top:0;color:#aaa;font-size:9px;line-height:14px}
 .price-tags-overlay .pt-three label{padding-right:0!important}
+
+/* PRICE TAGS — EAN-13 barcode appearance */
+.price-tags-overlay .pt-barcode-svg{display:block;width:92%;max-width:100%;margin:4px auto 0;overflow:visible}
+.price-tags-overlay .pt-ean13-svg{height:auto;min-height:46px}
+.price-tags-overlay .pt-ean13-text{font-weight:400;letter-spacing:0}

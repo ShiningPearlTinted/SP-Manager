@@ -1,25 +1,11 @@
-# Price Tags Function Check
+# Price Tags – Aronium-style update
 
-Added to Products > Price tags.
+- Product name size: range slider (6–48)
+- Price size: range slider (6–48)
+- Barcode height: range slider (10–120)
+- Removed the non-functional in-panel “Print preview” button. Live preview remains visible in the right pane; Print and Save as PDF remain in the preview toolbar.
+- EAN-13 preview/print now includes standard EAN-13 human-readable digits below the bars, including the leading digit, with OCR-B/Arial Narrow fallback font styling.
+- EAN-13 guard bars are extended lower than the normal bars to match the supplied reference appearance.
+- Existing product selection, copies, layout, margins, columns, label sizing, display toggles and other POS functions were not intentionally changed.
 
-Implemented controls:
-- Paper size: A4, A5, Letter
-- Page width / height
-- Roll paper / unlimited height
-- Margins: top, left, right, bottom (mm)
-- Columns
-- Label width / height (mm)
-- Row / column spacing
-- Product name, price, SKU, barcode, tax-inclusive display, borders
-- Barcode type selector matching the Aronium UI list shown by the user
-- Product name size, price size, barcode height
-- Product search by name/code/barcode
-- Product group filter
-- Multi-select products
-- Select all / Clear
-- Number of copies
-- Live print preview
-- Browser Print and Save as PDF workflow
-- Multi-page label preview
-
-Existing product, POS, database and calculation logic is unchanged.
+Source reference: official Aronium Help Center documentation for Print product price tags and official community/support posts. No proprietary Aronium source code was supplied, so source-level equivalence is not claimed.
