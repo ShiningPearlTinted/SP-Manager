@@ -3942,3 +3942,10 @@
 .price-tags-overlay .pt-ean13-svg{width:92%!important;min-height:0!important;max-height:none!important;height:auto}
 .price-tags-overlay .pt-barcode-svg{max-height:none!important}
 @media(max-width:800px){.price-tags-overlay .pt-range-stack{display:block!important}.price-tags-overlay .pt-range-stack label{width:100%!important}}
+
+
+/* PRICE TAGS — Aronium layout: column spacing is a numeric textbox */
+.price-tags-overlay .price-tags-settings input[type="number"]{
+  box-sizing:border-box!important;
+  min-width:0!important;
+}
