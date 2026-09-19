@@ -732,6 +732,7 @@ const loadPriceTagSetting=(key,fallback)=>{try{const raw=localStorage.getItem(PR
 function PriceTagsModal({products,groups,money,taxRate,onClose,setNotice}){
  const STORAGE_KEY="sp-manager-pos-price-tags-aronium-v8";
  const read=(key,fallback)=>{try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return fallback;const x=JSON.parse(raw);return Object.prototype.hasOwnProperty.call(x,key)?x[key]:fallback}catch(_){return fallback}};
+ const effectiveTaxRate=Number((typeof taxRate!=="undefined"&&taxRate!==null)?taxRate:read("taxRate",0))||0;
  const [paper,setPaper]=useState(()=>read("paper","A4"));
  const [roll,setRoll]=useState(()=>read("roll",false));
  const [pageW,setPageW]=useState(()=>read("pageW",210));
@@ -800,7 +801,7 @@ function PriceTagsModal({products,groups,money,taxRate,onClose,setNotice}){
    columns:Math.max(1,Number(columns)||1),labelW:Number(labelW)||50,labelH:Number(labelH)||50,rowGap:Number(rowGap)||0,colGap:Number(colGap)||0,
    showName:Boolean(showName),showPrice:Boolean(showPrice),showCode:Boolean(showCode),showBarcode:Boolean(showBarcode),taxInclusive:Boolean(taxInclusive),borders:Boolean(borders),
    barcodeType,nameSize:Number(nameSize)||10,priceSize:Number(priceSize)||16,barcodeHeight:Number(barcodeHeight)||15,copies:Math.max(1,Number(copies)||1),
-   products:labels.map((p,i)=>({id:p?.id??i,name:String(p?.name||""),unit:String(p?.unit||""),code:String(p?.code||""),barcode:String(p?.barcode||p?.barcodes?.[0]||p?.code||""),price:Number(p?.price||0),taxRate:Number(p?.taxRate??taxRate??0),taxInclusive:Boolean(p?.taxInclusive)}))
+   products:labels.map((p,i)=>({id:p?.id??i,name:String(p?.name||""),unit:String(p?.unit||""),code:String(p?.code||""),barcode:String(p?.barcode||p?.barcodes?.[0]||p?.code||""),price:Number(p?.price||0),taxRate:Number(p?.taxRate??effectiveTaxRate??0),taxInclusive:Boolean(p?.taxInclusive)}))
  });
  const loadFastReport=async()=>{
    setFastReportBusy(true);setFastReportError("");let last=null;
@@ -822,7 +823,7 @@ function PriceTagsModal({products,groups,money,taxRate,onClose,setNotice}){
      throw last||Error("FastReport service unavailable");
    }catch(e){setFastReportError(e?.message||"FastReport service unavailable");setFastReportUrl("");return ""}finally{setFastReportBusy(false)}
  };
- useEffect(()=>{const t=setTimeout(()=>loadFastReport(),250);return()=>clearTimeout(t)},[paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,selected,copies,products,taxRate]);
+ useEffect(()=>{const t=setTimeout(()=>loadFastReport(),250);return()=>clearTimeout(t)},[paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,selected,copies,products,effectiveTaxRate]);
  useEffect(()=>()=>{if(fastReportUrl)URL.revokeObjectURL(fastReportUrl)},[fastReportUrl]);
  const pdfSrc=fastReportUrl?`${fastReportUrl}#toolbar=0&navpanes=0&scrollbar=0&page=${previewPage}&zoom=${previewZoom}`:"";
  const print=async()=>{const url=await loadFastReport();if(!url){setNotice?.("FastReport belum tersedia. Sila jalankan SP-Manager Local Agent / FastReport Bridge.");return}const w=window.open(`${url}#toolbar=1&navpanes=0&print=1`,"_blank");if(!w)setNotice?.("Please allow pop-ups to print Price Tags.")};
