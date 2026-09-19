@@ -83,7 +83,8 @@ function App(){
  const[activeUser,setCurrentUser]=useState(()=>load("activeUser",null));
  const[page,setPage]=useState("POS / Sales");
  const[posMenu,setPosMenu]=useState(false);
- useEffect(()=>{setPosMenu(false)},[page]);
+ const[mobileNavOpen,setMobileNavOpen]=useState(false);
+ useEffect(()=>{setPosMenu(false);setMobileNavOpen(false)},[page]);
  const[products,setProducts]=useState(()=>load("products",seedProducts).map(normalizeProductStockControl));
  const[stockHistory,setStockHistory]=useState(()=>load("stockHistory",[]));
  const[categories,setCategories]=useState(()=>load("categories",["Tinted Film","Windscreen","Glass","Security","Protection"]));
@@ -258,10 +259,10 @@ function App(){
 
  if(!signedIn)return <Login users={users} company={company} onLogin={u=>{save("activeUser",u);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(u);setSignedIn(true);setPage("POS / Sales")}}/>;
  return <div className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
-  <aside><div className="brand"><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
-   {nav.filter(n=>{const map={"Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return !map[n]||isPermissionAllowed(activeUser,map[n])}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("")}} key={n}>▸ {n}</button>)}
+  <aside className={mobileNavOpen?"mobile-nav is-open":"mobile-nav"}><div className="brand"><button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={()=>setMobileNavOpen(false)}>×</button><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
+   {nav.filter(n=>{const map={"Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return !map[n]||isPermissionAllowed(activeUser,map[n])}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("");setMobileNavOpen(false)}} key={n}>▸ {n}</button>)}
   </aside>
-  <main><header><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className={"header-status-pill header-status-business "+(businessDay.open?"is-open":"is-closed")}><i/> {businessDay.open?"Business Day Open":"Closed"}</span><span className={"header-status-pill header-status-agent "+(agentHeaderStatus?.connected?"is-connected":"is-offline")}><i/> {agentHeaderStatus?.connected?"Hardware Ready":"Agent Not Detected"}</span><span className="header-status-pill header-status-online"><i/> Online</span></div></header>
+  <main><header><button type="button" className="mobile-nav-open" aria-label="Open menu" onClick={()=>setMobileNavOpen(true)}>☰</button><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className={"header-status-pill header-status-business "+(businessDay.open?"is-open":"is-closed")}><i/> {businessDay.open?"Business Day Open":"Closed"}</span><span className={"header-status-pill header-status-agent "+(agentHeaderStatus?.connected?"is-connected":"is-offline")}><i/> {agentHeaderStatus?.connected?"Hardware Ready":"Agent Not Detected"}</span><span className="header-status-pill header-status-online"><i/> Online</span></div></header>
    {notice&&<div className={"notice notice-"+String(settings.general.messagePosition||"Top").toLowerCase()+(settings.general.slideIn?" notice-slide-in":"")} onClick={()=>settings.general.clickToClose&&setNotice("")}>
     <span>{notice}</span>{settings.general.showClose!==false&&<button onClick={e=>{e.stopPropagation();setNotice("")}}>×</button>}
    </div>}

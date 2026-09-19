@@ -3193,3 +3193,99 @@
     overflow-y:hidden !important;
   }
 }
+
+/* ============================================================
+   SP-MANAGER — MOBILE MODULE NAVIGATION V13
+   MOBILE PHONE ONLY — UI/LAYOUT ONLY — FUNCTION LOCK
+   Menu is an overlay. Selecting a module closes it and the selected
+   module replaces the screen; it is never rendered underneath the menu.
+   Desktop / PC remains unchanged.
+   ============================================================ */
+.mobile-nav-close,.mobile-nav-open{display:none}
+@media (max-width:700px){
+  .app > aside.mobile-nav{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
+    min-height:100dvh !important;
+    max-height:100dvh !important;
+    margin:0 !important;
+    padding:18px 12px 24px !important;
+    z-index:10000 !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    transform:translateX(-100%) !important;
+    transition:transform .18s ease !important;
+    box-shadow:18px 0 60px rgba(0,0,0,.45) !important;
+  }
+  .app > aside.mobile-nav.is-open{
+    transform:translateX(0) !important;
+  }
+  .mobile-nav-close{
+    display:grid !important;
+    position:absolute !important;
+    top:18px !important;
+    right:14px !important;
+    width:42px !important;
+    height:42px !important;
+    place-items:center !important;
+    border:1px solid rgba(255,255,255,.14) !important;
+    border-radius:12px !important;
+    background:rgba(255,255,255,.06) !important;
+    color:#fff !important;
+    font-size:30px !important;
+    line-height:1 !important;
+    z-index:2 !important;
+  }
+  .app > aside.mobile-nav .brand{
+    padding-right:58px !important;
+  }
+  .app > aside.mobile-nav label{
+    margin-top:22px !important;
+  }
+  .app > aside.mobile-nav button:not(.mobile-nav-close){
+    min-height:48px !important;
+    padding:11px 12px !important;
+    font-size:18px !important;
+    border-radius:10px !important;
+  }
+  .app > main{
+    margin:0 !important;
+    width:100% !important;
+    min-width:0 !important;
+  }
+  .mobile-nav-open{
+    display:grid !important;
+    flex:0 0 42px !important;
+    width:42px !important;
+    height:42px !important;
+    margin-right:10px !important;
+    place-items:center !important;
+    border:1px solid #d9e1e7 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#17212b !important;
+    font-size:22px !important;
+    line-height:1 !important;
+  }
+  .app > main > header{
+    display:flex !important;
+    min-width:0 !important;
+  }
+  .app > main > header > div:first-of-type{
+    min-width:0 !important;
+  }
+  .app > main > header h1{
+    font-size:20px !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+  .app > main > header .head-actions{
+    display:none !important;
+  }
+  body:has(.mobile-nav.is-open){
+    overflow:hidden !important;
+  }
+}
