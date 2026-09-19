@@ -40,7 +40,13 @@ if %TRY% GEQ 15 (
 timeout /t 1 /nobreak >nul
 goto WAIT
 :READY
-echo SP-Manager Local Agent 1.0.12 > "%LOG_DIR%\agent-installed.flag"
+if exist "%AGENT_DIR%fastreport-price-tags.ps1" (
+ echo [INFO] Starting FastReport bridge...
+ start "SP-Manager FastReport Bridge" /min "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%AGENT_DIR%fastreport-price-tags.ps1" > "%LOG_DIR%\fastreport-console.log" 2>&1
+ timeout /t 2 /nobreak >nul
+ "%PS_EXE%" -NoProfile -Command "try{$r=Invoke-RestMethod 'http://127.0.0.1:18766/status' -TimeoutSec 3;Write-Host ('[OK] FastReport bridge connected. Template: '+$r.template);exit 0}catch{Write-Host '[WARN] FastReport bridge did not start. Check fastreport-console.log';exit 0}"
+)
+echo SP-Manager Local Agent 1.1.0 > "%LOG_DIR%\agent-installed.flag"
 echo.
 echo ==================================================
 echo SP-Manager Local Agent is READY.

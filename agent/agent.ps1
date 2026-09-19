@@ -46,5 +46,13 @@ function Handle($req){
     Send-Json $s 404 @{ok=$false;error='Not found'}
   }catch{Send-Json $s 500 @{ok=$false;error=$_.Exception.Message}}
 }
+$frScript=Join-Path $PSScriptRoot 'fastreport-price-tags.ps1'
+if(Test-Path $frScript){
+  try{
+    $frCheck=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18766/status' -TimeoutSec 1 -ErrorAction Stop
+  }catch{
+    Start-Process -FilePath $PSHOME\powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$frScript) -WindowStyle Hidden
+  }
+}
 $listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Parse($HostName),$Port);$listener.Start()
 while($true){$client=$listener.AcceptTcpClient();try{$req=Read-Request $client;Handle $req}catch{try{Send-Text $client.GetStream() 500 $_.Exception.Message}catch{}}finally{$client.Close()}}
