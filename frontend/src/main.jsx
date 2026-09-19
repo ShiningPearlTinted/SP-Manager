@@ -729,8 +729,8 @@ function BarcodeGraphic({value,type,height=48}){
 const PRICE_TAGS_STORAGE_KEY="sp-manager-pos-price-tags-settings-v16";
 const loadPriceTagSetting=(key,fallback)=>{try{const raw=localStorage.getItem(PRICE_TAGS_STORAGE_KEY);if(!raw)return fallback;const saved=JSON.parse(raw);return Object.prototype.hasOwnProperty.call(saved,key)?saved[key]:fallback}catch(_){return fallback}};
 
-function PriceTagsModal({products,groups,money,onClose,setNotice}){
- const STORAGE_KEY="sp-manager-pos-price-tags-aronium-v7";
+function PriceTagsModal({products,groups,money,taxRate,onClose,setNotice}){
+ const STORAGE_KEY="sp-manager-pos-price-tags-aronium-v8";
  const read=(key,fallback)=>{try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return fallback;const x=JSON.parse(raw);return Object.prototype.hasOwnProperty.call(x,key)?x[key]:fallback}catch(_){return fallback}};
  const [paper,setPaper]=useState(()=>read("paper","A4"));
  const [roll,setRoll]=useState(()=>read("roll",false));
@@ -746,11 +746,11 @@ function PriceTagsModal({products,groups,money,onClose,setNotice}){
  const [showPrice,setShowPrice]=useState(()=>read("showPrice",true));
  const [showCode,setShowCode]=useState(()=>read("showCode",true));
  const [showBarcode,setShowBarcode]=useState(()=>read("showBarcode",true));
- const [taxInclusive,setTaxInclusive]=useState(()=>read("taxInclusive",true));
- const [borders,setBorders]=useState(()=>read("borders",true));
+ const [taxInclusive,setTaxInclusive]=useState(()=>read("taxInclusive",false));
+ const [borders,setBorders]=useState(()=>read("borders",false));
  const [barcodeType,setBarcodeType]=useState(()=>read("barcodeType","EAN13"));
- const [nameSize,setNameSize]=useState(()=>read("nameSize",16));
- const [priceSize,setPriceSize]=useState(()=>read("priceSize",12));
+ const [nameSize,setNameSize]=useState(()=>read("nameSize",10));
+ const [priceSize,setPriceSize]=useState(()=>read("priceSize",16));
  const [barcodeHeight,setBarcodeHeight]=useState(()=>read("barcodeHeight",15));
  const [query,setQuery]=useState(()=>read("query",""));
  const [group,setGroup]=useState(()=>read("group","All groups"));
@@ -794,12 +794,13 @@ function PriceTagsModal({products,groups,money,onClose,setNotice}){
  const fastReportBases=["http://127.0.0.1:18765","http://127.0.0.1:18766"];
  const fastReportPayload=()=>({
    paper,pageW:Number(pageW)||210,pageH:Number(pageH)||297,roll:Boolean(roll),
-   rollHeight:Math.max((Number(labelH)||50)*Math.max(1,totalLabels)+Number(margins.top||0)+Number(margins.bottom||0),100),
+   rollWidth:Math.max(1,(Number(labelW)||50)*Math.max(1,Number(columns)||1)+Math.max(0,Number(colGap)||0)*(Math.max(1,Number(columns)||1)-1)+Number(margins.left||0)+Number(margins.right||0)),
+   rollHeight:Math.max((Number(labelH)||50)*Math.max(1,totalLabels)+Number(rowGap||0)*Math.max(0,totalLabels-1)+Number(margins.top||0)+Number(margins.bottom||0),1),
    margins:{top:Number(margins.top)||0,left:Number(margins.left)||0,right:Number(margins.right)||0,bottom:Number(margins.bottom)||0},
    columns:Math.max(1,Number(columns)||1),labelW:Number(labelW)||50,labelH:Number(labelH)||50,rowGap:Number(rowGap)||0,colGap:Number(colGap)||0,
    showName:Boolean(showName),showPrice:Boolean(showPrice),showCode:Boolean(showCode),showBarcode:Boolean(showBarcode),taxInclusive:Boolean(taxInclusive),borders:Boolean(borders),
-   barcodeType,nameSize:Number(nameSize)||16,priceSize:Number(priceSize)||12,barcodeHeight:Number(barcodeHeight)||15,copies:Math.max(1,Number(copies)||1),
-   products:labels.map((p,i)=>({id:p?.id??i,name:String(p?.name||""),unit:String(p?.unit||""),code:String(p?.code||""),barcode:String(p?.barcode||p?.barcodes?.[0]||p?.code||""),price:Number(p?.price||0)}))
+   barcodeType,nameSize:Number(nameSize)||10,priceSize:Number(priceSize)||16,barcodeHeight:Number(barcodeHeight)||15,copies:Math.max(1,Number(copies)||1),
+   products:labels.map((p,i)=>({id:p?.id??i,name:String(p?.name||""),unit:String(p?.unit||""),code:String(p?.code||""),barcode:String(p?.barcode||p?.barcodes?.[0]||p?.code||""),price:Number(p?.price||0),taxRate:Number(p?.taxRate??taxRate??0),taxInclusive:Boolean(p?.taxInclusive)}))
  });
  const loadFastReport=async()=>{
    setFastReportBusy(true);setFastReportError("");let last=null;
@@ -821,12 +822,12 @@ function PriceTagsModal({products,groups,money,onClose,setNotice}){
      throw last||Error("FastReport service unavailable");
    }catch(e){setFastReportError(e?.message||"FastReport service unavailable");setFastReportUrl("");return ""}finally{setFastReportBusy(false)}
  };
- useEffect(()=>{const t=setTimeout(()=>loadFastReport(),250);return()=>clearTimeout(t)},[paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,selected,copies,products]);
+ useEffect(()=>{const t=setTimeout(()=>loadFastReport(),250);return()=>clearTimeout(t)},[paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,selected,copies,products,taxRate]);
  useEffect(()=>()=>{if(fastReportUrl)URL.revokeObjectURL(fastReportUrl)},[fastReportUrl]);
  const pdfSrc=fastReportUrl?`${fastReportUrl}#toolbar=0&navpanes=0&scrollbar=0&page=${previewPage}&zoom=${previewZoom}`:"";
  const print=async()=>{const url=await loadFastReport();if(!url){setNotice?.("FastReport belum tersedia. Sila jalankan SP-Manager Local Agent / FastReport Bridge.");return}const w=window.open(`${url}#toolbar=1&navpanes=0&print=1`,"_blank");if(!w)setNotice?.("Please allow pop-ups to print Price Tags.")};
  const saveFastReport=async()=>{const url=await loadFastReport();if(!url)return;const a=document.createElement("a");a.href=url;a.download="Price-Tags-FastReport.pdf";document.body.appendChild(a);a.click();a.remove()};
- const setPreset=v=>{setPaper(v);if(v==="A4"){setRoll(false);setPageW(210);setPageH(297);setColumns(2);setLabelW(50);setLabelH(50)}else if(v==="A5"){setRoll(false);setPageW(148);setPageH(210);setColumns(2);setLabelW(50);setLabelH(50)}else if(v==="Letter"){setRoll(false);setPageW(215.9);setPageH(279.4);setColumns(2);setLabelW(50);setLabelH(50)}else{setRoll(false)}};
+ const setPreset=v=>{setPaper(v);if(v==="A3"){setRoll(false);setPageW(297);setPageH(420);setColumns(2);setLabelW(50);setLabelH(50)}else if(v==="A4"){setRoll(false);setPageW(210);setPageH(297);setColumns(2);setLabelW(50);setLabelH(50)}else if(v==="A5"){setRoll(false);setPageW(148);setPageH(210);setColumns(2);setLabelW(50);setLabelH(50)}else if(v==="Letter"){setRoll(false);setPageW(215.9);setPageH(279.4);setColumns(2);setLabelW(50);setLabelH(50)}else if(v==="Legal"){setRoll(false);setPageW(215.9);setPageH(355.6);setColumns(2);setLabelW(50);setLabelH(50)}else{setRoll(false)}};
  const toggle=setter=>e=>setter(e.target.checked);
  const iconModes=[
    {id:"name",icon:"*",title:"Product name"},
@@ -839,7 +840,7 @@ function PriceTagsModal({products,groups,money,onClose,setNotice}){
    <div className="price-tags-body">
     <aside className="price-tags-settings aronium-price-tags-settings">
       <h3>Layout</h3>
-      <label>Paper size<select value={paper} onChange={e=>setPreset(e.target.value)}><option>A4</option><option>A5</option><option>Letter</option><option>Custom</option></select></label>
+      <label>Paper size<select value={paper} onChange={e=>setPreset(e.target.value)}><option>A3</option><option>A4</option><option>A5</option><option>Letter</option><option>Legal</option><option>Custom</option></select></label>
       <div className="pt-two"><label>Page width<input type="number" value={pageW} onChange={e=>setPageW(Number(e.target.value))}/></label><label>Page height<input disabled={roll} type="number" value={pageH} onChange={e=>setPageH(Number(e.target.value))}/></label></div>
       <label className="pt-check pt-roll-check"><input type="checkbox" checked={roll} onChange={e=>setRoll(e.target.checked)}/><span>Print on roll paper (unlimited height)</span></label>
       <h4>Margins (in millimeters)</h4><div className="pt-grid4"><label>Top<input type="number" value={margins.top} onChange={e=>setMargins({...margins,top:Number(e.target.value)})}/></label><label>Left<input type="number" value={margins.left} onChange={e=>setMargins({...margins,left:Number(e.target.value)})}/></label><label>Right<input type="number" value={margins.right} onChange={e=>setMargins({...margins,right:Number(e.target.value)})}/></label><label>Bottom<input type="number" value={margins.bottom} onChange={e=>setMargins({...margins,bottom:Number(e.target.value)})}/></label></div>
@@ -970,7 +971,7 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
    <div className="editor-section"><h4>Stock & Details</h4><div className="editor-grid"><label>Opening / Current Stock<input type="number" min="0" step="1" value={form.stock} onChange={e=>setForm({...form,stock:e.target.value})}/></label><label>Rank / Sort Order<input type="number" value={form.rank} onChange={e=>setForm({...form,rank:e.target.value})}/></label><label>Age Restriction<input value={form.ageRestriction} onChange={e=>setForm({...form,ageRestriction:e.target.value})}/></label><label className="full">Description<textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><label className="full">Product Comment<textarea value={form.comments} onChange={e=>setForm({...form,comments:e.target.value})}/></label></div></div>
    <div className="form-actions"><button type="submit">{editing?"Save Changes":"Create Product"}</button><button type="button" className="secondary" onClick={()=>setShowEditor(false)}>Cancel</button></div>
   </form></div></div>}
-  {showPriceTags&&<PriceTagsModal products={products} groups={groups} money={money} onClose={()=>setShowPriceTags(false)} setNotice={setNotice}/>}
+  {showPriceTags&&<PriceTagsModal products={products} groups={groups} money={money} taxRate={taxRate} onClose={()=>setShowPriceTags(false)} setNotice={setNotice}/>}
   {showCategory&&<div className="modal-backdrop" onMouseDown={()=>setShowCategory(false)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Product Categories</h3><button className="iconbtn" onClick={()=>setShowCategory(false)}>×</button></div><div className="category-list">{categories.map(c=><div key={c}><span>{c}</span><small>{products.filter(p=>(p.category||p.group)===c).length} product(s)</small></div>)}</div><div className="inline-field"><input value={newCategory} placeholder="New category name" onChange={e=>setNewCategory(e.target.value)}/><button onClick={addCat}>Add Category</button></div></div></div>}
   {showGroup&&<div className="modal-backdrop" onMouseDown={()=>setShowGroup(false)}><form className="modal" onSubmit={saveGroup} onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Product Groups</h3><button type="button" className="iconbtn" onClick={()=>setShowGroup(false)}>×</button></div><p className="muted">One product group can contain any number of products. Select the same group when creating multiple items.</p><div className="category-list">{groups.map(g=><div key={g}><span>{g}</span><small>{products.filter(p=>(p.group||p.category)===g).length} product(s)</small></div>)}</div><div className="inline-field"><input autoFocus value={newGroup} placeholder="New product group name" onChange={e=>{setNewGroup(e.target.value);setGroupError("")}}/><button type="submit">Add Group</button></div>{groupError&&<p className="modal-inline-error">{groupError}</p>}</form></div>}
   {groupConfirm&&<div className="modal-backdrop" onMouseDown={()=>setGroupConfirm(null)}><div className="modal group-confirm-modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PRODUCT GROUPS</span><h3>{groupConfirm.type==="save"?"Save new group":groupConfirm.type==="edit"?"Save group changes":"Delete group"}</h3></div><button type="button" className="iconbtn" aria-label="Close" onClick={()=>setGroupConfirm(null)}>×</button></div><div className="group-confirm-body"><div className={groupConfirm.type==="delete"?"confirm-icon danger":"confirm-icon"}>{groupConfirm.type==="delete"?"!":"✓"}</div><p>{groupConfirm.type==="save"?`Save "${groupConfirm.name}" as a product group?`:groupConfirm.type==="edit"?`Rename "${groupConfirm.oldName}" to "${groupConfirm.name}"?`:`Delete the empty product group "${groupConfirm.name}"?`}</p></div><div className="group-confirm-actions"><button type="button" className="secondary" onClick={()=>setGroupConfirm(null)}>Cancel</button><button type="button" className={groupConfirm.type==="delete"?"danger-button":"primary-button"} onClick={confirmGroupAction}>{groupConfirm.type==="delete"?"Delete":"Confirm"}</button></div></div></div>}
