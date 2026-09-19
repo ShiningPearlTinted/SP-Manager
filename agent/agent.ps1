@@ -10,6 +10,12 @@ function Send-Json($stream,[int]$status,$obj){
   $hb=[Text.Encoding]::ASCII.GetBytes($hdr);$stream.Write($hb,0,$hb.Length);if($bytes.Length -gt 0){$stream.Write($bytes,0,$bytes.Length)};$stream.Flush()
 }
 function Send-Text($stream,[int]$status,$text){Send-Json $stream $status @{ok=$false;error=$text}}
+function Send-Bytes($stream,[int]$status,[string]$contentType,[byte[]]$bytes,[string]$disposition=''){
+  $reason=if($status -eq 200){'OK'}elseif($status -eq 204){'No Content'}elseif($status -eq 404){'Not Found'}else{'Error'}
+  $extra=if($disposition){"Content-Disposition: $disposition`r`n"}else{''}
+  $hdr="HTTP/1.1 $status $reason`r`nContent-Type: $contentType`r`nContent-Length: $($bytes.Length)`r`nCache-Control: no-store`r`nConnection: close`r`nAccess-Control-Allow-Origin: *`r`nAccess-Control-Allow-Headers: Content-Type`r`nAccess-Control-Allow-Methods: GET,POST,OPTIONS`r`n$extra`r`n"
+  $hb=[Text.Encoding]::ASCII.GetBytes($hdr);$stream.Write($hb,0,$hb.Length);if($bytes.Length -gt 0){$stream.Write($bytes,0,$bytes.Length)};$stream.Flush()
+}
 Add-Type -TypeDefinition @'
 using System; using System.Runtime.InteropServices;
 public static class SPRawPrinter { [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)] public class DOCINFO { public string pDocName; public string pOutputFile; public string pDataType; }
@@ -33,11 +39,43 @@ function Read-Request($client){
   $body=if($cl -gt 0){[Text.Encoding]::UTF8.GetString($bodyBytes,$headerBytes,$cl)}else{''}
   return @{stream=$stream;method=$method;path=$path;body=$body}
 }
+function Proxy-FastReport($method,$path,$body=''){
+  $url="http://127.0.0.1:18766$path"
+  $req=[System.Net.HttpWebRequest]::Create($url)
+  $req.Method=$method
+  $req.Timeout=15000
+  $req.ReadWriteTimeout=15000
+  $req.KeepAlive=$false
+  $req.Proxy=$null
+  if($method -eq 'POST'){
+    $bytes=[Text.Encoding]::UTF8.GetBytes([string]$body)
+    $req.ContentType='application/json; charset=utf-8'
+    $req.ContentLength=$bytes.Length
+    $st=$req.GetRequestStream();try{$st.Write($bytes,0,$bytes.Length)}finally{$st.Close()}
+  }
+  try{
+    $resp=$req.GetResponse()
+  }catch [System.Net.WebException]{
+    $resp=$_.Exception.Response
+    if($null -eq $resp){throw "FastReport bridge is not running on http://127.0.0.1:18766"}
+  }
+  $ms=New-Object IO.MemoryStream
+  try{$rs=$resp.GetResponseStream();$rs.CopyTo($ms);$rs.Close();$bytes=$ms.ToArray();$status=[int]$resp.StatusCode;$ct=[string]$resp.ContentType;return @{status=$status;contentType=$ct;bytes=$bytes}}finally{$ms.Dispose();$resp.Close()}
+}
+
 function Handle($req){
   $s=$req.stream
   try{
-    if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.0.12';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
+    if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){
+      $fr=$false;try{$x=Proxy-FastReport 'GET' '/status';$fr=($x.status -eq 200)}catch{}
+      Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.1';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;fastReport=$fr;fastReportPort=18766};return}
+    if($req.method -eq 'GET' -and $req.path -eq '/fastreport/status'){
+      $x=Proxy-FastReport 'GET' '/status';Send-Bytes $s $x.status $x.contentType $x.bytes;return
+    }
+    if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
+      $x=Proxy-FastReport 'POST' '/price-tags/pdf' $req.body;Send-Bytes $s $x.status $x.contentType $x.bytes 'inline; filename="Price-Tags-FastReport.pdf"';return
+    }
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     $b=if($req.body){$req.body|ConvertFrom-Json}else{[pscustomobject]@{}}
     if($req.method -eq 'POST' -and $req.path -eq '/print'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$copies=[Math]::Max(1,[int]$b.copies);$txt=[string]$b.text;$data=[Text.Encoding]::UTF8.GetBytes($txt);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data);$all.Add(10);$all.AddRange([byte[]](27,100,3))};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true};return}
@@ -51,7 +89,8 @@ if(Test-Path $frScript){
   try{
     $frCheck=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18766/status' -TimeoutSec 1 -ErrorAction Stop
   }catch{
-    Start-Process -FilePath $PSHOME\powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$frScript) -WindowStyle Hidden
+    Start-Process -FilePath $PSHOME\powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$frScript) -WindowStyle Hidden
+    Start-Sleep -Milliseconds 500
   }
 }
 $listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Parse($HostName),$Port);$listener.Start()
