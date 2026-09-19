@@ -76,7 +76,9 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
-  $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight);$barcode.Top=MmToPx(32.5)
+  # Keep the original Aronium FastReport script responsible for barcode position.
+  # It centers the barcode horizontally and places it at the bottom of Data1.
+  $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight)
   Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
