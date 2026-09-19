@@ -33,5 +33,8 @@ if errorlevel 1 (
  exit /b 1
 )
 echo.
+echo Testing REAL FastReport PDF generation...
+call "%~dp0TEST-FASTREPORT.bat"
+echo.
 echo ALL READY. Close this window and reload SP-Manager Price Tags.
 pause

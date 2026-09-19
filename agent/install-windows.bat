@@ -6,7 +6,7 @@ set "LOG_DIR=%ProgramData%\SP-Manager"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 echo ==================================================
-echo SP-Manager Local Agent Installer v1.1.1
+echo SP-Manager Local Agent Installer v1.2.0
 echo ==================================================
 echo.
 if not exist "%PS_EXE%" (
@@ -46,7 +46,7 @@ if exist "%AGENT_DIR%fastreport-price-tags.ps1" (
  timeout /t 2 /nobreak >nul
  "%PS_EXE%" -NoProfile -Command "try{$r=Invoke-RestMethod 'http://127.0.0.1:18766/status' -TimeoutSec 3;Write-Host ('[OK] FastReport bridge connected. Template: '+$r.template);exit 0}catch{Write-Host '[WARN] FastReport bridge did not start. Check fastreport-console.log';exit 0}"
 )
-echo SP-Manager Local Agent 1.1.1 > "%LOG_DIR%\agent-installed.flag"
+echo SP-Manager Local Agent 1.2.0 > "%LOG_DIR%\agent-installed.flag"
 echo.
 echo ==================================================
 echo SP-Manager Local Agent is READY.
