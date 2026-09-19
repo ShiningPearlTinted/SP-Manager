@@ -3000,3 +3000,97 @@
   z-index:12000 !important;
   margin:0 !important;
 }
+
+/* ============================================================
+   SP-MANAGER POS — MOBILE HAMBURGER V11
+   UI/LAYOUT ONLY — FUNCTION LOCK
+   ------------------------------------------------------------
+   Hamburger is fixed at TOP-LEFT of the mobile POS viewport.
+   The action-button row remains horizontally swipeable underneath.
+   Desktop/PC layout and all POS functions remain unchanged.
+   ============================================================ */
+@media (max-width:700px){
+  .ar-pos-shell .ar-topbar{
+    position:relative !important;
+    width:100% !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    padding-left:60px !important;
+    padding-right:3px !important;
+    scroll-padding-left:60px !important;
+    isolation:auto !important;
+    z-index:100 !important;
+  }
+
+  /* Remove the old RIGHT hamburger dock completely. */
+  .ar-pos-shell .ar-topbar::after{
+    display:none !important;
+    content:none !important;
+  }
+
+  /* FIXED = does not move when the action bar is swiped horizontally. */
+  .ar-pos-shell .ar-menu-btn{
+    position:fixed !important;
+    top:3px !important;
+    left:3px !important;
+    right:auto !important;
+    bottom:auto !important;
+    z-index:2147483647 !important;
+    width:50px !important;
+    min-width:50px !important;
+    max-width:50px !important;
+    height:52px !important;
+    min-height:52px !important;
+    max-height:52px !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    flex:0 0 50px !important;
+    box-sizing:border-box !important;
+    background:#303030 !important;
+    border:1px solid #4a4a4a !important;
+    border-radius:6px !important;
+    color:#e9283b !important;
+    box-shadow:0 2px 10px rgba(0,0,0,.38) !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+  }
+
+  .ar-pos-shell .ar-action{
+    position:relative !important;
+    z-index:101 !important;
+    flex:0 0 58px !important;
+    width:58px !important;
+    min-width:58px !important;
+    max-width:58px !important;
+  }
+}
+
+@media (max-width:700px) and (orientation:landscape){
+  .ar-pos-shell .ar-menu-btn{
+    position:fixed !important;
+    top:3px !important;
+    left:3px !important;
+    right:auto !important;
+    width:50px !important;
+    min-width:50px !important;
+    height:52px !important;
+  }
+}
+
+/* Native/browser fullscreen: hamburger remains TOP-LEFT and fixed. */
+@media (max-width:700px){
+  .ar-pos-shell:fullscreen .ar-menu-btn,
+  .ar-pos-shell:-webkit-full-screen .ar-menu-btn,
+  .ar-pos-shell.pos-browser-fullscreen .ar-menu-btn,
+  html:fullscreen .ar-pos-shell .ar-menu-btn,
+  html:-webkit-full-screen .ar-pos-shell .ar-menu-btn{
+    position:fixed !important;
+    top:3px !important;
+    left:3px !important;
+    right:auto !important;
+    z-index:2147483647 !important;
+  }
+}

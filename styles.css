@@ -2439,3 +2439,65 @@
 }
 .ar-pos-shell:fullscreen .ar-topbar,.ar-pos-shell:-webkit-full-screen .ar-topbar,.ar-pos-shell.pos-browser-fullscreen .ar-topbar{position:relative!important;isolation:isolate!important}
 .ar-pos-shell:fullscreen .ar-menu-btn,.ar-pos-shell:-webkit-full-screen .ar-menu-btn,.ar-pos-shell.pos-browser-fullscreen .ar-menu-btn{position:absolute!important;top:3px!important;right:3px!important;z-index:12000!important;margin:0!important}
+
+/* ============================================================
+   SP-MANAGER POS — MOBILE HAMBURGER FIX V10
+   UI/LAYOUT ONLY — FUNCTION LOCK
+   ------------------------------------------------------------
+   Mobile only:
+   - Hamburger stays fixed at the top-left of the POS header.
+   - POS action buttons remain horizontally swipeable.
+   - The action strip reserves space for the fixed hamburger.
+   - Desktop / PC layout and all POS functions remain unchanged.
+   ============================================================ */
+@media (max-width:700px){
+  .ar-pos-shell .ar-topbar{
+    position:relative !important;
+    padding-left:56px !important;
+    padding-right:3px !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    isolation:isolate;
+  }
+
+  .ar-pos-shell .ar-topbar::-webkit-scrollbar{
+    display:none;
+    width:0;
+    height:0;
+  }
+
+  /* Fixed/anchored mobile hamburger — does not move during horizontal swipe. */
+  .ar-pos-shell .ar-topbar .ar-menu-btn{
+    position:absolute !important;
+    left:3px !important;
+    top:3px !important;
+    z-index:100 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    flex:0 0 48px !important;
+    width:48px !important;
+    min-width:48px !important;
+    height:52px !important;
+    min-height:52px !important;
+    margin:0 !important;
+    border:1px solid #555 !important;
+    border-radius:5px !important;
+    background:#303030 !important;
+    color:#ff3348 !important;
+    box-shadow:0 4px 12px rgba(0,0,0,.28) !important;
+    touch-action:manipulation;
+  }
+
+  .ar-pos-shell .ar-topbar .ar-menu-btn:active{
+    transform:scale(.97);
+  }
+
+  /* Every action starts after the fixed hamburger at initial position. */
+  .ar-pos-shell .ar-topbar .ar-action{
+    position:relative;
+    z-index:1;
+  }
+}
