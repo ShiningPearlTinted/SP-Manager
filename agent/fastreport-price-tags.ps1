@@ -39,27 +39,14 @@ function Configure-Barcode($barcode,[string]$type){
   $barcode.ShowText=$true
   $barcode.AutoSize=$false
 }
-function Set-ReportCulture([string]$name='ms-MY') {
-  try {
-    $ci=New-Object System.Globalization.CultureInfo($name)
-    [System.Threading.Thread]::CurrentThread.CurrentCulture=$ci
-    [System.Threading.Thread]::CurrentThread.CurrentUICulture=$ci
-  } catch {}
-}
-
 function Build-Report([object]$b){
   if(!(Test-Path $Frx)){throw "FastReport template not found: $Frx"}
   $ds=New-Object System.Data.DataSet('ProductsDataSet')
   $dt=New-Object System.Data.DataTable('Product')
   [void]$dt.Columns.Add('Id',[object]);[void]$dt.Columns.Add('Name',[string]);[void]$dt.Columns.Add('MeasurementUnit',[string]);[void]$dt.Columns.Add('Code',[string]);[void]$dt.Columns.Add('Barcode',[string]);[void]$dt.Columns.Add('Price',[decimal])
   foreach($p in @($b.products)){
-    $rawPrice=[double]$p.price
-    $tax=[double]($p.taxRate)
-    $displayPrice=$rawPrice
-    if([bool]$b.taxInclusive -and $tax -gt 0 -and -not [bool]$p.taxInclusive){ $displayPrice=$rawPrice*(1.0+$tax/100.0) }
-    $r=$dt.NewRow();$r['Id']=if($null -eq $p.id){0}else{$p.id};$r['Name']=[string]$p.name;$r['MeasurementUnit']=[string]($p.unit);$r['Code']=[string]($p.code);$r['Barcode']=[string]($p.barcode);$r['Price']=[decimal]$displayPrice;[void]$dt.Rows.Add($r)
+    $r=$dt.NewRow();$r['Id']=if($null -eq $p.id){0}else{$p.id};$r['Name']=[string]$p.name;$r['MeasurementUnit']=[string]($p.unit);$r['Code']=[string]($p.code);$r['Barcode']=[string]($p.barcode);$r['Price']=[decimal]([double]$p.price);[void]$dt.Rows.Add($r)
   }
-  Set-ReportCulture 'ms-MY'
   [void]$ds.Tables.Add($dt)
   $report=New-Object FastReport.Report
   $report.Load($Frx)
@@ -70,32 +57,15 @@ function Build-Report([object]$b){
   $name=$report.FindObject('TextName')
   $price=$report.FindObject('TextPrice')
   $barcode=$report.FindObject('Barcode1')
+  $page.PaperWidth=[float]$b.pageW;$page.PaperHeight=[float]$b.pageH
+  $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
   $roll=[bool]$b.roll
-  $left=[double]$b.margins.left;$right=[double]$b.margins.right;$top=[double]$b.margins.top;$bottom=[double]$b.margins.bottom
-  $normalPageW=[double]$b.pageW;$normalPageH=[double]$b.pageH
-  if($roll){
-    # Aronium roll mode: the paper width follows the configured label/column width and the page height is unlimited.
-    $rollW=[double]$b.rollWidth
-    if($rollW -le 0){$rollW=[double]$b.labelW+$left+$right}
-    $page.PaperWidth=[float]$rollW
-    $page.PaperHeight=[float][Math]::Max(1,[double]$b.rollHeight)
-    $page.UnlimitedHeight=$true
-    $page.UnlimitedHeightValue=[float][Math]::Max(1,[double]$b.rollHeight)
-    $page.PrintOnRollPaper=$true
-    $page.LeftMargin=[float]$left;$page.RightMargin=[float]$right;$page.TopMargin=[float]$top;$page.BottomMargin=[float]$bottom
-    $band.Columns.Count=1
-    $band.Width=MmToPx([double]$b.labelW)
-    $band.Columns.Width=MmToPx([double]$b.labelW)
-  } else {
-    $page.UnlimitedHeight=$false
-    $page.PrintOnRollPaper=$false
-    $page.PaperWidth=[float]$normalPageW;$page.PaperHeight=[float]$normalPageH
-    $page.LeftMargin=[float]$left;$page.RightMargin=[float]$right;$page.TopMargin=[float]$top;$page.BottomMargin=[float]$bottom
-    $band.Columns.Count=[Math]::Max(1,[int]$b.columns)
-    $band.Width=MmToPx($normalPageW-$left-$right)
-    $band.Columns.Width=MmToPx([double]$b.labelW+[double]$b.colGap)
-  }
+  $page.UnlimitedHeight=$roll
+  if($roll){$page.PrintOnRollPaper=$true;$page.UnlimitedHeightValue=[float]$b.rollHeight}
+  $band.Width=MmToPx([double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right)
   $band.Height=MmToPx([double]$b.labelH+[double]$b.rowGap)
+  $band.Columns.Count=[Math]::Max(1,[int]$b.columns)
+  $band.Columns.Width=MmToPx([double]$b.labelW+[double]$b.colGap)
   $band.Columns.Layout=[FastReport.ColumnLayout]::AcrossThenDown
   $code.Visible=[bool]$b.showCode
   $name.Visible=[bool]$b.showName
@@ -106,9 +76,7 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
-  # Keep the original Aronium FastReport script responsible for barcode position.
-  # It centers the barcode horizontally and places it at the bottom of Data1.
-  $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight)
+  $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight);$barcode.Top=MmToPx(32.5)
   Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
