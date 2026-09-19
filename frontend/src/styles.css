@@ -3836,8 +3836,14 @@
    ========================================================= */
 .price-tags-overlay{position:fixed;inset:0;z-index:10050;background:#202020;color:#f5f7fa;display:flex;flex-direction:column;overflow:hidden}
 .price-tags-shell{width:100%;height:100%;display:flex;flex-direction:column;min-height:0}
-.price-tags-titlebar{height:38px;min-height:38px;background:#262626;border-bottom:1px solid #414141;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:13px}
-.price-tags-titlebar button{border:0;background:transparent;color:#ddd;font-size:22px;line-height:1;cursor:pointer;width:34px;height:30px}
+.price-tags-titlebar{height:42px;min-height:42px;background:#262626;border-bottom:1px solid #414141;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:14px}
+.price-tags-titlebar button{border:0;background:transparent;color:#ddd;cursor:pointer}
+.price-tags-back{display:inline-flex;align-items:center;gap:10px;height:34px;padding:0 8px 0 2px;font-size:14px;font-weight:500;color:#f1f1f1!important;border-radius:4px}
+.price-tags-back:hover{background:#333}
+.price-tags-back span:first-child{font-size:27px;line-height:1;font-weight:300;display:inline-flex;width:24px;justify-content:center;transform:translateY(-1px)}
+.price-tags-back span:last-child{font-size:14px;line-height:1}
+.price-tags-close{width:34px;height:32px;font-size:23px;line-height:1;border-radius:4px}
+.price-tags-close:hover{background:#333}
 .price-tags-body{display:grid;grid-template-columns:315px minmax(0,1fr);min-height:0;flex:1}
 .price-tags-settings{background:#292929;border-right:1px solid #444;padding:8px 10px;overflow:auto;font-size:11px}
 .price-tags-settings h3{font-size:13px;margin:2px 0 6px;color:#fff;border-bottom:1px solid #555;padding-bottom:5px}
