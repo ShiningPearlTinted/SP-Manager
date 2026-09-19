@@ -6,7 +6,7 @@ Write-Host '[1] Checking FastReport bridge...'
 try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 5; Write-Host "    OK - $($s.engine) / $($s.template)" } catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
 $payload=[ordered]@{
  paper='A4'; pageW=210; pageH=297; roll=$false; rollHeight=297
- margins=[ordered]@{top=0;left=0;right=0;bottom=0}; columns=2; labelW=105; labelH=148.5; rowGap=0; colGap=0
+ margins=[ordered]@{top=5;left=5;right=5;bottom=5}; columns=2; labelW=100; labelH=60; rowGap=2; colGap=2
  showName=$true; showPrice=$true; showCode=$true; showBarcode=$true; taxInclusive=$true; borders=$true
  barcodeType='EAN13'; nameSize=10; priceSize=16; barcodeHeight=28; copies=1
  products=@([ordered]@{id=1;name='TEST PRODUCT';unit='pcs';code='TEST001';barcode='4006381333931';price=12.50})

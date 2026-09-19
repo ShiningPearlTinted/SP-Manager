@@ -65,10 +65,7 @@ function Build-Report([object]$b){
   $band.Width=MmToPx([double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right)
   $band.Height=MmToPx([double]$b.labelH+[double]$b.rowGap)
   $band.Columns.Count=[Math]::Max(1,[int]$b.columns)
-  $availableMm=[double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right
-  $requestedColMm=[double]$b.labelW+[double]$b.colGap
-  if(($requestedColMm * [int]$b.columns) -gt ($availableMm + 0.01)){ throw "Price Tags layout exceeds printable width. Page=$availableMm mm, columns=$([int]$b.columns), label+gap=$requestedColMm mm. Reduce Label Width/Column Gap or Columns." }
-  $band.Columns.Width=MmToPx($requestedColMm)
+  $band.Columns.Width=MmToPx([double]$b.labelW+[double]$b.colGap)
   $band.Columns.Layout=[FastReport.ColumnLayout]::AcrossThenDown
   $code.Visible=[bool]$b.showCode
   $name.Visible=[bool]$b.showName
@@ -82,7 +79,7 @@ function Build-Report([object]$b){
   $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight);$barcode.Top=MmToPx(32.5)
   Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
-  else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray;$band.Border.Style=[FastReport.BorderStyle]::Dash}
+  else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
   return $report
 }
 function Handle($req){
@@ -102,13 +99,7 @@ function Handle($req){
       Send-Bytes $s 200 'application/pdf' $bytes 'inline; filename="Price-Tags-FastReport.pdf"';return
     }
     Send-Json $s 404 @{ok=$false;error='Not found'}
-  }catch{
-    $ex=$_.Exception
-    $inner=if($ex.InnerException){$ex.InnerException.ToString()}else{''}
-    $log="[$(Get-Date -Format s)] ERROR $($ex.ToString())`r`nSTACK: $($_.ScriptStackTrace)`r`nINNER: $inner`r`nBODY: $($req.body)"
-    try{Add-Content -LiteralPath (Join-Path $env:TEMP 'SP-Manager-FastReport.log') -Value $log -Encoding UTF8}catch{}
-    Send-Json $s 500 @{ok=$false;error=$ex.Message;details=$ex.ToString();inner=$inner}
-  }
+  }catch{Send-Json $s 500 @{ok=$false;error=$_.Exception.Message;details=$_.ScriptStackTrace}}
 }
 $listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Parse($HostName),$Port);$listener.Start()
 Write-Host "SP-Manager FastReport Bridge listening on http://$HostName`:$Port"
