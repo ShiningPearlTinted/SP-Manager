@@ -578,6 +578,18 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
    syncFullscreen();
    return()=>{document.removeEventListener("fullscreenchange",syncFullscreen);document.removeEventListener("webkitfullscreenchange",syncFullscreen)};
  },[]);
+ useEffect(()=>{
+   const updatePosViewport=()=>{
+     const h=(window.visualViewport?.height||window.innerHeight||0);
+     const w=(window.visualViewport?.width||window.innerWidth||0);
+     document.documentElement.style.setProperty("--sp-pos-viewport-h",`${h}px`);
+     document.documentElement.style.setProperty("--sp-pos-viewport-w",`${w}px`);
+   };
+   updatePosViewport();
+   window.addEventListener("resize",updatePosViewport,{passive:true});
+   window.visualViewport?.addEventListener("resize",updatePosViewport,{passive:true});
+   return()=>{window.removeEventListener("resize",updatePosViewport);window.visualViewport?.removeEventListener("resize",updatePosViewport)};
+ },[]);
  const togglePosFullscreen=async()=>{
    try{
      const shell=document.querySelector(".ar-pos-shell");
