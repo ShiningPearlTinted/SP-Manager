@@ -2424,3 +2424,18 @@
   .ar-pos-shell .ar-product-tile,
   .ar-pos-shell .ar-back-tile{height:84px !important;min-height:84px !important}
 }
+
+/* ============================================================
+   SP-MANAGER POS — MOBILE HAMBURGER / HEADER V9
+   UI/LAYOUT ONLY — FUNCTION LOCK
+   ============================================================ */
+@media (max-width:700px){
+  .ar-pos-shell .ar-topbar{position:relative!important;z-index:100!important;overflow-x:auto!important;overflow-y:hidden!important;padding-right:58px!important;isolation:isolate!important}
+  .ar-pos-shell .ar-topbar::after{content:""!important;position:absolute!important;top:0!important;right:0!important;bottom:0!important;width:57px!important;background:#303030!important;border-left:1px solid #454545!important;z-index:90!important;pointer-events:none!important}
+  .ar-pos-shell .ar-menu-btn{position:absolute!important;top:3px!important;right:3px!important;z-index:120!important;display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 50px!important;width:50px!important;min-width:50px!important;height:calc(100% - 6px)!important;min-height:48px!important;margin:0!important;padding:0!important;border:1px solid #4a4a4a!important;border-radius:6px!important;background:#303030!important;color:#e9283b!important;font-size:24px!important;line-height:1!important;box-shadow:0 2px 8px rgba(0,0,0,.28)!important;touch-action:manipulation!important}
+  .ar-pos-shell .ar-menu-btn:active{background:#3a3a3a!important}
+  .ar-pos-shell .ar-action{flex:0 0 58px!important;width:58px!important;min-width:58px!important}
+  .ar-pos-shell .ar-main{min-height:0!important}
+}
+.ar-pos-shell:fullscreen .ar-topbar,.ar-pos-shell:-webkit-full-screen .ar-topbar,.ar-pos-shell.pos-browser-fullscreen .ar-topbar{position:relative!important;isolation:isolate!important}
+.ar-pos-shell:fullscreen .ar-menu-btn,.ar-pos-shell:-webkit-full-screen .ar-menu-btn,.ar-pos-shell.pos-browser-fullscreen .ar-menu-btn{position:absolute!important;top:3px!important;right:3px!important;z-index:12000!important;margin:0!important}
