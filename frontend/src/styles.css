@@ -3946,6 +3946,8 @@
 .price-tags-overlay .pt-range::-moz-range-track{height:4px;background:#666;border-radius:2px}
 .price-tags-overlay .pt-range::-moz-range-thumb{width:8px;height:16px;border-radius:0;background:#2aaee8;border:0}
 .price-tags-overlay .pt-ean13-svg{width:92%!important;min-height:0!important;max-height:none!important;height:auto}
+.price-tags-overlay .pt-label{position:relative;padding-left:7mm;padding-right:7mm}
+.price-tags-overlay .pt-code-side{position:absolute;left:1.8mm;top:50%;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center;white-space:nowrap;font-size:9px;line-height:1;font-family:Arial,sans-serif;color:#111;z-index:2}
 .price-tags-overlay .pt-barcode-svg{max-height:none!important}
 @media(max-width:800px){.price-tags-overlay .pt-range-stack{display:block!important}.price-tags-overlay .pt-range-stack label{width:100%!important}}
 
