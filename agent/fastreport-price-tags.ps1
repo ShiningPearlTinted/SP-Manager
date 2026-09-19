@@ -40,12 +40,13 @@ function Configure-Barcode($barcode,[string]$type){
   $barcode.AutoSize=$false
 }
 function Build-Report([object]$b){
+  try { [Threading.Thread]::CurrentThread.CurrentCulture=[Globalization.CultureInfo]::GetCultureInfo('ms-MY'); [Threading.Thread]::CurrentThread.CurrentUICulture=[Globalization.CultureInfo]::GetCultureInfo('ms-MY') } catch {}
   if(!(Test-Path $Frx)){throw "FastReport template not found: $Frx"}
   $ds=New-Object System.Data.DataSet('ProductsDataSet')
   $dt=New-Object System.Data.DataTable('Product')
   [void]$dt.Columns.Add('Id',[object]);[void]$dt.Columns.Add('Name',[string]);[void]$dt.Columns.Add('MeasurementUnit',[string]);[void]$dt.Columns.Add('Code',[string]);[void]$dt.Columns.Add('Barcode',[string]);[void]$dt.Columns.Add('Price',[decimal])
   foreach($p in @($b.products)){
-    $r=$dt.NewRow();$r['Id']=if($null -eq $p.id){0}else{$p.id};$r['Name']=[string]$p.name;$r['MeasurementUnit']=[string]($p.unit);$r['Code']=[string]($p.code);$r['Barcode']=[string]($p.barcode);$r['Price']=[decimal]([double]$p.price);[void]$dt.Rows.Add($r)
+    $r=$dt.NewRow();$r['Id']=if($null -eq $p.id){0}else{$p.id};$r['Name']=[string]$p.name;$r['MeasurementUnit']=[string]($p.unit);$r['Code']=[string]($p.code);$r['Barcode']=[string]($p.barcode);$basePrice=[double]$p.price; $taxRate=if($null -eq $p.taxRate){0}else{[double]$p.taxRate}; $alreadyInclusive=if($null -eq $p.taxInclusive){$true}else{[bool]$p.taxInclusive}; if([bool]$b.taxInclusive -and !$alreadyInclusive){$basePrice=$basePrice*(1+($taxRate/100.0))}; $r['Price']=[decimal]$basePrice;[void]$dt.Rows.Add($r)
   }
   [void]$ds.Tables.Add($dt)
   $report=New-Object FastReport.Report
@@ -61,7 +62,8 @@ function Build-Report([object]$b){
   $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
   $roll=[bool]$b.roll
   $page.UnlimitedHeight=$roll
-  if($roll){$page.PrintOnRollPaper=$true;$page.UnlimitedHeightValue=[float]$b.rollHeight}
+  $page.PrintOnRollPaper=$roll
+  if($roll){$page.UnlimitedHeightValue=[float]$b.rollHeight}
   $band.Width=MmToPx([double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right)
   $band.Height=MmToPx([double]$b.labelH+[double]$b.rowGap)
   $band.Columns.Count=[Math]::Max(1,[int]$b.columns)

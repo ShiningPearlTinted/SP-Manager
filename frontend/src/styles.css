@@ -3977,3 +3977,10 @@
 .price-tags-preview-area .pt-fastreport-empty{position:absolute;inset:44px 0 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#cbd5e1;background:#202020;text-align:center}
 .price-tags-preview-area .pt-fastreport-empty b{font-size:18px;color:#fff}.price-tags-preview-area .pt-fastreport-empty small{opacity:.7}
 .price-tags-preview-area .pt-html-reference-preview{display:none!important}
+.price-tags-overlay .pt-filter-mode{display:grid;grid-template-columns:repeat(4,28px);gap:3px;align-items:center}
+.price-tags-overlay .pt-filter-mode button{width:28px!important;height:28px!important;margin:0!important;padding:0!important;border:1px solid #555;background:#303030;color:#ddd;border-radius:2px;font-size:11px;cursor:pointer}
+.price-tags-overlay .pt-filter-mode button.active{background:#21aee8;border-color:#21aee8;color:#fff}
+.price-tags-overlay .pt-product-filter{grid-template-columns:auto minmax(0,1fr);gap:5px}
+.price-tags-overlay .pt-product-filter select{grid-column:1 / -1}
+.price-tags-overlay .pt-print-preview-btn{width:100%!important;margin-top:7px!important;background:#343434!important;border:1px solid #666!important;color:#fff!important;padding:7px 8px!important;cursor:pointer}
+
