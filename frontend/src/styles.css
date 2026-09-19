@@ -3914,3 +3914,13 @@
   .price-tags-overlay .price-tags-settings{width:100%!important;max-height:none!important}
   .price-tags-overlay .price-tags-preview-area{width:100%!important;min-height:52vh}
 }
+
+/* PRICE TAGS — Aronium-style size controls */
+.price-tags-overlay .pt-three label{position:relative;min-width:0}
+.price-tags-overlay .pt-range{width:100%!important;height:18px!important;min-height:18px!important;padding:0!important;border:0!important;background:transparent!important;accent-color:#28aee4;cursor:pointer}
+.price-tags-overlay .pt-range::-webkit-slider-runnable-track{height:4px;background:#606060;border-radius:0}
+.price-tags-overlay .pt-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:8px;height:16px;margin-top:-6px;border-radius:0;background:#27aee4;border:0}
+.price-tags-overlay .pt-range::-moz-range-track{height:4px;background:#606060;border-radius:0}
+.price-tags-overlay .pt-range::-moz-range-thumb{width:8px;height:16px;border-radius:0;background:#27aee4;border:0}
+.price-tags-overlay .pt-three output{position:absolute;right:0;top:0;color:#aaa;font-size:9px;line-height:14px}
+.price-tags-overlay .pt-three label{padding-right:0!important}
