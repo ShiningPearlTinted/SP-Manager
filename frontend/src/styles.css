@@ -3289,3 +3289,199 @@
     overflow:hidden !important;
   }
 }
+
+/* ============================================================
+   SP-MANAGER V14 — MOBILE NORMAL-PAGE SCROLL + DASHBOARD
+   MOBILE PHONE ONLY — UI/LAYOUT ONLY — FUNCTION LOCK
+   ------------------------------------------------------------
+   Fixes normal module pages being unable to scroll after POS mobile
+   rules. POS remains viewport-locked. Dashboard gets a dedicated
+   mobile layout without changing data/calculation/function logic.
+   ============================================================ */
+@media (max-width:700px){
+  /* NORMAL MODULE PAGES MUST SCROLL. POS IS THE ONLY EXCEPTION. */
+  html, body, #root{
+    height:auto !important;
+    min-height:100% !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    overscroll-behavior-y:auto !important;
+  }
+  body:has(.ar-pos-shell),
+  #root:has(.ar-pos-shell){
+    overflow:hidden !important;
+    height:100% !important;
+    overscroll-behavior:none !important;
+  }
+
+  .app:not(:has(.ar-pos-shell)){
+    display:block !important;
+    min-height:100dvh !important;
+    height:auto !important;
+    overflow:visible !important;
+  }
+  .app:not(:has(.ar-pos-shell)) > main{
+    height:auto !important;
+    min-height:calc(100dvh - 72px) !important;
+    overflow:visible !important;
+  }
+  .app:not(:has(.ar-pos-shell)) > main > header{
+    position:sticky !important;
+    top:0 !important;
+    z-index:900 !important;
+    height:72px !important;
+    min-height:72px !important;
+    padding:10px 12px !important;
+    box-shadow:0 2px 12px rgba(16,42,67,.08) !important;
+  }
+  .app:not(:has(.ar-pos-shell)) > main > .content{
+    display:block !important;
+    width:100% !important;
+    max-width:none !important;
+    min-height:0 !important;
+    height:auto !important;
+    overflow:visible !important;
+    padding:14px 12px 36px !important;
+  }
+
+  /* ---------- DASHBOARD MOBILE ---------- */
+  .app:not(:has(.ar-pos-shell)) .aronium-dashboard{
+    width:100% !important;
+    max-width:none !important;
+    padding:12px !important;
+    box-sizing:border-box !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .ar-dashboard-monthly{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:12px !important;
+    width:100% !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-main,
+  .app:not(:has(.ar-pos-shell)) .monthly-total{
+    width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-title{
+    align-items:flex-start !important;
+    gap:10px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-title h3{
+    font-size:17px !important;
+    line-height:1.25 !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-title small{
+    font-size:10px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-tools{
+    flex:0 0 auto !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-chart{
+    width:100% !important;
+    min-width:0 !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    scrollbar-width:thin !important;
+    padding-bottom:5px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-bars{
+    min-width:690px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-legend{
+    flex-wrap:wrap !important;
+    gap:8px 14px !important;
+    font-size:10px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-total{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:10px !important;
+    align-items:center !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-total h3{
+    font-size:11px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .monthly-total > div:first-child strong{
+    font-size:20px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .top-month-label{
+    font-size:9px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .periodic-heading{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:10px !important;
+    margin:14px 0 !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .periodic-heading h3{
+    font-size:15px !important;
+    line-height:1.3 !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .period-controls{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:8px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .period-controls label{
+    min-width:0 !important;
+    font-size:9px !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .period-controls input{
+    width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .ar-dashboard-grid{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:12px !important;
+    width:100% !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .ar-dashboard-grid > .panel{
+    width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .hourly-panel .hourly-chart{
+    width:100% !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .hourly-panel .hourly-chart > *{
+    flex:0 0 auto !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .groups-content{
+    grid-template-columns:1fr !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .donut{
+    margin:0 auto !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .ar-dashboard-footer{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    padding-bottom:12px !important;
+  }
+
+  /* Other normal modules: prevent tables/cards from forcing the whole
+     document wider than the phone while preserving internal table scroll. */
+  .app:not(:has(.ar-pos-shell)) .table,
+  .app:not(:has(.ar-pos-shell)) .report-panel,
+  .app:not(:has(.ar-pos-shell)) .users-table{
+    max-width:100% !important;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+  }
+  .app:not(:has(.ar-pos-shell)) .panel,
+  .app:not(:has(.ar-pos-shell)) .card,
+  .app:not(:has(.ar-pos-shell)) .toolbar,
+  .app:not(:has(.ar-pos-shell)) .formgrid{
+    max-width:100% !important;
+    box-sizing:border-box !important;
+  }
+}
