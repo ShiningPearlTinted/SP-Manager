@@ -1,5 +1,5 @@
 $ErrorActionPreference='Stop'
-$Port=18766
+$Port=18767
 $HostName='127.0.0.1'
 $Base=Split-Path -Parent $MyInvocation.MyCommand.Path
 $FrDir=Join-Path $Base 'fastreport'
@@ -71,11 +71,15 @@ function Build-Report([object]$b){
   # The page itself is unlimited vertically.
   $originalRollW=190.0
   $originalRollH=62.5
+  # Aronium roll mode keeps the selected paper width (A4 = 210mm) in the
+  # layout, but the supplied ProductsPriceTags.frx DataBand itself is the
+  # original 190mm-wide label. Columns/label-size controls are not applied
+  # to the original roll template.
   $effectiveCols=if($roll){1}else{[Math]::Max(1,[int]$b.columns)}
   $effectiveLabelW=if($roll){$originalRollW}else{[double]$b.labelW}
   $effectiveLabelH=if($roll){$originalRollH}else{[double]$b.labelH}
   $rows=if($roll){[Math]::Max(1,[int]$b.products.Count)}else{0}
-  $effectivePageW=if($roll){$originalRollW+[double]$b.margins.left+[double]$b.margins.right}else{[double]$b.pageW}
+  $effectivePageW=if($roll){[double]$b.pageW}else{[double]$b.pageW}
   $effectivePageH=if($roll){([double]$rows*$originalRollH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom}else{[double]$b.pageH}
   if($roll -and $effectivePageH -lt $originalRollH){$effectivePageH=$originalRollH}
   $page.PaperWidth=[float]$effectivePageW
@@ -97,10 +101,20 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
-  # Keep the original FRX Currency formatting, but bind to a deterministic
-  # RM display field so the PDF is identical regardless of Windows locale.
-  $price.Text='RM[FormatNumber([Product.Price],2)]'
-  $price.Format=New-Object FastReport.Format.GeneralFormat
+  # Keep the original FRX [Product.Price] expression and use FastReport's
+  # native CurrencyFormat with an explicit RM symbol. This avoids depending
+  # on the Windows regional currency setting while preserving FastReport
+  # currency formatting.
+  $price.Text='[Product.Price]'
+  $currency=New-Object FastReport.Format.CurrencyFormat
+  $currency.UseLocale=$false
+  $currency.CurrencySymbol='RM'
+  $currency.DecimalDigits=2
+  $currency.DecimalSeparator='.'
+  $currency.GroupSeparator=','
+  $currency.PositivePattern=0
+  $currency.NegativePattern=1
+  $price.Format=$currency
   $barcode.Width=MmToPx(34.06)
   $barcode.Height=MmToPx(20.0)
   $barcode.Top=MmToPx(32.5)
@@ -114,7 +128,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium supplied package'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V4-ORIGINAL-ROLL'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b

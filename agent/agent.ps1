@@ -13,7 +13,7 @@ function Send-Json($stream,[int]$status,$obj){
   Send-Bytes $stream $status 'application/json; charset=utf-8' ([Text.Encoding]::UTF8.GetBytes($body))
 }
 function Invoke-FastReportPdf([string]$json){
-  $uri='http://127.0.0.1:18766/price-tags/pdf'
+  $uri='http://127.0.0.1:18767/price-tags/pdf'
   $enc=[Text.Encoding]::UTF8
   for($attempt=1;$attempt -le 3;$attempt++){
     try{
@@ -57,7 +57,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.1';fastReportProxy='http://127.0.0.1:18766';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.1';fastReportProxy='http://127.0.0.1:18767';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       if(!$req.body){throw 'Price Tags request body is empty'}
@@ -75,7 +75,7 @@ function Handle($req){
 $frScript=Join-Path $PSScriptRoot 'fastreport-price-tags.ps1'
 if(Test-Path $frScript){
   try{
-    $frCheck=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18766/status' -TimeoutSec 1 -ErrorAction Stop
+    $frCheck=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18767/status' -TimeoutSec 1 -ErrorAction Stop
   }catch{
     Start-Process -FilePath $PSHOME\powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$frScript) -WindowStyle Hidden
   }

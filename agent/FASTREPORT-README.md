@@ -2,7 +2,7 @@
 
 This bridge uses the **actual FastReport .NET engine** and the supplied Aronium `ProductsPriceTags.frx` template.
 
-- FastReport endpoint: `http://127.0.0.1:18766`
+- FastReport endpoint: `http://127.0.0.1:18767`
 - Status: `/status`
 - Price Tags PDF: `POST /price-tags/pdf`
 - Template: `fastreport/ProductsPriceTags.frx`
