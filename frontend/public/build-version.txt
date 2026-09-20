@@ -1,1 +1,1 @@
-SP-Manager V53 - Price Tags Runtime Error Fix
+SP-Manager V54 - Price Tags pages TDZ fix
