@@ -2,6 +2,19 @@ $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 $fr='http://127.0.0.1:18767'
 $agent='http://127.0.0.1:18765'
+Write-Host '[0] Starting FastReport bridge in background...'
+$launcher=Join-Path $root 'start-fastreport-hidden.vbs'
+Start-Process -FilePath 'wscript.exe' -ArgumentList @($launcher) -WindowStyle Hidden
+$ready=$false
+for($i=1;$i -le 60;$i++){
+  try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $ready=$true; break } catch { Start-Sleep -Milliseconds 500 }
+}
+if(-not $ready){
+  Write-Host '    FAIL: FastReport bridge did not start.'
+  $elog=Join-Path $root 'fastreport-startup-error.log'
+  if(Test-Path $elog){ Write-Host '    Startup error log:'; Get-Content $elog -Tail 30 }
+  exit 1
+}
 Write-Host '[1] Checking FastReport bridge...'
 try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 5; Write-Host "    OK - $($s.engine) / $($s.template)" } catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
 $payload=[ordered]@{

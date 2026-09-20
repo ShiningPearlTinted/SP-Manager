@@ -17,7 +17,7 @@ cmd = "Get-ChildItem -LiteralPath '" & Replace(root,"'","''") & "' -Recurse -Fil
 sh.Run Chr(34) & ps & Chr(34) & " -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -Command " & Chr(34) & cmd & Chr(34), 0, True
 
 ' Wait silently until the bridge is ready, then exit.
-For i = 1 To 15
+For i = 1 To 60
   WScript.Sleep 500
   On Error Resume Next
   Dim http, ok
@@ -29,3 +29,9 @@ For i = 1 To 15
   On Error GoTo 0
   If ok Then Exit For
 Next
+If Not ok Then
+  Dim f
+  Set f = fso.OpenTextFile(errlog, 8, True)
+  f.WriteLine Now & " - FastReport bridge did not become ready within 30 seconds."
+  f.Close
+End If
