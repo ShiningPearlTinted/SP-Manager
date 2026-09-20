@@ -6,30 +6,21 @@ $agent='http://127.0.0.1:18765'
 # Startup is intentionally silent. The test window must not report a false
 # "Starting FastReport bridge in background..." state while the hidden bridge
 # is being launched. Reuse an already-running bridge whenever possible.
-$script=Join-Path $root 'fastreport-price-tags.ps1'
-$log=Join-Path $root 'fastreport-startup.log'
-$elog=Join-Path $root 'fastreport-startup-error.log'
-$psExe=$PSHOME + '\powershell.exe'
-$ready=$false
-try {
-  $null=Invoke-RestMethod "$fr/status" -TimeoutSec 1
-  $ready=$true
-} catch {}
-if(-not $ready){
+$launcher=Join-Path $root 'start-fastreport.ps1'
+Write-Host '[0] Checking FastReport bridge startup...'
+if(-not (try { $null=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $true } catch { $false })) {
   try {
-    Start-Process -FilePath $psExe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$script) -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $elog | Out-Null
-  } catch {
-    Write-Host "    FAIL: could not start FastReport process: $($_.Exception.Message)"
-    exit 1
-  }
+    & "$PSHOME\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $launcher
+  } catch { Write-Host "    FAIL: startup launcher error: $($_.Exception.Message)"; exit 1 }
 }
-for($i=1;$i -le 60 -and -not $ready;$i++){
-  try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $ready=$true; break } catch { Start-Sleep -Milliseconds 500 }
+$ready=$false
+for($i=0;$i -lt 30;$i++){
+  try { $null=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $ready=$true; break } catch { Start-Sleep -Milliseconds 500 }
 }
 if(-not $ready){
-  Write-Host '    FAIL: FastReport bridge did not start.'
+  Write-Host '    FAIL: FastReport bridge did not become ready within 15 seconds.'
   $elog=Join-Path $root 'fastreport-startup-error.log'
-  if(Test-Path $elog){ Write-Host '    Startup error log:'; Get-Content $elog -Tail 30 }
+  if(Test-Path $elog){ Write-Host '    Startup error log:'; Get-Content $elog -Tail 20 }
   exit 1
 }
 Write-Host '[1] Checking FastReport bridge...'
