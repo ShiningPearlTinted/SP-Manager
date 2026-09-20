@@ -714,7 +714,7 @@ function BarcodeGraphic({value,type,height=60}){
  const h=Math.max(8,Number(height)||20);
  const label=barcodeTextForPreview(value,type);
  const typeLabel=String(type||"BARCODE");
- const common={className:"pt-barcode-svg",style:{width:"42mm",height:`${h}mm`},preserveAspectRatio:"none",role:"img","aria-label":`${typeLabel} ${label}`};
+ const common={className:"pt-barcode-svg",style:{width:"42mm",height:`${h}mm`,"--pt-barcode-h":`${h}mm`},preserveAspectRatio:"none",role:"img","aria-label":`${typeLabel} ${label}`};
  const human=<div className="pt-barcode-human" style={{fontFamily:"Arial,Helvetica,sans-serif",fontWeight:400,marginTop:"1px",lineHeight:1}}>{label}</div>;
  if(type==="EAN13"||type==="EAN8"){
   const d=type==="EAN13"?checksumEAN13(value):checksumEAN8(value),bits=eanPattern(d,type),w=type==="EAN13"?95:67,barW=w/bits.length;

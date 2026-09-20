@@ -1,1 +1,1 @@
-SP-Manager V50 - Barcode human label spacing LOCK
+SP-Manager V51 - Barcode Human Label Position & Height LOCK
