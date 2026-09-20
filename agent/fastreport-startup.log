@@ -1,2 +1,41 @@
-2026-09-20T17:25:50 FastReport process exited with code .
-2026-09-20T17:25:50 FastReport bridge did not become ready.
+2026-09-20 18:07:45.316 START pid=9276 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
+2026-09-20 18:07:45.333 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport
+2026-09-20 18:07:45.333 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport\FastReport.dll
+2026-09-20 18:07:45.349 FastReport exists=True
+2026-09-20 18:07:45.794 START pid=1224 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
+2026-09-20 18:07:45.810 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport
+2026-09-20 18:07:45.810 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport\FastReport.dll
+2026-09-20 18:07:45.810 FastReport exists=True
+2026-09-20 18:07:46.044 FastReport.dll loaded.
+2026-09-20 18:07:46.076 FastReport.dll loaded.
+2026-09-20 18:07:46.250 FastReport.Bars.dll loaded.
+2026-09-20 18:07:46.281 FastReport.Bars.dll loaded.
+2026-09-20 18:07:46.297 FastReport.SQLite.dll loaded.
+2026-09-20 18:07:46.300 LISTENING http://127.0.0.1:18767
+2026-09-20 18:07:46.317 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
+   at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+   at System.Net.Sockets.Socket.Bind(EndPoint localEP)
+   at System.Net.Sockets.TcpListener.Start(Int32 backlog)
+   at CallSite.Target(Closure , CallSite , Object )
+   --- End of inner exception stack trace ---
+   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)
+   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)
+   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)
+   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)
+2026-09-20 18:07:50.659 START pid=1016 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
+2026-09-20 18:07:50.675 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport
+2026-09-20 18:07:50.675 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V34-STARTUP-SYNTAX-LOCKED\agent\fastreport\FastReport.dll
+2026-09-20 18:07:50.675 FastReport exists=True
+2026-09-20 18:07:50.925 FastReport.dll loaded.
+2026-09-20 18:07:51.137 FastReport.Bars.dll loaded.
+2026-09-20 18:07:51.138 FastReport.SQLite.dll loaded.
+2026-09-20 18:07:51.155 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
+   at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+   at System.Net.Sockets.Socket.Bind(EndPoint localEP)
+   at System.Net.Sockets.TcpListener.Start(Int32 backlog)
+   at CallSite.Target(Closure , CallSite , Object )
+   --- End of inner exception stack trace ---
+   at System.Management.Automation.ExceptionHandlingOps.CheckActionPreference(FunctionContext funcContext, Exception exception)
+   at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)
+   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)
+   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)

@@ -74,7 +74,7 @@ function Configure-Barcode($barcode,[string]$type,[double]$heightMm){
   $normalized=[string]$type
 
   switch($normalized){
-    'EAN13' { # Keep the BarcodeBase that was loaded from ProductsPriceTags.frx. }
+    'EAN13' { } # Keep the BarcodeBase loaded from ProductsPriceTags.frx.
     'EAN8'  { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeEAN8 }
     'UPC A' { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_A }
     'UPC E0'{ $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_E0 }
