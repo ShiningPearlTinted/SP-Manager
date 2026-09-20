@@ -29,18 +29,29 @@ function Read-Request($client){
   return @{stream=$stream;method=$method;path=$path;body=$body}
 }
 function MmToPx([double]$mm){ return [single]($mm*96.0/25.4) }
+function Get-Ean13Value([string]$value,[string]$fallback){
+  # FastReport EAN13 accepts digits only and represents 12 data digits + checksum.
+  # Keep a real 13-digit EAN13 unchanged. For shorter numeric values, pad the
+  # existing barcode on the left and let FastReport calculate the checksum.
+  # Do not invent an EAN13 from alphabetic product codes: those are not EAN13 data.
+  $v=([string]$value).Trim()
+  if($v -match '^\d{13}$'){ return $v }
+  if($v -match '^\d{12}$'){ return $v }
+  if($v -match '^\d{1,11}$'){ return $v.PadLeft(12,'0') }
+  $f=([string]$fallback).Trim()
+  if($f -match '^\d{13}$'){ return $f }
+  if($f -match '^\d{12}$'){ return $f }
+  if($f -match '^\d{1,11}$'){ return $f.PadLeft(12,'0') }
+  return ''
+}
 function Configure-Barcode($barcode,[string]$type){
-  # EAN13 is the barcode type embedded in the original source FRX.
-  # For EAN13, keep the loaded FastReport object untouched so its native
-  # geometry/defaults remain exactly those from ProductsPriceTags.frx.
+  # EAN13 MUST remain the BarcodeObject that was loaded from the original
+  # ProductsPriceTags.frx. Do not replace it and do not alter its geometry.
   $normalized=[string]$type
   if($normalized -eq 'EAN13'){
-    $barcode.SymbologyName='EAN13'
     return
   }
 
-  # For other choices, replace the actual FastReport BarcodeBase object so
-  # changing the dropdown changes the real FastReport renderer.
   switch($normalized){
     'EAN8'  { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeEAN8 }
     'UPC A' { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_A }
@@ -51,7 +62,7 @@ function Configure-Barcode($barcode,[string]$type){
     'CODE 93' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode93 }
     'Interleaved 2 of 5 (ITF)' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode2of5Interleaved }
     'CODABAR' { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeCodabar }
-    default { $barcode.SymbologyName='EAN13'; return }
+    default { return }
   }
   $barcode.ShowText=$true
   $barcode.AutoSize=$false
@@ -62,7 +73,10 @@ function Build-Report([object]$b){
   $dt=New-Object System.Data.DataTable('Product')
   [void]$dt.Columns.Add('Id',[object]);[void]$dt.Columns.Add('Name',[string]);[void]$dt.Columns.Add('MeasurementUnit',[string]);[void]$dt.Columns.Add('Code',[string]);[void]$dt.Columns.Add('Barcode',[string]);[void]$dt.Columns.Add('Price',[decimal])
   foreach($p in @($b.products)){
-    $r=$dt.NewRow(); if($null -eq $p.id){$r['Id']=0}else{$r['Id']=$p.id}; $r['Name']=[string]$p.name; $r['MeasurementUnit']=[string]$p.unit; $r['Code']=[string]$p.code; $r['Barcode']=[string]$p.barcode; $r['Price']=[decimal]([double]$p.price); [void]$dt.Rows.Add($r)
+    $r=$dt.NewRow(); if($null -eq $p.id){$r['Id']=0}else{$r['Id']=$p.id}; $r['Name']=[string]$p.name; $r['MeasurementUnit']=[string]$p.unit; $r['Code']=[string]$p.code;
+    $rawBarcode=[string]$p.barcode
+    if(([string]$b.barcodeType) -eq 'EAN13'){$r['Barcode']=Get-Ean13Value $rawBarcode ([string]$p.code)}else{$r['Barcode']=$rawBarcode}
+    $r['Price']=[decimal]([double]$p.price); [void]$dt.Rows.Add($r)
   }
   [void]$ds.Tables.Add($dt)
   # SP-Manager uses the supplied ProductsPriceTags.frx and an explicit RM price script.
@@ -135,21 +149,9 @@ function Build-Report([object]$b){
   # Price is formatted by the template's OnPriceBeforePrint event as RM0.00.
   # Keep the original TextPrice format object intact; do not set UseLocale at runtime.
   $price.Text='[Product.Price]'
-  # IMPORTANT: for EAN13 keep Barcode1 as the actual object loaded from
-  # ProductsPriceTags.frx. The original FastReport object uses AutoSize +
-  # centered human-readable text. HorzAlign only takes effect when AutoSize
-  # is enabled in FastReport, so do not force AutoSize=false for EAN13.
-  $barcode.Width=MmToPx(34.06)
-  $barcode.Height=MmToPx(([double]$b.barcodeHeight))
-  if([double]$b.barcodeHeight -le 0){$barcode.Height=MmToPx(20.0)}
-  if(([string]$b.barcodeType) -eq 'EAN13') {
-    try { $barcode.AutoSize=$true } catch {}
-    try { $barcode.HorzAlign=[FastReport.Barcode.BarcodeObject+Alignment]::Center } catch {}
-    try { $barcode.Zoom=1.0 } catch {}
-  }
-  # Keep the original ProductsPriceTags.frx OnBarcodeBeforePrint geometry:
-  # it centers the barcode and docks it to the bottom of Data1.
-  # Do not hard-code Top/Left here; the actual FastReport template script owns them.
+  # LOCKED: EAN13 uses the Barcode1 object exactly as loaded from
+  # ProductsPriceTags.frx. The original FRX controls Width/Height/position,
+  # AutoSize, ShowText and EAN13 rendering. Do not override any of them.
   Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
@@ -159,7 +161,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V21-SP-MANAGER-ORIGINAL-FRX-EAN13-CENTERED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V22-SP-MANAGER-ORIGINAL-FRX-EAN13-LOCKED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b

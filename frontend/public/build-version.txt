@@ -1,1 +1,1 @@
-SP-Manager V21 - Price Tags EAN13 original FastReport barcode alignment fix
+SP-Manager V22 - Original ProductsPriceTags.frx EAN13 locked barcode
