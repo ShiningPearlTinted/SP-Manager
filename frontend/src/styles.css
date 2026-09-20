@@ -4122,3 +4122,63 @@
 .price-tags-overlay .pt-barcode-human{font-family:'OCR-B','Arial Narrow',Arial,sans-serif!important;font-size:9px!important;line-height:10px!important;height:10px!important;margin-top:1px!important;color:#111!important;white-space:nowrap!important;letter-spacing:.1px!important}
 .price-tags-overlay .pt-barcode-svg text{font-family:'OCR-B','Arial Narrow',Arial,sans-serif!important}
 .price-tags-overlay .pt-native-preview .pt-page{overflow:visible!important}
+
+/* V46 - Modern Price Tags UI / Arial barcode labels */
+.price-tags-overlay .pt-barcode-svg text,
+.price-tags-overlay .pt-barcode-human,
+.price-tags-overlay .pt-barcode-type{
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-weight:400!important;
+  font-style:normal!important;
+}
+.price-tags-overlay .pt-barcode-human{
+  font-size:10px!important;
+  line-height:12px!important;
+  height:12px!important;
+  margin-top:2px!important;
+  letter-spacing:0!important;
+}
+.price-tags-overlay .pt-barcode-type{
+  font-family:Arial,Helvetica,sans-serif!important;
+  font-size:9px!important;
+  line-height:11px!important;
+  height:11px!important;
+  margin-top:0!important;
+  color:#555!important;
+  font-weight:400!important;
+  white-space:nowrap!important;
+}
+.price-tags-overlay .pt-barcode-stack{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}
+.price-tags-overlay .pt-barcode-stack svg{font-family:Arial,Helvetica,sans-serif!important}
+.price-tags-overlay .pt-barcode-stack svg text{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}
+.price-tags-overlay .pt-name,
+.price-tags-overlay .pt-price{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}
+.price-tags-overlay .pt-price{font-weight:400!important}
+.price-tags-overlay .price-tags-settings{background:linear-gradient(180deg,#111b2a 0%,#0c1420 100%)!important;border-right:1px solid #26354a!important}
+.price-tags-overlay .pt-ar-section{background:rgba(255,255,255,.025)!important;border:1px solid #24354a!important;border-radius:9px!important;padding:9px 10px 10px!important;margin:7px 0!important;box-shadow:0 4px 16px rgba(0,0,0,.16)!important}
+.price-tags-overlay .pt-ar-section h3{color:#f4f8fc!important;border-bottom:1px solid #2b4058!important;font-size:12px!important;letter-spacing:.2px!important}
+.price-tags-overlay .pt-ar-section input[type=number],
+.price-tags-overlay .pt-ar-section select{background:#101c2c!important;border:1px solid #31465f!important;border-radius:6px!important;color:#eaf1f8!important;height:28px!important;font-size:11px!important}
+.price-tags-overlay .pt-check input[type=checkbox]{accent-color:#2388ff!important}
+.price-tags-overlay .pt-products-ar-toolbar{border:1px solid #30455e!important;background:#101b29!important;border-radius:7px!important}
+.price-tags-overlay .pt-products-ar-toolbar button{background:#162536!important;color:#b8c9d9!important}
+.price-tags-overlay .pt-products-ar-toolbar button.active{background:#1677e8!important;color:#fff!important}
+.price-tags-overlay .pt-products-ar-toolbar input{background:#0d1826!important;color:#fff!important}
+.price-tags-overlay .pt-product-mode-pill{background:#101c2b!important;border-color:#2c435d!important;border-radius:7px!important}
+.price-tags-overlay .pt-product-results{background:#0e1825!important;border-color:#2b425b!important;border-radius:7px!important}
+.price-tags-overlay .pt-product-result:hover{background:#17283a!important}
+.price-tags-overlay .pt-product-result.selected{background:rgba(22,119,232,.18)!important}
+.price-tags-overlay .pt-product-advanced button,
+.price-tags-overlay .pt-product-advanced select{border:1px solid #34506e!important;background:#142438!important;color:#dbe7f1!important;border-radius:6px!important}
+.price-tags-overlay .pt-print-preview-button{background:linear-gradient(135deg,#1677e8,#2597ff)!important;border:0!important;border-radius:8px!important;height:40px!important;font-size:12px!important;font-weight:600!important;box-shadow:0 5px 14px rgba(22,119,232,.25)!important}
+.price-tags-overlay .aronium-preview-toolbar{height:48px!important;background:#101a28!important;color:#dce7f2!important;border-bottom:1px solid #2a3b50!important;padding:0 12px!important}
+.price-tags-overlay .aronium-preview-toolbar button{height:32px!important;border:1px solid #38506a!important;background:#18283a!important;color:#eaf2f9!important;border-radius:7px!important;padding:0 12px!important;font-size:11px!important}
+.price-tags-overlay .aronium-preview-toolbar .pt-toolbar-primary{background:linear-gradient(135deg,#1677e8,#2597ff)!important;border-color:#1677e8!important;color:#fff!important;font-weight:600!important}
+.price-tags-overlay .aronium-preview-toolbar .pt-toolbar-pdf{background:linear-gradient(135deg,#0aa76b,#20c98a)!important;border-color:#0aa76b!important;color:#fff!important;font-weight:600!important}
+.price-tags-overlay .aronium-preview-toolbar .pt-page-counter input{background:#0d1826!important;color:#fff!important;border-color:#3a536d!important;border-radius:5px!important}
+.price-tags-overlay .aronium-preview-toolbar .pt-nav-btn{background:transparent!important;border-color:transparent!important;color:#9db2c7!important}
+.price-tags-overlay .aronium-preview-toolbar .pt-zoom-label{color:#b8c9d9!important}
+.price-tags-overlay .aronium-preview-toolbar .pt-zoom-range{accent-color:#258cff!important}
+.price-tags-overlay .pt-native-preview{inset:48px 0 0 0!important;background:radial-gradient(circle at 50% 15%,#1c2b3d 0%,#0e1622 65%)!important;padding:24px 0 40px!important}
+.price-tags-overlay .pt-native-preview .pt-page{box-shadow:0 10px 35px rgba(0,0,0,.45),0 0 0 1px #d8b35b!important;border-radius:2px!important}
+.price-tags-overlay .pt-label{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}

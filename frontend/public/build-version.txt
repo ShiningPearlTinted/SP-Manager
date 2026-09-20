@@ -1,1 +1,1 @@
-SP-Manager V45 - Price Tags Aronium Product Selector + Barcode UI
+SP-Manager V46 - Price Tags Modern UI + Arial Barcode Labels
