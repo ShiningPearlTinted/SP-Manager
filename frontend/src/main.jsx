@@ -796,7 +796,8 @@ function PriceTagsModal({products,groups,money,onClose,setNotice,settings}){
        const cellX=roll?leftM+(contentW-lw)/2:leftM+col*(lw+cg);
        const cellY=roll?topM+row*(lh+rg):topM+row*(lh+rg);
        const baseX=mmToDots(cellX), baseY=mmToDots(cellY), labelWidthDots=mmToDots(lw);
-       const xName=mmToDots(5), nameY=0, priceY=mmToDots(7.5), barcodeY=Math.max(mmToDots(12.5),mmToDots(lh)-mmToDots(barcodeHeight)), barcodeW=34.06;\n       if(borders&&lang==="ZPL")out.push(`^FO${baseX},${baseY}^GB${mmToDots(lw)},${mmToDots(lh)},2^FS`);\n       if(borders&&lang==="TSPL")out.push(`BOX ${baseX},${baseY},${baseX+mmToDots(lw)},${baseY+mmToDots(lh)},2`);
+       const xName=mmToDots(5), nameY=0, priceY=mmToDots(7.5), barcodeY=Math.max(mmToDots(12.5),mmToDots(lh)-mmToDots(barcodeHeight)), barcodeW=34.06;
+       if(borders&&lang==="ZPL")out.push(`^FO${baseX},${baseY}^GB${mmToDots(lw)},${mmToDots(lh)},2^FS`);\n       if(borders&&lang==="TSPL")out.push(`BOX ${baseX},${baseY},${baseX+mmToDots(lw)},${baseY+mmToDots(lh)},2`);
        const value=barcodeValue(p); const name=String(p?.name||""); const price=money(p?.price||0);
        const centeredBarcodeX=Math.max(0,Math.round((labelWidthDots-mmToDots(barcodeW))/2));
        if(lang==="ZPL"){
