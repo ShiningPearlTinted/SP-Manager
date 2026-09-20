@@ -77,7 +77,7 @@ if(Test-Path $frScript){
   try{
     $frCheck=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18767/status' -TimeoutSec 1 -ErrorAction Stop
   }catch{
-    Start-Process -FilePath $PSHOME\powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$frScript) -WindowStyle Hidden
+    $frPs=Join-Path $env:SystemRoot 'SysWOW64\WindowsPowerShell\v1.0\powershell.exe'; if(!(Test-Path $frPs)){$frPs=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'}; Start-Process -FilePath $frPs -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$frScript) -WindowStyle Hidden
   }
 }
 $listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Parse($HostName),$Port);$listener.Start()

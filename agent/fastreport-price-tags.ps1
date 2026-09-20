@@ -1,4 +1,12 @@
 $ErrorActionPreference='Stop'
+# FastReport.dll bundled with SP-Manager is a PE32/x86 .NET assembly.
+# It must run under 32-bit Windows PowerShell on 64-bit Windows.
+if([Environment]::Is64BitProcess){
+  $Base=Split-Path -Parent $MyInvocation.MyCommand.Path
+  $err=Join-Path $Base 'fastreport-startup-error.log'
+  try{Add-Content -Path $err -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff') + ' FATAL: FastReport bridge started in 64-bit PowerShell. Use SysWOW64 32-bit PowerShell.')}catch{}
+  exit 86
+}
 $Port=18767
 $HostName='127.0.0.1'
 $Base=Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -7,11 +15,13 @@ $Frx=Join-Path $FrDir 'ProductsPriceTags.frx'
 $StartupLog=Join-Path $Base 'fastreport-startup.log'
 $StartupErrorLog=Join-Path $Base 'fastreport-startup-error.log'
 function Startup-Log([string]$message){ try { Add-Content -Path $StartupLog -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff') + ' ' + $message) } catch {} }
-Startup-Log ('START pid=' + $PID + ' script=' + $MyInvocation.MyCommand.Path)
+Startup-Log ('START pid=' + $PID + ' script=' + $MyInvocation.MyCommand.Path + ' bitness=' + ($(if([Environment]::Is64BitProcess){'x64'}else{'x86'})) + ' PS=' + $PSVersionTable.PSVersion)
 try { Set-Location -LiteralPath $FrDir; Startup-Log ('CWD=' + (Get-Location).Path) } catch {}
 
 # Load the actual FastReport assemblies shipped with the SP-Manager FastReport package.
 try {
+  Startup-Log ('FastReport path=' + (Join-Path $FrDir 'FastReport.dll'))
+  Startup-Log ('FastReport exists=' + (Test-Path (Join-Path $FrDir 'FastReport.dll')))
   Add-Type -Path (Join-Path $FrDir 'FastReport.dll')
   Startup-Log 'FastReport.dll loaded.'
   try { Add-Type -Path (Join-Path $FrDir 'FastReport.Bars.dll'); Startup-Log 'FastReport.Bars.dll loaded.' } catch { Startup-Log ('FastReport.Bars.dll optional load failed: ' + $_.Exception.Message) }
@@ -184,7 +194,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V31-SP-MANAGER-STARTUP-DIRECT-ONE-PROCESS-LOCKED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V33-SP-MANAGER-FASTREPORT-STARTUP-DIAGNOSTIC-LOCKED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b

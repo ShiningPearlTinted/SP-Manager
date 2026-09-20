@@ -3,7 +3,7 @@ Dim sh, fso, root, ps, script, cmd, q
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 root = fso.GetParentFolderName(WScript.ScriptFullName)
-ps = sh.ExpandEnvironmentStrings("%SystemRoot%") & "\System32\WindowsPowerShell\v1.0\powershell.exe"
+ps = sh.ExpandEnvironmentStrings("%SystemRoot%") & "\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
 script = fso.BuildPath(root, "fastreport-price-tags.ps1")
 q = Chr(34)
 sh.CurrentDirectory = root
