@@ -1,6 +1,6 @@
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
-$fr='http://127.0.0.1:18766'
+$fr='http://127.0.0.1:18767'
 $agent='http://127.0.0.1:18765'
 Write-Host '[1] Checking FastReport bridge...'
 try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 5; Write-Host "    OK - $($s.engine) / $($s.template)" } catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }

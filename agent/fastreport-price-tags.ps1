@@ -90,7 +90,8 @@ function Build-Report([object]$b){
   $band.Width=MmToPx($effectiveLabelW)
   $band.Height=MmToPx($effectiveLabelH+[double]$b.rowGap)
   $band.Columns.Count=$effectiveCols
-  $band.Columns.Width=MmToPx($effectiveLabelW+(if($roll){0}else{[double]$b.colGap}))
+  $effectiveColGap=if($roll){0}else{[double]$b.colGap}
+  $band.Columns.Width=MmToPx($effectiveLabelW+$effectiveColGap)
   $band.Columns.Layout=[FastReport.ColumnLayout]::AcrossThenDown
   $code.Visible=[bool]$b.showCode
   $name.Visible=[bool]$b.showName
@@ -128,7 +129,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V4-ORIGINAL-ROLL'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V5-ORIGINAL-ROLL-FIX'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
