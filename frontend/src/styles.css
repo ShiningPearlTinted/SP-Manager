@@ -4013,3 +4013,81 @@
 
 /* Price Tags ZPL/TSPL native browser preview */
 .price-tags-preview-area .pt-native-preview{position:absolute;inset:44px 0 0 0;background:#202020;overflow:auto;padding:0;display:flex;flex-direction:column;align-items:center}.price-tags-preview-area .pt-native-preview .pt-page{flex:none;background:#fff;margin:0 0 16px;box-shadow:0 2px 12px rgba(0,0,0,.35)}
+
+/* =========================================================
+   PRICE TAGS — ARONIUM ORIGINAL LAYOUT / ROLL CONTROLS
+   Keep ZPL/TSPL renderer; restore the original designer layout.
+   ========================================================= */
+.price-tags-overlay .price-tags-titlebar{height:34px!important;min-height:34px!important;background:#242424!important;border-bottom:1px solid #3d3d3d!important;padding:0 7px!important}
+.price-tags-overlay .price-tags-back{height:30px!important;font-size:13px!important;gap:7px!important;padding-left:0!important}
+.price-tags-overlay .price-tags-back span:first-child{font-size:20px!important;width:18px!important}
+.price-tags-overlay .price-tags-back span:last-child{font-size:13px!important}
+.price-tags-overlay .price-tags-close{height:28px!important;width:28px!important;font-size:21px!important}
+.price-tags-overlay .price-tags-body{grid-template-columns:320px minmax(0,1fr)!important}
+.price-tags-overlay .price-tags-settings{padding:7px 15px 10px!important;background:#292929!important;border-right:1px solid #4a4a4a!important;font-size:11px!important}
+.price-tags-overlay .pt-ar-section{border-bottom:1px solid #555;padding-bottom:7px;margin-bottom:5px}
+.price-tags-overlay .pt-ar-section:last-of-type{border-bottom:0}
+.price-tags-overlay .pt-ar-section h3{font-size:13px!important;line-height:16px!important;margin:0 0 7px!important;padding:0 0 5px!important;border-bottom:1px solid #555!important;color:#f4f4f4!important;font-weight:600!important}
+.price-tags-overlay .pt-ar-section label{font-size:11px!important;color:#ddd!important;margin:0 0 6px!important;gap:3px!important}
+.price-tags-overlay .pt-ar-section input[type=number],
+.price-tags-overlay .pt-ar-section select{height:23px!important;min-height:23px!important;background:#303030!important;border:1px solid #555!important;border-radius:2px!important;color:#eee!important;padding:2px 5px!important;font-size:11px!important}
+.price-tags-overlay .pt-two{gap:8px!important}
+.price-tags-overlay .pt-page-size label,.price-tags-overlay .pt-label-size label{min-width:0!important}
+.price-tags-overlay .pt-roll-toggle{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin:2px 0 7px!important}
+.price-tags-overlay .pt-roll-toggle>span{white-space:nowrap!important}
+.price-tags-overlay .pt-switch{position:relative!important;width:31px!important;height:17px!important;min-width:31px!important;padding:0!important;border:1px solid #777!important;border-radius:1px!important;background:#666!important;cursor:pointer!important}
+.price-tags-overlay .pt-switch i{position:absolute!important;left:1px!important;top:1px!important;width:13px!important;height:13px!important;background:#eee!important;display:block!important;transition:left .12s ease!important}
+.price-tags-overlay .pt-switch.on{background:#55c96f!important;border-color:#55c96f!important}
+.price-tags-overlay .pt-switch.on i{left:15px!important}
+.price-tags-overlay .pt-disabled{color:#737373!important}
+.price-tags-overlay .pt-disabled input,.price-tags-overlay .pt-disabled .pt-range{opacity:.42!important;cursor:not-allowed!important}
+.price-tags-overlay .pt-margins-block{margin:0 0 7px!important}
+.price-tags-overlay .pt-subtitle{text-align:center;font-size:10px;font-weight:600;color:#ddd;margin:2px 0 2px}
+.price-tags-overlay .pt-margin-grid{height:82px;display:grid;grid-template-columns:1fr 72px 1fr;grid-template-rows:27px 27px 27px;column-gap:9px;align-items:center;justify-items:center}
+.price-tags-overlay .pt-margin-grid label{width:100%!important;text-align:center!important;align-items:center!important;margin:0!important;gap:2px!important}
+.price-tags-overlay .pt-margin-grid input{width:72px!important;text-align:center!important}
+.price-tags-overlay .pt-margin-grid .m-top{grid-column:2;grid-row:1}
+.price-tags-overlay .pt-margin-grid .m-left{grid-column:1;grid-row:2}
+.price-tags-overlay .pt-margin-grid .m-right{grid-column:3;grid-row:2}
+.price-tags-overlay .pt-margin-grid .m-bottom{grid-column:2;grid-row:3}
+.price-tags-overlay .pt-slider-row{display:flex!important;flex-direction:column!important;gap:2px!important;margin:2px 0 5px!important}
+.price-tags-overlay .pt-range{width:100%!important;height:17px!important;min-height:17px!important}
+.price-tags-overlay .pt-label-size{margin-bottom:1px!important}
+.price-tags-overlay .pt-display-ar{gap:2px 14px!important;margin-top:1px!important;margin-bottom:5px!important}
+.price-tags-overlay .pt-display-ar .pt-check{display:flex!important;flex-direction:row!important;align-items:center!important;gap:5px!important;margin:1px 0!important;color:#ddd!important}
+.price-tags-overlay .pt-display-ar .pt-check input{appearance:none!important;-webkit-appearance:none!important;width:27px!important;height:14px!important;min-width:27px!important;min-height:14px!important;border:1px solid #777!important;background:#555!important;border-radius:1px!important;position:relative!important;padding:0!important;cursor:pointer!important}
+.price-tags-overlay .pt-display-ar .pt-check input:before{content:"";position:absolute;left:1px;top:1px;width:10px;height:10px;background:#eee}
+.price-tags-overlay .pt-display-ar .pt-check input:checked{background:#57cf72!important;border-color:#57cf72!important}
+.price-tags-overlay .pt-display-ar .pt-check input:checked:before{left:14px}
+.price-tags-overlay .pt-products-section{padding-bottom:6px}
+.price-tags-overlay .pt-products-ar-toolbar{height:27px;display:flex;align-items:center;border:1px solid #555;background:#303030;margin-bottom:5px}
+.price-tags-overlay .pt-products-ar-toolbar button{height:25px!important;min-width:28px!important;width:28px!important;padding:0!important;margin:0!important;border:0!important;border-right:1px solid #4b4b4b!important;border-radius:0!important;background:#303030!important;color:#eee!important;font-size:11px!important}
+.price-tags-overlay .pt-products-ar-toolbar button.active{background:#2aaee8!important;color:#fff!important}
+.price-tags-overlay .pt-products-ar-toolbar input{height:25px!important;min-height:25px!important;flex:1!important;border:0!important;border-radius:0!important;background:#303030!important;color:#eee!important;padding:2px 6px!important;font-size:11px!important}
+.price-tags-overlay .pt-products-ar-toolbar>button:last-child{border-left:1px solid #4b4b4b!important;border-right:0!important;font-size:18px!important}
+.price-tags-overlay .pt-product-summary{min-height:62px;display:flex;align-items:center;justify-content:center;gap:8px;color:#aaa;text-align:center;border-bottom:1px solid #555;margin-bottom:5px}
+.price-tags-overlay .pt-product-summary .pt-info-icon{display:inline-flex;width:20px;height:20px;border:2px solid #8a8a8a;border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#aaa}
+.price-tags-overlay .pt-product-summary span:last-child{display:flex;flex-direction:column;gap:2px;font-size:10px}
+.price-tags-overlay .pt-product-summary small{font-size:9px;color:#888}
+.price-tags-overlay .pt-product-advanced{display:grid;grid-template-columns:1fr auto auto;gap:4px}
+.price-tags-overlay .pt-product-advanced select,.price-tags-overlay .pt-product-advanced button{height:22px!important;min-height:22px!important;font-size:10px!important;padding:2px 5px!important}
+.price-tags-overlay .pt-copies-section{padding-top:0!important}
+.price-tags-overlay .pt-copies-section>label{display:block!important}
+.price-tags-overlay .pt-stepper{display:flex;align-items:center;width:74px;height:22px;border:1px solid #555;background:#303030}
+.price-tags-overlay .pt-stepper button{width:22px!important;height:20px!important;min-height:20px!important;padding:0!important;border:0!important;background:#303030!important;color:#eee!important;font-size:15px!important}
+.price-tags-overlay .pt-stepper input{width:28px!important;height:20px!important;min-height:20px!important;border:0!important;text-align:center!important;background:#303030!important;color:#eee!important;padding:0!important}
+.price-tags-overlay .pt-stepper input::-webkit-inner-spin-button,.price-tags-overlay .pt-stepper input::-webkit-outer-spin-button{appearance:none;margin:0}
+.price-tags-overlay .pt-print-preview-button{height:34px!important;min-height:34px!important;margin:8px 0 0!important;background:#303030!important;border:1px solid #666!important;color:#fff!important;border-radius:2px!important;font-weight:400!important}
+.price-tags-overlay .price-tags-preview-area{background:#202020!important}
+.price-tags-overlay .aronium-preview-toolbar{height:34px!important;min-height:34px!important;background:#eee!important;border-bottom:1px solid #aaa!important;padding:0 6px!important;gap:4px!important;color:#222!important}
+.price-tags-overlay .aronium-preview-toolbar button{height:25px!important;min-height:25px!important;padding:2px 6px!important;border:1px solid #bbb!important;border-radius:2px!important;background:#f8f8f8!important;color:#222!important;font-size:11px!important}
+.price-tags-overlay .aronium-preview-toolbar .pt-toolbar-separator{height:22px;width:1px;background:#ccc;margin:0 2px}
+.price-tags-overlay .aronium-preview-toolbar .pt-nav-btn{min-width:23px!important;padding:0 4px!important;border-color:transparent!important;background:transparent!important}
+.price-tags-overlay .pt-page-counter{display:flex!important;align-items:center!important;gap:4px!important;color:#222!important;margin:0!important;font-size:11px!important}
+.price-tags-overlay .pt-page-counter input{width:37px!important;height:22px!important;min-height:22px!important;text-align:center!important;background:#fff!important;color:#222!important;border:1px solid #aaa!important;padding:0!important}
+.price-tags-overlay .pt-toolbar-spacer{flex:1!important}
+.price-tags-overlay .pt-zoom-label{margin:0!important;color:#444!important}
+.price-tags-overlay .pt-zoom-range{width:110px!important;height:17px!important;min-height:17px!important;accent-color:#29aee8!important}
+.price-tags-overlay .pt-native-preview{position:absolute!important;inset:34px 0 0 0!important;background:#242424!important;overflow:auto!important;padding:12px 0 30px!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:12px!important}
+.price-tags-overlay .pt-native-preview .pt-page{margin:0!important;box-shadow:0 0 0 1px #d4a500!important}
+@media(max-width:800px){.price-tags-overlay .price-tags-body{grid-template-columns:1fr!important}.price-tags-overlay .price-tags-settings{max-height:50vh!important}.price-tags-overlay .pt-native-preview{position:relative!important;inset:auto!important;min-height:50vh!important}}
