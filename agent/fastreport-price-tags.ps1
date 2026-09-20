@@ -48,6 +48,11 @@ function Build-Report([object]$b){
     $r=$dt.NewRow();$r['Id']=if($null -eq $p.id){0}else{$p.id};$r['Name']=[string]$p.name;$r['MeasurementUnit']=[string]($p.unit);$r['Code']=[string]($p.code);$r['Barcode']=[string]($p.barcode);$r['Price']=[decimal]([double]$p.price);[void]$dt.Rows.Add($r)
   }
   [void]$ds.Tables.Add($dt)
+  # Aronium's original ProductsPriceTags.frx uses Currency + UseLocale.
+  # Force the FastReport process culture to Malaysia so Currency renders as RM.
+  $culture=[System.Globalization.CultureInfo]::GetCultureInfo('ms-MY')
+  [System.Threading.Thread]::CurrentThread.CurrentCulture=$culture
+  [System.Threading.Thread]::CurrentThread.CurrentUICulture=$culture
   $report=New-Object FastReport.Report
   $report.Load($Frx)
   $report.RegisterData($ds,'ProductsDataSet',$true)
@@ -57,14 +62,18 @@ function Build-Report([object]$b){
   $name=$report.FindObject('TextName')
   $price=$report.FindObject('TextPrice')
   $barcode=$report.FindObject('Barcode1')
-  $page.PaperWidth=[float]$b.pageW;$page.PaperHeight=[float]$b.pageH
-  $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
   $roll=[bool]$b.roll
+  $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
+  # In Aronium roll mode the roll width is the label width; the page height is unlimited.
+  $effectivePageW=if($roll){[double]$b.labelW+[double]$b.margins.left+[double]$b.margins.right}else{[double]$b.pageW}
+  $effectivePageH=if($roll){[double]$b.rollHeight}else{[double]$b.pageH}
+  $page.PaperWidth=[float]$effectivePageW;$page.PaperHeight=[float]$effectivePageH
   $page.UnlimitedHeight=$roll
-  if($roll){$page.PrintOnRollPaper=$true;$page.UnlimitedHeightValue=[float]$b.rollHeight}
-  $band.Width=MmToPx([double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right)
+  $page.PrintOnRollPaper=$roll
+  if($roll){$page.UnlimitedHeightValue=MmToPx([double]$b.rollHeight)}
+  $band.Width=MmToPx((if($roll){[double]$b.labelW}else{[double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right}))
   $band.Height=MmToPx([double]$b.labelH+[double]$b.rowGap)
-  $band.Columns.Count=[Math]::Max(1,[int]$b.columns)
+  $band.Columns.Count=if($roll){1}else{[Math]::Max(1,[int]$b.columns)}
   $band.Columns.Width=MmToPx([double]$b.labelW+[double]$b.colGap)
   $band.Columns.Layout=[FastReport.ColumnLayout]::AcrossThenDown
   $code.Visible=[bool]$b.showCode
@@ -76,7 +85,7 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
-  $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight);$barcode.Top=MmToPx(32.5)
+  $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight);$barcode.Top=MmToPx(32.5);$barcode.Left=($band.Columns.Width-$barcode.Width)/2+$code.Width
   Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
