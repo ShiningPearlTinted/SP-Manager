@@ -1,1 +1,1 @@
-SP-Manager V51 - Barcode Human Label Position & Height LOCK
+SP-Manager V53 - Price Tags Runtime Error Fix
