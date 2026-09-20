@@ -1,4 +1,4 @@
-# SP-Manager V12 — GitHub Pages Deployment
+# SP-Manager V13 — GitHub Pages Deployment
 
 This build fixes the Price Tags `settings is not defined` error in the source and adds a deployment verification step so GitHub Pages cannot publish an unbuilt frontend artifact.
 
@@ -16,4 +16,4 @@ The workflow now runs `npm ci`, `npm run build`, verifies the Vite `dist` output
 After the workflow is green, use Chrome DevTools → Application → Storage → **Clear site data**, then **Ctrl+Shift+R**.
 
 ## Important
-The browser must show **SP-Manager V12** in the Price Tags toolbar. If it still shows an older version or an older `assets/index-*.js` filename, the old GitHub Pages deployment is still being served.
+The browser must show **SP-Manager V13** in the Price Tags toolbar. If it still shows an older version or an older `assets/index-*.js` filename, the old GitHub Pages deployment is still being served.
