@@ -1,12 +1,19 @@
-# Upload & Deploy
+# SP-Manager V12 — GitHub Pages Deployment
 
+This build fixes the Price Tags `settings is not defined` error in the source and adds a deployment verification step so GitHub Pages cannot publish an unbuilt frontend artifact.
+
+## Upload
 1. Extract this ZIP.
-2. Upload the CONTENTS to the ROOT of `ShiningPearlTinted/SP-Manager`.
-3. Commit to `main`.
-4. GitHub: Settings → Pages → Source = GitHub Actions.
-5. Wait for the Actions workflow `Deploy SP-Manager Pages` to complete.
-6. Open https://shiningpearltinted.github.io/SP-Manager/
+2. Upload the **contents** to the root of `ShiningPearlTinted/SP-Manager`.
+3. Commit/push to the `main` branch.
+4. GitHub → Settings → Pages → Source must be **GitHub Actions**.
+5. Open Actions → **Deploy SP-Manager Pages**. The run must finish with a green check.
+6. Only after the workflow succeeds, open `https://shiningpearltinted.github.io/SP-Manager/`.
 
-Do NOT create `SP-Manager/SP-Manager-GITHUB-PAGES/...`.
+The workflow now runs `npm ci`, `npm run build`, verifies the Vite `dist` output, and then uploads `frontend/dist` to GitHub Pages. This is the recommended Vite/GitHub Pages deployment flow.
 
-This version is a frontend-only test. POS data is stored in the browser. The Node backend is not required for this GitHub Pages test.
+## Browser refresh
+After the workflow is green, use Chrome DevTools → Application → Storage → **Clear site data**, then **Ctrl+Shift+R**.
+
+## Important
+The browser must show **SP-Manager V12** in the Price Tags toolbar. If it still shows an older version or an older `assets/index-*.js` filename, the old GitHub Pages deployment is still being served.
