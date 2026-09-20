@@ -8,27 +8,7 @@ function Send-Bytes($stream,[int]$status,[string]$contentType,[byte[]]$bytes,[st
   $hdr="HTTP/1.1 $status $reason`r`nContent-Type: $contentType`r`nContent-Length: $($bytes.Length)`r`nCache-Control: no-store`r`nAccess-Control-Allow-Origin: *`r`nAccess-Control-Allow-Headers: Content-Type`r`nAccess-Control-Allow-Methods: GET,POST,OPTIONS`r`nConnection: close`r`n$extra`r`n"
   $hb=[Text.Encoding]::ASCII.GetBytes($hdr);$stream.Write($hb,0,$hb.Length);if($bytes.Length -gt 0){$stream.Write($bytes,0,$bytes.Length)};$stream.Flush()
 }
-function Send-Json($stream,[int]$status,$obj){
-  $body=($obj|ConvertTo-Json -Compress -Depth 12)
-  Send-Bytes $stream $status 'application/json; charset=utf-8' ([Text.Encoding]::UTF8.GetBytes($body))
-}
-function Invoke-FastReportPdf([string]$json){
-  $uri='http://127.0.0.1:18767/price-tags/pdf'
-  $enc=[Text.Encoding]::UTF8
-  for($attempt=1;$attempt -le 3;$attempt++){
-    try{
-      $req=[Net.HttpWebRequest][Net.WebRequest]::Create($uri)
-      $req.Method='POST';$req.ContentType='application/json; charset=utf-8';$req.Timeout=120000;$req.ReadWriteTimeout=120000
-      $body=$enc.GetBytes($json);$req.ContentLength=$body.Length
-      $st=$req.GetRequestStream();$st.Write($body,0,$body.Length);$st.Close()
-      $resp=$req.GetResponse();$ms=New-Object IO.MemoryStream;$resp.GetResponseStream().CopyTo($ms);$resp.Close()
-      return $ms.ToArray()
-    }catch{
-      if($attempt -eq 3){throw}
-      Start-Sleep -Milliseconds (250*$attempt)
-    }
-  }
-}
+function Send-Json($stream,[int]$status,$obj){$body=($obj|ConvertTo-Json -Compress -Depth 12);Send-Bytes $stream $status 'application/json; charset=utf-8' ([Text.Encoding]::UTF8.GetBytes($body))}
 function Send-Text($stream,[int]$status,$text){Send-Json $stream $status @{ok=$false;error=$text}}
 Add-Type -TypeDefinition @'
 using System; using System.Runtime.InteropServices;
@@ -57,28 +37,15 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.1';fastReportProxy='http://127.0.0.1:18767';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.1';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
-    if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
-      if(!$req.body){throw 'Price Tags request body is empty'}
-      $pdf=Invoke-FastReportPdf $req.body
-      Send-Bytes $s 200 'application/pdf' $pdf 'inline; filename="Price-Tags-FastReport.pdf"'
-      return
-    }
     $b=if($req.body){$req.body|ConvertFrom-Json}else{[pscustomobject]@{}}
+    if($req.method -eq 'POST' -and $req.path -eq '/price-tags/raw'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$lang=[string]$b.language;if(@('ZPL','TSPL') -notcontains $lang.ToUpper()){throw 'Unsupported Price Tags printer language'};$data=[Text.Encoding]::UTF8.GetBytes([string]$b.data);$copies=[Math]::Max(1,[int]$b.copies);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data)};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true;language=$lang.ToUpper()};return}
     if($req.method -eq 'POST' -and $req.path -eq '/print'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$copies=[Math]::Max(1,[int]$b.copies);$txt=[string]$b.text;$data=[Text.Encoding]::UTF8.GetBytes($txt);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data);$all.Add(10);$all.AddRange([byte[]](27,100,3))};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true};return}
     if($req.method -eq 'POST' -and $req.path -eq '/cash-drawer'){$printer=[string]$b.printer;if(!$printer){throw 'Cash drawer printer is required'};$bytes=@($b.bytes|%{[byte][int]$_});if(!$bytes.Count){$bytes=[byte[]](27,112,0,25,250)};[SPRawPrinter]::Send($printer,$bytes);Send-Json $s 200 @{ok=$true};return}
     if($req.method -eq 'POST' -and $req.path -eq '/display'){$portName=[string]$b.port;if(!$portName){throw 'COM port is required'};$chars=[Math]::Max(8,[int]$b.chars);$baud=[int]$b.baud;if(!$baud){$baud=9600};$sp=New-Object IO.Ports.SerialPort($portName,$baud,'None',8,'One');$sp.Open();$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$sp.Write([char]12);$sp.Write($line1+$line2);$sp.Close();Send-Json $s 200 @{ok=$true};return}
     Send-Json $s 404 @{ok=$false;error='Not found'}
   }catch{Send-Json $s 500 @{ok=$false;error=$_.Exception.Message}}
-}
-$frScript=Join-Path $PSScriptRoot 'fastreport-price-tags.ps1'
-if(Test-Path $frScript){
-  try{
-    $frCheck=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18767/status' -TimeoutSec 1 -ErrorAction Stop
-  }catch{
-    $frPs=Join-Path $env:SystemRoot 'SysWOW64\WindowsPowerShell\v1.0\powershell.exe'; if(!(Test-Path $frPs)){$frPs=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'}; Start-Process -FilePath $frPs -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$frScript) -WindowStyle Hidden
-  }
 }
 $listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Parse($HostName),$Port);$listener.Start()
 while($true){$client=$listener.AcceptTcpClient();try{$req=Read-Request $client;Handle $req}catch{try{Send-Text $client.GetStream() 500 $_.Exception.Message}catch{}}finally{$client.Close()}}

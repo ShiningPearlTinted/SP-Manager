@@ -3,12 +3,12 @@
 - Product name size: range slider (6–48)
 - Price size: range slider (6–48)
 - Barcode height: range slider (10–120)
-- Removed the non-functional in-panel “Print preview” button. Live preview remains visible in the right pane; Print and Save as PDF remain in the preview toolbar.
-- EAN-13 preview/print now includes standard EAN-13 human-readable digits below the bars, including the leading digit, with OCR-B/Arial Narrow fallback font styling.
+- Price Tags now generates printer-native ZPL and TSPL commands. The live browser preview is independent of the printer language; the toolbar provides Preview / Print, Save ZPL, Save TSPL, and direct raw Print.
+- EAN-13 browser preview/raw printer output now includes standard EAN-13 human-readable digits below the bars, including the leading digit, with OCR-B/Arial Narrow fallback font styling.
 - EAN-13 guard bars are extended lower than the normal bars to match the supplied reference appearance.
 - Existing product selection, copies, layout, margins, columns, label sizing, display toggles and other POS functions were not intentionally changed.
 
-Source reference: official SP-Manager Help Center documentation for Print product price tags and official community/support posts. No proprietary SP-Manager source code was supplied, so source-level equivalence is not claimed.
+Printer-native output uses ZPL/TSPL command languages; Zebra documents ZPL barcode commands including EAN-13, EAN-8, UPC-A, UPC-E, Code 39, Code 93, Code 128, Interleaved 2 of 5 and Codabar, while TSC documents the corresponding TSPL BARCODE types.
 
 ## Settings persistence
 - Price Tags settings are persisted in browser localStorage under `sp-manager-pos-price-tags-settings-v16`.

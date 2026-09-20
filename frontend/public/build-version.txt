@@ -1,1 +1,1 @@
-SP-Manager V32 - FastReport x86 startup lock
+SP-Manager V38 - Price Tags ZPL/TSPL
