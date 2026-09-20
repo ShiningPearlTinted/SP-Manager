@@ -30,12 +30,29 @@ function Read-Request($client){
 }
 function MmToPx([double]$mm){ return [single]($mm*96.0/25.4) }
 function Configure-Barcode($barcode,[string]$type){
-  $map=@{
-    'EAN13'='EAN13'; 'EAN8'='EAN8'; 'UPC A'='UPC-A'; 'UPC E0'='UPC-E0'; 'UPC E1'='UPC-E1';
-    'CODE 39'='Code39'; 'CODE 128'='Code128'; 'CODE 93'='Code93'; 'Interleaved 2 of 5 (ITF)'='2/5 Interleaved'; 'CODABAR'='Codabar'
+  # EAN13 is the barcode type embedded in the original source FRX.
+  # For EAN13, keep the loaded FastReport object untouched so its native
+  # geometry/defaults remain exactly those from ProductsPriceTags.frx.
+  $normalized=[string]$type
+  if($normalized -eq 'EAN13'){
+    $barcode.SymbologyName='EAN13'
+    return
   }
-  $sym=$map[$type]; if(!$sym){$sym='EAN13'}
-  $barcode.SymbologyName=$sym
+
+  # For other choices, replace the actual FastReport BarcodeBase object so
+  # changing the dropdown changes the real FastReport renderer.
+  switch($normalized){
+    'EAN8'  { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeEAN8 }
+    'UPC A' { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_A }
+    'UPC E0'{ $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_E0 }
+    'UPC E1'{ $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_E1 }
+    'CODE 39' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode39 }
+    'CODE 128' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode128; $barcode.Barcode.AutoEncode=$true }
+    'CODE 93' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode93 }
+    'Interleaved 2 of 5 (ITF)' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode2of5Interleaved }
+    'CODABAR' { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeCodabar }
+    default { $barcode.SymbologyName='EAN13'; return }
+  }
   $barcode.ShowText=$true
   $barcode.AutoSize=$false
 }
@@ -72,8 +89,8 @@ function Build-Report([object]$b){
   } else {
     $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
   }
-  # Roll-paper mode keeps the original Aronium template width (190mm) but
-  # honours the Aronium UI controls that remain editable on roll paper:
+  # Roll-paper mode keeps the original SP-Manager template width (190mm) but
+  # honours the SP-Manager UI controls that remain editable on roll paper:
   # Label height and Row spacing.  The original FastReport barcode script
   # positions the barcode from the bottom of Data1, so changing label height
   # must change Data1.Height rather than being hard-coded to 62.5mm.
@@ -94,7 +111,6 @@ function Build-Report([object]$b){
     $effectivePageW=[double]$b.pageW
     $effectivePageH=[double]$b.pageH
   }
-  if($roll -and $effectivePageH -lt $originalRollH){$effectivePageH=$originalRollH}
   $page.PaperWidth=[float]$effectivePageW
   $page.PaperHeight=[float]$effectivePageH
   $page.UnlimitedHeight=$roll
