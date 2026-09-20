@@ -1,1 +1,1 @@
-SP-Manager V15 - Price Tags FastReport dynamic roll controls
+SP-Manager V18 - startup path fix only

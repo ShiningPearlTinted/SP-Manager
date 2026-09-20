@@ -1,5 +1,6 @@
 $ErrorActionPreference='Stop'
-$root=Split-Path -Parent $PSScriptRoot
+$root=$PSScriptRoot
+# LOCK: the hidden launcher lives in the agent folder; do not resolve it from project root.
 $fr='http://127.0.0.1:18767'
 $agent='http://127.0.0.1:18765'
 Write-Host '[0] Starting FastReport bridge in background...'
