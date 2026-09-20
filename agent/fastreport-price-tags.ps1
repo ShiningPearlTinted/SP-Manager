@@ -98,10 +98,9 @@ function Configure-Barcode($barcode,[string]$type,[double]$heightMm){
   if($h -le 0){$h=20.0}
   $barcode.Height=MmToPx($h)
 
-  # Human-readable barcode text must remain regular, not bold. FastReport's
-  # BarcodeBase exposes the Font used for the text below the bars. Use a
-  # regular 8pt Arial font so it stays close to the original template.
-  $barcode.Barcode.Font=New-Object System.Drawing.Font('Arial',8,[System.Drawing.FontStyle]::Regular)
+  # Keep the human-readable barcode text rendering from the original
+  # ProductsPriceTags.frx. FastReport 2019.1.5 BarcodeBase does not expose
+  # a public Font property, so do not assign an unsupported property here.
 }
 function Build-Report([object]$b){
   if(!(Test-Path $Frx)){throw "FastReport template not found: $Frx"}
@@ -197,7 +196,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V35-SP-MANAGER-BARCODE-ORIGINAL-FORMAT-LOCKED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V36-SP-MANAGER-BARCODE-ORIGINAL-FORMAT-LOCKED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
