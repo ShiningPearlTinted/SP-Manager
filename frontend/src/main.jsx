@@ -711,20 +711,28 @@ function code39Pattern(text){const t="*"+String(text||"").toUpperCase().replace(
 function itfPattern(text){let d=String(text||"").replace(/\D/g,"");if(d.length%2)d="0"+d;const map=["nnwwn","wnnnw","nwnnw","wwnnn","nnwnw","wnwnn","nwwnn","nnnww","wnnwn","nwnwn"];let out="1010";for(let i=0;i<d.length;i+=2){const a=map[Number(d[i])],b=map[Number(d[i+1])];for(let j=0;j<5;j++){const wa=a[j]==="w"?3:1,wb=b[j]==="w"?3:1;out+=("1".repeat(wa)+"0".repeat(wb))}}return out+"11101"}
 function barcodeBits(value,type){if(type==="EAN13"||type==="EAN8")return eanPattern(value,type);if(type==="CODE 39")return code39Pattern(value);if(type==="Interleaved 2 of 5 (ITF)")return itfPattern(value);if(type==="UPC A"){const d=String(value||"").replace(/\D/g,"").slice(-12).padStart(12,"0");return eanPattern("0"+d,"EAN13")}return code128Pattern(value)}
 function BarcodeGraphic({value,type,height=60}){
- const h=Math.max(10,Number(height)||20);
+ const h=Math.max(8,Number(height)||20);
  const label=barcodeTextForPreview(value,type);
- const common={className:"pt-barcode-svg",style:{width:"42mm",height:`${h}mm`},preserveAspectRatio:"none",role:"img","aria-label":`${type} ${label}`};
+ const typeLabel=String(type||'BARCODE');
+ const common={className:"pt-barcode-svg",style:{width:"42mm",height:`${h}mm`},preserveAspectRatio:"none",role:"img","aria-label":`${typeLabel} ${label}`};
+ const human=<div className="pt-barcode-human">{label}</div>;
+ const format=<div className="pt-barcode-type">({typeLabel})</div>;
  if(type==="EAN13"||type==="EAN8"){
   const d=type==="EAN13"?checksumEAN13(value):checksumEAN8(value),bits=eanPattern(d,type),w=type==="EAN13"?95:67,barW=w/bits.length;
-  return <div className="pt-barcode-stack"><svg {...common} viewBox={`0 0 ${w} 100`} aria-label={`${type} ${d}`}>
-   {[...bits].map((b,i)=>b==="1"?<rect key={i} x={i*barW} y="0" width={barW+0.01} height={i<3||(type==="EAN13"?i>=45&&i<50:i>=31&&i<36)||i>=bits.length-3?84:74} fill="#000"/>:null)}
-   <text x="50%" y="98" textAnchor="middle" fontFamily="Arial,Helvetica,sans-serif" fontSize="10" fill="#000">{d}</text>
-  </svg><div className="pt-barcode-type">({type})</div></div>;
+  return <div className="pt-barcode-stack">
+   <svg {...common} viewBox={`0 0 ${w} 100`} aria-label={`${typeLabel} ${d}`}>
+    {[...bits].map((b,i)=>b==="1"?<rect key={i} x={i*barW} y="0" width={barW+0.01} height="84" fill="#000"/>:null)}
+   </svg>
+   {human}{format}
+  </div>;
  }
  const bits=barcodeBits(value,type)||"";
- return <div className="pt-barcode-stack"><svg {...common} viewBox={`0 0 ${Math.max(bits.length,1)} 100`} aria-label={`${type} ${label}`}>
-  {[...bits].map((b,i)=>b==="1"?<rect key={i} x={i} y="0" width="1" height="78" fill="#000"/>:null)}
- </svg><div className="pt-barcode-human">{label}</div><div className="pt-barcode-type">({type})</div></div>;
+ return <div className="pt-barcode-stack">
+  <svg {...common} viewBox={`0 0 ${Math.max(bits.length,1)} 100`} aria-label={`${typeLabel} ${label}`}>
+   {[...bits].map((b,i)=>b==="1"?<rect key={i} x={i} y="0" width="1" height="82" fill="#000"/>:null)}
+  </svg>
+  {human}{format}
+ </div>;
 }
 
 const barcodeTextForPreview=(value,type)=>{
