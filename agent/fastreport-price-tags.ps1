@@ -87,20 +87,32 @@ function Configure-Barcode($barcode,[string]$type,[double]$heightMm){
     default { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeEAN13 }
   }
 
-  # Match the original ProductsPriceTags.frx barcode object geometry.
-  # The original object is 128.75px x 75.6px (34.06mm x 20mm), uses the
-  # native FastReport barcode renderer, and is positioned by OnBarcodeBeforePrint.
-  # Keep AutoSize off so the object respects its original width/height bounds.
-  $barcode.AutoSize=$false
-  $barcode.ShowText=$true
-  $barcode.Width=MmToPx(34.06)
+  # EAN13 MUST remain the native EAN13 BarcodeBase from ProductsPriceTags.frx.
+  # Explicitly select the symbology so the dropdown cannot leave the object in
+  # a previously selected symbology. Keep the original barcode renderer and
+  # preserve its proportions when the UI height changes.
   $h=[double]$heightMm
   if($h -le 0){$h=20.0}
-  $barcode.Height=MmToPx($h)
-
-  # Keep the human-readable barcode text rendering from the original
-  # ProductsPriceTags.frx. FastReport 2019.1.5 BarcodeBase does not expose
-  # a public Font property, so do not assign an unsupported property here.
+  if($normalized -eq 'EAN13'){
+    $barcode.SymbologyName='EAN13'
+    $barcode.AutoSize=$false
+    $barcode.ShowText=$true
+    # Original FRX geometry is 34.06mm x 20mm. Scale both dimensions together
+    # so EAN13 is never vertically squashed when Barcode height is changed.
+    # A small 10% scale-up makes the native human-readable EAN13 digits easier
+    # to read while preserving the correct EAN13 proportions.
+    $scale=1.10
+    $effectiveH=$h*$scale
+    $effectiveW=34.06*($effectiveH/20.0)
+    $barcode.Width=MmToPx($effectiveW)
+    $barcode.Height=MmToPx($effectiveH)
+  } else {
+    # Other 1D types use the actual FastReport BarcodeBase selected above.
+    $barcode.AutoSize=$false
+    $barcode.ShowText=$true
+    $barcode.Width=MmToPx(34.06)
+    $barcode.Height=MmToPx($h)
+  }
 }
 function Build-Report([object]$b){
   if(!(Test-Path $Frx)){throw "FastReport template not found: $Frx"}
@@ -196,7 +208,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V36-SP-MANAGER-BARCODE-ORIGINAL-FORMAT-LOCKED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V37-SP-MANAGER-EAN13-NATIVE-PROPORTIONAL-TEXT-LOCKED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b

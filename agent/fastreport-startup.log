@@ -1,19 +1,19 @@
-2026-09-20 18:27:04.697 START pid=15624 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
-2026-09-20 18:27:04.716 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport
-2026-09-20 18:27:04.721 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport\FastReport.dll
-2026-09-20 18:27:04.726 FastReport exists=True
-2026-09-20 18:27:05.155 START pid=3948 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
-2026-09-20 18:27:05.173 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport
-2026-09-20 18:27:05.175 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport\FastReport.dll
-2026-09-20 18:27:05.180 FastReport exists=True
-2026-09-20 18:27:05.402 FastReport.dll loaded.
-2026-09-20 18:27:05.438 FastReport.dll loaded.
-2026-09-20 18:27:05.609 FastReport.Bars.dll loaded.
-2026-09-20 18:27:05.643 FastReport.Bars.dll loaded.
-2026-09-20 18:27:05.655 FastReport.SQLite.dll loaded.
-2026-09-20 18:27:05.656 FastReport.SQLite.dll loaded.
-2026-09-20 18:27:05.670 LISTENING http://127.0.0.1:18767
-2026-09-20 18:27:05.681 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
+2026-09-20 18:37:33.498 START pid=16004 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
+2026-09-20 18:37:33.517 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport
+2026-09-20 18:37:33.522 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport\FastReport.dll
+2026-09-20 18:37:33.526 FastReport exists=True
+2026-09-20 18:37:33.955 START pid=10236 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
+2026-09-20 18:37:33.974 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport
+2026-09-20 18:37:33.977 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport\FastReport.dll
+2026-09-20 18:37:33.980 FastReport exists=True
+2026-09-20 18:37:34.194 FastReport.dll loaded.
+2026-09-20 18:37:34.239 FastReport.dll loaded.
+2026-09-20 18:37:34.395 FastReport.Bars.dll loaded.
+2026-09-20 18:37:34.438 FastReport.SQLite.dll loaded.
+2026-09-20 18:37:34.442 FastReport.Bars.dll loaded.
+2026-09-20 18:37:34.449 FastReport.SQLite.dll loaded.
+2026-09-20 18:37:34.452 LISTENING http://127.0.0.1:18767
+2026-09-20 18:37:34.473 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
    at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
    at System.Net.Sockets.Socket.Bind(EndPoint localEP)
    at System.Net.Sockets.TcpListener.Start(Int32 backlog)
@@ -23,14 +23,14 @@
    at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)
    at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)
    at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)
-2026-09-20 18:27:09.814 START pid=9228 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
-2026-09-20 18:27:09.832 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport
-2026-09-20 18:27:09.834 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V36-BARCODE-ERROR-FIX-LOCKED\agent\fastreport\FastReport.dll
-2026-09-20 18:27:09.838 FastReport exists=True
-2026-09-20 18:27:10.091 FastReport.dll loaded.
-2026-09-20 18:27:10.291 FastReport.Bars.dll loaded.
-2026-09-20 18:27:10.297 FastReport.SQLite.dll loaded.
-2026-09-20 18:27:10.319 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
+2026-09-20 18:37:38.753 START pid=15764 script=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport-price-tags.ps1 bitness=x86 PS=5.1.19041.6456
+2026-09-20 18:37:38.771 CWD=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport
+2026-09-20 18:37:38.773 FastReport path=C:\Users\marzu\Downloads\SP-Manager-POS-MOBILE-V16-PRICE-TAGS-SP-MANAGER-V37-EAN13-NATIVE-FORMAT-LOCKED\v37src\agent\fastreport\FastReport.dll
+2026-09-20 18:37:38.777 FastReport exists=True
+2026-09-20 18:37:39.032 FastReport.dll loaded.
+2026-09-20 18:37:39.230 FastReport.Bars.dll loaded.
+2026-09-20 18:37:39.236 FastReport.SQLite.dll loaded.
+2026-09-20 18:37:39.258 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
    at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
    at System.Net.Sockets.Socket.Bind(EndPoint localEP)
    at System.Net.Sockets.TcpListener.Start(Int32 backlog)
