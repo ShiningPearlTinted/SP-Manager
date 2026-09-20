@@ -3,19 +3,27 @@ $root=$PSScriptRoot
 # LOCK: the hidden launcher lives in the agent folder; do not resolve it from project root.
 $fr='http://127.0.0.1:18767'
 $agent='http://127.0.0.1:18765'
-Write-Host '[0] Starting FastReport bridge in background...'
+# Startup is intentionally silent. The test window must not report a false
+# "Starting FastReport bridge in background..." state while the hidden bridge
+# is being launched. Reuse an already-running bridge whenever possible.
 $script=Join-Path $root 'fastreport-price-tags.ps1'
 $log=Join-Path $root 'fastreport-startup.log'
 $elog=Join-Path $root 'fastreport-startup-error.log'
 $psExe=$PSHOME + '\powershell.exe'
-try {
-  Start-Process -FilePath $psExe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$script) -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $elog | Out-Null
-} catch {
-  Write-Host "    FAIL: could not start FastReport process: $($_.Exception.Message)"
-  exit 1
-}
 $ready=$false
-for($i=1;$i -le 60;$i++){
+try {
+  $null=Invoke-RestMethod "$fr/status" -TimeoutSec 1
+  $ready=$true
+} catch {}
+if(-not $ready){
+  try {
+    Start-Process -FilePath $psExe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$script) -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $elog | Out-Null
+  } catch {
+    Write-Host "    FAIL: could not start FastReport process: $($_.Exception.Message)"
+    exit 1
+  }
+}
+for($i=1;$i -le 60 -and -not $ready;$i++){
   try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $ready=$true; break } catch { Start-Sleep -Milliseconds 500 }
 }
 if(-not $ready){

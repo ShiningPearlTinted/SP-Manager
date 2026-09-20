@@ -1,1 +1,1 @@
-SP-Manager V23 - Original FastReport Barcode types + height control
+SP-Manager V24 - FastReport startup silent/reuse fix
