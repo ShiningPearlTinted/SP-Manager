@@ -135,13 +135,18 @@ function Build-Report([object]$b){
   # Price is formatted by the template's OnPriceBeforePrint event as RM0.00.
   # Keep the original TextPrice format object intact; do not set UseLocale at runtime.
   $price.Text='[Product.Price]'
+  # IMPORTANT: for EAN13 keep Barcode1 as the actual object loaded from
+  # ProductsPriceTags.frx. The original FastReport object uses AutoSize +
+  # centered human-readable text. HorzAlign only takes effect when AutoSize
+  # is enabled in FastReport, so do not force AutoSize=false for EAN13.
   $barcode.Width=MmToPx(34.06)
   $barcode.Height=MmToPx(([double]$b.barcodeHeight))
-  # Match the original Aronium/FastReport barcode object: keep the human-readable
-  # value centered inside the barcode object. FastReport exposes HorzAlign on
-  # BarcodeObject specifically for this alignment.
-  try { $barcode.HorzAlign=[FastReport.Barcode.BarcodeObject+Alignment]::Center } catch {}
   if([double]$b.barcodeHeight -le 0){$barcode.Height=MmToPx(20.0)}
+  if(([string]$b.barcodeType) -eq 'EAN13') {
+    try { $barcode.AutoSize=$true } catch {}
+    try { $barcode.HorzAlign=[FastReport.Barcode.BarcodeObject+Alignment]::Center } catch {}
+    try { $barcode.Zoom=1.0 } catch {}
+  }
   # Keep the original ProductsPriceTags.frx OnBarcodeBeforePrint geometry:
   # it centers the barcode and docks it to the bottom of Data1.
   # Do not hard-code Top/Left here; the actual FastReport template script owns them.
@@ -154,7 +159,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V20-SP-MANAGER-ROLL-MARGINS-EAN13-CENTERED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V21-SP-MANAGER-ORIGINAL-FRX-EAN13-CENTERED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
