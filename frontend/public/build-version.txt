@@ -1,1 +1,1 @@
-SP-Manager V18 - startup path fix only
+SP-Manager V19 - startup path fix only

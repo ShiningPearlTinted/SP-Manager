@@ -4,8 +4,16 @@ $root=$PSScriptRoot
 $fr='http://127.0.0.1:18767'
 $agent='http://127.0.0.1:18765'
 Write-Host '[0] Starting FastReport bridge in background...'
-$launcher=Join-Path $root 'start-fastreport-hidden.vbs'
-Start-Process -FilePath 'wscript.exe' -ArgumentList @($launcher) -WindowStyle Hidden
+$script=Join-Path $root 'fastreport-price-tags.ps1'
+$log=Join-Path $root 'fastreport-startup.log'
+$elog=Join-Path $root 'fastreport-startup-error.log'
+$psExe=$PSHOME + '\powershell.exe'
+try {
+  Start-Process -FilePath $psExe -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$script) -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $elog | Out-Null
+} catch {
+  Write-Host "    FAIL: could not start FastReport process: $($_.Exception.Message)"
+  exit 1
+}
 $ready=$false
 for($i=1;$i -le 60;$i++){
   try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $ready=$true; break } catch { Start-Sleep -Milliseconds 500 }
