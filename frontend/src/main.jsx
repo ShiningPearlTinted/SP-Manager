@@ -712,6 +712,7 @@ function itfPattern(text){let d=String(text||"").replace(/\D/g,"");if(d.length%2
 function barcodeBits(value,type){if(type==="EAN13"||type==="EAN8")return eanPattern(value,type);if(type==="CODE 39")return code39Pattern(value);if(type==="Interleaved 2 of 5 (ITF)")return itfPattern(value);if(type==="UPC A"){const d=String(value||"").replace(/\D/g,"").slice(-12).padStart(12,"0");return eanPattern("0"+d,"EAN13")}return code128Pattern(value)}
 function BarcodeGraphic({value,type,height=48}){
  const h=Math.max(20,Number(height)||48);
+ const label=barcodeTextForPreview(value,type);
  if(type==="EAN13"){
   const d=checksumEAN13(value),bits=eanPattern(d,"EAN13"),w=95,barW=w/bits.length;
   return <svg className="pt-barcode-svg pt-ean13-svg" style={{height:`${h}px`}} viewBox={`0 0 ${w} 100`} preserveAspectRatio="none" role="img" aria-label={`EAN13 ${d}`}>
@@ -723,9 +724,21 @@ function BarcodeGraphic({value,type,height=48}){
    </g>
   </svg>;
  }
- const bits=barcodeBits(value,type),w=bits.length,barW=100/w;
- return <svg className="pt-barcode-svg" style={{height:`${h}px`}} viewBox={`0 0 100 ${h}`} preserveAspectRatio="none" role="img" aria-label={`${type} ${value}`}>{[...bits].map((b,i)=>b==="1"?<rect key={i} x={i*barW} y="0" width={barW+0.05} height={h} fill="#000"/>:null)}</svg>
+ const bits=barcodeBits(value,type)||"";
+ const naturalW=Math.max(bits.length,1);
+ return <svg className="pt-barcode-svg pt-generic-barcode-svg" style={{height:`${h}px`,width:"90%"}} viewBox={`0 0 ${naturalW} 100`} preserveAspectRatio="xMidYMin meet" role="img" aria-label={`${type} ${value}`}>
+   {[...bits].map((b,i)=>b==="1"?<rect key={i} x={i} y="0" width="1" height="78" fill="#000"/>:null)}
+   <text x="50%" y="96" textAnchor="middle" fontFamily="'OCR-B','Arial Narrow',Arial,sans-serif" fontSize="10" fill="#000">{label}</text>
+  </svg>
 }
+const barcodeTextForPreview=(value,type)=>{
+ const raw=String(value||"").replace(/\D/g,"");
+ if(type==="EAN13") return checksumEAN13(value);
+ if(type==="EAN8") return checksumEAN8(value);
+ if(type==="UPC A") return raw.slice(-12).padStart(12,"0");
+ if(type==="UPC E0"||type==="UPC E1") return raw.slice(-6).padStart(6,"0");
+ return String(value||"");
+};
 const PRICE_TAGS_STORAGE_KEY="sp-manager-pos-price-tags-settings-v23-sp-manager-original-roll-controls";
 const loadPriceTagSetting=(key,fallback)=>{try{const raw=localStorage.getItem(PRICE_TAGS_STORAGE_KEY);if(!raw)return fallback;const saved=JSON.parse(raw);return Object.prototype.hasOwnProperty.call(saved,key)?saved[key]:fallback}catch(_){return fallback}};
 
@@ -763,7 +776,7 @@ function PriceTagsModal({products,groups,money,onClose,setNotice,settings}){
      return `^FO${x},${y}^BY${width},2,${h}^BCN,${h},Y,N,N^FD${zplEsc(data)}^FS`;
    }
    const barType=type==="EAN13"?"EAN13":type==="EAN8"?"EAN8":type==="UPC A"?"UPCA":(type==="UPC E0"||type==="UPC E1")?"UPCE":type==="CODE 39"?"39":type==="CODE 93"?"93":type==="Interleaved 2 of 5 (ITF)"?"25":"CODA";
-   return `BARCODE ${x},${y},"${barType}",${h},1,0,2,2,"${tsplEsc(data)}"`;
+   return `BARCODE ${x},${y},"${barType}",${h},1,0,2,4,"${tsplEsc(data)}"`;
  };
  const buildRaw=(lang)=>{
    const paperWidth=Math.max(1,Number(pageW)||210), paperHeight=Math.max(1,Number(pageH)||297);
@@ -783,7 +796,7 @@ function PriceTagsModal({products,groups,money,onClose,setNotice,settings}){
        const cellX=roll?leftM+(contentW-lw)/2:leftM+col*(lw+cg);
        const cellY=roll?topM+row*(lh+rg):topM+row*(lh+rg);
        const baseX=mmToDots(cellX), baseY=mmToDots(cellY), labelWidthDots=mmToDots(lw);
-       const xName=mmToDots(5), nameY=0, priceY=mmToDots(7.5), barcodeY=mmToDots(20), barcodeW=34.06;
+       const xName=mmToDots(5), nameY=0, priceY=mmToDots(7.5), barcodeY=Math.max(mmToDots(12.5),mmToDots(lh)-mmToDots(barcodeHeight)), barcodeW=34.06;\n       if(borders&&lang==="ZPL")out.push(`^FO${baseX},${baseY}^GB${mmToDots(lw)},${mmToDots(lh)},2^FS`);\n       if(borders&&lang==="TSPL")out.push(`BOX ${baseX},${baseY},${baseX+mmToDots(lw)},${baseY+mmToDots(lh)},2`);
        const value=barcodeValue(p); const name=String(p?.name||""); const price=money(p?.price||0);
        const centeredBarcodeX=Math.max(0,Math.round((labelWidthDots-mmToDots(barcodeW))/2));
        if(lang==="ZPL"){
@@ -802,7 +815,7 @@ function PriceTagsModal({products,groups,money,onClose,setNotice,settings}){
    });
    return out.join("\n")+"\n";
  };
- const reportCss=`@page{size:${pageW}mm ${roll?Math.max(100,labelH*totalLabels):pageH}mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,sans-serif}.pt-page{display:grid;align-content:start;grid-template-columns:${roll?`${Math.max(1,pageW-margins.left-margins.right)}mm`:Array(pageCols).fill(`${labelW}mm`).join(" ")};grid-auto-rows:${labelH}mm;column-gap:${colGap}mm;row-gap:${rowGap}mm;page-break-after:always}.pt-label{position:relative;overflow:hidden;background:#fff;color:#111}.pt-code{position:absolute;left:0;top:0;width:5mm;height:100%;display:flex;align-items:flex-end;justify-content:center;transform:rotate(-90deg);font:8pt Arial,sans-serif}.pt-name{position:absolute;left:5mm;right:0;top:0;height:7.5mm;text-align:center;padding:1mm 2mm;display:flex;align-items:center;justify-content:center}.pt-price{position:absolute;left:5mm;right:0;top:7.5mm;height:12.5mm;text-align:center;font-weight:700;display:flex;align-items:center;justify-content:center}.pt-barcode{position:absolute;left:50%;top:32.5mm;transform:translateX(-50%);width:34.06mm;display:flex;justify-content:center}.pt-barcode svg{width:34.06mm;height:${Math.max(10,Number(barcodeHeight)||20)}px}.pt-empty{padding:20mm;text-align:center}`;
+ const reportCss=`@page{size:${pageW}mm ${roll?Math.max(100,labelH*totalLabels):pageH}mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,sans-serif}.pt-page{display:grid;align-content:start;grid-template-columns:${roll?`${Math.max(1,pageW-margins.left-margins.right)}mm`:Array(pageCols).fill(`${labelW}mm`).join(" ")};grid-auto-rows:${labelH}mm;column-gap:${colGap}mm;row-gap:${rowGap}mm;page-break-after:always}.pt-label{position:relative;overflow:hidden;background:#fff;color:#111}.pt-code{position:absolute;left:0;top:0;width:5mm;height:100%;display:flex;align-items:flex-end;justify-content:center;transform:rotate(-90deg);font:8pt Arial,sans-serif}.pt-name{position:absolute;left:5mm;right:0;top:0;height:7.5mm;text-align:center;padding:1mm 2mm;display:flex;align-items:center;justify-content:center}.pt-price{position:absolute;left:5mm;right:0;top:7.5mm;height:12.5mm;text-align:center;font-weight:700;display:flex;align-items:center;justify-content:center}.pt-barcode{position:absolute;left:50%;top:calc(${labelH}mm - ${Math.max(5,Number(barcodeHeight)||20)}mm);transform:translateX(-50%);width:34.06mm;display:flex;justify-content:center;align-items:flex-end}.pt-barcode svg{width:34.06mm;height:${Math.max(10,Number(barcodeHeight)||20)}px}.pt-empty{padding:20mm;text-align:center}`;
  const barcodeSvgMarkup=(value,type,height)=>{const h=Math.max(20,Number(height)||48);if(type==="EAN13"){const d=checksumEAN13(value),bits=eanPattern(d,"EAN13"),w=95,bw=w/bits.length;const bars=[...bits].map((b,i)=>b==="1"?`<rect x="${(i*bw).toFixed(3)}" y="0" width="${(bw+.01).toFixed(3)}" height="${i<3||(i>=45&&i<50)||i>=92?84:74}"/>`:"").join("");const left=d.slice(1,7).split("").map((x,i)=>`<text x="${12+i*7}" y="97">${x}</text>`).join("");const right=d.slice(7).split("").map((x,i)=>`<text x="${56+i*7}" y="97">${x}</text>`).join("");return `<svg viewBox="0 0 95 100" preserveAspectRatio="none" style="width:34.06mm;height:${h}px"><g fill="#000">${bars}</g><g fill="#000" text-anchor="middle" font-family="Arial Narrow,Arial,sans-serif" font-size="10"><text x="2.5" y="97" text-anchor="start">${d[0]}</text>${left}${right}</g></svg>`}const bits=barcodeBits(value,type)||"";const bars=bits.split("").map((b,i)=>b==="1"?`<rect x="${i}" y="0" width="1" height="82"/>`:"").join("");return `<svg viewBox="0 0 ${Math.max(bits.length,1)} 100" preserveAspectRatio="none" style="width:34.06mm;height:${h}px"><g fill="#000">${bars}</g><text x="50%" y="98" text-anchor="middle" font-family="Arial Narrow,Arial,sans-serif" font-size="10">${escapeHtml(barcodeText(value,type))}</text></svg>`};
  const labelHtml=p=>{if(!p)return `<div class="pt-label"><div class="pt-empty">No products selected</div></div>`;const value=barcodeValue(p);return `<div class="pt-label">${showCode?`<div class="pt-code">SKU: ${escapeHtml(p.code||"")}</div>`:""}${showName?`<div class="pt-name" style="font-size:${nameSize}px">${escapeHtml(p.name)}</div>`:""}${showPrice?`<div class="pt-price" style="font-size:${priceSize}px">${escapeHtml(money(p.price))}</div>`:""}${showBarcode?`<div class="pt-barcode">${barcodeSvgMarkup(value,barcodeType,Math.max(20,Number(barcodeHeight)||48))}</div>`:""}</div>`};
  const labelReact=p=>{if(!p)return <div className="pt-label"><div className="pt-empty">No products selected</div></div>;const value=barcodeValue(p);return <div className="pt-label">{showCode&&<div className="pt-code">SKU: {p.code||""}</div>}{showName&&<div className="pt-name" style={{fontSize:`${nameSize}px`}}>{p.name}</div>}{showPrice&&<div className="pt-price" style={{fontSize:`${priceSize}px`}}>{money(p.price)}</div>}{showBarcode&&<div className="pt-barcode"><BarcodeGraphic value={value} type={barcodeType} height={Math.max(20,Number(barcodeHeight)||48)}/></div>}</div>};

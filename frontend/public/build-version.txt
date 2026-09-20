@@ -1,1 +1,1 @@
-SP-Manager V40 - Price Tags ZPL/TSPL Aronium Layout
+SP-Manager V41 - Price Tags Aronium Layout + Native ZPL/TSPL
