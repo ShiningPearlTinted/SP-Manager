@@ -1,1 +1,1 @@
-SP-Manager V22 - Original ProductsPriceTags.frx EAN13 locked barcode
+SP-Manager V23 - Original FastReport Barcode types + height control

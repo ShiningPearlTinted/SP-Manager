@@ -44,15 +44,14 @@ function Get-Ean13Value([string]$value,[string]$fallback){
   if($f -match '^\d{1,11}$'){ return $f.PadLeft(12,'0') }
   return ''
 }
-function Configure-Barcode($barcode,[string]$type){
-  # EAN13 MUST remain the BarcodeObject that was loaded from the original
-  # ProductsPriceTags.frx. Do not replace it and do not alter its geometry.
+function Configure-Barcode($barcode,[string]$type,[double]$heightMm){
+  # LOCKED: Barcode1 is always the real FastReport BarcodeObject loaded from
+  # ProductsPriceTags.frx. We only swap its BarcodeBase implementation when
+  # the user changes the Barcode type; we never replace the BarcodeObject.
   $normalized=[string]$type
-  if($normalized -eq 'EAN13'){
-    return
-  }
 
   switch($normalized){
+    'EAN13' { # Keep the BarcodeBase that was loaded from ProductsPriceTags.frx. }
     'EAN8'  { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeEAN8 }
     'UPC A' { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_A }
     'UPC E0'{ $barcode.Barcode = New-Object FastReport.Barcode.BarcodeUPC_E0 }
@@ -62,10 +61,21 @@ function Configure-Barcode($barcode,[string]$type){
     'CODE 93' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode93 }
     'Interleaved 2 of 5 (ITF)' { $barcode.Barcode = New-Object FastReport.Barcode.Barcode2of5Interleaved }
     'CODABAR' { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeCodabar }
-    default { return }
+    default { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeEAN13 }
   }
-  $barcode.ShowText=$true
+
+  # Match the original ProductsPriceTags.frx object geometry:
+  # Width 128.75px = 34.06mm, Height 75.6px = 20mm.
+  # FastReport documentation says AutoSize=false uses Width/Height directly.
+  # This is important because AutoSize=true made EAN13 expand beyond the
+  # original Aronium geometry. The original FRX also centers the object by
+  # script (OnBarcodeBeforePrint), so no browser/SVG positioning is involved.
   $barcode.AutoSize=$false
+  $barcode.ShowText=$true
+  $barcode.Width=MmToPx(34.06)
+  $h=[double]$heightMm
+  if($h -le 0){$h=20.0}
+  $barcode.Height=MmToPx($h)
 }
 function Build-Report([object]$b){
   if(!(Test-Path $Frx)){throw "FastReport template not found: $Frx"}
@@ -149,10 +159,10 @@ function Build-Report([object]$b){
   # Price is formatted by the template's OnPriceBeforePrint event as RM0.00.
   # Keep the original TextPrice format object intact; do not set UseLocale at runtime.
   $price.Text='[Product.Price]'
-  # LOCKED: EAN13 uses the Barcode1 object exactly as loaded from
-  # ProductsPriceTags.frx. The original FRX controls Width/Height/position,
-  # AutoSize, ShowText and EAN13 rendering. Do not override any of them.
-  Configure-Barcode $barcode ([string]$b.barcodeType)
+  # LOCKED: use the actual FastReport Barcode1 object from ProductsPriceTags.frx.
+  # The barcode type dropdown changes only BarcodeBase; geometry remains the
+  # original 34.06mm width while Barcode height follows the UI slider.
+  Configure-Barcode $barcode ([string]$b.barcodeType) ([double]$b.barcodeHeight)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
   return $report
@@ -161,7 +171,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V22-SP-MANAGER-ORIGINAL-FRX-EAN13-LOCKED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V23-SP-MANAGER-ORIGINAL-FRX-BARCODE-TYPES-HEIGHT-LOCKED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
