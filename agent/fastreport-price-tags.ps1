@@ -64,23 +64,29 @@ function Build-Report([object]$b){
   $barcode=$report.FindObject('Barcode1')
   $roll=[bool]$b.roll
   $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
-  # In Aronium roll mode the roll width is the label width; the page height is unlimited.
-  # Aronium roll mode keeps the selected paper width/columns and only makes the page height continuous.
-  # Each DataBand column is the actual label width.
-  $effectiveCols=[Math]::Max(1,[int]$b.columns)
-  $effectivePageW=[double]$b.pageW
-  $rows=if($roll){[Math]::Ceiling(([double]$b.products.Count)/$effectiveCols)}else{0}
-  $effectivePageH=if($roll){([double]$rows*[double]$b.labelH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom}else{[double]$b.pageH}
-  if($roll -and $effectivePageH -lt 1){$effectivePageH=1}
+  # IMPORTANT: Aronium's original roll-paper mode does NOT use the A4 page width,
+  # the selected column count, or the label width/height controls. It prints the
+  # original ProductsPriceTags.frx DataBand as one full-width roll label:
+  # 190mm (718.2px) wide x 62.5mm (236.25px) high, one label per row.
+  # The page itself is unlimited vertically.
+  $originalRollW=190.0
+  $originalRollH=62.5
+  $effectiveCols=if($roll){1}else{[Math]::Max(1,[int]$b.columns)}
+  $effectiveLabelW=if($roll){$originalRollW}else{[double]$b.labelW}
+  $effectiveLabelH=if($roll){$originalRollH}else{[double]$b.labelH}
+  $rows=if($roll){[Math]::Max(1,[int]$b.products.Count)}else{0}
+  $effectivePageW=if($roll){$originalRollW+[double]$b.margins.left+[double]$b.margins.right}else{[double]$b.pageW}
+  $effectivePageH=if($roll){([double]$rows*$originalRollH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom}else{[double]$b.pageH}
+  if($roll -and $effectivePageH -lt $originalRollH){$effectivePageH=$originalRollH}
   $page.PaperWidth=[float]$effectivePageW
   $page.PaperHeight=[float]$effectivePageH
   $page.UnlimitedHeight=$roll
   $page.PrintOnRollPaper=$roll
   if($roll){$page.UnlimitedHeightValue=MmToPx($effectivePageH)}
-  $band.Width=MmToPx((if($roll){([double]$b.labelW*$effectiveCols)+([double]$b.colGap*[double]([Math]::Max(0,$effectiveCols-1)))}else{[double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right}))
-  $band.Height=MmToPx([double]$b.labelH+[double]$b.rowGap)
+  $band.Width=MmToPx($effectiveLabelW)
+  $band.Height=MmToPx($effectiveLabelH+[double]$b.rowGap)
   $band.Columns.Count=$effectiveCols
-  $band.Columns.Width=MmToPx([double]$b.labelW+[double]$b.colGap)
+  $band.Columns.Width=MmToPx($effectiveLabelW+(if($roll){0}else{[double]$b.colGap}))
   $band.Columns.Layout=[FastReport.ColumnLayout]::AcrossThenDown
   $code.Visible=[bool]$b.showCode
   $name.Visible=[bool]$b.showName
@@ -91,15 +97,14 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
-  $price.Format=New-Object FastReport.Format.CurrencyFormat
-  $price.Format.CurrencySymbol='RM'
-  $price.Format.DecimalDigits=2
-  $price.Format.DecimalSeparator='.'
-  $price.Format.GroupSeparator=','
-  $price.Format.PositivePattern=0
-  $price.Format.NegativePattern=1
-  $price.Format.UseLocale=$false
-  $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight);$barcode.Top=MmToPx(32.5);$barcode.Left=($band.Columns.Width-$barcode.Width)/2+$code.Width
+  # Keep the original FRX Currency formatting, but bind to a deterministic
+  # RM display field so the PDF is identical regardless of Windows locale.
+  $price.Text='RM[FormatNumber([Product.Price],2)]'
+  $price.Format=New-Object FastReport.Format.GeneralFormat
+  $barcode.Width=MmToPx(34.06)
+  $barcode.Height=MmToPx(20.0)
+  $barcode.Top=MmToPx(32.5)
+  $barcode.Left=($band.Columns.Width-$barcode.Width)/2+$code.Width
   Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
