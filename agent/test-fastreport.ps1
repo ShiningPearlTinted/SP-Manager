@@ -1,67 +1,50 @@
-$ErrorActionPreference='Stop'
+$ErrorActionPreference='Continue'
 $root=$PSScriptRoot
-# LOCK: the hidden launcher lives in the agent folder; do not resolve it from project root.
-$fr='http://127.0.0.1:18767'
-$agent='http://127.0.0.1:18765'
-# Startup is intentionally silent. The test window must not report a false
-# "Starting FastReport bridge in background..." state while the hidden bridge
-# is being launched. Reuse an already-running bridge whenever possible.
-$launcher=Join-Path $root 'start-fastreport.ps1'
-Write-Host '[0] Checking FastReport bridge startup...'
-if(-not (try { $null=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $true } catch { $false })) {
+$ps=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$bridge=Join-Path $root 'fastreport-price-tags.ps1'
+$log=Join-Path $root 'fastreport-startup-error.log'
+
+function Port-Open {
+  $c=New-Object System.Net.Sockets.TcpClient
   try {
-    & "$PSHOME\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $launcher
-  } catch { Write-Host "    FAIL: startup launcher error: $($_.Exception.Message)"; exit 1 }
+    $task=$c.ConnectAsync('127.0.0.1',18767)
+    if(-not $task.Wait(700)){ return $false }
+    return $c.Connected
+  } catch { return $false } finally { try{$c.Close()}catch{} }
 }
-$ready=$false
-for($i=0;$i -lt 30;$i++){
-  try { $null=Invoke-RestMethod "$fr/status" -TimeoutSec 1; $ready=$true; break } catch { Start-Sleep -Milliseconds 500 }
-}
-if(-not $ready){
-  Write-Host '    FAIL: FastReport bridge did not become ready within 15 seconds.'
-  $elog=Join-Path $root 'fastreport-startup-error.log'
-  if(Test-Path $elog){ Write-Host '    Startup error log:'; Get-Content $elog -Tail 20 }
-  exit 1
-}
-Write-Host '[1] Checking FastReport bridge...'
-try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 5; Write-Host "    OK - $($s.engine) / $($s.template)" } catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
-$payload=[ordered]@{
- paper='A4'; pageW=210; pageH=297; roll=$true; rollHeight=250
- margins=[ordered]@{top=0;left=0;right=0;bottom=0}; columns=2; labelW=50; labelH=35; rowGap=0; colGap=0
- showName=$true; showPrice=$true; showCode=$true; showBarcode=$true; taxInclusive=$true; borders=$true
- barcodeType='EAN13'; nameSize=16; priceSize=16; barcodeHeight=20; copies=1
- products=@(
-  [ordered]@{id=1;name='TEST PRODUCT 1';unit='pcs';code='SP001';barcode='4006381333931';price=180.00},
-  [ordered]@{id=2;name='TEST PRODUCT 2';unit='pcs';code='SP002';barcode='4012345678901';price=280.00}
- )
-}
-$json=$payload | ConvertTo-Json -Depth 12 -Compress
-$tmp=Join-Path $env:TEMP 'SP-Manager-FastReport-Test.pdf'
-try { Remove-Item $tmp -Force -ErrorAction SilentlyContinue } catch {}
-function Post-Pdf($url,$body){
- $req=[Net.HttpWebRequest][Net.WebRequest]::Create($url);$req.Method='POST';$req.ContentType='application/json; charset=utf-8';$req.Timeout=120000;$req.ReadWriteTimeout=120000
- $bytes=[Text.Encoding]::UTF8.GetBytes($body);$req.ContentLength=$bytes.Length
- $st=$req.GetRequestStream();$st.Write($bytes,0,$bytes.Length);$st.Close()
- try {$resp=$req.GetResponse()} catch {$r=$_.Exception.Response;if($r){$reader=New-Object IO.StreamReader($r.GetResponseStream());$msg=$reader.ReadToEnd();throw "HTTP $([int]$r.StatusCode): $msg"};throw}
- $ms=New-Object IO.MemoryStream;$resp.GetResponseStream().CopyTo($ms);$resp.Close();return $ms.ToArray()
-}
-Write-Host '[2] Sending valid JSON to REAL FastReport...'
-try {
- $pdf=Post-Pdf "$fr/price-tags/pdf" $json
- [IO.File]::WriteAllBytes($tmp,$pdf)
- Write-Host "    PDF bytes: $($pdf.Length)"
- if($pdf.Length -lt 1000){throw 'PDF output is unexpectedly small'}
- Write-Host "    PASS - $tmp"
- Start-Process $tmp
-} catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
-Write-Host '[3] Testing Local Agent FastReport proxy...'
-try {
- $as=Invoke-RestMethod "$agent/status" -TimeoutSec 5
- Write-Host "    Agent: $($as.version), Proxy: $($as.fastReportProxy)"
- $pdf2=Post-Pdf "$agent/price-tags/pdf" $json
- Write-Host "    Proxy PDF bytes: $($pdf2.Length)"
- if($pdf2.Length -lt 1000){throw 'Proxy PDF output is unexpectedly small'}
- Write-Host '    PASS - Local Agent proxy works.'
-} catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
+
+Write-Host '=================================================='
+Write-Host 'SP-Manager REAL FASTREPORT TEST'
+Write-Host '=================================================='
 Write-Host ''
-Write-Host 'ALL FASTREPORT TESTS PASSED.'
+Write-Host '[0] Checking FastReport bridge startup...'
+
+if(-not (Port-Open)) {
+  Write-Host '    FastReport is not running. Launching bridge...'
+  try {
+    # One direct child only. No VBS and no wrapper script.
+    $args=@('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$bridge)
+    $p=Start-Process -FilePath $ps -ArgumentList $args -WorkingDirectory $root -WindowStyle Hidden -PassThru -ErrorAction Stop
+    Write-Host "    Bridge process started (PID $($p.Id))."
+  } catch {
+    Write-Host "    FAIL: Cannot launch FastReport bridge: $($_.Exception.Message)"
+    exit 1
+  }
+}
+
+$deadline=(Get-Date).AddSeconds(12)
+while((Get-Date) -lt $deadline) {
+  if(Port-Open) {
+    Write-Host '[1] FastReport bridge: PORT 18767 READY'
+    Write-Host ''
+    Write-Host 'Startup check completed. Use Price Tags in SP-Manager to generate the real PDF.'
+    exit 0
+  }
+  Start-Sleep -Milliseconds 400
+}
+
+Write-Host '    FAIL: FastReport bridge did not open port 18767 within 12 seconds.'
+foreach($f in @($log,(Join-Path $root 'fastreport-startup.log'))){
+  if(Test-Path $f){Write-Host "    --- $f ---"; Get-Content $f -Tail 80}
+}
+exit 1

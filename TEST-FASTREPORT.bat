@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 cd /d "%~dp0"
 echo ==================================================
 echo SP-Manager REAL FASTREPORT TEST

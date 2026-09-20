@@ -4,11 +4,24 @@ $HostName='127.0.0.1'
 $Base=Split-Path -Parent $MyInvocation.MyCommand.Path
 $FrDir=Join-Path $Base 'fastreport'
 $Frx=Join-Path $FrDir 'ProductsPriceTags.frx'
+$StartupLog=Join-Path $Base 'fastreport-startup.log'
+$StartupErrorLog=Join-Path $Base 'fastreport-startup-error.log'
+function Startup-Log([string]$message){ try { Add-Content -Path $StartupLog -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff') + ' ' + $message) } catch {} }
+Startup-Log ('START pid=' + $PID + ' script=' + $MyInvocation.MyCommand.Path)
+try { Set-Location -LiteralPath $FrDir; Startup-Log ('CWD=' + (Get-Location).Path) } catch {}
 
 # Load the actual FastReport assemblies shipped with the SP-Manager FastReport package.
-Add-Type -Path (Join-Path $FrDir 'FastReport.dll')
-try { Add-Type -Path (Join-Path $FrDir 'FastReport.Bars.dll') } catch {}
-try { Add-Type -Path (Join-Path $FrDir 'FastReport.SQLite.dll') } catch {}
+try {
+  Add-Type -Path (Join-Path $FrDir 'FastReport.dll')
+  Startup-Log 'FastReport.dll loaded.'
+  try { Add-Type -Path (Join-Path $FrDir 'FastReport.Bars.dll'); Startup-Log 'FastReport.Bars.dll loaded.' } catch { Startup-Log ('FastReport.Bars.dll optional load failed: ' + $_.Exception.Message) }
+  try { Add-Type -Path (Join-Path $FrDir 'FastReport.SQLite.dll'); Startup-Log 'FastReport.SQLite.dll loaded.' } catch { Startup-Log ('FastReport.SQLite.dll optional load failed: ' + $_.Exception.Message) }
+} catch {
+  $msg='FATAL FastReport assembly load failed: ' + $_.Exception.ToString()
+  try { Add-Content -Path $StartupErrorLog -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff') + ' ' + $msg) } catch {}
+  Startup-Log $msg
+  exit 1
+}
 
 function Send-Bytes($stream,[int]$status,[string]$contentType,[byte[]]$bytes,[string]$disposition='') {
   if($status -eq 200){$reason='OK'}elseif($status -eq 204){$reason='No Content'}else{$reason='Error'}
@@ -171,7 +184,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V25-SP-MANAGER-ORIGINAL-FRX-BARCODE-TYPES-HEIGHT-LOCKED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V31-SP-MANAGER-STARTUP-DIRECT-ONE-PROCESS-LOCKED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
@@ -186,6 +199,15 @@ function Handle($req){
     Send-Json $s 404 @{ok=$false;error='Not found'}
   }catch{ $e=$_.Exception; $inner=''; if($e.InnerException){$inner=$e.InnerException.ToString()}; Send-Json $s 500 @{ok=$false;error=$e.Message;details=$_.ScriptStackTrace;inner=$inner;type=$e.GetType().FullName} }
 }
-$listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Parse($HostName),$Port);$listener.Start()
-Write-Host "SP-Manager FastReport Bridge listening on http://$HostName`:$Port"
+try {
+  $listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Parse($HostName),$Port)
+  $listener.Start()
+  Startup-Log ('LISTENING http://' + $HostName + ':' + $Port)
+  Write-Host "SP-Manager FastReport Bridge listening on http://$HostName`:$Port"
+} catch {
+  $msg='FATAL listener startup failed: ' + $_.Exception.ToString()
+  try { Add-Content -Path $StartupErrorLog -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff') + ' ' + $msg) } catch {}
+  Startup-Log $msg
+  exit 1
+}
 while($true){$client=$listener.AcceptTcpClient();try{$req=Read-Request $client;Handle $req}catch{try{Send-Json $client.GetStream() 500 @{ok=$false;error=$_.Exception.Message}}catch{}}finally{$client.Close()}}

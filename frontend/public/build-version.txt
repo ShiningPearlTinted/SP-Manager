@@ -1,1 +1,1 @@
-SP-Manager V24 - FastReport startup silent/reuse fix
+SP-Manager V31 - Startup direct one-process lock
