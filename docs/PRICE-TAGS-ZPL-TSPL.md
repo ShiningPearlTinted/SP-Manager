@@ -1,14 +1,12 @@
-# Price Tags — ZPL / TSPL
+# SP-Manager Price Tags — ZPL / TSPL
 
-Price Tags no longer uses a .NET report engine. The module generates printer-native ZPL or TSPL commands directly from the selected products and layout settings.
+## V39 — Settings Restored
 
-- **ZPL**: Zebra-compatible label printers.
-- **TSPL**: TSC-compatible label printers and compatible devices.
-- Browser preview is an independent visual preview of the same label layout.
-- `Save ZPL` and `Save TSPL` download the generated raw printer commands.
-- `Print ZPL` / `Print TSPL` sends the selected raw language to the configured Windows printer through the existing SP-Manager Local Agent.
-- Other POS, product, inventory, customer, sales and settings functions are unchanged.
+Price Tags keeps the ZPL/TSPL printer-native renderer introduced in V38 while restoring the original left-side Price Tags settings layout.
 
-Zebra documents ZPL commands for EAN-13 (`^BE`), EAN-8 (`^B8`), UPC-A (`^BU`), UPC-E (`^B9`), Code 39 (`^B3`), Code 93 (`^BA`), Code 128 (`^BC`), Interleaved 2 of 5 (`^B2`) and Codabar (`^BK`).
-
-TSC's TSPL/TSPL2 programming documentation lists corresponding `BARCODE` types including 128, 39, 93, EAN13, EAN8, CODA, UPCA, UPCE and Interleaved 2 of 5.
+### Locked
+- Price Tags only: ZPL / TSPL output.
+- No FastReport runtime, DLLs, FRX files, or port 18767.
+- Existing POS/Product/Customer/Payment/Settings functions are not changed.
+- Left-side Price Tags settings restored: barcode type, printer language, size controls, product search/group, selection, copies, display options, and preview/print.
+- Preview pane is constrained to the right-hand preview area and no longer covers the settings sidebar.
