@@ -4182,3 +4182,19 @@
 .price-tags-overlay .pt-native-preview{inset:48px 0 0 0!important;background:radial-gradient(circle at 50% 15%,#1c2b3d 0%,#0e1622 65%)!important;padding:24px 0 40px!important}
 .price-tags-overlay .pt-native-preview .pt-page{box-shadow:0 10px 35px rgba(0,0,0,.45),0 0 0 1px #d8b35b!important;border-radius:2px!important}
 .price-tags-overlay .pt-label{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}
+
+/* V47 locked modern Price Tags toolbar, zoom and barcode presentation */
+.price-tags-overlay .pt-preview-toolbar{height:56px!important;min-height:56px!important;background:#0b1422!important;color:#eaf1f8!important;border-bottom:1px solid #26384e!important;padding:0 16px!important;gap:8px!important}
+.price-tags-overlay .pt-toolbar-primary,.price-tags-overlay .pt-toolbar-pdf{border:0!important;border-radius:8px!important;padding:9px 14px!important;font-weight:600!important;font-size:12px!important;box-shadow:0 4px 14px rgba(0,0,0,.22)!important}
+.price-tags-overlay .pt-toolbar-primary{background:#1683ff!important;color:#fff!important}.price-tags-overlay .pt-toolbar-pdf{background:#19b96b!important;color:#fff!important}
+.price-tags-overlay .pt-nav-btn{background:#142238!important;color:#eaf1f8!important;border:1px solid #2e4560!important;border-radius:7px!important;min-width:30px!important;height:30px!important}
+.price-tags-overlay .pt-page-counter input{background:#101c2c!important;color:#fff!important;border:1px solid #31465f!important;border-radius:5px!important;text-align:center!important;width:34px!important;height:26px!important}
+.price-tags-overlay .pt-zoom-label{margin-left:0!important;font-weight:600!important;color:#dce8f5!important}.price-tags-overlay .pt-zoom-range{width:120px!important;accent-color:#1683ff!important}
+.price-tags-overlay .pt-barcode-stack{width:42mm!important;max-width:100%!important;font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}
+.price-tags-overlay .pt-barcode-stack .pt-barcode-svg{width:42mm!important;max-width:100%!important;font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}
+.price-tags-overlay .pt-barcode-stack svg text{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important}
+.price-tags-overlay .pt-barcode-human,.price-tags-overlay .pt-barcode-type{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important;font-style:normal!important;color:#111!important;text-align:center!important}
+.price-tags-overlay .pt-barcode-human{font-size:10px!important;line-height:12px!important;height:auto!important;margin-top:2px!important;letter-spacing:0!important}
+.price-tags-overlay .pt-barcode-type{font-size:10px!important;line-height:12px!important;height:auto!important;margin-top:1px!important;white-space:nowrap!important}
+.price-tags-overlay .pt-native-preview{padding:24px 20px 40px!important;background:radial-gradient(circle at 50% 10%,#1c2c40 0%,#0b1320 68%)!important}
+.price-tags-overlay .pt-native-preview .pt-page{overflow:visible!important;box-shadow:0 12px 36px rgba(0,0,0,.42),0 0 0 1px #d8b35b!important}
