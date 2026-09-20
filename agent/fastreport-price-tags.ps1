@@ -87,18 +87,21 @@ function Configure-Barcode($barcode,[string]$type,[double]$heightMm){
     default { $barcode.Barcode = New-Object FastReport.Barcode.BarcodeEAN13 }
   }
 
-  # Match the original ProductsPriceTags.frx object geometry:
-  # Width 128.75px = 34.06mm, Height 75.6px = 20mm.
-  # FastReport documentation says AutoSize=false uses Width/Height directly.
-  # This is important because AutoSize=true made EAN13 expand beyond the
-  # original Aronium geometry. The original FRX also centers the object by
-  # script (OnBarcodeBeforePrint), so no browser/SVG positioning is involved.
+  # Match the original ProductsPriceTags.frx barcode object geometry.
+  # The original object is 128.75px x 75.6px (34.06mm x 20mm), uses the
+  # native FastReport barcode renderer, and is positioned by OnBarcodeBeforePrint.
+  # Keep AutoSize off so the object respects its original width/height bounds.
   $barcode.AutoSize=$false
   $barcode.ShowText=$true
   $barcode.Width=MmToPx(34.06)
   $h=[double]$heightMm
   if($h -le 0){$h=20.0}
   $barcode.Height=MmToPx($h)
+
+  # Human-readable barcode text must remain regular, not bold. FastReport's
+  # BarcodeBase exposes the Font used for the text below the bars. Use a
+  # regular 8pt Arial font so it stays close to the original template.
+  $barcode.Barcode.Font=New-Object System.Drawing.Font('Arial',8,[System.Drawing.FontStyle]::Regular)
 }
 function Build-Report([object]$b){
   if(!(Test-Path $Frx)){throw "FastReport template not found: $Frx"}
@@ -194,7 +197,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V33-SP-MANAGER-FASTREPORT-STARTUP-DIAGNOSTIC-LOCKED'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V35-SP-MANAGER-BARCODE-ORIGINAL-FORMAT-LOCKED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b

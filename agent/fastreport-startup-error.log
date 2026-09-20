@@ -1,4 +1,4 @@
-2026-09-20 18:07:46.317 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
+2026-09-20 18:19:27.700 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
    at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
    at System.Net.Sockets.Socket.Bind(EndPoint localEP)
    at System.Net.Sockets.TcpListener.Start(Int32 backlog)
@@ -8,7 +8,7 @@
    at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(InterpretedFrame frame)
    at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)
    at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)
-2026-09-20 18:07:51.155 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
+2026-09-20 18:19:35.061 FATAL listener startup failed: System.Management.Automation.MethodInvocationException: Exception calling "Start" with "0" argument(s): "Only one usage of each socket address (protocol/network address/port) is normally permitted" ---> System.Net.Sockets.SocketException: Only one usage of each socket address (protocol/network address/port) is normally permitted
    at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
    at System.Net.Sockets.Socket.Bind(EndPoint localEP)
    at System.Net.Sockets.TcpListener.Start(Int32 backlog)
