@@ -11,7 +11,7 @@ try { Add-Type -Path (Join-Path $FrDir 'FastReport.Bars.dll') } catch {}
 try { Add-Type -Path (Join-Path $FrDir 'FastReport.SQLite.dll') } catch {}
 
 function Send-Bytes($stream,[int]$status,[string]$contentType,[byte[]]$bytes,[string]$disposition='') {
-  $reason=if($status -eq 200){'OK'}elseif($status -eq 204){'No Content'}else{'Error'}
+  if($status -eq 200){$reason='OK'}elseif($status -eq 204){$reason='No Content'}else{$reason='Error'}
   $extra=''
   if($disposition){$extra="Content-Disposition: $disposition`r`n"}
   $hdr="HTTP/1.1 $status $reason`r`nContent-Type: $contentType`r`nContent-Length: $($bytes.Length)`r`nCache-Control: no-store`r`nConnection: close`r`nAccess-Control-Allow-Origin: *`r`nAccess-Control-Allow-Headers: Content-Type`r`nAccess-Control-Allow-Methods: GET,POST,OPTIONS`r`n$extra`r`n"
@@ -25,7 +25,7 @@ function Read-Request($client){
   $head=$raw.Substring(0,$headerEnd);$lines=$head -split "`r`n";$parts=$lines[0].Split(' ');$method=$parts[0];$path=$parts[1];$cl=0;foreach($l in $lines){if($l -match '^(?i)Content-Length:\s*(\d+)'){$cl=[int]$Matches[1]}}
   $headerBytes=$headerEnd+4;$bodyBytes=$ms.ToArray();$need=$headerBytes+$cl
   while($bodyBytes.Length -lt $need){$n=$stream.Read($buf,0,$buf.Length);if($n -le 0){break};$ms.Write($buf,0,$n);$bodyBytes=$ms.ToArray()}
-  $body=if($cl -gt 0){[Text.Encoding]::UTF8.GetString($bodyBytes,$headerBytes,$cl)}else{''}
+  if($cl -gt 0){$body=[Text.Encoding]::UTF8.GetString($bodyBytes,$headerBytes,$cl)}else{$body=''}
   return @{stream=$stream;method=$method;path=$path;body=$body}
 }
 function MmToPx([double]$mm){ return [single]($mm*96.0/25.4) }
@@ -45,7 +45,7 @@ function Build-Report([object]$b){
   $dt=New-Object System.Data.DataTable('Product')
   [void]$dt.Columns.Add('Id',[object]);[void]$dt.Columns.Add('Name',[string]);[void]$dt.Columns.Add('MeasurementUnit',[string]);[void]$dt.Columns.Add('Code',[string]);[void]$dt.Columns.Add('Barcode',[string]);[void]$dt.Columns.Add('Price',[decimal])
   foreach($p in @($b.products)){
-    $r=$dt.NewRow();$r['Id']=if($null -eq $p.id){0}else{$p.id};$r['Name']=[string]$p.name;$r['MeasurementUnit']=[string]($p.unit);$r['Code']=[string]($p.code);$r['Barcode']=[string]($p.barcode);$r['Price']=[decimal]([double]$p.price);[void]$dt.Rows.Add($r)
+    $r=$dt.NewRow(); if($null -eq $p.id){$r['Id']=0}else{$r['Id']=$p.id}; $r['Name']=[string]$p.name; $r['MeasurementUnit']=[string]$p.unit; $r['Code']=[string]$p.code; $r['Barcode']=[string]$p.barcode; $r['Price']=[decimal]([double]$p.price); [void]$dt.Rows.Add($r)
   }
   [void]$ds.Tables.Add($dt)
   # Aronium's original ProductsPriceTags.frx uses Currency + UseLocale.
@@ -83,12 +83,21 @@ function Build-Report([object]$b){
   # layout, but the supplied ProductsPriceTags.frx DataBand itself is the
   # original 190mm-wide label. Columns/label-size controls are not applied
   # to the original roll template.
-  $effectiveCols=if($roll){1}else{[Math]::Max(1,[int]$b.columns)}
-  $effectiveLabelW=if($roll){$originalRollW}else{[double]$b.labelW}
-  $effectiveLabelH=if($roll){$originalRollH}else{[double]$b.labelH}
-  $rows=if($roll){[Math]::Max(1,[int]$b.products.Count)}else{0}
-  $effectivePageW=[double]$b.pageW
-  $effectivePageH=if($roll){([double]$rows*$originalRollH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom}else{[double]$b.pageH}
+  if($roll){
+    $effectiveCols=1
+    $effectiveLabelW=$originalRollW
+    $effectiveLabelH=$originalRollH
+    $rows=[Math]::Max(1,[int]$b.products.Count)
+    $effectivePageW=[double]$b.pageW
+    $effectivePageH=([double]$rows*$originalRollH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom
+  } else {
+    $effectiveCols=[Math]::Max(1,[int]$b.columns)
+    $effectiveLabelW=[double]$b.labelW
+    $effectiveLabelH=[double]$b.labelH
+    $rows=0
+    $effectivePageW=[double]$b.pageW
+    $effectivePageH=[double]$b.pageH
+  }
   if($roll -and $effectivePageH -lt $originalRollH){$effectivePageH=$originalRollH}
   $page.PaperWidth=[float]$effectivePageW
   $page.PaperHeight=[float]$effectivePageH
@@ -98,7 +107,7 @@ function Build-Report([object]$b){
   $band.Width=MmToPx($effectiveLabelW)
   $band.Height=MmToPx($effectiveLabelH+[double]$b.rowGap)
   $band.Columns.Count=$effectiveCols
-  $effectiveColGap=if($roll){0}else{[double]$b.colGap}
+  if($roll){$effectiveColGap=0}else{$effectiveColGap=[double]$b.colGap}
   $band.Columns.Width=MmToPx($effectiveLabelW+$effectiveColGap)
   $band.Columns.Layout=[FastReport.ColumnLayout]::AcrossThenDown
   $code.Visible=[bool]$b.showCode
@@ -134,7 +143,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V6-ORIGINAL-ROLL-RM-BARCODE-SAFE'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V7-POWERSHELL-5.1-SAFE-ORIGINAL-ROLL-RM-BARCODE'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
