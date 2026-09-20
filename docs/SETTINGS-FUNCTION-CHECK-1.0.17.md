@@ -2,7 +2,7 @@
 
 Scope: Settings only. Existing POS behaviour is preserved; the latest POS source is used as the base.
 
-## Aronium reference checked
+## SP-Manager reference checked
 - General: language, writing direction, color scheme, layout, zoom, virtual keyboard, notifications, business day, button bar.
 - Order & payment: floor plans, sounds, default search, search options, default quantity, discount type, separate rows, prevent sale below cost, negative inventory, single user, payment form options, due date, merge receipt items, single-item discount, payment shortcut confirmation, void options and advanced order options.
 - Products: tax-inclusive display/print, discount rule, sorting and negative price.
@@ -32,10 +32,10 @@ Scope: Settings only. Existing POS behaviour is preserved; the latest POS source
 - Customer-display, printer and cash-drawer test buttons use the SP-Manager Local Agent.
 
 ## Platform differences
-SP-Manager is browser-based. Windows/SQLite-native Aronium operations cannot be copied 1:1:
+SP-Manager is browser-based. Windows/SQLite-native SP-Manager operations cannot be copied 1:1:
 - direct SQLite optimization is represented by saving the current local application database/settings state;
 - Windows printer capabilities and ESC/POS hardware require the Local Agent;
-- native Aronium licensing/account/update services are not reproduced;
+- native SP-Manager licensing/account/update services are not reproduced;
 - full application translation requires a separate language resource layer.
 
 No unrelated POS, sales, customer, inventory, payment or reporting functions were intentionally changed in this settings patch.

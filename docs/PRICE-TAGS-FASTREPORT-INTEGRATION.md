@@ -1,7 +1,7 @@
 # Price Tags — FastReport Integration
 
 ## Source of truth
-The supplied Aronium package contains `Templates/Ltr/ProductsPriceTags.frx`. SP-Manager now sends Price Tags data/settings to a local Windows FastReport bridge which loads that actual `.frx` template.
+The supplied SP-Manager package contains `Templates/Ltr/ProductsPriceTags.frx`. SP-Manager now sends Price Tags data/settings to a local Windows FastReport bridge which loads that actual `.frx` template.
 
 ## Why a bridge is required
 FastReport .NET is a .NET report engine and cannot execute inside a normal React/Vite browser bundle. The bridge runs locally on the POS Windows computer and exposes the prepared report as PDF.

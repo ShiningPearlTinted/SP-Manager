@@ -1,6 +1,6 @@
 # SP-Manager FastReport Bridge
 
-This bridge uses the **actual FastReport .NET engine** and the supplied Aronium `ProductsPriceTags.frx` template.
+This bridge uses the **actual FastReport .NET engine** and the supplied SP-Manager `ProductsPriceTags.frx` template.
 
 - FastReport endpoint: `http://127.0.0.1:18767`
 - Status: `/status`

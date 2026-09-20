@@ -5,11 +5,14 @@ $agent='http://127.0.0.1:18765'
 Write-Host '[1] Checking FastReport bridge...'
 try { $s=Invoke-RestMethod "$fr/status" -TimeoutSec 5; Write-Host "    OK - $($s.engine) / $($s.template)" } catch { Write-Host "    FAIL: $($_.Exception.Message)"; exit 1 }
 $payload=[ordered]@{
- paper='A4'; pageW=210; pageH=297; roll=$false; rollHeight=297
- margins=[ordered]@{top=5;left=5;right=5;bottom=5}; columns=2; labelW=100; labelH=60; rowGap=2; colGap=2
+ paper='A4'; pageW=210; pageH=297; roll=$true; rollHeight=250
+ margins=[ordered]@{top=0;left=0;right=0;bottom=0}; columns=2; labelW=50; labelH=50; rowGap=0; colGap=0
  showName=$true; showPrice=$true; showCode=$true; showBarcode=$true; taxInclusive=$true; borders=$true
- barcodeType='EAN13'; nameSize=10; priceSize=16; barcodeHeight=28; copies=1
- products=@([ordered]@{id=1;name='TEST PRODUCT';unit='pcs';code='TEST001';barcode='4006381333931';price=12.50})
+ barcodeType='EAN13'; nameSize=16; priceSize=16; barcodeHeight=20; copies=1
+ products=@(
+  [ordered]@{id=1;name='TEST PRODUCT 1';unit='pcs';code='SP001';barcode='4006381333931';price=180.00},
+  [ordered]@{id=2;name='TEST PRODUCT 2';unit='pcs';code='SP002';barcode='4012345678901';price=280.00}
+ )
 }
 $json=$payload | ConvertTo-Json -Depth 12 -Compress
 $tmp=Join-Path $env:TEMP 'SP-Manager-FastReport-Test.pdf'

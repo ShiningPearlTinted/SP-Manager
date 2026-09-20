@@ -5,7 +5,7 @@ $Base=Split-Path -Parent $MyInvocation.MyCommand.Path
 $FrDir=Join-Path $Base 'fastreport'
 $Frx=Join-Path $FrDir 'ProductsPriceTags.frx'
 
-# Load the actual FastReport assemblies shipped with the supplied Aronium package.
+# Load the actual FastReport assemblies shipped with the SP-Manager FastReport package.
 Add-Type -Path (Join-Path $FrDir 'FastReport.dll')
 try { Add-Type -Path (Join-Path $FrDir 'FastReport.Bars.dll') } catch {}
 try { Add-Type -Path (Join-Path $FrDir 'FastReport.SQLite.dll') } catch {}
@@ -48,8 +48,8 @@ function Build-Report([object]$b){
     $r=$dt.NewRow(); if($null -eq $p.id){$r['Id']=0}else{$r['Id']=$p.id}; $r['Name']=[string]$p.name; $r['MeasurementUnit']=[string]$p.unit; $r['Code']=[string]$p.code; $r['Barcode']=[string]$p.barcode; $r['Price']=[decimal]([double]$p.price); [void]$dt.Rows.Add($r)
   }
   [void]$ds.Tables.Add($dt)
-  # Aronium's original ProductsPriceTags.frx uses Currency + UseLocale.
-  # Force the FastReport process culture to Malaysia so Currency renders as RM.
+  # SP-Manager uses the supplied ProductsPriceTags.frx and an explicit RM price script.
+  # Keep the FastReport process culture at Malaysia for all other locale-sensitive formatting.
   $culture=[System.Globalization.CultureInfo]::GetCultureInfo('ms-MY')
   [System.Threading.Thread]::CurrentThread.CurrentCulture=$culture
   [System.Threading.Thread]::CurrentThread.CurrentUICulture=$culture
@@ -64,7 +64,7 @@ function Build-Report([object]$b){
   $barcode=$report.FindObject('Barcode1')
   $roll=[bool]$b.roll
   if($roll){
-    # Aronium's original FRX band is 190mm wide on a 210mm A4 page.
+    # The supplied price-tag template uses a 190mm band on a 210mm A4 page.
     # The 10mm side margins create the exact 190mm printable label width.
     $rollLeft=10.0; $rollRight=10.0
     $page.LeftMargin=[float]$rollLeft; $page.RightMargin=[float]$rollRight
@@ -72,17 +72,14 @@ function Build-Report([object]$b){
   } else {
     $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
   }
-  # IMPORTANT: Aronium's original roll-paper mode does NOT use the A4 page width,
-  # the selected column count, or the label width/height controls. It prints the
-  # original ProductsPriceTags.frx DataBand as one full-width roll label:
+  # Roll-paper mode uses the supplied template's original DataBand as one full-width roll label:
   # 190mm (718.2px) wide x 62.5mm (236.25px) high, one label per row.
   # The page itself is unlimited vertically.
   $originalRollW=190.0
   $originalRollH=62.5
-  # Aronium roll mode keeps the selected paper width (A4 = 210mm) in the
-  # layout, but the supplied ProductsPriceTags.frx DataBand itself is the
-  # original 190mm-wide label. Columns/label-size controls are not applied
-  # to the original roll template.
+  # Roll mode keeps the A4 paper width in the layout; the template DataBand is
+  # the 190mm-wide printable label. UI columns/label-size values are retained
+  # for compatibility but do not override the original roll template geometry.
   if($roll){
     $effectiveCols=1
     $effectiveLabelW=$originalRollW
@@ -119,17 +116,14 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
-  # IMPORTANT: FastReport 2019.1.5 CurrencyFormat does NOT expose UseLocale
-  # as a runtime property on the loaded format object. Keep the original
-  # Aronium Currency format untouched and use ms-MY process culture above.
-  # The original FRX has Format=Currency and Format.UseLocale=true, so
-  # FastReport formats Product.Price using the Malaysia locale (RM).
+  # Price is formatted by the template's OnPriceBeforePrint event as RM0.00.
+  # Keep the original TextPrice format object intact; do not set UseLocale at runtime.
   $price.Text='[Product.Price]'
   $barcode.Width=MmToPx(34.06)
   $barcode.Height=MmToPx(20.0)
   $barcode.Top=MmToPx(32.5)
   $barcode.Left=($band.Columns.Width-$barcode.Width)/2+$code.Width
-  Configure-Barcode $barcode ([string]$b.barcodeType)
+  if($roll){Configure-Barcode $barcode 'EAN13'}else{Configure-Barcode $barcode ([string]$b.barcodeType)}
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
   return $report
@@ -138,13 +132,13 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V8-ORIGINAL-FRX-CURRENCY-NO-USELOCALE'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V9-SP-MANAGER-ORIGINAL-ROLL-RM-BARCODE'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
       [void]$report.Prepare()
       $export=New-Object FastReport.Export.Pdf.PDFExport
-      $export.PrintScaling=$false;$export.AllowPrint=$true;$export.Producer='SP-Manager / FastReport';$export.Title='Price Tags'
+      $export.PrintScaling=$false;$export.AllowPrint=$true;$export.Producer='SP-Manager';$export.Title='SP-Manager Price Tags'
       $ms=New-Object IO.MemoryStream
       $report.Export($export,$ms)
       $bytes=$ms.ToArray();$ms.Dispose();$report.Dispose()
