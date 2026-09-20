@@ -72,21 +72,20 @@ function Build-Report([object]$b){
   } else {
     $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
   }
-  # Roll-paper mode uses the supplied template's original DataBand as one full-width roll label:
-  # 190mm (718.2px) wide x 62.5mm (236.25px) high, one label per row.
-  # The page itself is unlimited vertically.
+  # Roll-paper mode keeps the original Aronium template width (190mm) but
+  # honours the Aronium UI controls that remain editable on roll paper:
+  # Label height and Row spacing.  The original FastReport barcode script
+  # positions the barcode from the bottom of Data1, so changing label height
+  # must change Data1.Height rather than being hard-coded to 62.5mm.
   $originalRollW=190.0
-  $originalRollH=62.5
-  # Roll mode keeps the A4 paper width in the layout; the template DataBand is
-  # the 190mm-wide printable label. UI columns/label-size values are retained
-  # for compatibility but do not override the original roll template geometry.
   if($roll){
     $effectiveCols=1
     $effectiveLabelW=$originalRollW
-    $effectiveLabelH=$originalRollH
+    $effectiveLabelH=[double]$b.labelH
+    if($effectiveLabelH -le 0){$effectiveLabelH=35.0}
     $rows=[Math]::Max(1,[int]$b.products.Count)
     $effectivePageW=[double]$b.pageW
-    $effectivePageH=([double]$rows*$originalRollH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom
+    $effectivePageH=([double]$rows*$effectiveLabelH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom
   } else {
     $effectiveCols=[Math]::Max(1,[int]$b.columns)
     $effectiveLabelW=[double]$b.labelW
@@ -120,10 +119,12 @@ function Build-Report([object]$b){
   # Keep the original TextPrice format object intact; do not set UseLocale at runtime.
   $price.Text='[Product.Price]'
   $barcode.Width=MmToPx(34.06)
-  $barcode.Height=MmToPx(20.0)
-  $barcode.Top=MmToPx(32.5)
-  $barcode.Left=($band.Columns.Width-$barcode.Width)/2+$code.Width
-  if($roll){Configure-Barcode $barcode 'EAN13'}else{Configure-Barcode $barcode ([string]$b.barcodeType)}
+  $barcode.Height=MmToPx(([double]$b.barcodeHeight))
+  if([double]$b.barcodeHeight -le 0){$barcode.Height=MmToPx(20.0)}
+  # Keep the original ProductsPriceTags.frx OnBarcodeBeforePrint geometry:
+  # it centers the barcode and docks it to the bottom of Data1.
+  # Do not hard-code Top/Left here; the actual FastReport template script owns them.
+  Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
   else{$band.Border.Lines=[FastReport.BorderLines]::All;$band.Border.Color=[System.Drawing.Color]::Gray}
   return $report
@@ -132,7 +133,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V13-SP-MANAGER-ORIGINAL-ROLL-RM-BARCODE'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V15-SP-MANAGER-ORIGINAL-ROLL-DYNAMIC-HEIGHT-BARCODE'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
