@@ -83,7 +83,7 @@ function Build-Report([object]$b){
   if($roll){
     # The supplied price-tag template uses a 190mm band on a 210mm A4 page.
     # The 10mm side margins create the exact 190mm printable label width.
-    $rollLeft=10.0; $rollRight=10.0
+    $rollLeft=[double]$b.margins.left; $rollRight=[double]$b.margins.right
     $page.LeftMargin=[float]$rollLeft; $page.RightMargin=[float]$rollRight
     $page.TopMargin=[float]$b.margins.top; $page.BottomMargin=[float]$b.margins.bottom
   } else {
@@ -97,7 +97,8 @@ function Build-Report([object]$b){
   $originalRollW=190.0
   if($roll){
     $effectiveCols=1
-    $effectiveLabelW=$originalRollW
+    $effectiveLabelW=[double]$b.pageW-$rollLeft-$rollRight
+    if($effectiveLabelW -le 0){$effectiveLabelW=$originalRollW}
     $effectiveLabelH=[double]$b.labelH
     if($effectiveLabelH -le 0){$effectiveLabelH=35.0}
     $rows=[Math]::Max(1,[int]$b.products.Count)
@@ -136,6 +137,10 @@ function Build-Report([object]$b){
   $price.Text='[Product.Price]'
   $barcode.Width=MmToPx(34.06)
   $barcode.Height=MmToPx(([double]$b.barcodeHeight))
+  # Match the original Aronium/FastReport barcode object: keep the human-readable
+  # value centered inside the barcode object. FastReport exposes HorzAlign on
+  # BarcodeObject specifically for this alignment.
+  try { $barcode.HorzAlign=[FastReport.Barcode.BarcodeObject+Alignment]::Center } catch {}
   if([double]$b.barcodeHeight -le 0){$barcode.Height=MmToPx(20.0)}
   # Keep the original ProductsPriceTags.frx OnBarcodeBeforePrint geometry:
   # it centers the barcode and docks it to the bottom of Data1.
@@ -149,7 +154,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V15-SP-MANAGER-ORIGINAL-ROLL-DYNAMIC-HEIGHT-BARCODE'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='SP-Manager bundled ProductsPriceTags.frx';build='V20-SP-MANAGER-ROLL-MARGINS-EAN13-CENTERED'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
