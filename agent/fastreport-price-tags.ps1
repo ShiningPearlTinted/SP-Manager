@@ -65,15 +65,21 @@ function Build-Report([object]$b){
   $roll=[bool]$b.roll
   $page.LeftMargin=[float]$b.margins.left;$page.RightMargin=[float]$b.margins.right;$page.TopMargin=[float]$b.margins.top;$page.BottomMargin=[float]$b.margins.bottom
   # In Aronium roll mode the roll width is the label width; the page height is unlimited.
-  $effectivePageW=if($roll){[double]$b.labelW+[double]$b.margins.left+[double]$b.margins.right}else{[double]$b.pageW}
-  $effectivePageH=if($roll){[double]$b.rollHeight}else{[double]$b.pageH}
-  $page.PaperWidth=[float]$effectivePageW;$page.PaperHeight=[float]$effectivePageH
+  # Aronium roll mode keeps the selected paper width/columns and only makes the page height continuous.
+  # Each DataBand column is the actual label width.
+  $effectiveCols=[Math]::Max(1,[int]$b.columns)
+  $effectivePageW=[double]$b.pageW
+  $rows=if($roll){[Math]::Ceiling(([double]$b.products.Count)/$effectiveCols)}else{0}
+  $effectivePageH=if($roll){([double]$rows*[double]$b.labelH)+([double]([Math]::Max(0,$rows-1))*[double]$b.rowGap)+[double]$b.margins.top+[double]$b.margins.bottom}else{[double]$b.pageH}
+  if($roll -and $effectivePageH -lt 1){$effectivePageH=1}
+  $page.PaperWidth=[float]$effectivePageW
+  $page.PaperHeight=[float]$effectivePageH
   $page.UnlimitedHeight=$roll
   $page.PrintOnRollPaper=$roll
-  if($roll){$page.UnlimitedHeightValue=MmToPx([double]$b.rollHeight)}
-  $band.Width=MmToPx((if($roll){[double]$b.labelW}else{[double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right}))
+  if($roll){$page.UnlimitedHeightValue=MmToPx($effectivePageH)}
+  $band.Width=MmToPx((if($roll){([double]$b.labelW*$effectiveCols)+([double]$b.colGap*[double]([Math]::Max(0,$effectiveCols-1)))}else{[double]$b.pageW-[double]$b.margins.left-[double]$b.margins.right}))
   $band.Height=MmToPx([double]$b.labelH+[double]$b.rowGap)
-  $band.Columns.Count=if($roll){1}else{[Math]::Max(1,[int]$b.columns)}
+  $band.Columns.Count=$effectiveCols
   $band.Columns.Width=MmToPx([double]$b.labelW+[double]$b.colGap)
   $band.Columns.Layout=[FastReport.ColumnLayout]::AcrossThenDown
   $code.Visible=[bool]$b.showCode
@@ -85,6 +91,14 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
+  $price.Format=New-Object FastReport.Format.CurrencyFormat
+  $price.Format.CurrencySymbol='RM'
+  $price.Format.DecimalDigits=2
+  $price.Format.DecimalSeparator='.'
+  $price.Format.GroupSeparator=','
+  $price.Format.PositivePattern=0
+  $price.Format.NegativePattern=1
+  $price.Format.UseLocale=$false
   $barcode.Width=MmToPx(34.06);$barcode.Height=MmToPx([double]$b.barcodeHeight);$barcode.Top=MmToPx(32.5);$barcode.Left=($band.Columns.Width-$barcode.Width)/2+$code.Width
   Configure-Barcode $barcode ([string]$b.barcodeType)
   if(!$b.borders){$band.Border.Lines=[FastReport.BorderLines]::None}
