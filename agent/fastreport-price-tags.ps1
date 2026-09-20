@@ -119,17 +119,12 @@ function Build-Report([object]$b){
   $price.Left=$code.Width;$price.Width=$band.Columns.Width-$code.Width;$price.Height=MmToPx(12.5);$price.Top=$name.Height
   $name.Font=New-Object System.Drawing.Font('Arial',[float]$b.nameSize,[System.Drawing.FontStyle]::Regular)
   $price.Font=New-Object System.Drawing.Font('Arial',[float]$b.priceSize,[System.Drawing.FontStyle]::Bold)
-  # Keep the original FastReport Currency format object loaded from Aronium's FRX.
-  # Change only its properties; do not replace the Format object at runtime.
-  # This is compatible with the supplied FastReport 2019.1.5 engine.
+  # IMPORTANT: FastReport 2019.1.5 CurrencyFormat does NOT expose UseLocale
+  # as a runtime property on the loaded format object. Keep the original
+  # Aronium Currency format untouched and use ms-MY process culture above.
+  # The original FRX has Format=Currency and Format.UseLocale=true, so
+  # FastReport formats Product.Price using the Malaysia locale (RM).
   $price.Text='[Product.Price]'
-  $price.Format.UseLocale=$false
-  $price.Format.CurrencySymbol='RM'
-  $price.Format.DecimalDigits=2
-  $price.Format.DecimalSeparator='.'
-  $price.Format.GroupSeparator=','
-  $price.Format.PositivePattern=0
-  $price.Format.NegativePattern=1
   $barcode.Width=MmToPx(34.06)
   $barcode.Height=MmToPx(20.0)
   $barcode.Top=MmToPx(32.5)
@@ -143,7 +138,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V7-POWERSHELL-5.1-SAFE-ORIGINAL-ROLL-RM-BARCODE'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;fastReport=$true;engine='FastReport .NET';version='2019.1.5';port=$Port;template='ProductsPriceTags.frx';templateSource='Aronium(5).zip / Templates/Ltr/ProductsPriceTags.frx';build='V8-ORIGINAL-FRX-CURRENCY-NO-USELOCALE'};return}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/pdf'){
       $b=$req.body|ConvertFrom-Json
       $report=Build-Report $b
