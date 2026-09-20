@@ -1,1 +1,1 @@
-SP-Manager V41 - Price Tags Aronium Layout + Native ZPL/TSPL
+SP-Manager V44 - Price Tags Large Barcode + Functional Settings
