@@ -84,8 +84,9 @@ function App(){
  const[activeUser,setCurrentUser]=useState(()=>load("activeUser",null));
  const[page,setPage]=useState("POS / Sales");
  const[posMenu,setPosMenu]=useState(false);
+ const[cashInOutOpen,setCashInOutOpen]=useState(false);
  const[mobileNavOpen,setMobileNavOpen]=useState(false);
- useEffect(()=>{setPosMenu(false);setMobileNavOpen(false)},[page]);
+ useEffect(()=>{setPosMenu(false);setMobileNavOpen(false);setCashInOutOpen(false)},[page]);
  const[products,setProducts]=useState(()=>load("products",seedProducts).map(normalizeProductStockControl));
  const[stockHistory,setStockHistory]=useState(()=>load("stockHistory",[]));
  const[categories,setCategories]=useState(()=>load("categories",["Tinted Film","Windscreen","Glass","Security","Protection"]));
@@ -271,7 +272,7 @@ function App(){
    </div>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="Management"&&hasManagementAccess(activeUser)&&<Management activeUser={activeUser} setPage={setPage}/>}
-   {page==="POS / Sales"&&<POS activeUser={activeUser} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt}/>}
+   {page==="POS / Sales"&&<POS activeUser={activeUser} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt} openCashInOut={()=>{setPosMenu(false);setCashInOutOpen(true)}} onCashDrawer={cashDrawer}/>}
    {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} suppliers={suppliers} setNotice={setNotice} settings={settings}/>}
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} sales={sales}/>}
@@ -292,6 +293,7 @@ function App(){
    {page==="Settings"&&isPermissionAllowed(activeUser,"manageSettings")&&<Settings settings={settings} setSettings={updateSettings} businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}} company={company} onCancel={()=>setPage("POS / Sales")}/>}
    {!nav.includes(page)&&page!=="Management"&&!['Cash In / Out','Credit payments'].includes(page)&&<div className="panel"><div className="eyebrow">SP-MANAGER</div><h2>Page not available</h2><p>The selected module could not be loaded.</p><button className="primary" onClick={()=>setPage("POS / Sales")}>Back to POS / Sales</button></div>}
    {lowStockAlert&&page==="POS / Sales"&&<div className="ar-low-stock-backdrop" role="dialog" aria-modal="true" aria-labelledby="ar-low-stock-title"><div className="ar-low-stock-dialog"><div className="ar-low-stock-icon" aria-hidden="true">!</div><div className="ar-low-stock-content"><h2 id="ar-low-stock-title">Products are reaching low stock quantity</h2><p>Some products have reached their reorder point.</p><p>Consider purchasing the following items: <b>{lowStockAlert.map(p=>p.name).join(", ")}</b>.</p></div><button className="ar-low-stock-ok" onClick={()=>setLowStockAlert(null)}>OK</button></div></div>}
+   {cashInOutOpen&&<CashInOutModal movements={cashMovements} setMovements={v=>{persist("cashMovements",v,setCashMovements)}} activeUser={activeUser} onClose={()=>setCashInOutOpen(false)} onCashDrawer={cashDrawer} setNotice={setNotice}/>} 
   </main>
  </div>
 }
@@ -341,6 +343,58 @@ function CashInOut({movements,setMovements,setNotice}){
   <label className="settings-field"><span>Amount</span><input type="number" min="0" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0.00"/></label>
   <label className="settings-field wide"><span>Reason</span><input value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. Petty cash, cash deposit, expense"/></label>
  </div><button className="primary" onClick={saveMovement}>＋ Record Cash {type}</button><div className="table-wrap" style={{marginTop:16}}><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reason</th></tr></thead><tbody>{movements.map(x=><tr key={x.id}><td>{new Date(x.date).toLocaleString("en-MY")}</td><td>{x.type}</td><td>{money(x.amount)}</td><td>{x.reason}</td></tr>)}</tbody></table>{!movements.length&&<Empty text="No cash movements recorded."/>}</div></div></section>
+}
+function CashInOutModal({movements,setMovements,activeUser,onClose,onCashDrawer,setNotice}){
+ const[type,setType]=useState("In");
+ const[amount,setAmount]=useState("");
+ const[reason,setReason]=useState("");
+ const amountValue=Number(amount);
+ const canSave=Number.isFinite(amountValue)&&amountValue>0;
+ const saveMovement=()=>{
+  if(!canSave){setNotice("Enter a valid amount for Cash In / Out.");return}
+  const row={
+   id:uid(),
+   date:new Date().toISOString(),
+   type,
+   amount:Number(amountValue.toFixed(2)),
+   reason:reason.trim(),
+   userName:activeUser?.name||activeUser?.username||"User"
+  };
+  const next=[row,...movements];
+  persist("cashMovements",next,setMovements);
+  setAmount("");
+  setReason("");
+  setNotice(`Cash ${type==="In"?"In":"Out"} recorded successfully.`);
+  onClose();
+ };
+ const closeOnBackdrop=e=>{if(e.target===e.currentTarget)onClose()};
+ return <div className="sp-cash-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sp-cash-modal-title" onMouseDown={closeOnBackdrop}>
+  <div className="sp-cash-modal">
+   <div className="sp-cash-modal-head">
+    <div><small>MANAGEMENT</small><h2 id="sp-cash-modal-title">Cash In / Out</h2><span>Record a non-sales cash movement.</span></div>
+    <button type="button" className="sp-cash-close" aria-label="Close" onClick={onClose}>×</button>
+   </div>
+   <div className="sp-cash-modal-body">
+    <div className="sp-cash-action-row">
+     <button type="button" className={"sp-cash-type "+(type==="In"?"active":"")} onClick={()=>setType("In")}><span>↓</span><b>Add cash</b><small>Cash received into drawer</small></button>
+     <button type="button" className={"sp-cash-type out "+(type==="Out"?"active":"")} onClick={()=>setType("Out")}><span>↑</span><b>Remove cash</b><small>Cash taken from drawer</small></button>
+     <button type="button" className="sp-cash-drawer" onClick={onCashDrawer}><span>▤</span><b>Cash drawer</b><small>Open drawer</small></button>
+    </div>
+    <div className="sp-cash-form-grid">
+     <label><span>Amount</span><div className="sp-cash-amount"><b>RM</b><input autoFocus inputMode="decimal" type="number" min="0" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0.00" onKeyDown={e=>{if(e.key==="Enter"&&canSave)saveMovement()}}/></div></label>
+     <label className="wide"><span>Description</span><textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="Enter the reason for adding or removing cash..."/></label>
+    </div>
+    <div className="sp-cash-entries-head"><div><b>Cash entries</b><span>{movements.length} {movements.length===1?"entry":"entries"}</span></div><small>Latest entries appear first</small></div>
+    <div className="sp-cash-entries">
+     {movements.length?movements.map(x=><div className="sp-cash-entry" key={x.id}>
+       <span className={"sp-cash-entry-icon "+(x.type==="In"?"in":"out")}>{x.type==="In"?"↓":"↑"}</span>
+       <div className="sp-cash-entry-main"><b>{money(x.amount)}</b><span>{x.reason||"<No description>"}</span><small>{x.userName||activeUser?.name||activeUser?.username||"User"} · {new Date(x.date).toLocaleString("en-MY")}</small></div>
+      </div>):<div className="sp-cash-empty"><span>▤</span><b>No records</b><small>No cash entries have been recorded yet.</small></div>}
+    </div>
+   </div>
+   <div className="sp-cash-modal-foot"><span>{activeUser?.name||activeUser?.username||"User"} · Cash In / Out</span><div><button type="button" className="sp-cash-cancel" onClick={onClose}>Cancel</button><button type="button" className="sp-cash-save" disabled={!canSave} onClick={saveMovement}>✓ Save</button></div></div>
+  </div>
+ </div>
 }
 function CreditPayments({sales,setSales,paymentTypes,setNotice}){
  const[amounts,setAmounts]=useState({});
@@ -523,7 +577,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  </section>
 }
 function Card({t,v}){return <div className="card"><small>{t}</small><strong>{v}</strong></div>}
-function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,discountFixed,setDiscountFixed,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt,settings,activeUser,signOut}){
+function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,discountFixed,setDiscountFixed,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt,settings,activeUser,signOut},openCashInOut,onCashDrawer}){
  const[catLevel,setCatLevel]=useState("root");
  const[group,setGroup]=useState("");
  const[showCustomer,setShowCustomer]=useState(false);
@@ -697,7 +751,7 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
     </div>
    </div>
   </div>
-  {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - {activeUser?.name||activeUser?.username||"User"} <b onClick={()=>setMenuOpen(false)}>→</b></div><div className="ar-user-identity" aria-label="Current user"><div><b>{activeUser?.username||activeUser?.name||"User"}</b></div></div>{[["⚒","Management","Management","__management"],["↕","Cash In / Out","Cash In / Out","cashInOut"],["⚑","End of day","X / Z Report","endOfDay"],["⇥","Sign out",null,"__signout"]].map(([ic,label,target,perm])=>{const allowed=perm==="__management"?hasManagementAccess(activeUser):perm==="__signout"||isPermissionAllowed(activeUser,perm);return <button key={label} disabled={!allowed} className={!allowed?"permission-disabled":""} onClick={()=>{if(!allowed)return;setMenuOpen(false);if(perm==="__signout")signOut();else if(target)setPage(target)}}><span>{ic}</span>{label}</button>})}<div className="ar-menu-date">{new Date().toLocaleDateString('en-GB')}</div><div className="ar-menu-footer spmanager-footer-controls" aria-label="POS controls">
+  {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - {activeUser?.name||activeUser?.username||"User"} <b onClick={()=>setMenuOpen(false)}>→</b></div><div className="ar-user-identity" aria-label="Current user"><div><b>{activeUser?.username||activeUser?.name||"User"}</b></div></div>{[["⚒","Management","Management","__management"],["↕","Cash In / Out","Cash In / Out","cashInOut"],["⚑","End of day","X / Z Report","endOfDay"],["⇥","Sign out",null,"__signout"]].map(([ic,label,target,perm])=>{const allowed=perm==="__management"?hasManagementAccess(activeUser):perm==="__signout"||isPermissionAllowed(activeUser,perm);return <button key={label} disabled={!allowed} className={!allowed?"permission-disabled":""} onClick={()=>{if(!allowed)return;setMenuOpen(false);if(perm==="__signout")signOut();else if(perm==="cashInOut"&&openCashInOut)openCashInOut();else if(target)setPage(target)}}><span>{ic}</span>{label}</button>})}<div className="ar-menu-date">{new Date().toLocaleDateString('en-GB')}</div><div className="ar-menu-footer spmanager-footer-controls" aria-label="POS controls">
  <button type="button" title="Settings" aria-label="Settings" onClick={openPosSettings}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 4v4M15 10v4M8 16v4"/></svg></button>
  <button type="button" title="Toggle full screen" aria-label="Toggle full screen" onClick={togglePosFullscreen}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg></button>
  <button type="button" title="Exit application" aria-label="Exit application" onClick={exitPosApplication}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.2 5.8a8 8 0 1 0 11.6 0"/></svg></button>
