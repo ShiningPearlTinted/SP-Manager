@@ -1,1 +1,1 @@
-SP-Manager V54 - Price Tags pages TDZ fix
+SP-Manager 1.0.14 - Report Engine Removed + Loyalty + Permissions Fix
