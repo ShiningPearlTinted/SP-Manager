@@ -343,7 +343,7 @@ function CashInOutModal({movements,setMovements,activeUser,onClose,onCashDrawer,
  };
  const entries=Array.isArray(movements)?movements:[];
  const balance=entries.reduce((a,x)=>a+(x.type==="In"?Number(x.amount||0):-Number(x.amount||0)),0);
- return <div className="cashio-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="cashio-modal-title" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
+ return <div className="cashio-modal-backdrop sp-pos-cashio-overlay" role="dialog" aria-modal="true" aria-labelledby="cashio-modal-title" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
   <div className="cashio-modal">
    <div className="cashio-modal-head">
     <div><div className="eyebrow">POS • CASH DRAWER</div><h2 id="cashio-modal-title">Cash In / Out</h2><p>Add or remove cash without leaving the POS screen.</p></div>
