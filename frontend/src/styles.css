@@ -4244,3 +4244,26 @@
 .sp-cash-entry-head{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 0 9px;border-top:1px solid #dce6ee}.sp-cash-entry-head>div{display:flex;align-items:baseline;gap:10px}.sp-cash-entry-head b{font-size:12px}.sp-cash-entry-head small{color:#718397;font-size:11px}.sp-cash-entry-head>span{color:#718397;font-size:10px}.sp-cash-entry-list{max-height:260px;overflow:auto;border:1px solid #dce6ee;border-radius:9px;background:#fff}.sp-cash-entry{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #edf1f4}.sp-cash-entry:last-child{border-bottom:0}.sp-cash-entry>span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:900}.sp-cash-entry>span.in{background:#e9f8f0;color:#16804a}.sp-cash-entry>span.out{background:#fceceb;color:#b42318}.sp-cash-entry b,.sp-cash-entry small{display:block}.sp-cash-entry b{font-size:11px;color:#2e4c63}.sp-cash-entry small{margin-top:2px;color:#8394a3;font-size:10px}.sp-cash-empty{padding:24px;text-align:center;color:#8294a5;font-size:11px}
 .sp-cash-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 22px;border-top:1px solid #dce6ee;background:#fff}.sp-cash-modal-foot>span{color:#718397;font-size:11px}.sp-cash-modal-foot>span b{margin-left:5px;color:#173b5b;font-size:14px}.sp-cash-modal-foot>div{display:flex;gap:8px}.sp-cash-modal-foot button{height:38px;padding:0 16px;border-radius:8px;font-weight:800;cursor:pointer}.sp-cash-modal-foot button.secondary{border:1px solid #cfd8e3;background:#fff;color:#344054}.sp-cash-modal-foot button.primary{border:1px solid #159bd4;background:#159bd4;color:#fff}.sp-cash-modal-foot button.primary:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:720px){.sp-cash-modal-backdrop{padding:10px}.sp-cash-modal{width:100%;max-height:calc(100vh - 20px);border-radius:12px}.sp-cash-actions{grid-template-columns:1fr 1fr}.sp-cash-actions .sp-cash-drawer{grid-column:1/-1;width:100%;justify-self:stretch;min-height:58px}.sp-cash-form-grid{grid-template-columns:1fr}.sp-cash-modal-head,.sp-cash-modal-body,.sp-cash-modal-foot{padding-left:14px;padding-right:14px}.sp-cash-entry-head{align-items:flex-start;flex-direction:column}.sp-cash-modal-foot{flex-direction:column;align-items:stretch}.sp-cash-modal-foot>div{justify-content:flex-end}}
+
+/* ============================================================
+   CASH IN / OUT NOTICE — LOCKED FIX
+   Ensure save/error/success message stays above the POS modal.
+   Modal backdrop is z-index 5000; notice must always be above it.
+   ============================================================ */
+.notice{
+  position:fixed!important;
+  z-index:100000!important;
+  top:16px!important;
+  left:16px!important;
+  right:16px!important;
+  width:auto!important;
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+.notice.notice-top{top:16px!important;bottom:auto!important}
+.notice.notice-bottom{top:auto!important;bottom:16px!important;left:16px!important;right:16px!important}
+.notice span{position:relative;z-index:100001!important}
+.notice button{position:relative;z-index:100001!important}
+.sp-cash-modal-backdrop{z-index:5000!important}
