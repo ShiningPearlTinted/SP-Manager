@@ -1,1 +1,1 @@
-SP-Manager 1.0.14 - Report Engine Removed + Loyalty + Permissions Fix
+SP-Manager 1.0.17 - Cash In Out Field Fix + Logged-in User Role
