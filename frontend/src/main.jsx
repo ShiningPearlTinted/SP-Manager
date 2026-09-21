@@ -297,11 +297,12 @@ function App(){
    {page==="Cash In / Out"&&isPermissionAllowed(activeUser,"cashInOut")&&<CashInOut movements={cashMovements} setMovements={v=>{persist("cashMovements",v,setCashMovements)}} setNotice={setNotice}/>}
    {page==="Credit payments"&&isPermissionAllowed(activeUser,"creditPayments")&&<CreditPayments sales={sales} setSales={v=>{persist("sales",v,setSales)}} paymentTypes={paymentTypes} setNotice={setNotice}/>}
    {page==="Reports"&&<Reports sales={sales} products={products} customers={customers} purchases={purchases} businessDay={businessDay} users={users} suppliers={suppliers} paymentTypes={paymentTypes}/>}
+   {page==="End of day"&&isPermissionAllowed(activeUser,"endOfDay")&&<EndOfDay sales={sales} businessDay={businessDay} paymentTypes={paymentTypes} activeUser={activeUser} orders={orders} cashMovements={cashMovements} setCashMovements={setCashMovements} setSales={setSales} setBusinessDay={setBusinessDay} setNotice={setNotice} onClose={()=>setPage("POS / Sales")}/> }
    {page==="X / Z Report"&&<XZ sales={sales} businessDay={businessDay} paymentTypes={paymentTypes}/> }
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={o=>{persist("orders",o,setOrders);setNotice("Order saved successfully.")}} customers={customers}/>}
    {page==="My company"&&<MyCompany company={company} setCompany={v=>{persist("company",v,setCompany);setNotice("Company data saved successfully.")}}/>}
    {page==="Settings"&&isPermissionAllowed(activeUser,"manageSettings")&&<Settings settings={settings} setSettings={updateSettings} businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={r=>{setTaxRate(r);save("taxRate",r)}} company={company} onCancel={()=>setPage("POS / Sales")}/>}
-   {!nav.includes(page)&&page!=="Management"&&!['Cash In / Out','Credit payments'].includes(page)&&<div className="panel"><div className="eyebrow">SP-MANAGER</div><h2>Page not available</h2><p>The selected module could not be loaded.</p><button className="primary" onClick={()=>setPage("POS / Sales")}>Back to POS / Sales</button></div>}
+   {!nav.includes(page)&&page!=="Management"&&!['Cash In / Out','Credit payments','End of day'].includes(page)&&<div className="panel"><div className="eyebrow">SP-MANAGER</div><h2>Page not available</h2><p>The selected module could not be loaded.</p><button className="primary" onClick={()=>setPage("POS / Sales")}>Back to POS / Sales</button></div>}
    {showCashInOutModal&&page==="POS / Sales"&&<CashInOutModal movements={cashMovements} activeUser={activeUser} onClose={()=>setShowCashInOutModal(false)} onSave={recordCashMovement} onCashDrawer={cashDrawer}/>}
    {lowStockAlert&&page==="POS / Sales"&&<div className="ar-low-stock-backdrop" role="dialog" aria-modal="true" aria-labelledby="ar-low-stock-title"><div className="ar-low-stock-dialog"><div className="ar-low-stock-icon" aria-hidden="true">!</div><div className="ar-low-stock-content"><h2 id="ar-low-stock-title">Products are reaching low stock quantity</h2><p>Some products have reached their reorder point.</p><p>Consider purchasing the following items: <b>{lowStockAlert.map(p=>p.name).join(", ")}</b>.</p></div><button className="ar-low-stock-ok" onClick={()=>setLowStockAlert(null)}>OK</button></div></div>}
   </main>
@@ -395,6 +396,83 @@ function Reports({sales,products,customers,purchases,businessDay,users,suppliers
  const total=sales.filter(s=>!s.voided&&!s.refunded).reduce((a,s)=>a+Number(s.total||0),0);const tx=sales.filter(s=>!s.voided&&!s.refunded).length;const unpaid=sales.filter(s=>s.payment==="Unpaid").reduce((a,s)=>a+Number(s.total||0),0);const profit=sales.filter(s=>!s.voided&&!s.refunded).reduce((a,s)=>a+s.items.reduce((q,i)=>{const p=products.find(x=>x.id===i.id);return q+(Number(i.price||0)-Number(p?.cost||0))*Number(i.qty||0)},0),0);
  return <section className="content"><div className="panel"><div className="eyebrow">REPORTING</div><h2>Reports</h2><p>Sales and business summaries from the current local database.</p><div className="cards"><Card t="Sales" v={money(total)}/><Card t="Transactions" v={tx}/><Card t="Gross margin" v={money(profit)}/><Card t="Unpaid" v={money(unpaid)}/></div><Table cols={["Report","Value"]} rows={[["Products",products.length],["Customers",customers.length],["Purchases",purchases.length],["Users",users.length],["Suppliers",suppliers.length],["Payment types",paymentTypes.length],["Business day",businessDay.open?"Open":"Closed"]]}/></div></section>
 }
+function EndOfDay({sales,businessDay,paymentTypes,activeUser,orders,cashMovements,setCashMovements,setSales,setBusinessDay,setNotice,onClose}){
+ const [tab,setTab]=useState("End of day");
+ const [option,setOption]=useState("");
+ const [busy,setBusy]=useState(false);
+ const [reports,setReports]=useState(()=>load("zReports",[]));
+ const active=sales.filter(s=>!s.voided&&!s.refunded);
+ const openOrders=orders.filter(o=>String(o.status||"Open").toLowerCase()==="open");
+ const userName=activeUser?.name||activeUser?.username||"User";
+ const currentUserSales=active.filter(s=>{
+  const owner=s.userName||s.cashier||s.user||"";
+  return !owner||owner===userName;
+ });
+ const baseSales=currentUserSales.length?currentUserSales:active;
+ const cashSales=baseSales.filter(s=>s.payment==="Cash"||Array.isArray(s.payments)&&s.payments.some(p=>p.payment==="Cash"));
+ const tenderRows=paymentTypes.filter(p=>p.enabled!==false).map(p=>{
+  const rows=baseSales.filter(s=>s.payment===p.name||(Array.isArray(s.payments)&&s.payments.some(x=>x.payment===p.name)));
+  const amount=rows.reduce((sum,s)=>sum+(Array.isArray(s.payments)&&s.payments.length?s.payments.filter(x=>x.payment===p.name).reduce((a,x)=>a+Number(x.amount||0),0):Number(s.total||0)),0);
+  return {name:p.name,count:rows.length,amount};
+ });
+ const total=baseSales.reduce((a,s)=>a+Number(s.total||0),0);
+ const cashTotal=cashSales.reduce((a,s)=>a+(Array.isArray(s.payments)&&s.payments.length?s.payments.filter(x=>x.payment==="Cash").reduce((q,x)=>q+Number(x.amount||0),0):Number(s.total||0)),0);
+ const formatDate=d=>new Date(d).toLocaleDateString("en-GB");
+ const createReport=()=>({id:uid(),number:reports.length+1,date:new Date().toISOString(),user:userName,total, cashTotal, transactions:baseSales.length,tenders:tenderRows});
+ const persistReports=next=>{save("zReports",next);setReports(next)};
+ const cashOutUser=()=>{
+  if(!baseSales.length){setNotice("No completed transactions to cash out.");return}
+  const row={id:uid(),date:new Date().toISOString(),type:"Out",amount:cashTotal,reason:`End of day cash out - ${userName}`,user:userName};
+  const next=[row,...cashMovements];save("cashMovements",next);setCashMovements(next);
+  setNotice(`${userName} cashed out successfully.`);
+  setOption("");
+ };
+ const cashOutAll=()=>{
+  if(!active.length){setNotice("No completed transactions to cash out.");return}
+  const allCash=active.reduce((sum,s)=>sum+(Array.isArray(s.payments)&&s.payments.length?s.payments.filter(x=>x.payment==="Cash").reduce((a,x)=>a+Number(x.amount||0),0):(s.payment==="Cash"?Number(s.total||0):0)),0);
+  const row={id:uid(),date:new Date().toISOString(),type:"Out",amount:allCash,reason:"End of day cash out - all users",user:userName};
+  const next=[row,...cashMovements];save("cashMovements",next);setCashMovements(next);
+  setNotice("All users successfully cashed out.");setOption("");
+ };
+ const closeRegister=()=>{
+  if(openOrders.length){setNotice("There are users with open orders! All orders must be closed before closing the day.");return}
+  setBusy(true);
+  const report=createReport();
+  const nextReports=[report,...reports];
+  persistReports(nextReports);
+  const closed={...businessDay,open:false,closedAt:new Date().toISOString(),lastZReport:report.number};
+  save("businessDay",closed);setBusinessDay(closed);
+  setNotice("Register successfully closed");setBusy(false);setOption("");
+ };
+ const continueAction=()=>{if(option==="user")cashOutUser();else if(option==="all")cashOutAll();else if(option==="close")closeRegister();};
+ const printReport=report=>{if(!report)return;window.print();};
+ return <section className="eod-page">
+  <div className="eod-shell">
+   <div className="eod-head"><div><div className="eyebrow">MANAGEMENT / POS CLOSING</div><h2>End of day</h2><p>{userName} · {formatDate(new Date())} · {businessDay.open?"Business day open":"Business day closed"}</p></div><button className="eod-close" onClick={onClose||(()=>{})} aria-label="Close">×</button></div>
+   <div className="eod-alert"><span>!</span><div><b>Printer status</b><small>Printer is disabled or not selected. Reports may not be printed.</small></div></div>
+   <div className="eod-tabs"><button className={tab==="End of day"?"active":""} onClick={()=>setTab("End of day")}>End of day</button><button className={tab==="History"?"active":""} onClick={()=>setTab("History")}>History</button></div>
+   {tab==="End of day"&&<div className="eod-body">
+    <div className="eod-section-title">Select cash out option</div>
+    <div className="eod-options">
+      <button className={option==="user"?"selected":""} onClick={()=>setOption("user")}><span>♟</span><b>Cash out</b><small>{userName}</small></button>
+      <button className={option==="all"?"selected":""} onClick={()=>setOption("all")}><span>♟♟</span><b>Cash out all users</b><small>All active users</small></button>
+      <button className={option==="close"?"selected":""} onClick={()=>setOption("close")}><span>⇥</span><b>Close register</b><small>Create Z report & close business day</small></button>
+      <button className="eod-report" onClick={()=>{const r=reports[0]||createReport();printReport(r)}}><span>×</span><b>REPORT</b><small>Print latest Z report</small></button>
+    </div>
+    <div className="eod-summary-grid">
+      <div className="eod-summary-card"><small>Open transactions</small><strong>{openOrders.length}</strong><span>{openOrders.length?"Must be closed before register close":"Ready to close"}</span></div>
+      <div className="eod-summary-card"><small>Transactions</small><strong>{baseSales.length}</strong><span>Current user / shift</span></div>
+      <div className="eod-summary-card"><small>Day total</small><strong>{money(total)}</strong><span>Sales for this closing</span></div>
+      <div className="eod-summary-card"><small>Cash</small><strong>{money(cashTotal)}</strong><span>Cash tender total</span></div>
+    </div>
+    <div className="eod-tender-panel"><div className="eod-panel-head"><b>Tender types</b><span>{baseSales.length} transactions</span></div>{tenderRows.map(x=><div className="eod-tender-row" key={x.name}><span>{x.name}</span><small>{x.count} transaction{x.count===1?"":"s"}</small><b>{money(x.amount)}</b></div>)}</div>
+    {option==="close"&&openOrders.length>0&&<div className="eod-warning"><b>Open orders</b><span>There are users with open orders. All orders must be closed before closing the day.</span></div>}
+   </div>}
+   {tab==="History"&&<div className="eod-history"><div className="eod-info">ⓘ <span>Use the list below to select and print a copy of any previously generated Z report.</span></div><div className="eod-history-toolbar"><b>{reports.length?`${formatDate(reports[reports.length-1].date)} - ${formatDate(reports[0].date)}`:"No reports yet"}</b><div><button disabled={!reports.length} onClick={()=>printReport(reports[0])}>▣ Print</button><button disabled={!reports.length} onClick={()=>{if(!reports.length)return;const r=reports[0];const csv=[["Z Report",r.number],["Date",new Date(r.date).toLocaleString("en-GB")],["User",r.user||"User"],["Total",Number(r.total||0).toFixed(2)],[],["Tender type","Transactions","Amount"],...(r.tenders||[]).map(x=>[x.name,x.count,Number(x.amount||0).toFixed(2)])].map(row=>row.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`Z-Report-${String(r.number).padStart(4,"0")}.csv`;a.click();URL.revokeObjectURL(a.href)}}>⌁ Save</button></div></div><div className="eod-history-table"><div className="eod-history-head"><span>Number</span><span>Date</span><span>User</span><span>Total</span><span>Action</span></div>{reports.length?reports.map(r=><div className="eod-history-row" key={r.id}><span>{String(r.number).padStart(4,"0")}</span><span>{new Date(r.date).toLocaleString("en-GB")}</span><span>{r.user||"User"}</span><span>{money(r.total)}</span><button onClick={()=>printReport(r)}>Print</button></div>):<div className="eod-empty">No Z reports generated yet.</div>}</div></div>}
+   <div className="eod-foot"><span>{option?`Selected: ${option==="user"?"Cash out":option==="all"?"Cash out all users":"Close register"}`:"Choose one of the options above to continue"}</span><div><button className="eod-cancel" onClick={onClose||(()=>{})}>Cancel</button><button className="eod-continue" disabled={!option||busy} onClick={continueAction}>✓ Continue</button></div></div>
+  </div>
+ </section>
+}
 function XZ({sales,businessDay,paymentTypes}){
  const active=sales.filter(s=>!s.voided&&!s.refunded);const total=active.reduce((a,s)=>a+Number(s.total||0),0);const cash=active.filter(s=>s.payment==="Cash").reduce((a,s)=>a+Number(s.total||0),0);
  return <section className="content"><div className="panel"><div className="eyebrow">END OF DAY</div><h2>X / Z Report</h2><p>Current business-day totals.</p><div className="cards"><Card t="Transactions" v={active.length}/><Card t="Total sales" v={money(total)}/><Card t="Cash sales" v={money(cash)}/><Card t="Business day" v={businessDay.open?"OPEN":"CLOSED"}/></div><Table cols={["Payment type","Transactions","Amount"]} rows={paymentTypes.map(p=>{const a=active.filter(s=>s.payment===p.name);return [p.name,a.length,money(a.reduce((x,s)=>x+Number(s.total||0),0))]})}/></div></section>
@@ -467,7 +545,7 @@ function Management({activeUser,setPage}){
   ["▱","View open sales","Named Order / Takeaway","viewOpenSales"],
   ["↕","Cash In / Out","Cash In / Out","cashInOut"],
   ["▤","Credit payments","Credit payments","creditPayments"],
-  ["⚑","End of day","X / Z Report","endOfDay"],
+  ["⚑","End of day","End of day","endOfDay"],
   ["♙","User info","Users & Permissions","userInfo"],
   ["⚙","Users & Permissions","Users & Permissions","manageUsers"],
   ["◈","Products","Products","manageProducts"],
@@ -730,7 +808,7 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
     </div>
    </div>
   </div>
-  {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - {activeUser?.name||activeUser?.username||"User"} <b onClick={()=>setMenuOpen(false)}>→</b></div><div className="ar-user-identity" aria-label="Current user"><div><b>{activeUser?.username||activeUser?.name||"User"}</b></div></div>{[["⚒","Management","Management","__management"],["↕","Cash In / Out","Cash In / Out","cashInOut"],["⚑","End of day","X / Z Report","endOfDay"],["⇥","Sign out",null,"__signout"]].map(([ic,label,target,perm])=>{const allowed=perm==="__management"?hasManagementAccess(activeUser):perm==="__signout"||isPermissionAllowed(activeUser,perm);return <button key={label} disabled={!allowed} className={!allowed?"permission-disabled":""} onClick={()=>{if(!allowed)return;setMenuOpen(false);if(perm==="__signout")signOut();else if(perm==="cashInOut")openCashInOut?.();else if(target)setPage(target)}}><span>{ic}</span>{label}</button>})}<div className="ar-menu-date">{new Date().toLocaleDateString('en-GB')}</div><div className="ar-menu-footer spmanager-footer-controls" aria-label="POS controls">
+  {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - {activeUser?.name||activeUser?.username||"User"} <b onClick={()=>setMenuOpen(false)}>→</b></div><div className="ar-user-identity" aria-label="Current user"><div><b>{activeUser?.username||activeUser?.name||"User"}</b></div></div>{[["⚒","Management","Management","__management"],["↕","Cash In / Out","Cash In / Out","cashInOut"],["⚑","End of day","End of day","endOfDay"],["⇥","Sign out",null,"__signout"]].map(([ic,label,target,perm])=>{const allowed=perm==="__management"?hasManagementAccess(activeUser):perm==="__signout"||isPermissionAllowed(activeUser,perm);return <button key={label} disabled={!allowed} className={!allowed?"permission-disabled":""} onClick={()=>{if(!allowed)return;setMenuOpen(false);if(perm==="__signout")signOut();else if(perm==="cashInOut")openCashInOut?.();else if(target)setPage(target)}}><span>{ic}</span>{label}</button>})}<div className="ar-menu-date">{new Date().toLocaleDateString('en-GB')}</div><div className="ar-menu-footer spmanager-footer-controls" aria-label="POS controls">
  <button type="button" title="Settings" aria-label="Settings" onClick={openPosSettings}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 4v4M15 10v4M8 16v4"/></svg></button>
  <button type="button" title="Toggle full screen" aria-label="Toggle full screen" onClick={togglePosFullscreen}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg></button>
  <button type="button" title="Exit application" aria-label="Exit application" onClick={exitPosApplication}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.2 5.8a8 8 0 1 0 11.6 0"/></svg></button>
