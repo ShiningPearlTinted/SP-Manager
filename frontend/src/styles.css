@@ -4231,3 +4231,109 @@
 .price-tags-overlay .pt-barcode{display:flex!important;justify-content:center!important;align-items:flex-start!important;width:100%!important;margin:1.5mm auto 0!important;padding:0!important;gap:0!important;overflow:visible!important;}
 
 .ar-user-identity{display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 12px;border-bottom:1px solid #4b5054;background:#303030;color:#eee;min-height:66px}.ar-user-identity div{min-width:0;text-align:left}.ar-user-identity b{display:block;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ar-user-identity small{display:block;margin-top:4px;color:#aeb8bf;font-size:10px}.ar-user-identity:hover{background:#363a3e}
+
+/* ============================================================
+   SP-MANAGER — POS CASH IN / OUT MODAL
+   UI / interaction only. Standalone Management Cash In / Out page
+   remains unchanged. POS stays visible behind this modal.
+   ============================================================ */
+.cashio-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:5000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(4,9,16,.72);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+.cashio-modal{
+  width:min(940px,calc(100vw - 28px));
+  max-height:min(760px,calc(100vh - 28px));
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:#18202a;
+  color:#eef3f7;
+  border:1px solid #3a4653;
+  border-radius:14px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55);
+}
+.cashio-modal-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  padding:20px 22px 17px;
+  border-bottom:1px solid #303b47;
+  background:linear-gradient(180deg,#1c2631,#18202a);
+}
+.cashio-modal-head .eyebrow{color:#73c7eb;font-size:10px;letter-spacing:1.2px;font-weight:800}
+.cashio-modal-head h2{margin:4px 0 4px;color:#fff;font-size:20px;line-height:1.2}
+.cashio-modal-head p{margin:0;color:#9ba9b6;font-size:12px}
+.cashio-close{
+  width:36px!important;height:36px!important;min-width:36px!important;padding:0!important;
+  border:1px solid #46515d!important;border-radius:9px!important;
+  background:#242d36!important;color:#dce4ea!important;font-size:22px!important;line-height:1!important;
+}
+.cashio-close:hover{background:#303b46!important}
+.cashio-modal-body{padding:18px;overflow:auto}
+.cashio-layout{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(360px,1.1fr);gap:14px}
+.cashio-form-card,.cashio-history-card{
+  background:#202a34;border:1px solid #35414d;border-radius:12px;overflow:hidden;
+}
+.cashio-form-card{padding:16px}
+.cashio-type-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.cashio-type-tabs button{
+  min-height:44px!important;border-radius:9px!important;border:1px solid #46525e!important;
+  background:#27313b!important;color:#c9d3db!important;font-weight:800!important;font-size:12px!important;
+}
+.cashio-type-tabs button.active.in{background:#123c35!important;border-color:#1c9b7a!important;color:#7de1c2!important}
+.cashio-type-tabs button.active.out{background:#432b2f!important;border-color:#d05b69!important;color:#ff9da7!important}
+.cashio-field{display:block;margin-bottom:14px;color:#aebbc6;font-size:11px;font-weight:800}
+.cashio-field>span{display:block;margin-bottom:7px}
+.cashio-field input{
+  width:100%;height:43px;box-sizing:border-box;padding:0 12px!important;
+  border:1px solid #4b5865!important;border-radius:9px!important;background:#171e25!important;
+  color:#f5f7f9!important;font-size:13px!important;outline:none!important;
+}
+.cashio-field input:focus{border-color:#25a8df!important;box-shadow:0 0 0 3px rgba(37,168,223,.13)!important}
+.cashio-amount{display:flex;align-items:center;height:47px;border:1px solid #4b5865;border-radius:9px;background:#171e25;overflow:hidden}
+.cashio-amount>span{padding-left:13px;color:#7f8d99;font-size:12px;font-weight:800}
+.cashio-amount input{height:45px!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:19px!important;font-weight:800!important;text-align:right;padding-right:13px!important}
+.cashio-meta{display:flex;justify-content:space-between;gap:12px;padding:10px 0 14px;color:#82919d;font-size:10px;border-top:1px solid #303b46}
+.cashio-meta b{color:#d9e2e8}
+.cashio-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:4px}
+.cashio-actions>div{display:flex;gap:8px}
+.cashio-actions button{min-height:40px!important;padding:0 16px!important;border-radius:8px!important;font-size:12px!important;font-weight:800!important}
+.cashio-secondary{background:#29343e!important;border:1px solid #4a5865!important;color:#dce5eb!important}
+.cashio-cancel{background:#252e37!important;border:1px solid #46525e!important;color:#c8d1d8!important}
+.cashio-save{border:1px solid transparent!important;color:#fff!important;min-width:76px!important}
+.cashio-save.in{background:#168f72!important;border-color:#1ba982!important}
+.cashio-save.out{background:#b84c5b!important;border-color:#cf5b69!important}
+.cashio-history-card{display:flex;flex-direction:column;min-height:330px}
+.cashio-history-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #35414d;background:#1b242d}
+.cashio-history-head>b,.cashio-history-head b{color:#f1f5f8;font-size:13px}
+.cashio-history-head small{display:block;color:#8796a3;font-size:10px;margin-top:3px}
+.cashio-balance{text-align:right}.cashio-balance b{font-size:15px!important}
+.cashio-history-list{overflow:auto;max-height:470px}
+.cashio-entry{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid #2f3943}
+.cashio-entry:last-child{border-bottom:0}
+.cashio-entry-icon{width:30px;height:30px;min-width:30px;display:grid;place-items:center;border-radius:8px;font-weight:900}
+.cashio-entry-icon.in{background:#123c35;color:#70dfbd}.cashio-entry-icon.out{background:#432b2f;color:#ff9aa5}
+.cashio-entry-main{min-width:0;flex:1}.cashio-entry-main b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e9eef2;font-size:11px}.cashio-entry-main small{display:block;margin-top:3px;color:#7f8e9a;font-size:9px}
+.cashio-entry>strong{font-size:11px;white-space:nowrap}.cashio-entry>strong.in{color:#63d6b5}.cashio-entry>strong.out{color:#ff8f9a}
+.cashio-empty{display:grid;place-items:center;text-align:center;min-height:250px;padding:20px;color:#81909c}.cashio-empty div{font-size:25px;margin-bottom:8px;color:#596a78}.cashio-empty b{color:#cbd5dc;font-size:12px}.cashio-empty span{font-size:10px;margin-top:4px}
+@media(max-width:760px){
+ .cashio-modal-backdrop{padding:8px}
+ .cashio-modal{width:100%;max-height:calc(100vh - 16px);border-radius:12px}
+ .cashio-layout{grid-template-columns:1fr}
+ .cashio-history-card{min-height:240px}
+ .cashio-history-list{max-height:260px}
+ .cashio-meta{flex-direction:column;gap:4px}
+ .cashio-actions{align-items:stretch;flex-direction:column}
+ .cashio-actions>div{width:100%}
+ .cashio-actions button{flex:1}
+}
