@@ -47,10 +47,10 @@ const seedPaymentTypes=[
 {id:6,name:"Deposit",code:"",position:6,enabled:true,quickPayment:false,customerRequired:true,changeAllowed:false,markPaid:true,printReceipt:true,shortcutKey:"",openCashDrawer:false},
 {id:7,name:"Unpaid",code:"",position:7,enabled:true,quickPayment:true,customerRequired:true,changeAllowed:false,markPaid:false,printReceipt:true,shortcutKey:"",openCashDrawer:false}
 ];
-const PERMISSION_KEYS=["viewSalesHistory","viewOpenSales","cashInOut","creditPayments","endOfDay","userInfo","feedback","manageUsers","manageProducts","manageInventory","manageCustomers","managePurchases","managePayments","manageSettings","manageReports","manageTax","manageDiscount","manageLoyalty"];
-const PERMISSION_LABELS={viewSalesHistory:"View sales history",viewOpenSales:"View open sales",cashInOut:"Cash In / Out",creditPayments:"Credit payments",endOfDay:"End of day",userInfo:"User info",feedback:"Feedback",manageUsers:"Users & Permissions",manageProducts:"Products",manageInventory:"Inventory",manageCustomers:"Customers",managePurchases:"Purchases",managePayments:"Payments",manageSettings:"Settings",manageReports:"Reports",manageTax:"Tax",manageDiscount:"Discount / Promotion",manageLoyalty:"Loyalty"};
+const PERMISSION_KEYS=["viewSalesHistory","viewOpenSales","cashInOut","creditPayments","endOfDay","userInfo","manageUsers","manageProducts","manageInventory","manageCustomers","managePurchases","managePayments","manageManagement","manageSettings","manageReports","manageTax","manageDiscount","manageLoyalty"];
+const PERMISSION_LABELS={viewSalesHistory:"View sales history",viewOpenSales:"View open sales",cashInOut:"Cash In / Out",creditPayments:"Credit payments",endOfDay:"End of day",userInfo:"User info",manageUsers:"Users & Permissions",manageProducts:"Products",manageInventory:"Inventory",manageCustomers:"Customers",managePurchases:"Purchases",managePayments:"Payments",manageSettings:"Settings",manageReports:"Reports",manageTax:"Tax",manageDiscount:"Discount / Promotion",manageLoyalty:"Loyalty",manageManagement:"Management"};
 const ALL_PERMISSIONS=Object.fromEntries(PERMISSION_KEYS.map(k=>[k,true]));
-const CASHIER_PERMISSIONS={viewSalesHistory:false,viewOpenSales:false,cashInOut:true,creditPayments:false,endOfDay:true,userInfo:false,feedback:true,manageUsers:false,manageProducts:false,manageInventory:false,manageCustomers:true,managePurchases:false,managePayments:true,manageSettings:false,manageReports:false,manageTax:false,manageDiscount:true,manageLoyalty:false};
+const CASHIER_PERMISSIONS={viewSalesHistory:false,viewOpenSales:false,cashInOut:true,creditPayments:false,endOfDay:true,userInfo:false,manageUsers:false,manageProducts:false,manageInventory:false,manageCustomers:true,managePurchases:false,managePayments:true,manageSettings:false,manageReports:false,manageTax:false,manageDiscount:true,manageLoyalty:false,manageManagement:false};
 const seedUsers=[
 {id:1,name:"Administrator",username:"admin",role:"Administrator",enabled:true,password:"admin123",permissions:ALL_PERMISSIONS},
 {id:2,name:"Cashier",username:"cashier",role:"Cashier",enabled:true,password:"cashier123",permissions:CASHIER_PERMISSIONS}
@@ -76,8 +76,7 @@ const load=(k,d)=>{try{return JSON.parse(localStorage.getItem("sp_"+k))??d}catch
 const save=(k,v)=>localStorage.setItem("sp_"+k,JSON.stringify(v));
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
 const isPermissionAllowed=(user,key)=>Boolean(user&&(user.role==="Administrator"||user.permissions?.[key]===true));
-const MANAGEMENT_PERMISSION_KEYS=["viewSalesHistory","viewOpenSales","cashInOut","creditPayments","endOfDay","userInfo","manageUsers","manageProducts","manageInventory","manageCustomers","managePurchases","managePayments","manageReports","manageTax","manageDiscount","manageLoyalty","manageSettings"];
-const hasManagementAccess=user=>Boolean(user&&(user.role==="Administrator"||MANAGEMENT_PERMISSION_KEYS.some(k=>user.permissions?.[k]===true)));
+const hasManagementAccess=user=>Boolean(user&&(user.role==="Administrator"||user.permissions?.manageManagement===true));
 
 function playPosBeep(kind="ok"){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const ctx=new C();const o=ctx.createOscillator();const g=ctx.createGain();o.type="sine";o.frequency.value=kind==="error"?220:880;g.gain.value=.035;o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.07);setTimeout(()=>ctx.close?.(),120)}catch{}}
 function App(){
