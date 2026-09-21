@@ -693,7 +693,7 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
     </>}
     {catLevel==='items'&&!shown.length&&<Empty text="No products found in this category."/>}
     <div className="ar-page-footer">
-     <button type="button" className="ar-user-footer-btn" onClick={()=>{setShowUserMenu(v=>!v);setMenuOpen(false)}} title="Open user menu"><span className="ar-user-avatar">♙</span><span><b>{activeUser?.name||activeUser?.username||"User"}</b><small>{activeUser?.role||"Staff"}</small></span><i>⌃</i></button>
+     <button type="button" className="ar-user-footer-btn" onClick={()=>{setShowUserMenu(v=>!v);setMenuOpen(false)}} title="Open user menu"><span><b>{activeUser?.name||activeUser?.username||"User"}</b></span><i>⌃</i></button>
      <span className="footer-home">⌂</span><span>Page 1 / 1　│‹　‹　›　›│</span>
     </div>
    </div>
