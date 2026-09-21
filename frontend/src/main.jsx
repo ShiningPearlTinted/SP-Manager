@@ -117,6 +117,7 @@ function App(){
  const[editing,setEditing]=useState(null);
  const[productGroups,setProductGroups]=useState(()=>load("productGroups",[...new Set(seedProducts.map(p=>p.group||p.category).filter(Boolean))]));
  const[lastSale,setLastSale]=useState(null);
+ const[showCashInOutModal,setShowCashInOutModal]=useState(false);
 
  useEffect(()=>{if(!notice)return;const ms=Math.max(1,Number(settings.general.messageDuration||5))*1000;const t=setTimeout(()=>setNotice(""),ms);return()=>clearTimeout(t)},[notice,settings.general.messageDuration]);
  useEffect(()=>{const key="sp_startup_settings_checked";if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,"1");let next={...businessDay};let changed=false;if(settings.general.selectBusinessDay){const answer=window.prompt("Select business day (YYYY-MM-DD)",businessDay.date||new Date().toISOString().slice(0,10));if(answer&&/^\d{4}-\d{2}-\d{2}$/.test(answer)){next.date=answer;changed=true}}if(settings.general.showCashIn){const answer=window.prompt("Starting cash",String(businessDay.openingCash||0));if(answer!==null&&!Number.isNaN(Number(answer))){next.openingCash=Math.max(0,Number(answer));changed=true}}if(changed){persist("businessDay",next,setBusinessDay)}},[]);
@@ -603,7 +604,6 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
  const[posFullscreen,setPosFullscreen]=useState(false);
  const[showUserMenu,setShowUserMenu]=useState(false);
  const[permissionError,setPermissionError]=useState(null);
- const[showCashInOutModal,setShowCashInOutModal]=useState(false);
  useEffect(()=>setVirtualKeyboard(!!settings.general.virtualKeyboard),[settings.general.virtualKeyboard]);
  const[roundNotice,setRoundNotice]=useState(false);
  useEffect(()=>{if(!noticeLocal)return;const t=setTimeout(()=>setNoticeLocal(""),2500);return()=>clearTimeout(t)},[noticeLocal]);
