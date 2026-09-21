@@ -9,4 +9,3 @@ Price Tags only update based on the existing Aronium-style layout.
 - Group filter, Select all and Clear operate on current filtered candidates.
 - Existing ZPL/TSPL printer output retained.
 - Other POS functions are unchanged.
-- FastReport is not reintroduced.
