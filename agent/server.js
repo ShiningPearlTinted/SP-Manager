@@ -23,6 +23,27 @@ public static void Send(string p, byte[] b){IntPtr h; if(!OpenPrinter(p,out h,In
 '@
 if($Bytes){$data=($Bytes -split ',')|ForEach-Object{[byte]$_};[RawPrinter]::Send($Printer,$data)}else{$b=[Text.Encoding]::UTF8.GetBytes($Text);$all=New-Object System.Collections.Generic.List[byte];1..([Math]::Max(1,$Copies))|ForEach-Object{$all.AddRange($b);$all.Add(10);$all.AddRange([byte[]](27,100,3))};[RawPrinter]::Send($Printer,$all.ToArray())}
 `;
+
+const emailScript=`
+param([string]$Host,[int]$Port,[bool]$Ssl,[string]$From,[string]$DisplayName,[string]$Username,[string]$Password,[string]$To,[string]$Subject,[string]$Body,[string]$Bcc)
+if([string]::IsNullOrWhiteSpace($Host)){throw 'SMTP host is required'}
+if([string]::IsNullOrWhiteSpace($From)){throw 'Sender email is required'}
+if([string]::IsNullOrWhiteSpace($To)){throw 'Customer email is required'}
+if([string]::IsNullOrWhiteSpace($Password)){throw 'SMTP password is required'}
+$mail=New-Object System.Net.Mail.MailMessage
+try{
+ $mail.From=New-Object System.Net.Mail.MailAddress($From,$(if([string]::IsNullOrWhiteSpace($DisplayName)){$From}else{$DisplayName}))
+ $mail.To.Add($To)
+ if($Bcc){$Bcc.Split(',')|ForEach-Object{if($_.Trim()){$mail.Bcc.Add($_.Trim())}}}
+ $mail.Subject=$Subject
+ $mail.SubjectEncoding=[Text.Encoding]::UTF8
+ $mail.BodyEncoding=[Text.Encoding]::UTF8
+ $mail.IsBodyHtml=$true
+ $mail.Body=$Body
+ $smtp=New-Object System.Net.Mail.SmtpClient($Host,$Port)
+ try{$smtp.EnableSsl=$Ssl;$smtp.Credentials=New-Object System.Net.NetworkCredential($(if([string]::IsNullOrWhiteSpace($Username)){$From}else{$Username}),$Password);$smtp.Send($mail)}finally{$smtp.Dispose()}
+}finally{$mail.Dispose()}
+`;
 async function printers(){const out=await ps('Get-Printer | Select-Object Name,PrinterStatus,WorkOffline | ConvertTo-Json -Compress');if(!out)return[];const x=JSON.parse(out);return Array.isArray(x)?x:[x]}
 async function route(req,res){
  if(req.method==='OPTIONS')return json(res,204,{});
@@ -32,6 +53,7 @@ async function route(req,res){
   if(req.method==='GET'&&req.url==='/printers')return json(res,200,{connected:true,printers:await printers()});
   if(req.method==='POST'&&req.url==='/print'){const b=await readBody(req);if(!b.printer)throw Error('Printer is required');await ps(rawScript,[String(b.printer),String(b.text||''),String(Math.max(1,Number(b.copies||1))),'']);return json(res,200,{ok:true});}
   if(req.method==='POST'&&req.url==='/cash-drawer'){const b=await readBody(req);if(!b.printer)throw Error('Cash drawer printer is required');const bytes=(b.bytes||[27,112,0,25,250]).map(Number);await ps(rawScript,[String(b.printer),'','1',bytes.join(',')]);return json(res,200,{ok:true});}
+  if(req.method==='POST'&&req.url==='/email'){const b=await readBody(req);await ps(emailScript,[String(b.host||''),String(Number(b.port||0)),String(b.ssl!==false),String(b.from||''),String(b.displayName||''),String(b.username||''),String(b.password||''),String(b.to||''),String(b.subject||''),String(b.body||''),String(b.bcc||'')]);return json(res,200,{ok:true});}
   if(req.method==='POST'&&req.url==='/display'){const b=await readBody(req);if(!b.port)throw Error('COM port is required');const chars=Math.max(8,Number(b.chars||20));const line=v=>String(v||'').padEnd(chars,' ').slice(0,chars);const script=`$p=New-Object System.IO.Ports.SerialPort('${String(b.port).replace(/'/g,"''")}',${Number(b.baud||9600)},'None',8,'One');$p.Open();$p.Write([char]12);$p.Write('${line(b.line1).replace(/'/g,"''")}');$p.Write('${line(b.line2).replace(/'/g,"''")}');$p.Close()`;await ps(script);return json(res,200,{ok:true});}
   return json(res,404,{ok:false,error:'Not found'});
  }catch(e){return json(res,500,{ok:false,error:e.message})}
