@@ -516,7 +516,7 @@ function EndOfDay({sales,businessDay,paymentTypes,activeUser,orders,cashMovement
  const printReport=report=>{if(!report)return;window.print();};
  return <section className="eod-page">
   <div className="eod-shell">
-   <div className="eod-head"><div><div className="eyebrow">MANAGEMENT / POS CLOSING</div><h2>End of day</h2><p>{userName} · {formatDate(new Date())} · {businessDay.open?"Business day open":"Business day closed"}</p></div><button className="eod-close" onClick={onClose||(()=>{})} aria-label="Close">×</button></div>
+   <div className="eod-head"><div><div className="eyebrow">POS / CLOSING</div><h2>End of day</h2><p>{userName} · {formatDate(new Date())} · {businessDay.open?"Business day open":"Business day closed"}</p></div><button className="eod-close" onClick={onClose||(()=>{})} aria-label="Close">×</button></div>
    <div className="eod-alert"><span>!</span><div><b>Printer status</b><small>Printer is disabled or not selected. Reports may not be printed.</small></div></div>
    <div className="eod-tabs"><button className={tab==="End of day"?"active":""} onClick={()=>setTab("End of day")}>End of day</button><button className={tab==="History"?"active":""} onClick={()=>setTab("History")}>History</button></div>
    {tab==="End of day"&&<div className="eod-body">
@@ -613,7 +613,6 @@ function Management({activeUser,setPage}){
   ["▱","View open sales","Named Order / Takeaway","viewOpenSales"],
   ["↕","Cash In / Out","Cash In / Out","cashInOut"],
   ["▤","Credit payments","Credit payments","creditPayments"],
-  ["⚑","End of day","End of day","endOfDay"],
   ["♙","User info","Users & Permissions","userInfo"],
   ["⚙","Users & Permissions","Users & Permissions","manageUsers"],
   ["◈","Products","Products","manageProducts"],
