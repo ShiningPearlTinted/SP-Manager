@@ -1500,6 +1500,7 @@ function Settings({settings,setSettings,businessDay,toggleBusiness,taxRate,setTa
  const tabs=["General","Order & payment","Products","Documents","Weighing scale","Customer display","Email","Print","Hardware","Database","License","About"];
  const Toggle=({checked,onChange})=><input type="checkbox" checked={!!checked} onChange={e=>onChange(e.target.checked)}/>;
  const general=draft.general||{},order=draft.order||{},prod=draft.products||{},doc=draft.documents||{},w=draft.weighing||{},cd=draft.customerDisplay||{},email=draft.email||{},pr=draft.print||{},db=draft.database||{},hw=draft.hardware||{};
+ const prt=pr;
  const [hardwareStatus,setHardwareStatus]=useState(null); const [printers,setPrinters]=useState([]);
  const refreshHardware=()=>{const base=hw.agentUrl||"http://127.0.0.1:18765";hardwareRequestLocal(base,"/status").then(x=>{setHardwareStatus(x);return hardwareRequestLocal(base,"/printers")}).then(x=>setPrinters(x.printers||[])).catch(()=>{setHardwareStatus({connected:false,agentDetected:false,printers:[]});setPrinters([])})};
  useEffect(()=>{if(tab!=="Hardware")return;refreshHardware();const id=setInterval(refreshHardware,5000);return()=>clearInterval(id)},[tab,hw.agentUrl]);
