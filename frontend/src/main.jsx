@@ -153,6 +153,7 @@ function App(){
  const[payment,setPayment]=useState(()=>load("paymentTypes",seedPaymentTypes).filter(x=>x.enabled).sort((a,b)=>a.position-b.position)[0]?.name||"Cash");
  const[taxRate,setTaxRate]=useState(()=>load("taxRate",0));
  const[notice,setNotice]=useState("");
+ const[messageBox,setMessageBox]=useState(null);
  const[lowStockAlert,setLowStockAlert]=useState(null);
  const[businessDay,setBusinessDay]=useState(()=>load("businessDay",{open:true,openingCash:0,date:new Date().toISOString().slice(0,10)}));
  const[company,setCompany]=useState(()=>load("company",{name:"Shining Pearl Tinted",taxNumber:"",streetName:"",buildingNumber:"",additionalStreetName:"",plotIdentification:"",district:"",postalCode:"",city:"",state:"",country:"Malaysia",phoneNumber:"",email:"",bankAccountNumber:"",bankDetails:"",logo:""}));
@@ -171,10 +172,10 @@ function App(){
  const filtered=useMemo(()=>{const mode=posSearchMode||"All";const list=products.filter(p=>{const text=mode==="Barcode"?((p.barcode||"")+" "+(Array.isArray(p.barcodes)?p.barcodes.join(" "):"")):mode==="Code"?(p.code||""):mode==="Name"?(p.name||""):[p.name,p.code,p.barcode,Array.isArray(p.barcodes)?p.barcodes.join(" "):"",p.group,p.category].join(" ");const cat=!q||posCategory==="All Categories"||((p.category||p.group||"")===posCategory);return cat&&text.toLowerCase().includes(q.toLowerCase())});return [...list].sort((a,b)=>settings.products.sorting==="Code"?String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true}):String(a.name||"").localeCompare(String(b.name||"")))},[products,q,posCategory,posSearchMode,settings.order.defaultSearch,settings.products.sorting]);
  const emailReceipt=async(sale)=>{
   const c=customers.find(x=>x.id===sale.customerId);const to=c?.email&&c.email!=="-"?String(c.email).trim():"";
-  if(!to){window.alert("Customer email is missing. Please add a valid customer email before sending.");return}
+  if(!to){setMessageBox({title:"Email",message:"Customer email is missing. Please add a valid customer email before sending.",type:"warning"});return}
   const e=settings?.email||{};
   if(!String(e.host||"").trim()||!Number(e.port)||!String(e.emailAddress||"").trim()||!String(e.password||"").trim()){
-   window.alert("Email settings are not configured correctly. Please check Settings > Email: Host, Port, Email address and Password.");return;
+   setMessageBox({title:"Email Settings",message:"Email settings are not configured correctly. Please check Settings > Email: Host, Port, Email address and Password.",type:"warning"});return;
   }
   const subjectTemplate=e.subject||"Receipt attached - {receipt}";
   const subject=String(subjectTemplate).replaceAll("{receipt}",sale.no).replaceAll("{date}",formatInvoiceDate(sale.date)).replaceAll("{total}",money(sale.total));
@@ -187,7 +188,7 @@ function App(){
    const data=await r.json().catch(()=>({}));
    if(!r.ok||!data.ok)throw new Error(data.error||"Email sending failed.");
    setNotice("Email sent successfully to "+to+".");
-  }catch(err){window.alert("Unable to send email. Please check Settings > Email and make sure the SMTP details are correct.\n\n"+String(err?.message||err));}
+  }catch(err){setMessageBox({title:"Email Sending Failed",message:"Unable to send email. Please check Settings > Email and make sure the SMTP details are correct.\n\n"+String(err?.message||err),type:"error"});}
  };
 
  const subtotal=cart.reduce((a,x)=>a+x.price*x.qty,0);
@@ -368,6 +369,7 @@ function App(){
    {!nav.includes(page)&&page!=="Management"&&!['Cash In / Out','Credit payments','End of day'].includes(page)&&<div className="panel"><div className="eyebrow">SP-MANAGER</div><h2>Page not available</h2><p>The selected module could not be loaded.</p><button className="primary" onClick={()=>setPage("POS / Sales")}>Back to POS / Sales</button></div>}
    {showCashInOutModal&&page==="POS / Sales"&&<CashInOutModal movements={cashMovements} activeUser={activeUser} onClose={()=>setShowCashInOutModal(false)} onSave={recordCashMovement} onCashDrawer={cashDrawer}/>}
    {lowStockAlert&&page==="POS / Sales"&&<div className="ar-low-stock-backdrop" role="dialog" aria-modal="true" aria-labelledby="ar-low-stock-title"><div className="ar-low-stock-dialog"><div className="ar-low-stock-icon" aria-hidden="true">!</div><div className="ar-low-stock-content"><h2 id="ar-low-stock-title">Products are reaching low stock quantity</h2><p>Some products have reached their reorder point.</p><p>Consider purchasing the following items: <b>{lowStockAlert.map(p=>p.name).join(", ")}</b>.</p></div><button className="ar-low-stock-ok" onClick={()=>setLowStockAlert(null)}>OK</button></div></div>}
+   {messageBox&&<div className="sp-messagebox-backdrop" role="dialog" aria-modal="true" aria-labelledby="sp-messagebox-title"><div className="sp-messagebox"><div className={"sp-messagebox-icon "+(messageBox.type||"warning")} aria-hidden="true">{messageBox.type==="error"?"!":"i"}</div><div className="sp-messagebox-content"><div className="sp-messagebox-kicker">SP-MANAGER</div><h2 id="sp-messagebox-title">{messageBox.title||"Message"}</h2><p>{messageBox.message}</p></div><button type="button" className="sp-messagebox-close" aria-label="Close" onClick={()=>setMessageBox(null)}>×</button><div className="sp-messagebox-actions"><button type="button" className="sp-messagebox-ok" onClick={()=>setMessageBox(null)}>OK</button></div></div></div>}
   </main>
  </div>
 }

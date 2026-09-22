@@ -4283,3 +4283,21 @@
 .eod-foot{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 22px;border-top:1px solid #dce6ee;background:#fff}.eod-foot>span{font-size:11px;color:#718397}.eod-foot>div{display:flex;gap:8px}.eod-foot button{height:38px;padding:0 16px;border-radius:8px;font-weight:800;cursor:pointer}.eod-cancel{border:1px solid #cfd8e3;background:#fff;color:#344054}.eod-continue{border:1px solid #159bd4;background:#159bd4;color:#fff}.eod-continue:disabled{opacity:.42;cursor:not-allowed}
 @media(max-width:900px){.eod-options{grid-template-columns:repeat(2,1fr)}.eod-summary-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.eod-page{padding:12px}.eod-options,.eod-summary-grid{grid-template-columns:1fr}.eod-body,.eod-history{padding:15px}.eod-tender-row{grid-template-columns:1fr 90px 110px}.eod-history-head,.eod-history-row{grid-template-columns:70px 1fr 1fr 100px}.eod-history-head span:nth-child(5),.eod-history-row button{display:none}.eod-foot{align-items:stretch;flex-direction:column}.eod-foot>div{justify-content:flex-end}}
+
+/* SP-Manager custom message box — UI-only polish for email validation/errors. */
+.sp-messagebox-backdrop{position:fixed;inset:0;z-index:12000;display:flex;align-items:flex-start;justify-content:center;padding:72px 20px 20px;background:rgba(15,23,42,.42);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);animation:sp-msg-fade .14s ease-out}
+.sp-messagebox{position:relative;width:min(590px,calc(100vw - 40px));display:grid;grid-template-columns:48px 1fr;column-gap:16px;align-items:start;padding:24px 24px 20px;border:1px solid #d9e3eb;border-radius:18px;background:rgba(255,255,255,.98);box-shadow:0 24px 70px rgba(15,23,42,.25),0 4px 16px rgba(15,23,42,.10);color:#173b5b;animation:sp-msg-pop .16s ease-out}
+.sp-messagebox-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:22px;font-weight:900;font-family:Arial,sans-serif;background:#fff4e5;color:#c56a00;border:1px solid #f3d5a6;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.sp-messagebox-icon.error{background:#fff0f0;color:#b42318;border-color:#efc5c2}
+.sp-messagebox-content{padding-right:28px}
+.sp-messagebox-kicker{font-size:9px;letter-spacing:1.7px;font-weight:800;color:#8a9aaa;margin:1px 0 5px}
+.sp-messagebox-content h2{margin:0;color:#102a43;font-size:19px;line-height:1.25}
+.sp-messagebox-content p{margin:9px 0 0;color:#607589;font-size:12px;line-height:1.65;white-space:pre-line}
+.sp-messagebox-close{position:absolute;top:13px;right:13px;width:30px;height:30px;border:1px solid #dbe4ec;border-radius:9px;background:#fff;color:#718397;font-size:20px;line-height:1;cursor:pointer}
+.sp-messagebox-close:hover{background:#f4f8fb;color:#173b5b}
+.sp-messagebox-actions{grid-column:2;display:flex;justify-content:flex-end;margin-top:18px}
+.sp-messagebox-ok{min-width:88px;height:38px;padding:0 18px;border:0;border-radius:9px;background:#159bd4;color:#fff;font-size:12px;font-weight:800;box-shadow:0 5px 15px rgba(21,155,212,.22);cursor:pointer}
+.sp-messagebox-ok:hover{background:#0e88bd}
+@keyframes sp-msg-fade{from{opacity:0}to{opacity:1}}
+@keyframes sp-msg-pop{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:600px){.sp-messagebox-backdrop{padding:58px 12px 12px}.sp-messagebox{width:100%;grid-template-columns:42px 1fr;column-gap:12px;padding:20px 18px 17px;border-radius:15px}.sp-messagebox-icon{width:42px;height:42px;border-radius:12px;font-size:19px}.sp-messagebox-content{padding-right:20px}.sp-messagebox-content h2{font-size:17px}.sp-messagebox-content p{font-size:11px}.sp-messagebox-actions{grid-column:1 / -1}.sp-messagebox-ok{width:100%}}
