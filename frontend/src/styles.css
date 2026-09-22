@@ -4347,3 +4347,11 @@
 .sp-notes-ok{border:1px solid #159bd4;background:#159bd4;color:#fff;box-shadow:0 5px 15px rgba(21,155,212,.18)}
 .sp-notes-ok:hover{background:#0e88bd;border-color:#0e88bd;transform:translateY(-1px)}
 @media(max-width:700px){.sp-notes-backdrop{padding:10px}.sp-notes-modal{width:100%;max-height:calc(100vh - 20px);border-radius:13px}.sp-notes-header{padding:14px 15px 12px}.sp-notes-header h2{font-size:19px}.sp-notes-body{padding:10px 12px 4px}.sp-notes-document-grid{grid-template-columns:1fr}.sp-notes-document-grid>div{border-right:0;border-bottom:1px solid #edf1f4}.sp-notes-document-grid>div:last-child{border-bottom:0}.sp-notes-label{display:block}.sp-notes-label span{display:block;margin-top:2px}.sp-notes-textarea{min-height:100px}.sp-notes-footer{padding:11px 12px}.sp-notes-footer button{flex:1;min-width:0}}
+
+/* END OF DAY — POS-only presentation lock.
+   Opens from POS user menu and covers the POS workspace without routing
+   the user into the Management module. Existing EOD controls remain unchanged. */
+.eod-pos-overlay{position:fixed;inset:0;z-index:11000;background:#f7f9fb;overflow:auto;}
+.eod-pos-overlay .eod-page{min-height:100vh;padding:20px;box-sizing:border-box;}
+.eod-pos-overlay .eod-shell{max-width:none;width:100%;min-height:calc(100vh - 40px);margin:0;box-sizing:border-box;}
+@media(max-width:650px){.eod-pos-overlay .eod-page{padding:10px}.eod-pos-overlay .eod-shell{min-height:calc(100vh - 20px)}}

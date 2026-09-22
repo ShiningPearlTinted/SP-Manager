@@ -128,7 +128,8 @@ function App(){
  const[activeUser,setCurrentUser]=useState(()=>load("activeUser",null));
  const[page,setPage]=useState("POS / Sales");
  const[posMenu,setPosMenu]=useState(false);
- const openEndOfDayFromPOS=()=>{sessionStorage.setItem("sp_eod_source","pos");setPage("End of day")};
+ const[showEndOfDay,setShowEndOfDay]=useState(false);
+ const openEndOfDayFromPOS=()=>{sessionStorage.setItem("sp_eod_source","pos");setShowEndOfDay(true)};
  const[mobileNavOpen,setMobileNavOpen]=useState(false);
  useEffect(()=>{setPosMenu(false);setMobileNavOpen(false);if(page==="End of day"&&sessionStorage.getItem("sp_eod_source")!=="pos"){setPage("POS / Sales")}},[page]);
  const[products,setProducts]=useState(()=>load("products",seedProducts).map(normalizeProductStockControl));
@@ -365,6 +366,7 @@ function App(){
    {page==="Credit payments"&&isPermissionAllowed(activeUser,"creditPayments")&&<CreditPayments sales={sales} setSales={v=>{persist("sales",v,setSales)}} paymentTypes={paymentTypes} setNotice={setNotice}/>}
    {page==="Reports"&&<Reports sales={sales} products={products} customers={customers} purchases={purchases} businessDay={businessDay} users={users} suppliers={suppliers} paymentTypes={paymentTypes}/>}
    {page==="End of day"&&isPermissionAllowed(activeUser,"endOfDay")&&<EndOfDay sales={sales} businessDay={businessDay} paymentTypes={paymentTypes} activeUser={activeUser} orders={orders} cashMovements={cashMovements} setCashMovements={setCashMovements} setSales={setSales} setBusinessDay={setBusinessDay} setNotice={setNotice} onClose={()=>{sessionStorage.removeItem("sp_eod_source");setPage("POS / Sales")}}/> }
+   {page==="POS / Sales"&&showEndOfDay&&isPermissionAllowed(activeUser,"endOfDay")&&<div className="eod-pos-overlay" role="dialog" aria-modal="true" aria-label="End of day"><EndOfDay sales={sales} businessDay={businessDay} paymentTypes={paymentTypes} activeUser={activeUser} orders={orders} cashMovements={cashMovements} setCashMovements={setCashMovements} setSales={setSales} setBusinessDay={setBusinessDay} setNotice={setNotice} onClose={()=>{sessionStorage.removeItem("sp_eod_source");setShowEndOfDay(false)}}/></div>}
    {page==="X / Z Report"&&<XZ sales={sales} businessDay={businessDay} paymentTypes={paymentTypes}/> }
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={o=>{persist("orders",o,setOrders);setNotice("Order saved successfully.")}} customers={customers}/>}
    {page==="My company"&&<MyCompany company={company} setCompany={v=>{persist("company",v,setCompany);setNotice("Company data saved successfully.")}}/>}
