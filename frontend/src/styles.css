@@ -4382,3 +4382,12 @@
 .localize-label-control>input{width:100%}
 .localize-label-control>input[type=checkbox]{width:18px;height:18px;justify-self:center;accent-color:#159bd4}
 @media(max-width:900px){.print-operation-row{grid-template-columns:1fr}.print-gear{width:100%}.settings-localize-grid{grid-template-columns:1fr}}
+
+/* Aronium-style printer settings dialog */
+.print-printer-modal-backdrop{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;padding:24px}
+.print-printer-modal{width:min(980px,96vw);max-height:92vh;display:flex;flex-direction:column;background:var(--card,#fff);border:1px solid var(--border,rgba(255,255,255,.12));border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.45);overflow:hidden}
+.print-printer-modal-head{display:flex;justify-content:space-between;gap:20px;padding:18px 22px;border-bottom:1px solid var(--border,rgba(255,255,255,.12))}
+.print-printer-modal-head h3{margin:3px 0 4px}.print-printer-modal-head p{margin:0;color:var(--text2,#94a3b8);font-size:13px}.print-printer-modal-head>button{width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:inherit;font-size:24px;cursor:pointer}
+.print-printer-modal-tabs{display:flex;gap:4px;padding:0 22px;border-bottom:1px solid var(--border,rgba(255,255,255,.12))}.print-printer-modal-tabs button{border:0;background:transparent;padding:12px 14px;color:inherit;cursor:pointer;border-bottom:2px solid transparent}.print-printer-modal-tabs button.active{border-bottom-color:#1aa7e8;color:#1aa7e8}
+.print-printer-modal-body{padding:18px 22px;overflow:auto}.print-printer-modal-body h4{margin:8px 0 10px}.print-printer-modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid var(--border,rgba(255,255,255,.12))}.print-printer-modal-foot button{min-width:110px}
+@media(max-width:700px){.print-printer-modal-backdrop{padding:8px}.print-printer-modal{width:100%;max-height:96vh}.print-printer-modal-body{padding:14px}.print-printer-modal-head{padding:14px}.print-printer-modal-tabs{padding:0 14px;overflow:auto}}
