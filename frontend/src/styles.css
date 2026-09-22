@@ -4301,3 +4301,15 @@
 @keyframes sp-msg-fade{from{opacity:0}to{opacity:1}}
 @keyframes sp-msg-pop{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:600px){.sp-messagebox-backdrop{padding:58px 12px 12px}.sp-messagebox{width:100%;grid-template-columns:42px 1fr;column-gap:12px;padding:20px 18px 17px;border-radius:15px}.sp-messagebox-icon{width:42px;height:42px;border-radius:12px;font-size:19px}.sp-messagebox-content{padding-right:20px}.sp-messagebox-content h2{font-size:17px}.sp-messagebox-content p{font-size:11px}.sp-messagebox-actions{grid-column:1 / -1}.sp-messagebox-ok{width:100%}}
+
+/* Add Notes message box — same SP-Manager message-box UI, input only. */
+.sp-notebox{grid-template-columns:48px 1fr;}
+.sp-messagebox-icon.note{background:#eef8fc;color:#159bd4;border-color:#b8dff0;}
+.sp-notebox-help{margin-bottom:10px!important;}
+.sp-notebox-input{width:100%;min-height:92px;resize:vertical;padding:11px 12px;border:1px solid #cbd8e3;border-radius:10px;background:#fff;color:#173b5b;font:inherit;font-size:12px;line-height:1.5;outline:none;box-shadow:inset 0 1px 2px rgba(15,42,67,.04);}
+.sp-notebox-input:focus{border-color:#159bd4;box-shadow:0 0 0 3px rgba(21,155,212,.12);}
+.sp-notebox-input::placeholder{color:#9aa9b5;}
+.sp-notebox-actions{gap:8px;align-items:center;}
+.sp-notebox-cancel{min-width:88px;height:38px;padding:0 18px;border:1px solid #cfd8e3;border-radius:9px;background:#fff;color:#526579;font-size:12px;font-weight:800;cursor:pointer;}
+.sp-notebox-cancel:hover{background:#f4f8fb;color:#173b5b;}
+@media(max-width:600px){.sp-notebox{grid-template-columns:42px 1fr}.sp-notebox-input{min-height:110px}.sp-notebox-actions{grid-column:1 / -1}.sp-notebox-actions button{flex:1}.sp-notebox-cancel{min-width:0}}
