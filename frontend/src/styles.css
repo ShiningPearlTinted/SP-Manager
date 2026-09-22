@@ -4313,3 +4313,37 @@
 .sp-notebox-cancel{min-width:88px;height:38px;padding:0 18px;border:1px solid #cfd8e3;border-radius:9px;background:#fff;color:#526579;font-size:12px;font-weight:800;cursor:pointer;}
 .sp-notebox-cancel:hover{background:#f4f8fb;color:#173b5b;}
 @media(max-width:600px){.sp-notebox{grid-template-columns:42px 1fr}.sp-notebox-input{min-height:110px}.sp-notebox-actions{grid-column:1 / -1}.sp-notebox-actions button{flex:1}.sp-notebox-cancel{min-width:0}}
+
+/* ============================================================
+   SP-MANAGER NOTES DIALOG — ARONIUM WORKFLOW / MODERN UI
+   UI + note fields only. Existing business logic remains locked.
+   ============================================================ */
+.sp-notes-backdrop{position:fixed;inset:0;z-index:12010;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(8,15,24,.58);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);animation:sp-msg-fade .14s ease-out}
+.sp-notes-modal{position:relative;width:min(900px,calc(100vw - 32px));max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #d6e0e8;border-radius:16px;background:#fff;box-shadow:0 28px 80px rgba(8,24,40,.30);color:#173b5b;animation:sp-msg-pop .16s ease-out}
+.sp-notes-header{display:flex;align-items:center;justify-content:space-between;padding:17px 20px 14px;border-bottom:1px solid #dce5ec;background:#fff}
+.sp-notes-kicker{font-size:9px;letter-spacing:1.7px;font-weight:800;color:#8a9aaa;margin-bottom:3px}
+.sp-notes-header h2{margin:0;font-size:22px;line-height:1.2;color:#102a43;font-weight:700}
+.sp-notes-close{width:34px;height:34px;border:1px solid #d6e0e8;border-radius:9px;background:#fff;color:#607589;font-size:23px;line-height:1;cursor:pointer}
+.sp-notes-close:hover{background:#f4f8fb;color:#173b5b}
+.sp-notes-body{padding:12px 18px 6px;overflow:auto}
+.sp-notes-section{margin-bottom:16px}
+.sp-notes-section-title{height:34px;display:flex;align-items:center;padding:0 10px;border:1px solid #cbd8e3;border-bottom:0;border-radius:7px 7px 0 0;background:#edf4f9;color:#173b5b;font-size:12px;font-weight:800}
+.sp-notes-document{border:1px solid #cbd8e3;border-radius:7px;overflow:hidden}
+.sp-notes-document .sp-notes-section-title{border:0;border-bottom:1px solid #cbd8e3;border-radius:0;background:#159bd4;color:#fff}
+.sp-notes-document-grid{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:0;background:#fff}
+.sp-notes-document-grid>div{min-width:0;display:grid;grid-template-columns:max-content 1fr;gap:12px;padding:13px 12px;border-right:1px solid #edf1f4;align-items:center}
+.sp-notes-document-grid>div:last-child{border-right:0}
+.sp-notes-document-grid span{font-size:11px;font-weight:800;color:#526579}
+.sp-notes-document-grid b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#173b5b;font-weight:600}
+.sp-notes-label{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 7px;color:#526579;font-size:12px;font-weight:800}
+.sp-notes-label span{font-size:10px;color:#8a9aaa;font-weight:500}
+.sp-notes-textarea{display:block;width:100%;min-height:112px;box-sizing:border-box;resize:vertical;padding:11px 12px;border:1px solid #cbd8e3;border-radius:8px;background:#fff;color:#173b5b;font:inherit;font-size:12px;line-height:1.5;outline:none;box-shadow:inset 0 1px 2px rgba(15,42,67,.04)}
+.sp-notes-textarea:focus{border-color:#159bd4;box-shadow:0 0 0 3px rgba(21,155,212,.12)}
+.sp-notes-textarea::placeholder{color:#9aa9b5}
+.sp-notes-footer{display:flex;justify-content:flex-end;gap:8px;padding:13px 18px;border-top:1px solid #dce5ec;background:#fbfcfd}
+.sp-notes-footer button{height:40px;min-width:116px;padding:0 18px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;transition:.15s ease}
+.sp-notes-cancel{border:1px solid #cfd8e3;background:#fff;color:#526579}
+.sp-notes-cancel:hover{background:#f4f8fb;color:#173b5b}
+.sp-notes-ok{border:1px solid #159bd4;background:#159bd4;color:#fff;box-shadow:0 5px 15px rgba(21,155,212,.18)}
+.sp-notes-ok:hover{background:#0e88bd;border-color:#0e88bd;transform:translateY(-1px)}
+@media(max-width:700px){.sp-notes-backdrop{padding:10px}.sp-notes-modal{width:100%;max-height:calc(100vh - 20px);border-radius:13px}.sp-notes-header{padding:14px 15px 12px}.sp-notes-header h2{font-size:19px}.sp-notes-body{padding:10px 12px 4px}.sp-notes-document-grid{grid-template-columns:1fr}.sp-notes-document-grid>div{border-right:0;border-bottom:1px solid #edf1f4}.sp-notes-document-grid>div:last-child{border-bottom:0}.sp-notes-label{display:block}.sp-notes-label span{display:block;margin-top:2px}.sp-notes-textarea{min-height:100px}.sp-notes-footer{padding:11px 12px}.sp-notes-footer button{flex:1;min-width:0}}
