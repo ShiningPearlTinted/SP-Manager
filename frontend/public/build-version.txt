@@ -1,1 +1,1 @@
-SP-Manager 1.0.17 - Cash In Out Field Fix + Logged-in User Role
+SP-Manager 1.0.18 - Print Settings Aronium Tabs V11
