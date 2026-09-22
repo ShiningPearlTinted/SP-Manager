@@ -85,7 +85,7 @@ function App(){
  const[page,setPage]=useState("POS / Sales");
  const[posMenu,setPosMenu]=useState(false);
  const[mobileNavOpen,setMobileNavOpen]=useState(false);
- useEffect(()=>{setPosMenu(false);setMobileNavOpen(false)},[page]);
+ useEffect(()=>{setPosMenu(false);setMobileNavOpen(false);if(page!=="POS / Sales")setShowEndOfDay(false)},[page]);
  const[products,setProducts]=useState(()=>load("products",seedProducts).map(normalizeProductStockControl));
  const[stockHistory,setStockHistory]=useState(()=>load("stockHistory",[]));
  const[categories,setCategories]=useState(()=>load("categories",["Tinted Film","Windscreen","Glass","Security","Protection"]));
@@ -118,6 +118,7 @@ function App(){
  const[productGroups,setProductGroups]=useState(()=>load("productGroups",[...new Set(seedProducts.map(p=>p.group||p.category).filter(Boolean))]));
  const[lastSale,setLastSale]=useState(null);
  const[showCashInOutModal,setShowCashInOutModal]=useState(false);
+ const[showEndOfDay,setShowEndOfDay]=useState(false);
 
  useEffect(()=>{if(!notice)return;const ms=Math.max(1,Number(settings.general.messageDuration||5))*1000;const t=setTimeout(()=>setNotice(""),ms);return()=>clearTimeout(t)},[notice,settings.general.messageDuration]);
  useEffect(()=>{const key="sp_startup_settings_checked";if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,"1");let next={...businessDay};let changed=false;if(settings.general.selectBusinessDay){const answer=window.prompt("Select business day (YYYY-MM-DD)",businessDay.date||new Date().toISOString().slice(0,10));if(answer&&/^\d{4}-\d{2}-\d{2}$/.test(answer)){next.date=answer;changed=true}}if(settings.general.showCashIn){const answer=window.prompt("Starting cash",String(businessDay.openingCash||0));if(answer!==null&&!Number.isNaN(Number(answer))){next.openingCash=Math.max(0,Number(answer));changed=true}}if(changed){persist("businessDay",next,setBusinessDay)}},[]);
@@ -282,7 +283,8 @@ function App(){
    </div>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="Management"&&hasManagementAccess(activeUser)&&<Management activeUser={activeUser} setPage={setPage}/>}
-   {page==="POS / Sales"&&<POS activeUser={activeUser} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt} openCashInOut={openCashInOut} openCashDrawer={cashDrawer}/>}
+   {page==="POS / Sales"&&<POS activeUser={activeUser} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt} openCashInOut={openCashInOut} openEndOfDay={()=>setShowEndOfDay(true)} openCashDrawer={cashDrawer}/>}
+   {showEndOfDay&&page==="POS / Sales"&&isPermissionAllowed(activeUser,"endOfDay")&&<EndOfDay sales={sales} businessDay={businessDay} paymentTypes={paymentTypes} activeUser={activeUser} orders={orders} cashMovements={cashMovements} setCashMovements={setCashMovements} setSales={setSales} setBusinessDay={setBusinessDay} setNotice={setNotice} onClose={()=>setShowEndOfDay(false)}/> }
    {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} suppliers={suppliers} setNotice={setNotice} settings={settings}/>}
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} sales={sales}/>}
@@ -297,7 +299,7 @@ function App(){
    {page==="Cash In / Out"&&isPermissionAllowed(activeUser,"cashInOut")&&<CashInOut movements={cashMovements} setMovements={v=>{persist("cashMovements",v,setCashMovements)}} setNotice={setNotice}/>}
    {page==="Credit payments"&&isPermissionAllowed(activeUser,"creditPayments")&&<CreditPayments sales={sales} setSales={v=>{persist("sales",v,setSales)}} paymentTypes={paymentTypes} setNotice={setNotice}/>}
    {page==="Reports"&&<Reports sales={sales} products={products} customers={customers} purchases={purchases} businessDay={businessDay} users={users} suppliers={suppliers} paymentTypes={paymentTypes}/>}
-   {page==="End of day"&&isPermissionAllowed(activeUser,"endOfDay")&&<EndOfDay sales={sales} businessDay={businessDay} paymentTypes={paymentTypes} activeUser={activeUser} orders={orders} cashMovements={cashMovements} setCashMovements={setCashMovements} setSales={setSales} setBusinessDay={setBusinessDay} setNotice={setNotice} onClose={()=>setPage("POS / Sales")}/> }
+
    {page==="X / Z Report"&&<XZ sales={sales} businessDay={businessDay} paymentTypes={paymentTypes}/> }
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={o=>{persist("orders",o,setOrders);setNotice("Order saved successfully.")}} customers={customers}/>}
    {page==="My company"&&<MyCompany company={company} setCompany={v=>{persist("company",v,setCompany);setNotice("Company data saved successfully.")}}/>}
@@ -448,7 +450,7 @@ function EndOfDay({sales,businessDay,paymentTypes,activeUser,orders,cashMovement
  const printReport=report=>{if(!report)return;window.print();};
  return <section className="eod-page">
   <div className="eod-shell">
-   <div className="eod-head"><div><div className="eyebrow">MANAGEMENT / POS CLOSING</div><h2>End of day</h2><p>{userName} · {formatDate(new Date())} · {businessDay.open?"Business day open":"Business day closed"}</p></div><button className="eod-close" onClick={onClose||(()=>{})} aria-label="Close">×</button></div>
+   <div className="eod-head"><div><div className="eyebrow">POS / END OF DAY</div><h2>End of day</h2><p>{userName} · {formatDate(new Date())} · {businessDay.open?"Business day open":"Business day closed"}</p></div><button className="eod-close" onClick={onClose||(()=>{})} aria-label="Close">×</button></div>
    <div className="eod-alert"><span>!</span><div><b>Printer status</b><small>Printer is disabled or not selected. Reports may not be printed.</small></div></div>
    <div className="eod-tabs"><button className={tab==="End of day"?"active":""} onClick={()=>setTab("End of day")}>End of day</button><button className={tab==="History"?"active":""} onClick={()=>setTab("History")}>History</button></div>
    {tab==="End of day"&&<div className="eod-body">
@@ -545,7 +547,6 @@ function Management({activeUser,setPage}){
   ["▱","View open sales","Named Order / Takeaway","viewOpenSales"],
   ["↕","Cash In / Out","Cash In / Out","cashInOut"],
   ["▤","Credit payments","Credit payments","creditPayments"],
-  ["⚑","End of day","End of day","endOfDay"],
   ["♙","User info","Users & Permissions","userInfo"],
   ["⚙","Users & Permissions","Users & Permissions","manageUsers"],
   ["◈","Products","Products","manageProducts"],
@@ -634,7 +635,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  </section>
 }
 function Card({t,v}){return <div className="card"><small>{t}</small><strong>{v}</strong></div>}
-function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,discountFixed,setDiscountFixed,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt,settings,activeUser,signOut,openCashInOut,openCashDrawer}){
+function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,discountFixed,setDiscountFixed,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt,settings,activeUser,signOut,openCashInOut,openEndOfDay,openCashDrawer}){
  const[catLevel,setCatLevel]=useState("root");
  const[group,setGroup]=useState("");
  const[showCustomer,setShowCustomer]=useState(false);
@@ -808,7 +809,7 @@ function POS({filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,
     </div>
    </div>
   </div>
-  {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - {activeUser?.name||activeUser?.username||"User"} <b onClick={()=>setMenuOpen(false)}>→</b></div><div className="ar-user-identity" aria-label="Current user"><div><b>{activeUser?.username||activeUser?.name||"User"}</b></div></div>{[["⚒","Management","Management","__management"],["↕","Cash In / Out","Cash In / Out","cashInOut"],["⚑","End of day","End of day","endOfDay"],["⇥","Sign out",null,"__signout"]].map(([ic,label,target,perm])=>{const allowed=perm==="__management"?hasManagementAccess(activeUser):perm==="__signout"||isPermissionAllowed(activeUser,perm);return <button key={label} disabled={!allowed} className={!allowed?"permission-disabled":""} onClick={()=>{if(!allowed)return;setMenuOpen(false);if(perm==="__signout")signOut();else if(perm==="cashInOut")openCashInOut?.();else if(target)setPage(target)}}><span>{ic}</span>{label}</button>})}<div className="ar-menu-date">{new Date().toLocaleDateString('en-GB')}</div><div className="ar-menu-footer spmanager-footer-controls" aria-label="POS controls">
+  {menuOpen&&<div className="ar-menu-panel"><div className="ar-menu-title">POS - {activeUser?.name||activeUser?.username||"User"} <b onClick={()=>setMenuOpen(false)}>→</b></div><div className="ar-user-identity" aria-label="Current user"><div><b>{activeUser?.username||activeUser?.name||"User"}</b></div></div>{[["⚒","Management","Management","__management"],["↕","Cash In / Out","Cash In / Out","cashInOut"],["⚑","End of day","End of day","endOfDay"],["⇥","Sign out",null,"__signout"]].map(([ic,label,target,perm])=>{const allowed=perm==="__management"?hasManagementAccess(activeUser):perm==="__signout"||isPermissionAllowed(activeUser,perm);return <button key={label} disabled={!allowed} className={!allowed?"permission-disabled":""} onClick={()=>{if(!allowed)return;setMenuOpen(false);if(perm==="__signout")signOut();else if(perm==="cashInOut")openCashInOut?.();else if(perm==="endOfDay")openEndOfDay?.();else if(target)setPage(target)}}><span>{ic}</span>{label}</button>})}<div className="ar-menu-date">{new Date().toLocaleDateString('en-GB')}</div><div className="ar-menu-footer spmanager-footer-controls" aria-label="POS controls">
  <button type="button" title="Settings" aria-label="Settings" onClick={openPosSettings}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 4v4M15 10v4M8 16v4"/></svg></button>
  <button type="button" title="Toggle full screen" aria-label="Toggle full screen" onClick={togglePosFullscreen}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg></button>
  <button type="button" title="Exit application" aria-label="Exit application" onClick={exitPosApplication}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.2 5.8a8 8 0 1 0 11.6 0"/></svg></button>
