@@ -44,6 +44,77 @@ function Handle($req){
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/raw'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$lang=[string]$b.language;if(@('ZPL','TSPL') -notcontains $lang.ToUpper()){throw 'Unsupported Price Tags printer language'};$data=[Text.Encoding]::UTF8.GetBytes([string]$b.data);$copies=[Math]::Max(1,[int]$b.copies);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data)};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true;language=$lang.ToUpper()};return}
     if($req.method -eq 'POST' -and $req.path -eq '/print'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$copies=[Math]::Max(1,[int]$b.copies);$txt=[string]$b.text;$data=[Text.Encoding]::UTF8.GetBytes($txt);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data);$all.Add(10);$all.AddRange([byte[]](27,100,3))};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true};return}
     if($req.method -eq 'POST' -and $req.path -eq '/cash-drawer'){$printer=[string]$b.printer;if(!$printer){throw 'Cash drawer printer is required'};$bytes=@($b.bytes|%{[byte][int]$_});if(!$bytes.Count){$bytes=[byte[]](27,112,0,25,250)};[SPRawPrinter]::Send($printer,$bytes);Send-Json $s 200 @{ok=$true};return}
+    if($req.method -eq 'POST' -and $req.path -eq '/email'){
+      $smtpHost=[string]$b.host
+      $smtpPort=[int]$b.port
+      $ssl=($b.ssl -ne $false)
+      $from=[string]$b.from
+      $displayName=[string]$b.displayName
+      $username=[string]$b.username
+      $password=[string]$b.password
+      $to=[string]$b.to
+      $subject=[string]$b.subject
+      $body=[string]$b.body
+      $bcc=[string]$b.bcc
+      $pdfPath=''
+      $pdfName=[string]$b.pdfFileName
+      if(!$pdfName){$pdfName='SP-Manager-Invoice.pdf'}
+      if(!$smtpHost){throw 'SMTP host is required'}
+      if(!$from){throw 'Sender email is required'}
+      if(!$to){throw 'Customer email is required'}
+      if(!$password){throw 'SMTP password is required'}
+      try{
+        if([string]$b.pdfHtml){
+          $tmp=[IO.Path]::GetTempPath()
+          $base='SP-Manager-'+[Guid]::NewGuid().ToString('N')
+          $htmlPath=Join-Path $tmp ($base+'.html')
+          $pdfPath=Join-Path $tmp ($base+'.pdf')
+          [IO.File]::WriteAllText($htmlPath,[string]$b.pdfHtml,(New-Object Text.UTF8Encoding($false)))
+          $edge=$null
+          $cmd=Get-Command msedge.exe -ErrorAction SilentlyContinue
+          if($cmd){$edge=$cmd.Source}
+          if(!$edge){
+            $candidates=@(
+              "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+              "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe",
+              "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
+            )
+            $edge=$candidates|Where-Object{Test-Path $_}|Select-Object -First 1
+          }
+          if(!$edge){throw 'Microsoft Edge is required to create PDF attachments.'}
+          $fileUrl='file:///'+($htmlPath -replace '\\','/')
+          $pdfArg='--print-to-pdf='+$pdfPath
+          $args=@('--headless','--disable-gpu','--no-pdf-header-footer',$pdfArg,$fileUrl)
+          $proc=Start-Process -FilePath $edge -ArgumentList $args -Wait -PassThru -WindowStyle Hidden
+          Start-Sleep -Milliseconds 500
+          if(!(Test-Path $pdfPath)){throw 'PDF generation failed.'}
+          try{Remove-Item -LiteralPath $htmlPath -Force -ErrorAction SilentlyContinue}catch{}
+        }
+        $mail=New-Object System.Net.Mail.MailMessage
+        try{
+          $senderName=if([string]::IsNullOrWhiteSpace($displayName)){$from}else{$displayName}
+          $mail.From=New-Object System.Net.Mail.MailAddress($from,$senderName)
+          $mail.To.Add($to)
+          if($bcc){$bcc.Split(',')|ForEach-Object{if($_.Trim()){$mail.Bcc.Add($_.Trim())}}}
+          if($pdfPath -and (Test-Path $pdfPath)){$mail.Attachments.Add($pdfPath)|Out-Null}
+          $mail.Subject=$subject
+          $mail.SubjectEncoding=[Text.Encoding]::UTF8
+          $mail.BodyEncoding=[Text.Encoding]::UTF8
+          $mail.IsBodyHtml=$true
+          $mail.Body=$body
+          $smtp=New-Object System.Net.Mail.SmtpClient($smtpHost,$smtpPort)
+          try{
+            $smtp.EnableSsl=$ssl
+            $login=if([string]::IsNullOrWhiteSpace($username)){$from}else{$username}
+            $smtp.Credentials=New-Object System.Net.NetworkCredential($login,$password)
+            $smtp.Send($mail)
+          }finally{$smtp.Dispose()}
+        }finally{$mail.Dispose()}
+        Send-Json $s 200 @{ok=$true;attachment=[bool]$pdfPath;attachmentName=$pdfName};return
+      }finally{
+        if($pdfPath){try{Remove-Item -LiteralPath $pdfPath -Force -ErrorAction SilentlyContinue}catch{}}
+      }
+    }
     if($req.method -eq 'GET' -and $req.path -eq '/display-state'){
       Send-Json $s 200 $script:DisplayState;return
     }
