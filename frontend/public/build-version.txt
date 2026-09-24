@@ -1,1 +1,1 @@
-SP-Manager 1.0.24 - Customer Display Secondary Monitor Fix v1.1.2
+1.0.28

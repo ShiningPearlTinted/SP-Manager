@@ -22,3 +22,7 @@ Implemented:
 - Settings
 
 LOCK RULE: existing functions and design are preserved unless explicitly requested. This phase adds functionality to the current SP-Manager build. GitHub Pages stores demo data in browser localStorage; production backend/database comes later.
+
+
+## Local Agent Auto-Start / Auto-Restart V1.1.8
+Run `agent\install-windows.bat` once after installation/update. It registers a per-user Windows Task Scheduler watchdog that starts the Local Agent at Windows logon and restarts it automatically if the agent stops responding. The POS application itself does not need to be changed.
