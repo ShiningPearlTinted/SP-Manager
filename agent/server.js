@@ -82,7 +82,7 @@ async function route(req,res){
  if(req.method==='OPTIONS')return json(res,204,{});
  try{
   if(req.method==='POST'&&req.url==='/price-tags/raw'){const b=await readBody(req);if(!b.printer)throw Error('Printer is required');const data=String(b.data||'');const copies=Math.max(1,Number(b.copies||1));const lang=String(b.language||'TSPL').toUpperCase();if(!['ZPL','TSPL'].includes(lang))throw Error('Unsupported Price Tags printer language');await ps(rawScript,[String(b.printer),data,copies,'']);return json(res,200,{ok:true,language:lang});}
-  if(req.method==='GET'&&(req.url==='/'||req.url==='/status'))return json(res,200,{connected:true,agentDetected:true,agent:'SP-Manager Local Agent',version:'1.0.8',port:PORT,host:HOST,platform:process.platform,pid:process.pid,startedAt:STARTED_AT,uptimeSeconds:Math.floor(process.uptime())});
+  if(req.method==='GET'&&(req.url==='/'||req.url==='/status'))return json(res,200,{connected:true,agentDetected:true,agent:'SP-Manager Local Agent',version:'1.1.2',port:PORT,host:HOST,platform:process.platform,pid:process.pid,startedAt:STARTED_AT,uptimeSeconds:Math.floor(process.uptime())});
   if(req.method==='GET'&&req.url==='/printers')return json(res,200,{connected:true,printers:await printers()});
   if(req.method==='POST'&&req.url==='/print'){const b=await readBody(req);if(!b.printer)throw Error('Printer is required');await ps(rawScript,[String(b.printer),String(b.text||''),String(Math.max(1,Number(b.copies||1))),'',JSON.stringify(b.options||{})]);return json(res,200,{ok:true,advancedApplied:true});}
   if(req.method==='POST'&&req.url==='/cash-drawer'){const b=await readBody(req);if(!b.printer)throw Error('Cash drawer printer is required');const bytes=(b.bytes||[27,112,0,25,250]).map(Number);await ps(rawScript,[String(b.printer),'','1',bytes.join(',')]);return json(res,200,{ok:true});}
@@ -90,11 +90,60 @@ async function route(req,res){
   if(req.method==='GET'&&req.url==='/display-state')return json(res,200,displayState);
   if(req.method==='GET'&&req.url==='/customer-display'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(`<!doctype html><html><head><meta charset="utf-8"><title>SP-Manager Customer Display</title><style>html,body{margin:0;width:100%;height:100%;background:#05080c;color:#fff;font-family:Segoe UI,Arial,sans-serif;overflow:hidden}body{display:flex;flex-direction:column;justify-content:center;padding:4vw;box-sizing:border-box}.line1{font-size:clamp(24px,5vw,72px);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.line2{margin-top:3vh;font-size:clamp(28px,6vw,90px);font-weight:800;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand{position:fixed;left:24px;top:18px;font-size:12px;letter-spacing:.18em;opacity:.55}</style></head><body><div class="brand">SP-MANAGER</div><div class="line1" id="l1">WELCOME!</div><div class="line2" id="l2"></div><script>async function tick(){try{const r=await fetch('/display-state',{cache:'no-store'});const d=await r.json();document.getElementById('l1').textContent=d.line1||'';document.getElementById('l2').textContent=d.line2||''}catch(e){}}tick();setInterval(tick,400)</script></body></html>`)}
   if(req.method==='GET'&&req.url==='/display-monitors'){const displayScript=`Add-Type -AssemblyName System.Windows.Forms;$screens=[System.Windows.Forms.Screen]::AllScreens;@($screens)|ForEach-Object{[pscustomobject]@{index=[array]::IndexOf($screens,$_);primary=$_.Primary;x=$_.Bounds.X;y=$_.Bounds.Y;width=$_.Bounds.Width;height=$_.Bounds.Height;device=$_.DeviceName}}|ConvertTo-Json -Compress`;const out=await ps(displayScript);let monitors=[];if(out){try{const x=JSON.parse(out);monitors=Array.isArray(x)?x:[x]}catch{}};return json(res,200,{ok:true,monitors});}
-  if(req.method==='POST'&&req.url==='/display-window'){const b=await readBody(req);const chars=Math.max(8,Number(b.chars||20));const line=v=>String(v||'').padEnd(chars,' ').slice(0,chars);displayState={line1:line(b.line1||'WELCOME!'),line2:line(b.line2||''),chars,updatedAt:new Date().toISOString()};const displayScript=`$ErrorActionPreference='Stop';Add-Type -AssemblyName System.Windows.Forms;Add-Type @'
-using System; using System.Runtime.InteropServices;
-public static class SPWindow { [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd,IntPtr hWndInsertAfter,int X,int Y,int cx,int cy,uint uFlags); [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd,int nCmdShow); }
+  if(req.method==='POST'&&req.url==='/display-window'){
+    const b=await readBody(req);
+    const chars=Math.max(8,Number(b.chars||20));
+    const line=v=>String(v||'').padEnd(chars,' ').slice(0,chars);
+    displayState={line1:line(b.line1||'WELCOME!'),line2:line(b.line2||''),chars,updatedAt:new Date().toISOString()};
+    const displayScript=`
+$ErrorActionPreference='Stop'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class SPWindow {
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+}
 '@
-$screens=[System.Windows.Forms.Screen]::AllScreens;if($screens.Count -lt 2){throw 'No secondary monitor detected. In Windows press Win+P and select Extend.'};$s=$screens[1];$url='http://127.0.0.1:${PORT}/customer-display';$edge=(Get-Command msedge.exe -ErrorAction SilentlyContinue).Source;if(-not $edge){$candidates=@("$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe","$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe","$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe");$edge=$candidates|Where-Object{Test-Path $_}|Select-Object -First 1};if(-not $edge){$chrome=(Get-Command chrome.exe -ErrorAction SilentlyContinue).Source;if($chrome){$edge=$chrome}};if(-not $edge){throw 'Microsoft Edge or Google Chrome was not found.'};$args=@("--app=$url","--new-window","--window-position=$($s.Bounds.X),$($s.Bounds.Y)","--window-size=$($s.Bounds.Width),$($s.Bounds.Height)",'--disable-session-crashed-bubble');$proc=Start-Process -FilePath $edge -ArgumentList $args -PassThru;Start-Sleep -Milliseconds 1200;$hwnd=[IntPtr]::Zero;for($i=0;$i -lt 10 -and $hwnd -eq [IntPtr]::Zero;$i++){try{$proc.Refresh();$hwnd=$proc.MainWindowHandle}catch{};if($hwnd -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 300}};if($hwnd -ne [IntPtr]::Zero){[SPWindow]::ShowWindowAsync($hwnd,3)|Out-Null;[SPWindow]::SetWindowPos($hwnd,[IntPtr]::Zero,$s.Bounds.X,$s.Bounds.Y,$s.Bounds.Width,$s.Bounds.Height,0x0040)|Out-Null};Write-Output (@{monitor=$s.DeviceName;x=$s.Bounds.X;y=$s.Bounds.Y;width=$s.Bounds.Width;height=$s.Bounds.Height;windowFound=($hwnd -ne [IntPtr]::Zero)}|ConvertTo-Json -Compress)`;const out=await ps(displayScript);let info={};if(out){try{info=JSON.parse(out)}catch{}};return json(res,200,{ok:true,monitor:'secondary',details:info});}
+$screens=[System.Windows.Forms.Screen]::AllScreens
+if($screens.Count -lt 2){throw 'No secondary monitor detected. Windows must be set to Extend displays.'}
+$s=$screens[1]
+$url='http://127.0.0.1:${PORT}/customer-display'
+$edge=$null
+foreach($cmd in @('msedge.exe','chrome.exe')){
+  if(-not $edge){$edge=(Get-Command $cmd -ErrorAction SilentlyContinue).Source}
+}
+if(-not $edge){
+  $candidates=@(
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe",
+    "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+    "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
+    "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+  )
+  $edge=$candidates|Where-Object{Test-Path $_}|Select-Object -First 1
+}
+if(-not $edge){throw 'Microsoft Edge or Google Chrome was not found on this Windows PC.'}
+$args=@("--app=$url","--new-window","--window-position=$($s.Bounds.X),$($s.Bounds.Y)","--window-size=$($s.Bounds.Width),$($s.Bounds.Height)",'--disable-session-crashed-bubble')
+$proc=Start-Process -FilePath $edge -ArgumentList $args -PassThru
+Start-Sleep -Milliseconds 1500
+$hwnd=[IntPtr]::Zero
+for($i=0;$i -lt 15 -and $hwnd -eq [IntPtr]::Zero;$i++){
+  try{$proc.Refresh();$hwnd=$proc.MainWindowHandle}catch{}
+  if($hwnd -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 300}
+}
+if($hwnd -eq [IntPtr]::Zero){throw 'Customer display browser window started, but Windows did not return its window handle.'}
+[SPWindow]::ShowWindowAsync($hwnd,3)|Out-Null
+[SPWindow]::SetWindowPos($hwnd,[IntPtr]::Zero,$s.Bounds.X,$s.Bounds.Y,$s.Bounds.Width,$s.Bounds.Height,0x0040)|Out-Null
+Write-Output (@{monitor=$s.DeviceName;x=$s.Bounds.X;y=$s.Bounds.Y;width=$s.Bounds.Width;height=$s.Bounds.Height;windowFound=$true;browser=$edge}|ConvertTo-Json -Compress)
+`;
+    const out=await ps(displayScript);
+    let info={};
+    if(out){try{info=JSON.parse(out)}catch{info={raw:out}}}
+    return json(res,200,{ok:true,mode:'secondary',details:info});
+  }
 
   if(req.method==='POST'&&req.url==='/display'){const b=await readBody(req);const chars=Math.max(8,Number(b.chars||20));const line=v=>String(v||'').padEnd(chars,' ').slice(0,chars);displayState={line1:line(b.line1),line2:line(b.line2),chars,updatedAt:new Date().toISOString()};if(String(b.mode||'com')==='secondary')return json(res,200,{ok:true,mode:'secondary'});if(!b.port)throw Error('COM port is required');const script=`$p=New-Object System.IO.Ports.SerialPort('${String(b.port).replace(/'/g,"''")}',${Number(b.baud||9600)},'None',${Number(b.dataBits||8)},${Number(b.stopBits||1)===2?'Two':'One'});$p.Open();$p.Write([char]12);$p.Write('${line(b.line1).replace(/'/g,"''")}');$p.Write('${line(b.line2).replace(/'/g,"''")}');$p.Close()`;await ps(script);return json(res,200,{ok:true,mode:'com'});}
   return json(res,404,{ok:false,error:'Not found'});
@@ -102,4 +151,4 @@ $screens=[System.Windows.Forms.Screen]::AllScreens;if($screens.Count -lt 2){thro
 }
 const server=http.createServer(route);
 server.on('error',e=>{console.error(e);process.exitCode=1});
-server.listen(PORT,HOST,()=>console.log(`SP-Manager Local Agent 1.0.7 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`SP-Manager Local Agent 1.1.2 listening on http://${HOST}:${PORT}`));
