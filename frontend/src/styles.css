@@ -4461,3 +4461,11 @@
   .ar-pos-shell .pos-stock-badge{top:5px !important;right:5px !important;min-height:18px !important;padding:2px 6px !important;font-size:8px !important;}
   .ar-pos-shell .ar-standard-product-button{padding-top:28px !important;}
 }
+.pos-integration-modal{width:min(520px,calc(100vw - 32px));color:#173b5b}
+.pos-integration-modal label{display:flex;flex-direction:column;gap:7px;color:#526579;font-size:11px;font-weight:800;margin:10px 0}
+.pos-integration-modal input,.pos-integration-modal textarea,.pos-integration-modal select{width:100%;box-sizing:border-box;border:1px solid #cbd8e3;border-radius:9px;background:#fff;color:#173b5b;padding:10px 11px;outline:none}
+.pos-integration-modal textarea{resize:vertical;min-height:110px}
+.pos-integration-modal input:focus,.pos-integration-modal textarea:focus,.pos-integration-modal select:focus{border-color:#159bd4;box-shadow:0 0 0 3px #159bd41a}
+.table-picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:14px 0}
+.table-picker-grid button{min-height:52px;border:1px solid #d5e0e8;border-radius:10px;background:#f8fbfd;color:#31546c;font-weight:800;cursor:pointer}
+.table-picker-grid button.chosen,.table-picker-grid button:hover{border-color:#159bd4;background:#eaf8fc;color:#0874a0}
