@@ -195,6 +195,7 @@ function App(){
  const[agentHeaderStatus,setAgentHeaderStatus]=useState({connected:false});
  const[editing,setEditing]=useState(null);
  const[productGroups,setProductGroups]=useState(()=>load("productGroups",[...new Set(seedProducts.map(p=>p.group||p.category).filter(Boolean))]));
+ const[groupMeta,setGroupMeta]=useState(()=>load("productGroupMeta",{}));
  const[lastSale,setLastSale]=useState(null);
  const[showCashInOutModal,setShowCashInOutModal]=useState(false);
  const[posOrderMeta,setPosOrderMeta]=useState({name:"",comment:"",serviceType:"Dine In",table:""});
@@ -482,7 +483,7 @@ function App(){
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="Management"&&hasManagementAccess(activeUser)&&<Management activeUser={activeUser} setPage={setPage}/>}
    {page==="POS / Sales"&&<POS setCart={setCart} updateLinePrice={updateLinePrice} activeUser={activeUser} posOrderMeta={posOrderMeta} setPosOrderMeta={setPosOrderMeta} retrieveOpenOrder={retrieveOpenOrder} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} setNoteBox={setNoteBox} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt} openCashInOut={openCashInOut} openCashDrawer={cashDrawer} openEndOfDayFromPOS={openEndOfDayFromPOS} groupMeta={groupMeta}/>}
-   {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} suppliers={suppliers} setNotice={setNotice} settings={settings}/>}
+   {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} groupMeta={groupMeta} setGroupMeta={setGroupMeta} suppliers={suppliers} setNotice={setNotice} settings={settings}/>}
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} sales={sales}/>}
    {page==="Purchases"&&<Purchases products={products} suppliers={suppliers} receivePurchase={receivePurchase} purchases={purchases} setPurchases={setPurchases} setNotice={setNotice} paymentTypes={paymentTypes}/>}
@@ -1309,7 +1310,7 @@ const productModeLabel=productMode==="barcode"?"Barcode search":productMode==="c
  </div>;
 }
 
-function Products({products,setProducts,addProduct,updateProduct,editing,setEditing,categories,setCategories,productGroups,setProductGroups,suppliers=[],setNotice,settings=defaultSettings}){
+function Products({products,setProducts,addProduct,updateProduct,editing,setEditing,categories,setCategories,productGroups,setProductGroups,groupMeta,setGroupMeta,suppliers=[],setNotice,settings=defaultSettings}){
  const blank={code:"",barcode:"",barcodes:[],name:"",category:"",group:"",plu:"",unit:"pcs",price:0,cost:0,margin:0,stock:0,reorder:5,supplierId:"",preferredQuantity:0,lowStockWarning:false,lowStockWarningQuantity:0,taxInclusive:true,priceChangeAllowed:false,isService:false,defaultQuantity:true,active:true,description:"",image:"",rank:0,ageRestriction:"",lastPurchasePrice:0,comments:"",warrantyEnabled:false,warrantyYears:1,maintenanceEnabled:false,maintenanceCount:1};
  const[form,setForm]=useState(blank);
  const[showPriceTags,setShowPriceTags]=useState(false);
@@ -1321,7 +1322,6 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
  const[selectedProductId,setSelectedProductId]=useState(null);
  const[expandedCategories,setExpandedCategories]=useState(()=>new Set());
  const[groupCategories,setGroupCategories]=useState(()=>load("productGroupCategories",{}));
- const[groupMeta,setGroupMeta]=useState(()=>load("productGroupMeta",{}));
  const[groupImageFile,setGroupImageFile]=useState("");
  const[filter,setFilter]=useState("");
  const[showCategory,setShowCategory]=useState(false);
