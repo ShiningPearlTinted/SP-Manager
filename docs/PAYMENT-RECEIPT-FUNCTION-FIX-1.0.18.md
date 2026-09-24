@@ -12,4 +12,4 @@ Fixed missing runtime handlers used by:
 
 No POS calculations, payment calculations, Cash In/Out, End of Day, permissions, inventory or other business functions were changed.
 
-The implementation follows the SP-Manager receipt workflow concept: receipt, invoice, email and PDF/print actions are separate actions after payment completion.
+The implementation follows the SP-Manager reference receipt workflow concept: receipt, invoice, email and PDF/print actions are separate actions after payment completion.

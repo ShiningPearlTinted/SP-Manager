@@ -74,16 +74,16 @@
     <BackupDatabase Text="Validating database version..." />
     <Migrations Text="Checking the database...">
       <Errors Text="Database update failed!">
-        <Info Text="We've encountered errors during database update. Please see the details below and reach out to our support at support@sp-manager.com." />
-        <StopMessage Text="Please close SP-Manager as it is not safe to continue, reach out to support immediately and share the error from this screen by using 'Copy to clipboard' button." />
-        <ContinueMessage Text="You can continue using SP-Manager for now, but the application may become unstable or stop working. Please contact support and share the error using the Copy to clipboard button before continuing." />
+        <Info Text="We've encountered errors during database update. Please see the details below and reach out to our support at support@SP-Manager reference.com." />
+        <StopMessage Text="Please close SP-Manager reference as it is not safe to continue, reach out to support immediately and share the error from this screen by using 'Copy to clipboard' button." />
+        <ContinueMessage Text="You can continue using SP-Manager reference for now, but the application may become unstable or stop working. Please contact support and share the error using the Copy to clipboard button before continuing." />
         <Close Text="Close" />
         <Copy Text="Copy to clipboard" />
         <LearnMore Text="Learn more about database migration errors" />
       </Errors>
       <Validators>
-        <Lite Text="SP-Manager Lite: Something went wrong during your database update. We expected database version {0}, but your local database version is {1}." />
-        <Pro Text="SP-Manager Pro: Something went wrong during your database update. We expected database version {0}, but your local database version is {1}." />
+        <Lite Text="SP-Manager reference Lite: Something went wrong during your database update. We expected database version {0}, but your local database version is {1}." />
+        <Pro Text="SP-Manager reference Pro: Something went wrong during your database update. We expected database version {0}, but your local database version is {1}." />
       </Validators>
     </Migrations>
     <RestartRequired Text="Application restart is required for changes to take effect.\nClick the button below to restart the application." />
@@ -94,8 +94,8 @@
     <VerifyVersion Text="Verifying application version..." />
     <Compatibility>
       <Errors Text="Compatibility errors detected">
-        <OlderVersion Text="Your database was updated to the SP-Manager version {0}, which is higher than the one used on this computer. Running an older SP-Manager version may cause functionality issues or application failure.\nPlease update all computers to the latest SP-Manager version to avoid compatibility problems." />
-        <Info Text="Some plugins are not compatible with current SP-Manager version and will not be loaded.\nPlease update the following plugins to the latest version to continue using them." />
+        <OlderVersion Text="Your database was updated to the SP-Manager reference version {0}, which is higher than the one used on this computer. Running an older SP-Manager reference version may cause functionality issues or application failure.\nPlease update all computers to the latest SP-Manager reference version to avoid compatibility problems." />
+        <Info Text="Some plugins are not compatible with current SP-Manager reference version and will not be loaded.\nPlease update the following plugins to the latest version to continue using them." />
       </Errors>
       <Uninstall Text="Uninstall plugins" />
     </Compatibility>
@@ -1202,7 +1202,7 @@
       <Version Text="Version" />
       <ApplicationId Text="Application ID" />
       <HelpCenter Text="Open help center">
-        <Info Text="Go to SP-Manager support to open support request." />
+        <Info Text="Go to help.SP-Manager reference.com to open support request." />
       </HelpCenter>
       <ApplicationDirectory Text="Application data directory">
         <Info Text="Location where application settings, log files and other application related items are stored." />
@@ -1224,7 +1224,7 @@
         <Check Text="Check for updates">
           <Checking Text="Checking for updates... Please wait..." />
           <Downloading Text="Downloading update... Please wait..." />
-          <UpToDate Text="SP-Manager is up to date." />
+          <UpToDate Text="SP-Manager reference is up to date." />
           <Available Text="New version is available.">
             <Run Text="Click here to install now." />
           </Available>
@@ -1256,7 +1256,7 @@
         <Info Text="Read our &quot;Terms of Use&quot; online" />
       </TermsOfUse>
       <DownloadLogs Text="Download logs">
-        <Info Text="Save SP-Manager logs to a compressed (ZIP) file" />
+        <Info Text="Save SP-Manager reference logs to a compressed (ZIP) file" />
         <Success Text="Logs successfully saved to {0}" />
       </DownloadLogs>
     </About>
@@ -1290,7 +1290,7 @@
         </Optimize>
       </Maintenance>
     </Database>
-    <RestartRequired Text="SP-Manager must be restarted for these changes to take effect.">
+    <RestartRequired Text="SP-Manager reference must be restarted for these changes to take effect.">
       <Title Text="Restart required" />
     </RestartRequired>
   </Settings>
@@ -1502,8 +1502,8 @@
     </Authorization>
   </Invoices>
   <Feedback Text="Feedback">
-    <Title Text="Help us improve SP-Manager" />
-    <Description Text="Thank you for taking the time to provide a suggestion.\nYour feedback helps us make the SP-Manager application better.">
+    <Title Text="Help us improve SP-Manager reference" />
+    <Description Text="Thank you for taking the time to provide a suggestion.\nYour feedback helps us make the SP-Manager reference application better.">
       <Contact Text="Feel free to contact us anytime at" />
     </Description>
     <Message>
@@ -1516,7 +1516,7 @@
     <Send Text="Send feedback" />
     <Confirmation>
       <Title Text="Thank you!" />
-      <Message Text="Your feedback is sent. We will use it to make SP-Manager better." />
+      <Message Text="Your feedback is sent. We will use it to make SP-Manager reference better." />
     </Confirmation>
     <Error>
       <General Text="Error occurred while trying to send feedback. Please check your input and internet connection and try again." />
@@ -1624,7 +1624,7 @@
           </LicenseType>
         </Products>
         <NoLicense>
-          <Info Text="Visit SP-Manager website to learn more about premium features" />
+          <Info Text="Visit www.SP-Manager reference.com to learn more about premium features" />
         </NoLicense>
         <Refresh Text="Refresh license">
           <Success Text="License downloaded successfully." />
@@ -1669,7 +1669,7 @@
         <NoStores Text="No stores found">
           <Info Text="It seems there are no stores associated with account &quot;{0}&quot;. In order to activate your license, you need to have a store associated with it." />
           <Reload Text="Please create a store first and then click &quot;Refresh&quot; button below to continue." />
-          <Add Text="Open My SP-Manager to create your first store" />
+          <Add Text="Open My SP-Manager reference to create your first store" />
         </NoStores>
         <Successfull Text="You have successfully signed in">
           <Info Text="If license exists for selected store, it will be automatically downloaded" />
@@ -1760,7 +1760,7 @@
   </Validations>
   <Print>
     <Error Text="Print error occurred">
-      <CustomTemplate Text="Error in custom template was detected!\nPlease contact SP-Manager support in order to resolve potential issues with your custom print template.">
+      <CustomTemplate Text="Error in custom template was detected!\nPlease contact SP-Manager reference support in order to resolve potential issues with your custom print template.">
         <Continue Text="Do you wish to continue printing using default template?" />
       </CustomTemplate>
     </Error>
@@ -1836,7 +1836,7 @@
       <Available Text="Plugin updates available. Click here to install them now." />
       <Installer>
         <Error>
-          <NotFound Text="Unable to run Installer.\nPlease update SP-Manager to the latest version or contact support." />
+          <NotFound Text="Unable to run Installer.\nPlease update SP-Manager reference to the latest version or contact support." />
         </Error>
       </Installer>
     </Plugins>

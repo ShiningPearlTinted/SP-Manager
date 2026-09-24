@@ -20,9 +20,9 @@ When the POS user-menu **Cash In / Out** button is pressed:
 - It does not navigate to the standalone Management Cash In / Out page.
 - The standalone Management Cash In / Out page remains available and unchanged.
 
-## SP-Manager workflow reference
+## SP-Manager reference workflow reference
 
-The supplied project contains the previous SP-Manager audit documenting the SP-Manager workflow from `SP-Manager(7).zip` / `Lang/en.lang`:
+The supplied project contains the previous SP-Manager audit documenting the SP-Manager reference workflow from `SP-Manager reference(7).zip` / `Lang/en.lang`:
 
 - Cash In / Out
 - Add cash
@@ -34,7 +34,7 @@ The supplied project contains the previous SP-Manager audit documenting the SP-M
 - Cash drawer
 - Save / Cancel
 
-The current upload did not contain the original `SP-Manager(7).zip` source package itself; therefore the implementation follows the workflow recorded in that verified project audit while using the modern SP-Manager UI.
+The current upload did not contain the original `SP-Manager reference(7).zip` source package itself; therefore the implementation follows the workflow recorded in that verified project audit while using the modern SP-Manager UI.
 
 ## Modal functions
 

@@ -1,6 +1,6 @@
 # SP-Manager V45 - Price Tags
 
-Price Tags only update based on the existing SP-Manager-style layout.
+Price Tags only update based on the existing SP-Manager reference-style layout.
 
 - Large, readable barcode with human-readable value below.
 - Barcode height constrained to label height so the value is not clipped.

@@ -10,15 +10,15 @@ This audit covers the uploaded **SP-Manager 1.0.14** package.
 
 Removed:
 
+- `docs/SP-Manager reference-PriceTags-Reference/README.md`
+- `docs/SP-Manager reference-PriceTags-Reference/ProductsPriceTags.frx`
+- `docs/SP-Manager reference-PriceTags-Reference/`
 - `docs/SP-Manager-PriceTags-Reference/README.md`
 - `docs/SP-Manager-PriceTags-Reference/ProductsPriceTags.frx`
 - `docs/SP-Manager-PriceTags-Reference/`
-- `docs/SP-Manager-PriceTags-Reference/README.md`
-- `docs/SP-Manager-PriceTags-Reference/ProductsPriceTags.frx`
-- `docs/SP-Manager-PriceTags-Reference/`
-- `docs/PRICE-TAGS-FASTREPORT-SP-MANAGER-RESTORE.md`
+- `docs/PRICE-TAGS-FASTREPORT-REFERENCE-RESTORE.md`
 - `docs/PRICE-TAGS-FASTREPORT-INTEGRATION.md`
-- `docs/PRICE-TAGS-SP-MANAGER-REFERENCE.md`
+- `docs/PRICE-TAGS-REFERENCE-REFERENCE.md`
 
 The separate **SP-Manager Local Agent on port 18765 was NOT removed**. It is not FastReport and is used for Windows printer, cash drawer and customer display integration.
 

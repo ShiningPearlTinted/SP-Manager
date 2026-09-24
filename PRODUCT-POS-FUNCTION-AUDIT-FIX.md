@@ -1,7 +1,7 @@
 # SP-Manager Product Master ↔ POS Audit / Fix
 
 ## Basis
-Reviewed the current SP-Manager Product Master source and `SP-Manager(9).zip` reference, focusing on Product Master fields that are expected to affect POS behavior.
+Reviewed the current SP-Manager Product Master source and `SP-Manager reference(9).zip` reference, focusing on Product Master fields that are expected to affect POS behavior.
 
 ## Fixed POS-linked functions
 - **Active**: inactive products are no longer shown in POS search/category lists and cannot be added to a sale.
