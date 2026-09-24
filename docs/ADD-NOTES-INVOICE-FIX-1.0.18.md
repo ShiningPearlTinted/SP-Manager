@@ -6,14 +6,14 @@ Targeted fix only for the POS receipt dialog **Add notes** workflow and the gene
 
 ## Add Notes
 
-- Uses a modern SP-Manager dialog following the Aronium Notes workflow.
+- Uses a modern SP-Manager dialog following the SP-Manager Notes workflow.
 - Shows Document number, Customer and Total.
 - Provides **Public note** and **Internal note** fields.
 - Public note is stored in `sale.note` and is printed on the invoice.
 - Internal note is stored in `sale.internalNote` and is not printed on the invoice.
 - Existing `updateSaleNote()` flow remains the persistence path.
 
-Aronium's official support describes Public notes as printable on receipt/invoice and Private notes as visible in the document section only.
+SP-Manager's official support describes Public notes as printable on receipt/invoice and Private notes as visible in the document section only.
 
 ## Invoice
 

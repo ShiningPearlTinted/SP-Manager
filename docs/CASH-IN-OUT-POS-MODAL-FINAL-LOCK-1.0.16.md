@@ -13,9 +13,9 @@ When Cash In / Out is selected from the POS action menu:
 - show only the Cash In / Out modal over the POS;
 - Management Cash In / Out remains a separate page.
 
-## Aronium reference checked
+## SP-Manager reference checked
 
-The uploaded `Aronium(8).zip` was inspected. `Lang/en.lang` defines the Starting Cash UI as:
+The uploaded `SP-Manager(8).zip` was inspected. `Lang/en.lang` defines the Starting Cash UI as:
 
 - Cash In / Out
 - Add cash
@@ -27,7 +27,7 @@ The uploaded `Aronium(8).zip` was inspected. `Lang/en.lang` defines the Starting
 - No description / No records
 - Starting cash saved successfully
 
-The Aronium workflow uses `Aronium.Pos.Common.Tasks.BusinessDay.StartingCashTask` and `StartingCashTaskView.xaml`. The database migration defines `StartingCash` with UserId, Amount, Description, StartingCashType, ZReportNumber and DateCreated.
+The SP-Manager workflow uses `SP-Manager.Pos.Common.Tasks.BusinessDay.StartingCashTask` and `StartingCashTaskView.xaml`. The database migration defines `StartingCash` with UserId, Amount, Description, StartingCashType, ZReportNumber and DateCreated.
 
 SP-Manager retains those core movement semantics while using its modern UI and existing Local Agent cash-drawer action.
 

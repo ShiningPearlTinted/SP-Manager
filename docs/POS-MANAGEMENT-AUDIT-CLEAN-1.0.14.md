@@ -10,15 +10,15 @@ This audit covers the uploaded **SP-Manager 1.0.14** package.
 
 Removed:
 
-- `docs/Aronium-PriceTags-Reference/README.md`
-- `docs/Aronium-PriceTags-Reference/ProductsPriceTags.frx`
-- `docs/Aronium-PriceTags-Reference/`
 - `docs/SP-Manager-PriceTags-Reference/README.md`
 - `docs/SP-Manager-PriceTags-Reference/ProductsPriceTags.frx`
 - `docs/SP-Manager-PriceTags-Reference/`
-- `docs/PRICE-TAGS-FASTREPORT-ARONIUM-RESTORE.md`
+- `docs/SP-Manager-PriceTags-Reference/README.md`
+- `docs/SP-Manager-PriceTags-Reference/ProductsPriceTags.frx`
+- `docs/SP-Manager-PriceTags-Reference/`
+- `docs/PRICE-TAGS-FASTREPORT-SP-MANAGER-RESTORE.md`
 - `docs/PRICE-TAGS-FASTREPORT-INTEGRATION.md`
-- `docs/PRICE-TAGS-ARONIUM-REFERENCE.md`
+- `docs/PRICE-TAGS-SP-MANAGER-REFERENCE.md`
 
 The separate **SP-Manager Local Agent on port 18765 was NOT removed**. It is not FastReport and is used for Windows printer, cash drawer and customer display integration.
 

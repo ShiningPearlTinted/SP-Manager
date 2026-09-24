@@ -20,9 +20,9 @@ When the POS user-menu **Cash In / Out** button is pressed:
 - It does not navigate to the standalone Management Cash In / Out page.
 - The standalone Management Cash In / Out page remains available and unchanged.
 
-## Aronium workflow reference
+## SP-Manager workflow reference
 
-The supplied project contains the previous SP-Manager audit documenting the Aronium workflow from `Aronium(7).zip` / `Lang/en.lang`:
+The supplied project contains the previous SP-Manager audit documenting the SP-Manager workflow from `SP-Manager(7).zip` / `Lang/en.lang`:
 
 - Cash In / Out
 - Add cash
@@ -34,7 +34,7 @@ The supplied project contains the previous SP-Manager audit documenting the Aron
 - Cash drawer
 - Save / Cancel
 
-The current upload did not contain the original `Aronium(7).zip` source package itself; therefore the implementation follows the workflow recorded in that verified project audit while using the modern SP-Manager UI.
+The current upload did not contain the original `SP-Manager(7).zip` source package itself; therefore the implementation follows the workflow recorded in that verified project audit while using the modern SP-Manager UI.
 
 ## Modal functions
 
