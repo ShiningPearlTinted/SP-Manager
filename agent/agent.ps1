@@ -38,7 +38,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.6';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.7';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     $b=if($req.body){$req.body|ConvertFrom-Json}else{[pscustomobject]@{}}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/raw'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$lang=[string]$b.language;if(@('ZPL','TSPL') -notcontains $lang.ToUpper()){throw 'Unsupported Price Tags printer language'};$data=[Text.Encoding]::UTF8.GetBytes([string]$b.data);$copies=[Math]::Max(1,[int]$b.copies);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data)};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true;language=$lang.ToUpper()};return}
@@ -71,17 +71,28 @@ function Handle($req){
           $pdfPath=Join-Path $tmp ($base+'.pdf')
           [IO.File]::WriteAllText($htmlPath,[string]$b.pdfHtml,(New-Object Text.UTF8Encoding($false)))
           $edge=$null
-          $cmd=Get-Command msedge.exe -ErrorAction SilentlyContinue
-          if($cmd){$edge=$cmd.Source}
+          # PDF engine: prefer Edge, then Chrome/Chromium-family browsers.
+          foreach($cmdName in @('msedge.exe','chrome.exe','brave.exe')){
+            if(!$edge){
+              $cmd=Get-Command $cmdName -ErrorAction SilentlyContinue
+              if($cmd){$edge=$cmd.Source}
+            }
+          }
           if(!$edge){
             $candidates=@(
               "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
               "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe",
-              "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
+              "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe",
+              "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+              "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
+              "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
+              "$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe",
+              "$env:ProgramFiles(x86)\BraveSoftware\Brave-Browser\Application\brave.exe",
+              "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe"
             )
             $edge=$candidates|Where-Object{Test-Path $_}|Select-Object -First 1
           }
-          if(!$edge){throw 'Microsoft Edge is required to create PDF attachments.'}
+          if(!$edge){throw 'A Chromium browser (Microsoft Edge, Google Chrome, or Brave) is required to create PDF attachments.'}
           $fileUrl='file:///'+($htmlPath -replace '\\','/')
           $pdfArg='--print-to-pdf='+$pdfPath
           $args=@('--headless','--disable-gpu','--no-pdf-header-footer',$pdfArg,$fileUrl)

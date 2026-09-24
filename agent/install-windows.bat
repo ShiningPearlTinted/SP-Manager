@@ -6,7 +6,7 @@ set "LOG_DIR=%ProgramData%\SP-Manager"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 echo ==================================================
-echo SP-Manager Local Agent Installer v1.1.6
+echo SP-Manager Local Agent Installer v1.1.7
 echo ==================================================
 echo.
 if not exist "%PS_EXE%" (
@@ -42,7 +42,7 @@ goto WAIT
 :READY
  timeout /t 2 /nobreak >nul
 )
-echo SP-Manager Local Agent 1.1.6 > "%LOG_DIR%\agent-installed.flag"
+echo SP-Manager Local Agent 1.1.7 > "%LOG_DIR%\agent-installed.flag"
 echo.
 echo ==================================================
 echo SP-Manager Local Agent is READY.
