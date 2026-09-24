@@ -19,6 +19,8 @@ const seedProducts=[
 {id:7,code:"SP007",name:"Security Film",group:"Security",category:"Security",price:520,cost:260,stock:4,reorder:5},
 {id:8,code:"SP008",name:"UV Protection Film",group:"Protection",category:"Protection",price:320,cost:160,stock:9,reorder:5}
 ];
+const priceChangeAllowedFor=p=>{const v=p?.priceChangeAllowed??p?.allowPriceChangeAtPOS??p?.allowPriceChange??p?.priceChangeAtPOS;return v===true||v===1||String(v??"").trim().toLowerCase()==="true"||String(v??"").trim()==="1"};
+
 const normalizeProductStockControl=p=>{
  const reorder=Math.max(0,Number(p?.reorder??0)||0);
  const warningQty=Number.isFinite(Number(p?.lowStockWarningQuantity))?Math.max(0,Number(p.lowStockWarningQuantity)):reorder;
@@ -253,7 +255,6 @@ function App(){
  };
  const add=(p,quantityOverride,manualPriceOverride)=>{if(p?.active===false){setNotice("This product is inactive and cannot be sold.");return false}if(!settings.products.allowNegativePrice&&Number(p.price||0)<0){setNotice("Negative price is not allowed for "+p.name+".");return false}const service=Boolean(p.isService||p.service||p.serviceItem);if(settings.order.preventSaleBelowCost&&!service&&Number(p.price||0)<Number(p.cost||0)){setNotice("Sale below cost price is prevented for "+p.name+".");return false}const existing=settings.order.separateRow?null:cart.find(x=>x.id===p.id);const productDefaultQuantity=p.defaultQuantity===false?1:Math.max(1,Number(settings.order.defaultQuantity||1));const step=Math.max(1,Number(quantityOverride||productDefaultQuantity));const nextQty=(existing?.qty||0)+step;if(settings.order.preventNegativeInventory&&!service&&nextQty>Number(p.stock||0)){setNotice("Insufficient stock for "+p.name+".");return false}const hasManualPrice=manualPriceOverride!==undefined&&manualPriceOverride!==null&&Number.isFinite(Number(manualPriceOverride));const forcedPrice=hasManualPrice?Number(manualPriceOverride):null;setCart(c=>{const old=settings.order.separateRow?null:c.find(x=>x.id===p.id);const qty=(old?.qty||0)+step;const price=hasManualPrice?forcedPrice:(old?.manualPrice?old.price:promotionPrice(p,qty));const line=old?{...old,qty,price,isService:service,manualPrice:hasManualPrice?true:old.manualPrice}:{...p,id:p.id,productId:p.id,lineId:settings.order.separateRow?uid():p.id,qty,originalPrice:p.price,price,isService:service,manualPrice:hasManualPrice};return old?c.map(x=>x.id===p.id?line:x):[...c,line]});return true;};
  const changeQty=(key,d)=>{setCart(c=>c.flatMap(x=>{if((x.lineId||x.id)!==key)return [x];const qty=x.qty+d;if(qty<=0)return [];const base=products.find(p=>p.id===x.productId||p.id===x.id)||x;const service=Boolean(base.isService||base.service||base.serviceItem);const price=x.manualPrice?x.price:promotionPrice(base,qty);return [{...x,qty,price,originalPrice:base.price,isService:service}]}));};
- const priceChangeAllowedFor=(p)=>{const v=p?.priceChangeAllowed??p?.allowPriceChangeAtPOS??p?.allowPriceChange??p?.priceChangeAtPOS;return v===true||v===1||String(v??"").trim().toLowerCase()==="true"||String(v??"").trim()==="1"};
  const updateLinePrice=(key,value)=>{const n=Number(value);if(!Number.isFinite(n)||n<0){setNoticeLocal("Enter a valid sale price.");return false}setCart(c=>c.map(x=>(x.lineId||x.id)===key?{...x,price:n,manualPrice:true}:x));return true};
 
  const completeSale=(paymentInfo={})=>{
