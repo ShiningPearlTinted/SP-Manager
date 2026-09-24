@@ -4421,3 +4421,11 @@
 .price-keypad-footer button{border:1px solid #4f5a62;border-radius:4px;padding:9px 15px;background:#168dcc;color:#fff;font-weight:700}
 .price-keypad-footer .secondary{background:#30363b!important;color:#e7ecef!important;border-color:#515c64!important}
 @media(max-width:480px){.price-keypad-modal{width:calc(100vw - 20px)}.price-keypad-grid button{height:46px}.price-keypad-display input{font-size:25px}}
+
+
+/* POS PRICE CHANGE — TARGETED CLICK SAFETY */
+/* Only POS product/category controls: keep them clickable; no layout/function changes. */
+.ar-pos-shell .ar-product-tile,
+.ar-pos-shell .ar-category-tile,
+.ar-pos-shell .ar-back-tile,
+.ar-pos-shell .ar-standard-table button{pointer-events:auto !important;cursor:pointer !important;}
