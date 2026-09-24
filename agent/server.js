@@ -28,14 +28,27 @@ if($Bytes){$data=($Bytes -split ',')|ForEach-Object{[byte]$_};[RawPrinter]::Send
  $cp=437;if($o.codePage){[void][int]::TryParse([string]$o.codePage,[ref]$cp)}
  try{$enc=[Text.Encoding]::GetEncoding($cp)}catch{$enc=[Text.Encoding]::UTF8}
  $all=New-Object System.Collections.Generic.List[byte]
+ function AddRasterLogo([System.Collections.Generic.List[byte]]$buf,[string]$data,[int]$maxDots){
+   if([string]::IsNullOrWhiteSpace($data)){return}
+   try{
+     $raw=$data -replace '^data:image/[^;]+;base64,','';$bytes=[Convert]::FromBase64String($raw);$ms=New-Object IO.MemoryStream(,$bytes);$bmp=[Drawing.Bitmap]::FromStream($ms);
+     $scale=[Math]::Min(1.0,$maxDots/[double]$bmp.Width);$w=[Math]::Max(1,[int]($bmp.Width*$scale));$h=[Math]::Max(1,[int]($bmp.Height*$scale));$img=New-Object Drawing.Bitmap($w,$h);$g=[Drawing.Graphics]::FromImage($img);$g.DrawImage($bmp,0,0,$w,$h);$g.Dispose();$bmp.Dispose();$ms.Dispose();
+     $rowBytes=[int][Math]::Ceiling($w/8.0);$buf.AddRange([byte[]](29,118,48,0,[byte]($rowBytes%256),[byte]([Math]::Floor($rowBytes/256)),[byte]($h%256),[byte]([Math]::Floor($h/256))));
+     for($y=0;$y -lt $h;$y++){for($x=0;$x -lt $rowBytes;$x++){[byte]$v=0;for($b=0;$b -lt 8;$b++){ $px=$x*8+$b;if($px -lt $w){$c=$img.GetPixel($px,$y);$gray=(0.299*$c.R+0.587*$c.G+0.114*$c.B);if($gray -lt 180){$v=$v -bor (1 -shl (7-$b))}}};$buf.Add($v)}};$img.Dispose()
+   }catch{}
+ }
  1..([Math]::Max(1,$Copies))|ForEach-Object{
    $all.AddRange([byte[]](27,64))
    if($o.characterSet -and $o.characterSet -ne 'None'){
      $map=@{'USA'=0;'France'=1;'Germany'=2;'UK'=3;'Denmark I'=4;'Sweden'=5;'Italy'=6;'Spain I'=7;'Japan'=8;'Norway'=9;'Denmark II'=10;'Spain II'=11;'Latin America'=12;'Korea'=13;'Slovenia / Croatia'=18;'China'=15;'Vietnam'=16;'Arabia'=19};$cs=$map[[string]$o.characterSet];if($null -ne $cs){$all.AddRange([byte[]](27,82,[byte]$cs))}
    }
+   $fontSize=[Math]::Max(50,[Math]::Min(200,[int]($(if($null -eq $o.fontSize){100}else{$o.fontSize}))));$mode=0;if($fontSize -ge 140){$mode=17}elseif($fontSize -le 80){$mode=1};$all.AddRange([byte[]](29,33,[byte]$mode))
    $align=0;if([string]$o.alignment -eq 'Center'){$align=1}elseif([string]$o.alignment -eq 'Right'){$align=2};$all.AddRange([byte[]](27,97,[byte]$align))
-   $lines=String($Text).Split([char]10)
-   foreach($line in $lines){$clean=$line.TrimEnd([char]13);if($o.rightToLeft){$clean=($clean.ToCharArray() -join '')};$all.AddRange($enc.GetBytes($clean));$all.Add(10)}
+   $top=[Math]::Max(0,[Math]::Min(20,[int]($o.marginTop)));if($top -gt 0){$all.AddRange([byte[]](27,100,[byte]$top))}
+   if($o.printBitmap -ne $false -and $o.logoData){$maxDots=([Math]::Max(32,[Math]::Min(576,[int]($o.charactersPerLine)*12)));AddRasterLogo $all ([string]$o.logoData) $maxDots;$all.Add(10)}
+   $left=[Math]::Max(0,[Math]::Min(40,[int]($o.marginLeft)));$right=[Math]::Max(0,[Math]::Min(40,[int]($o.marginRight)));$lines=String($Text).Split([char]10)
+   foreach($line in $lines){$clean=$line.TrimEnd([char]13);if($o.rightToLeft){$clean=($clean.ToCharArray() -join '')};if($left -gt 0){$clean=(' ' * $left)+$clean};if($right -gt 0){$clean=$clean+(' ' * $right)};$all.AddRange($enc.GetBytes($clean));$all.Add(10)}
+   if($o.printBarcode -ne $false -and $o.barcodeData){$bd=[Text.Encoding]::ASCII.GetBytes([string]$o.barcodeData);$payload=[byte[]](123,66)+$bd;$all.AddRange([byte[]](29,107,73,[byte]$payload.Length));$all.AddRange($payload);$all.Add(10)}
    $feed=[Math]::Max(0,[Math]::Min(20,[int]($o.feedLines)));if($feed -gt 0){$all.AddRange([byte[]](27,100,[byte]$feed))}
    if($o.cutPaper -ne $false){$all.AddRange([byte[]](29,86,65,3))}
   }

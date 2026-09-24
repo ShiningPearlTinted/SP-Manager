@@ -261,14 +261,14 @@ function App(){
  const disc=totalDiscount;
 
  const persist=(key,val,setter)=>{save(key,val);setter(val)};
- const formatDocumentNumber=(type="Order")=>{
-   const current=Math.max(0,Number(load("orderCounter",0)||0))+1;
-   save("orderCounter",current);
+ const nextDocumentCounter=()=>{const current=Math.max(0,Number(load("orderCounter",0)||0))+1;save("orderCounter",current);return current};
+ const formatDocumentNumber=(type="Order",counterOverride)=>{
+   const current=counterOverride==null?nextDocumentCounter():Math.max(0,Number(counterOverride||0));
    const d=settings?.documents||{};
    const pattern=d.overrides?.[type]||d.numberFormat||"%YEAR%-%TYPE%-%COUNTER%";
    return String(pattern).replaceAll("%YEAR%",String(new Date().getFullYear())).replaceAll("%TYPE%",type).replaceAll("%COUNTER%",String(current).padStart(6,"0"));
  };
- const nextOrderNumber=()=>formatDocumentNumber("Order");
+ const nextOrderNumber=(counterOverride)=>formatDocumentNumber("Order",counterOverride);
  const updateSettings=next=>{const merged=deepMerge(defaultSettings,next);persist("settings",merged,setSettings);return merged};
  useEffect(()=>{save("settings",settings)},[settings]);
  useEffect(()=>{save("posSearchMode",posSearchMode)},[posSearchMode]);
@@ -306,7 +306,8 @@ function App(){
   const customerObj=customers.find(c=>c.id===customer);
   const dueDays=Number(customerObj?.dueDatePeriod>0?customerObj.dueDatePeriod:settings.order.defaultDueDate||0);
   const dueDate=new Date(Date.now()+dueDays*86400000).toISOString();
-  const sale={id:uid(),no:formatDocumentNumber("Invoice"),orderNumber:nextOrderNumber(),date:new Date().toISOString(),dueDate,customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment:payments.length>1?"Split payment":(primary?.name||primaryName),paymentTypeId:primary?.id,paid:allPaid,paymentAmount:totalPaymentAmount,change:Math.max(0,totalPaymentAmount-grand),payments,voided:false,refunded:false,note:String(paymentInfo.note??posOrderMeta.comment??""),internalNote:String(paymentInfo.internalNote??""),orderName:String(paymentInfo.orderName??posOrderMeta.name??""),serviceType:String(paymentInfo.serviceType??posOrderMeta.serviceType??""),table:String(paymentInfo.table??posOrderMeta.table??""),receiptAllowed:paymentInfo.printReceipt!==false};
+  const documentCounter=nextDocumentCounter();
+  const sale={id:uid(),no:formatDocumentNumber("Invoice",documentCounter),orderNumber:nextOrderNumber(documentCounter),date:new Date().toISOString(),dueDate,customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment:payments.length>1?"Split payment":(primary?.name||primaryName),paymentTypeId:primary?.id,paid:allPaid,paymentAmount:totalPaymentAmount,change:Math.max(0,totalPaymentAmount-grand),payments,voided:false,refunded:false,note:String(paymentInfo.note??posOrderMeta.comment??""),internalNote:String(paymentInfo.internalNote??""),orderName:String(paymentInfo.orderName??posOrderMeta.name??""),serviceType:String(paymentInfo.serviceType??posOrderMeta.serviceType??""),table:String(paymentInfo.table??posOrderMeta.table??""),receiptAllowed:paymentInfo.printReceipt!==false};
   const ns=[...sales,sale];
   const np=products.map(p=>{const i=cart.find(x=>x.id===p.id);return i?{...p,stock:Math.max(0,p.stock-i.qty)}:p});
   const lowStockItems=cart.map(i=>{const product=products.find(p=>p.id===i.id);const before=Number(product?.stock||0);const after=Math.max(0,before-Number(i.qty||0));const warningEnabled=product?.lowStockWarning!==false;const warningQty=Math.max(0,Number(product?.lowStockWarningQuantity??product?.reorder??0));return {product,before,after,warningEnabled,warningQty}}).filter(x=>x.product&&x.warningEnabled&&x.warningQty>0&&x.before>=x.warningQty&&x.after<x.warningQty);
@@ -404,7 +405,7 @@ function App(){
   ].filter(Boolean).join("\n");
   const printer=prt.printerReceipt||settings?.hardware?.printer||prt.printer||"";
   if(prt.printReceipt!==false&&printer){
-   hardwareRequest("/print",{printer,text:receiptLines,copies:Number(prt.copies||1),options:{printerType:prt.printerType,paperSize:prt.paperSize,charactersPerLine:prt.charactersPerLine,rightToLeft:prt.rightToLeft,feedLines:prt.feedLines,cutPaper:prt.cutPaper,printBitmap:prt.printBitmap,richFormatting:prt.richFormatting,printBarcode:prt.printBarcode,printLogoFullWidth:prt.printLogoFullWidth,alignment:prt.alignment,codePage:prt.codePage,characterSet:prt.characterSet,marginTop:prt.marginTop,marginRight:prt.marginRight,marginBottom:prt.marginBottom,marginLeft:prt.marginLeft,fontFamily:prt.fontFamily,fontSize:prt.fontSize}}).then(()=>{if(settings?.hardware?.cashDrawerEnabled&&String(sale.payment||"").toLowerCase().includes("cash"))cashDrawer();setNotice("Receipt printed successfully.")}).catch(()=>{const w=window.open("","_blank","width=420,height=720");if(!w){alert("Please allow pop-ups to print the receipt.");return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${sale.no}</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:18px;color:#111}pre{white-space:pre-wrap}</style></head><body><pre>${receiptLines.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</pre><script>window.onload=()=>setTimeout(()=>window.print(),200)</script></body></html>`);w.document.close();});
+   hardwareRequest("/print",{printer,text:receiptLines,copies:Number(prt.copies||1),options:{printerType:prt.printerType,paperSize:prt.paperSize,charactersPerLine:prt.charactersPerLine,rightToLeft:prt.rightToLeft,feedLines:prt.feedLines,cutPaper:prt.cutPaper,printBitmap:prt.printBitmap,richFormatting:prt.richFormatting,printBarcode:prt.printBarcode,printLogoFullWidth:prt.printLogoFullWidth,alignment:prt.alignment,codePage:prt.codePage,characterSet:prt.characterSet,marginTop:prt.marginTop,marginRight:prt.marginRight,marginBottom:prt.marginBottom,marginLeft:prt.marginLeft,fontFamily:prt.fontFamily,fontSize:prt.fontSize,logoData:prt.printBitmap?(company?.logo||""):"",barcodeData:prt.printBarcode?String(sale.orderNumber||sale.no||""):""}}).then(()=>setNotice("Receipt printed successfully.")).catch(()=>{const w=window.open("","_blank","width=420,height=720");if(!w){alert("Please allow pop-ups to print the receipt.");return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${sale.no}</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:18px;color:#111}pre{white-space:pre-wrap}</style></head><body><pre>${receiptLines.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</pre><script>window.onload=()=>setTimeout(()=>window.print(),200)</script></body></html>`);w.document.close();});
    return;
   }
   const w=window.open("","_blank","width=420,height=720");if(!w){alert("Please allow pop-ups to print the receipt.");return}w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${sale.no}</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:18px;color:#111}pre{white-space:pre-wrap}</style></head><body><pre>${receiptLines.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</pre><script>window.onload=()=>setTimeout(()=>window.print(),200)</script></body></html>`);w.document.close();
