@@ -131,12 +131,16 @@ $proc=Start-Process -FilePath $edge -ArgumentList $args -PassThru
 Start-Sleep -Milliseconds 1500
 $hwnd=[IntPtr]::Zero
 for($i=0;$i -lt 15 -and $hwnd -eq [IntPtr]::Zero;$i++){
-  try{$proc.Refresh();$hwnd=$proc.MainWindowHandle}catch{}
+  try{
+    $proc.Refresh()
+    $rawHandle=$proc.MainWindowHandle
+    if($null -ne $rawHandle -and [string]$rawHandle -ne ''){try{$hwnd=[IntPtr]::new([long]$rawHandle)}catch{$hwnd=[IntPtr]::Zero}}
+  }catch{}
   if($hwnd -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 300}
 }
 if($hwnd -eq [IntPtr]::Zero){throw 'Customer display browser window started, but Windows did not return its window handle.'}
-[SPWindow]::ShowWindowAsync($hwnd,3)|Out-Null
-[SPWindow]::SetWindowPos($hwnd,[IntPtr]::Zero,$s.Bounds.X,$s.Bounds.Y,$s.Bounds.Width,$s.Bounds.Height,0x0040)|Out-Null
+[SPWindow]::ShowWindowAsync([IntPtr]$hwnd,3)|Out-Null
+[SPWindow]::SetWindowPos([IntPtr]$hwnd,[IntPtr]::Zero,$s.Bounds.X,$s.Bounds.Y,$s.Bounds.Width,$s.Bounds.Height,0x0040)|Out-Null
 Write-Output (@{monitor=$s.DeviceName;x=$s.Bounds.X;y=$s.Bounds.Y;width=$s.Bounds.Width;height=$s.Bounds.Height;windowFound=$true;browser=$edge}|ConvertTo-Json -Compress)
 `;
     const out=await ps(displayScript);

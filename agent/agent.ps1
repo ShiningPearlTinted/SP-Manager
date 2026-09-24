@@ -38,7 +38,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.4';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.5';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     $b=if($req.body){$req.body|ConvertFrom-Json}else{[pscustomobject]@{}}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/raw'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$lang=[string]$b.language;if(@('ZPL','TSPL') -notcontains $lang.ToUpper()){throw 'Unsupported Price Tags printer language'};$data=[Text.Encoding]::UTF8.GetBytes([string]$b.data);$copies=[Math]::Max(1,[int]$b.copies);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data)};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true;language=$lang.ToUpper()};return}
@@ -101,17 +101,28 @@ public static class SPDisplayWindow {
       Start-Sleep -Milliseconds 1800
       $hwnd=[IntPtr]::Zero
       for($i=0;$i -lt 20 -and $hwnd -eq [IntPtr]::Zero;$i++){
-        try{$started.Refresh();$hwnd=$started.MainWindowHandle}catch{}
+        try{
+          $started.Refresh()
+          $rawHandle=$started.MainWindowHandle
+          if($null -ne $rawHandle -and [string]$rawHandle -ne ''){
+            try{$hwnd=[IntPtr]::new([long]$rawHandle)}catch{$hwnd=[IntPtr]::Zero}
+          }
+        }catch{}
         if($hwnd -eq [IntPtr]::Zero){
           $name=[IO.Path]::GetFileNameWithoutExtension($browser)
           $candidate=Get-Process -Name $name -ErrorAction SilentlyContinue|Where-Object{$_.MainWindowHandle -ne 0}|Sort-Object StartTime -Descending|Select-Object -First 1
-          if($candidate){$hwnd=$candidate.MainWindowHandle}
+          if($candidate){
+            try{
+              $rawCandidate=$candidate.MainWindowHandle
+              if($null -ne $rawCandidate -and [string]$rawCandidate -ne ''){$hwnd=[IntPtr]::new([long]$rawCandidate)}
+            }catch{$hwnd=[IntPtr]::Zero}
+          }
         }
         if($hwnd -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 300}
       }
       if($hwnd -eq [IntPtr]::Zero){throw 'Customer display browser started, but Windows did not return a usable window handle.'}
-      [SPDisplayWindow]::ShowWindowAsync($hwnd,3)|Out-Null
-      [SPDisplayWindow]::SetWindowPos($hwnd,[IntPtr]::Zero,$screen.Bounds.X,$screen.Bounds.Y,$screen.Bounds.Width,$screen.Bounds.Height,0x0040)|Out-Null
+      [SPDisplayWindow]::ShowWindowAsync([IntPtr]$hwnd,3)|Out-Null
+      [SPDisplayWindow]::SetWindowPos([IntPtr]$hwnd,[IntPtr]::Zero,$screen.Bounds.X,$screen.Bounds.Y,$screen.Bounds.Width,$screen.Bounds.Height,0x0040)|Out-Null
       Send-Json $s 200 @{ok=$true;mode='secondary';details=@{monitor=$screen.DeviceName;x=$screen.Bounds.X;y=$screen.Bounds.Y;width=$screen.Bounds.Width;height=$screen.Bounds.Height;windowFound=$true;browser=$browser}};return
     }
     if($req.method -eq 'POST' -and $req.path -eq '/display'){$chars=[Math]::Max(8,[int]$b.chars);$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$script:DisplayState=@{line1=$line1;line2=$line2;chars=$chars;updatedAt=(Get-Date).ToUniversalTime().ToString('o')};$portName=[string]$b.port;if(!$portName){throw 'COM port is required'};$chars=[Math]::Max(8,[int]$b.chars);$baud=[int]$b.baud;if(!$baud){$baud=9600};$sp=New-Object IO.Ports.SerialPort($portName,$baud,'None',8,'One');$sp.Open();$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$sp.Write([char]12);$sp.Write($line1+$line2);$sp.Close();Send-Json $s 200 @{ok=$true};return}
