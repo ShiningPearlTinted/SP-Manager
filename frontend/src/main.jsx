@@ -148,6 +148,7 @@ const invoiceCss=`@page{size:__INVOICE_PAPER__ portrait;margin:0}body{font-famil
 const printInvoice=(sale,company={},customers=[],settings={})=>{try{const w=window.open("","_blank","width=900,height=760");if(!w){window.alert("Please allow pop-ups for SP-Manager printing.");return false}w.document.open();const paper=settings?.print?.printA5?"A5":"A4";w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${escapeHtml(sale?.no||"")}</title><style>${invoiceCss.replace("__INVOICE_PAPER__",paper)}</style></head><body>${buildInvoiceHtml(sale,company,customers,settings)}<script>window.onload=()=>setTimeout(()=>window.print(),180);<\/script></body></html>`);w.document.close();return true}catch(e){window.alert("Unable to open invoice: "+e.message);return false}};
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem("sp_"+k))??d}catch{return d}};
 const save=(k,v)=>localStorage.setItem("sp_"+k,JSON.stringify(v));
+const persist=(key,val,setter)=>{save(key,val);setter(val)};
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
 const isPermissionAllowed=(user,key)=>Boolean(user&&(user.role==="Administrator"||user.permissions?.[key]===true));
 const hasManagementAccess=user=>Boolean(user&&(user.role==="Administrator"||user.permissions?.manageManagement===true));
@@ -256,7 +257,7 @@ function App(){
  };
  const add=(p,quantityOverride,manualPriceOverride)=>{if(p?.active===false){setNotice("This product is inactive and cannot be sold.");return false}if(!settings.products.allowNegativePrice&&Number(p.price||0)<0){setNotice("Negative price is not allowed for "+p.name+".");return false}const service=Boolean(p.isService||p.service||p.serviceItem);if(settings.order.preventSaleBelowCost&&!service&&Number(p.price||0)<Number(p.cost||0)){setNotice("Sale below cost price is prevented for "+p.name+".");return false}const existing=settings.order.separateRow?null:cart.find(x=>x.id===p.id);const productDefaultQuantity=p.defaultQuantity===false?1:Math.max(1,Number(settings.order.defaultQuantity||1));const step=Math.max(1,Number(quantityOverride||productDefaultQuantity));const nextQty=(existing?.qty||0)+step;if(settings.order.preventNegativeInventory&&!service&&nextQty>Number(p.stock||0)){setNotice("Insufficient stock for "+p.name+".");return false}const hasManualPrice=manualPriceOverride!==undefined&&manualPriceOverride!==null&&Number.isFinite(Number(manualPriceOverride));const forcedPrice=hasManualPrice?Number(manualPriceOverride):null;setCart(c=>{const old=settings.order.separateRow?null:c.find(x=>x.id===p.id);const qty=(old?.qty||0)+step;const price=hasManualPrice?forcedPrice:(old?.manualPrice?old.price:promotionPrice(p,qty));const line=old?{...old,qty,price,isService:service,manualPrice:hasManualPrice?true:old.manualPrice}:{...p,id:p.id,productId:p.id,lineId:settings.order.separateRow?uid():p.id,qty,originalPrice:p.price,price,isService:service,manualPrice:hasManualPrice};return old?c.map(x=>x.id===p.id?line:x):[...c,line]});return true;};
  const changeQty=(key,d)=>{setCart(c=>c.flatMap(x=>{if((x.lineId||x.id)!==key)return [x];const qty=x.qty+d;if(qty<=0)return [];const base=products.find(p=>p.id===x.productId||p.id===x.id)||x;const service=Boolean(base.isService||base.service||base.serviceItem);const price=x.manualPrice?x.price:promotionPrice(base,qty);return [{...x,qty,price,originalPrice:base.price,isService:service}]}));};
- const updateLinePrice=(key,value)=>{const n=Number(value);if(!Number.isFinite(n)||n<0){setNoticeLocal("Enter a valid sale price.");return false}setCart(c=>c.map(x=>(x.lineId||x.id)===key?{...x,price:n,manualPrice:true}:x));return true};
+ const updateLinePrice=(key,value)=>{const n=Number(value);if(!Number.isFinite(n)||n<0){setNotice("Enter a valid sale price.");return false}setCart(c=>c.map(x=>(x.lineId||x.id)===key?{...x,price:n,manualPrice:true}:x));return true};
 
  const completeSale=(paymentInfo={})=>{
   if(!cart.length)return setNotice("The cart is empty.");
@@ -417,7 +418,7 @@ function App(){
    </div>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="Management"&&hasManagementAccess(activeUser)&&<Management activeUser={activeUser} setPage={setPage}/>}
-   {page==="POS / Sales"&&<POS updateLinePrice={updateLinePrice} activeUser={activeUser} posOrderMeta={posOrderMeta} setPosOrderMeta={setPosOrderMeta} retrieveOpenOrder={retrieveOpenOrder} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} setNoteBox={setNoteBox} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt} openCashInOut={openCashInOut} openCashDrawer={cashDrawer} openEndOfDayFromPOS={openEndOfDayFromPOS}/>}
+   {page==="POS / Sales"&&<POS setCart={setCart} updateLinePrice={updateLinePrice} activeUser={activeUser} posOrderMeta={posOrderMeta} setPosOrderMeta={setPosOrderMeta} retrieveOpenOrder={retrieveOpenOrder} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} setNoteBox={setNoteBox} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt} openCashInOut={openCashInOut} openCashDrawer={cashDrawer} openEndOfDayFromPOS={openEndOfDayFromPOS}/>}
    {page==="Products"&&<Products products={products} setProducts={setProducts} addProduct={addProduct} updateProduct={updateProduct} editing={editing} setEditing={setEditing} categories={categories} setCategories={setCategories} productGroups={productGroups} setProductGroups={setProductGroups} suppliers={suppliers} setNotice={setNotice} settings={settings}/>}
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} sales={sales}/>}
@@ -456,6 +457,7 @@ function Login({users,company,onLogin}){
 
 
 function NamedOrders({orders,setOrders,customers,onOpenOrder}){
+ const refreshOrders=()=>{const latest=load("orders",orders);setOrders(Array.isArray(latest)?latest:orders)};
  const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");
  const visible=orders.filter(o=>String(o.name||o.orderName||"").toLowerCase().includes(search.toLowerCase()));
  const add=()=>{if(!name.trim())return;setOrders([...orders,{id:uid(),name:name.trim(),customerId,date:new Date().toISOString(),status:"Open",items:[]}]);setName("")};
@@ -771,7 +773,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  </section>
 }
 function Card({t,v}){return <div className="card"><small>{t}</small><strong>{v}</strong></div>}
-function POS({updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenOrder,filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,discountFixed,setDiscountFixed,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,setNoteBox,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt,settings,activeUser,signOut,openCashInOut,openCashDrawer,openEndOfDayFromPOS}){
+function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenOrder,filtered,q,setQ,posSearchMode,setPosSearchMode,add,cart,changeQty,customers,setCustomers,customer,setCustomer,discount,setDiscount,discountFixed,setDiscountFixed,payment,setPayment,paymentTypes,subtotal,disc,taxRate,setTaxRate,tax,grand,sale,saveOpenOrder,orders,setOrders,updateSaleNote,setNoteBox,clearCurrentSale,printReceipt,closeLastSale,categories,posCategory,setPosCategory,products,company,lastSale,menuOpen,setMenuOpen,setPage,sales,emailReceipt,settings,activeUser,signOut,openCashInOut,openCashDrawer,openEndOfDayFromPOS}){
  const[catLevel,setCatLevel]=useState("root");
  const[group,setGroup]=useState("");
  const[showCustomer,setShowCustomer]=useState(false);
@@ -1299,6 +1301,33 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
   const code=candidate12+check;
   setForm(f=>{const current=(f.barcodes||[]).map(String).filter(Boolean);const all=f.barcode&&!current.includes(String(f.barcode))?[String(f.barcode),...current]:current;return {...f,barcode:f.barcode||code,barcodes:[...all,code].filter((x,i,a)=>a.indexOf(x)===i)}});
  };
+ const refreshProducts=()=>{
+  const nextProducts=load("products",products).map(normalizeProductStockControl);
+  const nextCategories=load("categories",categories);
+  const nextGroups=load("productGroups",productGroups);
+  const nextGroupCategories=load("productGroupCategories",groupCategories);
+  setProducts(nextProducts);
+  setCategories(Array.isArray(nextCategories)?nextCategories:categories);
+  setProductGroups(Array.isArray(nextGroups)?nextGroups:productGroups);
+  setGroupCategories(nextGroupCategories&&typeof nextGroupCategories==="object"?nextGroupCategories:groupCategories);
+  setSelectedProductId(null);
+  setNotice("Product data refreshed successfully.");
+ };
+ const requestDeleteProduct=()=>{
+  const product=products.find(p=>p.id===selectedProductId);
+  if(!product){setNotice("Please select a product first.");return}
+  setProductDeleteTarget(product);
+ };
+ const confirmDeleteProduct=()=>{
+  if(!productDeleteTarget)return;
+  const next=products.filter(p=>p.id!==productDeleteTarget.id);
+  save("products",next);
+  setProducts(next);
+  if(editing?.id===productDeleteTarget.id){setEditing(null);setShowEditor(false)}
+  setSelectedProductId(null);
+  setProductDeleteTarget(null);
+  setNotice("Product deleted successfully.");
+ };
  const openNew=()=>{setEditing(null);setEditorTab("General");setForm({...blank,code:nextProductCode(),category:selectedCategory!=="All Products"?selectedCategory:"",group:selectedGroup!=="All Groups"?selectedGroup:""});setShowEditor(true)};
  const openEdit=p=>{setEditing(p);setEditorTab("General");const rawPriceChange=p?.priceChangeAllowed??p?.allowPriceChangeAtPOS??p?.allowPriceChange??p?.priceChangeAtPOS;const priceChangeAllowed=rawPriceChange===true||rawPriceChange===1||String(rawPriceChange??"").trim().toLowerCase()==="true"||String(rawPriceChange??"").trim()==="1";setForm({...blank,...p,priceChangeAllowed,barcode:p.barcode||p.barcodes?.[0]||"",barcodes:Array.isArray(p.barcodes)?p.barcodes:(p.barcode?[p.barcode]:[]),category:p.category||"",group:p.group||p.category||"",warrantyEnabled:Boolean(p.warrantyEnabled),warrantyYears:Math.max(1,Number(p.warrantyYears)||1),maintenanceEnabled:Boolean(p.maintenanceEnabled),maintenanceCount:Math.max(1,Number(p.maintenanceCount)||1)});setShowEditor(true)};
  const editSelectedProduct=()=>{const product=products.find(p=>p.id===selectedProductId);if(product)openEdit(product);else setNotice("Please select a product first.");};
@@ -1334,6 +1363,7 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
    </div>
    <div className="form-actions"><button type="submit">{editing?"Save Changes":"Create Product"}</button><button type="button" className="secondary" onClick={()=>setShowEditor(false)}>Cancel</button></div>
   </form></div></div>}
+  {productDeleteTarget&&<div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-product-title" onMouseDown={()=>setProductDeleteTarget(null)}><div className="modal group-confirm-modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">PRODUCT MASTER</span><h3 id="delete-product-title">Delete Product</h3></div><button type="button" className="iconbtn" aria-label="Close" onClick={()=>setProductDeleteTarget(null)}>×</button></div><div className="group-confirm-body"><div className="confirm-icon danger">!</div><p>Are you sure you want to delete <b>"{productDeleteTarget.name}"</b>?</p><small className="muted">This removes the product from Product Master and POS. Existing sales history is not changed.</small></div><div className="group-confirm-actions"><button type="button" className="secondary" onClick={()=>setProductDeleteTarget(null)}>No</button><button type="button" className="danger-button" onClick={confirmDeleteProduct}>Yes, delete</button></div></div></div>}
   {showPriceTags&&<PriceTagsModal products={products} groups={groups} money={money} settings={settings} onClose={()=>setShowPriceTags(false)} setNotice={setNotice}/>}
   {showCategory&&<div className="modal-backdrop" onMouseDown={()=>setShowCategory(false)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Product Categories</h3><button className="iconbtn" onClick={()=>setShowCategory(false)}>×</button></div><div className="category-list">{categories.map(c=><div key={c}><span>{c}</span><small>{products.filter(p=>(p.category||p.group)===c).length} product(s)</small></div>)}</div><div className="inline-field"><input value={newCategory} placeholder="New category name" onChange={e=>setNewCategory(e.target.value)}/><button onClick={addCat}>Add Category</button></div></div></div>}
   {showGroup&&<div className="modal-backdrop" onMouseDown={()=>setShowGroup(false)}><form className="modal" onSubmit={saveGroup} onMouseDown={e=>e.stopPropagation()}><div className="modal-head"><h3>Product Groups</h3><button type="button" className="iconbtn" onClick={()=>setShowGroup(false)}>×</button></div><p className="muted">One product group can contain any number of products. Select the same group when creating multiple items.</p><div className="category-list">{groups.map(g=><div key={g}><span>{g}</span><small>{products.filter(p=>(p.group||p.category)===g).length} product(s)</small></div>)}</div><div className="inline-field"><input autoFocus value={newGroup} placeholder="New product group name" onChange={e=>{setNewGroup(e.target.value);setGroupError("")}}/><button type="submit">Add Group</button></div>{groupError&&<p className="modal-inline-error">{groupError}</p>}</form></div>}
@@ -1342,6 +1372,7 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
  </section>
 }
 function Inventory({products,setProducts,stockHistory,setStockHistory,categories}){
+ const refreshInventory=()=>{const latestProducts=load("products",products).map(normalizeProductStockControl);const latestHistory=load("stockHistory",stockHistory);setProducts(latestProducts);setStockHistory(Array.isArray(latestHistory)?latestHistory:stockHistory)};
  const [category,setCategory]=useState("All Products");
  const [search,setSearch]=useState("");
  const [negative,setNegative]=useState(false);
