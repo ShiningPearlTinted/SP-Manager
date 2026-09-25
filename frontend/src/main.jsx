@@ -167,14 +167,15 @@ function CustomerDisplay(){
  useEffect(()=>{poll();const id=setInterval(poll,1000);return()=>clearInterval(id)},[displayCode,terminalCode]);
  const fmt=n=>`${state.currency||"RM"} ${Number(n||0).toFixed(2)}`;
  const idle=state.state==="IDLE"||!state.items?.length;
- return <div className="customer-display-screen">
+ return <div className="customer-display-screen cd-modern-v4">
    <div className="customer-display-status"><span className={connected?"online":"offline"}>●</span>{connected?"Connected": "Connection lost"}</div>
    <div className="customer-display-brand"><div className="customer-display-brand-name">{state.companyName||"Shining Pearl Tinted"}</div><div className="customer-display-brand-sub">CUSTOMER DISPLAY</div></div>
    <main className="customer-display-main">
-    <section className="customer-display-media">{state.imageData?<img src={state.imageData} alt="Promotion"/>:<div className="customer-display-placeholder"><b>SHINING PEARL</b><span>Premium Automotive Care</span></div>}</section>
+    <section className="customer-display-media"><div className="cd-media-label">SHINING PEARL TINTED <span>ADVERTISEMENT</span></div>{state.imageData?<img src={state.imageData} alt="Promotion"/>:<div className="customer-display-placeholder"><b>SHINING PEARL</b><span>Premium Automotive Care</span></div>}</section>
     <section className="customer-display-order">
+      <div className="cd-order-glow"/>
       {idle?<div className="customer-display-idle"><div className="customer-display-idle-logo">SP</div><h1>Welcome</h1><p>Thank you for visiting Shining Pearl Tinted</p><small>{error||"Ready for your order"}</small></div>:
-      <><div className="customer-display-order-head"><div><span>{state.state==="PAYMENT"?"PAYMENT":"YOUR ORDER"}</span><h1>{state.state==="PAYMENT"?"Payment Summary":"Shopping Cart"}</h1></div><div className="customer-display-item-count">{(state.items||[]).reduce((a,x)=>a+Number(x.qty||0),0)} items</div></div>
+      <><div className="customer-display-order-head"><div><span>{state.state==="PAYMENT"?"PAYMENT":"YOUR ORDER"}</span><h1>{state.state==="PAYMENT"?"Payment Summary":"Shopping Cart"}</h1></div><div className="customer-display-item-count">{(state.items||[]).reduce((a,x)=>a+Number(x.qty||0),0)} <span>ITEMS</span></div></div>
       <div className="customer-display-items">{(state.items||[]).map((item,i)=><div className="customer-display-item" key={item.lineId||item.id||i}><div><b>{item.name||"Product"}</b><small>{item.code||""}</small></div><strong>{Number(item.qty||0)}</strong><strong>{fmt(Number(item.price||0)*Number(item.qty||0))}</strong></div>)}</div>
       <div className="customer-display-totals"><div><span>Subtotal</span><b>{fmt(state.subtotal)}</b></div>{Number(state.discount)>0&&<div><span>Discount</span><b>-{fmt(state.discount)}</b></div>}{Number(state.tax)>0&&<div><span>Tax</span><b>{fmt(state.tax)}</b></div>}<div className="grand"><span>TOTAL</span><b>{fmt(state.total)}</b></div></div>
       {state.state==="PAYMENT"&&<div className="customer-display-payment"><div><span>Payment</span><b>{fmt(state.paymentAmount)}</b></div><div><span>Change</span><b>{fmt(state.change)}</b></div></div>}
@@ -231,7 +232,7 @@ function App(){
  const[showCashInOutModal,setShowCashInOutModal]=useState(false);
  const[posOrderMeta,setPosOrderMeta]=useState({name:"",comment:"",serviceType:"Dine In",table:""});
  const[customerDisplayTerminal,setCustomerDisplayTerminal]=useState(()=>load("customerDisplayTerminal",CUSTOMER_DISPLAY_DEFAULTS));
- const publishCustomerDisplay=useCallback(async(state)=>{try{const t=customerDisplayTerminal||CUSTOMER_DISPLAY_DEFAULTS; if(!t?.enabled||!t?.displayId)return; await customerDisplayRequest("/customer-display.php?action=state",{method:"POST",body:JSON.stringify({display_code:t.displayId,terminal_id:t.terminalId,terminal_name:t.terminalName,terminal_type:t.terminalType,outlet_id:t.outletId,state})});}catch(e){console.warn("Customer Display update failed",e?.message||e)}},[customerDisplayTerminal]);
+ const publishCustomerDisplay=useCallback(async(state)=>{const t=customerDisplayTerminal||CUSTOMER_DISPLAY_DEFAULTS;if(!t?.enabled||!t?.displayId)return;let lastError=null;for(let attempt=0;attempt<3;attempt++){try{await customerDisplayRequest("/customer-display.php?action=state",{method:"POST",body:JSON.stringify({display_code:t.displayId,terminal_id:t.terminalId,terminal_name:t.terminalName,terminal_type:t.terminalType,outlet_id:t.outletId,state})});return}catch(e){lastError=e;if(attempt<2)await new Promise(r=>setTimeout(r,350));}}console.warn("Customer Display update failed",lastError?.message||lastError)},[customerDisplayTerminal]);
 
 
  useEffect(()=>{if(!notice)return;const ms=Math.max(1,Number(settings.general.messageDuration||5))*1000;const t=setTimeout(()=>setNotice(""),ms);return()=>clearTimeout(t)},[notice,settings.general.messageDuration]);
@@ -295,7 +296,7 @@ function App(){
  }
  const disc=totalDiscount;
  const customerDisplayState={state:cart.length?"CART":"IDLE",items:cart,subtotal,discount:disc,tax,total:grand,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"};
- useEffect(()=>{if(!customerDisplayTerminal?.enabled||!customerDisplayTerminal?.displayId||!cart.length)return;publishCustomerDisplay(customerDisplayState)},[cart,subtotal,disc,tax,grand,customerDisplayTerminal?.enabled,customerDisplayTerminal?.displayId]);
+ useEffect(()=>{if(!customerDisplayTerminal?.enabled||!customerDisplayTerminal?.displayId)return; if(cart.length){publishCustomerDisplay(customerDisplayState);return;} let hold=false;try{hold=Number(sessionStorage.getItem("sp_customer_display_payment_hold")||0)>Date.now()}catch{} if(hold)return; publishCustomerDisplay({state:"IDLE",items:[],subtotal:0,discount:0,tax:0,total:0,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});},[cart,subtotal,disc,tax,grand,customerDisplayTerminal?.enabled,customerDisplayTerminal?.displayId]);
 
  const persist=(key,val,setter)=>{save(key,val);setter(val)};
  const nextDocumentCounter=()=>{const current=Math.max(0,Number(load("orderCounter",0)||0))+1;save("orderCounter",current);return current};
@@ -357,7 +358,8 @@ function App(){
   persist("customers",nc,setCustomers);
   if(settings.order.showReceiptDialog===false){setLastSale(null);if(paymentInfo.printReceipt!==false)printReceipt(sale)}else setLastSale(sale);if(paymentInfo.openCashDrawer===true)setTimeout(()=>cashDrawer(),0);
   publishCustomerDisplay({state:"PAYMENT",items:sale.items||[],subtotal:sale.subtotal||0,discount:sale.discount||0,tax:sale.tax||0,total:sale.total||0,paymentAmount:sale.paymentAmount||0,change:sale.change||0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});
-  setTimeout(()=>publishCustomerDisplay({state:"IDLE",items:[],subtotal:0,discount:0,tax:0,total:0,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"}),5000);
+  try{sessionStorage.setItem("sp_customer_display_payment_hold",String(Date.now()+6000))}catch{}
+  setTimeout(()=>{publishCustomerDisplay({state:"IDLE",items:[],subtotal:0,discount:0,tax:0,total:0,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});try{sessionStorage.removeItem("sp_customer_display_payment_hold")}catch{}},6000);
   setCart([]);setDiscount(0);setDiscountFixed(0);setNotice("Sale completed successfully: "+sale.no+" — "+money(grand));setPage("POS / Sales");
  };
  const saveOpenOrder=({newSale=false,name="",comment="",serviceType="",table=""}={})=>{
