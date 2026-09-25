@@ -955,20 +955,13 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const parentGroup=currentGroup?parentOf(currentGroup):"";
  const openPosGroup=name=>{const children=childGroupNames(name);setGroup(name);setCatLevel(children.length?"group":"items")};
  const goBackGroup=()=>{
-   // At the top Categories level, Back must leave the category browser and return
-   // to the main POS product menu instead of rendering Categories again.
-   if(!currentGroup){
-     setGroup("");
-     setPosCategory("All Categories");
-     setQ("");
-     setCatLevel("home");
-     return;
-   }
+   // Locked POS navigation: Product -> Third Group -> Second Group -> Main Group -> Categories.
+   // A Main Group (root group) always returns to Categories.
+   if(!currentGroup)return;
    const parent=parentOf(currentGroup);
    if(parent){setGroup(parent);setCatLevel("group");return}
-   // Back from a root/main group returns to the Categories screen.
    setGroup("");
-   setCatLevel("group");
+   setCatLevel("root");
  };
  const groupTile=name=><button type="button" className="ar-category-tile ar-group-tile" key={name} onClick={()=>openPosGroup(name)}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{groupProductCount(name)} products</small></button>;
  const applyDiscount=()=>{
@@ -997,18 +990,11 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const stockOnHandText=p=>{const n=Number(p?.stock);return Number.isFinite(n)?n.toLocaleString('en-MY',{maximumFractionDigits:2}):'0'};
  const categoryTile=name=><button type="button" className="ar-category-tile" key={name} onClick={()=>{
    const categoryName=String(name||"");
+   // Category is a dedicated level. Do NOT skip the Main Group even when the
+   // Main Group has the same name as the category (for example Tinted Film).
    setPosCategory(categoryName);
-   // A category may have a root group with the same name. Enter that root
-   // immediately so the category itself is never rendered as a duplicate tile.
-   const sameNameRoot=allGroupNames.find(g=>String(g)===categoryName&&!parentOf(g));
-   if(sameNameRoot&&groupHasItems(sameNameRoot)){
-     const children=childGroupNames(sameNameRoot);
-     setGroup(sameNameRoot);
-     setCatLevel(children.length?"group":"items");
-   }else{
-     setGroup("");
-     setCatLevel("group");
-   }
+   setGroup("");
+   setCatLevel("group");
  }}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>(p.category||p.group)===String(name)).length} products</small></button>;
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")};
@@ -1092,18 +1078,8 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
     {q&&<div className="ar-search-hint">{filtered.length} product(s) found</div>}
     {settings.general.layout==="Standard" ? <div className="ar-standard-list">{filtered.length?<div className="ar-standard-table">{filtered.map(p=><button type="button" key={p.id} className="ar-standard-product-button" onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><span><b>{p.name}</b><small>{p.code||"No code"}{p.barcode?" · "+p.barcode:""}</small></span><strong>{money(p.price)}</strong></button>)}</div>:<Empty text="No products found."/>}</div> : <>
     {q?<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Search results</strong></div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{filtered.length?filtered.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}{p.barcode?" · "+p.barcode:""}</small><b>{money(p.price)}</b></div></button>):<Empty text="No products found."/>}</div></>:null}
-    {!q&&catLevel==='home'&&<div className="ar-pos-home-menu">
-      <div className="ar-breadcrumb"><strong>POS</strong></div>
-      <div className="ar-pos-home-actions">
-        <button type="button" className="ar-category-tile" onClick={()=>{setPosCategory("All Categories");setGroup("");setCatLevel("root")}}>
-          <div className="ar-cat-icon"><span>✦</span></div>
-          <strong>Categories</strong>
-          <small>Browse product groups</small>
-        </button>
-      </div>
-    </div>}
-    {!q&&catLevel==='root'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← POS</button><b>›</b><strong>Categories</strong></div><div className="ar-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{rootCats.map(categoryTile)}</div></>}
-    {catLevel==='group'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← {currentGroup?(parentGroup||posCategory):'Start'}</button>{currentGroup&&<><b>›</b><strong>{currentGroup}</strong></>}</div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}><button type="button" className="ar-back-tile ar-back-primary" onClick={goBackGroup}><span>←</span><small>Back to {currentGroup?(parentGroup||posCategory):'Start'}</small></button>{currentChildren.length?currentChildren.map(groupTile):(!currentGroup&&shown.length?shown.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}</small><b>{money(p.price)}</b></div></button>):<Empty text="No groups found in this category."/>)}</div></>}
+    {!q&&catLevel==='root'&&<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Categories</strong></div><div className="ar-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{rootCats.map(categoryTile)}</div></>}
+    {catLevel==='group'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← {currentGroup?(parentGroup||posCategory):'Categories'}</button>{currentGroup&&<><b>›</b><strong>{currentGroup}</strong></>}</div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}><button type="button" className="ar-back-tile ar-back-primary" onClick={goBackGroup}><span>←</span><small>Back to {currentGroup?(parentGroup||posCategory):'Categories'}</small></button>{currentChildren.length?currentChildren.map(groupTile):(!currentGroup&&shown.length?shown.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}</small><b>{money(p.price)}</b></div></button>):<Empty text="No groups found in this category."/>)}</div></>}
     {catLevel==='items'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← {parentGroup||posCategory}</button><b>›</b><strong>{currentGroup}</strong></div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}><button type="button" className="ar-back-tile" onClick={goBackGroup}><span>←</span><small>Back to {parentGroup||posCategory}</small></button>{shown.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}</small><b>{money(p.price)}</b></div></button>)}</div></>}
     </>}
     {catLevel==='items'&&!shown.length&&<Empty text="No products found in this group."/>}
