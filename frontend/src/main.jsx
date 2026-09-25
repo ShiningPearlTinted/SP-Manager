@@ -947,7 +947,7 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
    return directCategory===String(posCategory)||groupName===String(posCategory)||rootGroup===String(posCategory)||rootMetaCategory===String(posCategory)||groupMetaCategory===String(posCategory);
  };
  const categoryProducts=products.filter(productBelongsToPosCategory);
- const childrenOf=name=>allGroupNames.filter(g=>String(groupMeta?.[g]?.parent||"")===String(name));
+ const childrenOf=name=>allGroupNames.filter(g=>String(g)!==String(name)&&String(parentOf(g)||"")===String(name));
  const groupProductCount=name=>{const descendants=[];const walk=n=>{if(descendants.includes(n))return;descendants.push(n);childrenOf(n).forEach(walk)};walk(name);return categoryProducts.filter(p=>descendants.includes(String(p.group||p.category||""))).length};
  const groupHasItems=name=>groupProductCount(name)>0;
  const groupOrder=name=>{const rank=Number(groupMeta?.[name]?.rank);if(Number.isFinite(rank)&&rank>0)return rank;const i=allGroupNames.indexOf(name);return i<0?999999:i};
