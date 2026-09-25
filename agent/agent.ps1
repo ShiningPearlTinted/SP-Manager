@@ -192,6 +192,7 @@ const $=id=>document.getElementById(id);function esc(v){return String(v??'').rep
       Send-Json $s 200 @{ok=$true;monitors=$items};return
     }
     if($req.method -eq 'POST' -and $req.path -eq '/display-window'){
+      $chars=[Math]::Max(8,[int]$b.chars);$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$script:DisplayState=@{line1=$line1;line2=$line2;chars=$chars;companyName=[string]$b.companyName;logo=[string]$b.logo;displayImage=[string]$b.displayImage;items=@($b.items);total=[double]$b.total;currency=([string]$b.currency);customerName=[string]$b.customerName;updatedAt=(Get-Date).ToUniversalTime().ToString('o')}
       Add-Type -AssemblyName System.Windows.Forms
       Add-Type -TypeDefinition @'
 using System;
@@ -227,7 +228,6 @@ public static class SPDisplayWindow {
         $browser=$candidates|Where-Object{Test-Path $_}|Select-Object -First 1
       }
       if(-not $browser){throw 'Microsoft Edge or Google Chrome was not found on this Windows PC.'}
-      $chars=[Math]::Max(8,[int]$b.chars);$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$script:DisplayState=@{line1=$line1;line2=$line2;chars=$chars;companyName=[string]$b.companyName;logo=[string]$b.logo;displayImage=[string]$b.displayImage;items=@($b.items);total=[double]$b.total;currency=([string]$b.currency);customerName=[string]$b.customerName;updatedAt=(Get-Date).ToUniversalTime().ToString('o')}
       $url="http://127.0.0.1:$Port/customer-display"
       $args=@("--app=$url","--new-window","--window-position=$($screen.Bounds.X),$($screen.Bounds.Y)","--window-size=$($screen.Bounds.Width),$($screen.Bounds.Height)",'--disable-session-crashed-bubble')
       $started=Start-Process -FilePath $browser -ArgumentList $args -PassThru
