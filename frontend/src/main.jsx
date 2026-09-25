@@ -1021,6 +1021,17 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
      setCatLevel("group");
    }
  }}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>String(p.category||"")===String(name)).length} products</small></button>;
+ // Safety guard for POS category -> group navigation. If a category has a root group
+ // with the same name, entering that category must immediately open its children;
+ // the root group itself must never be rendered as a second tile.
+ useEffect(()=>{
+   if(catLevel!=="root"||!posCategory||posCategory==="All Categories")return;
+   const sameNameRoot=posGroups.find(g=>String(g)===String(posCategory)&&!posParentOf(g));
+   if(!sameNameRoot||!posGroupHasContent(sameNameRoot))return;
+   const children=posChildrenOf(sameNameRoot).filter(posGroupHasContent);
+   if(String(group)!==String(sameNameRoot)){setGroup(sameNameRoot);}
+   setCatLevel(children.length?"group":"items");
+ },[catLevel,posCategory,group,posGroups.length,products.length]);
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")};
  useEffect(()=>{
