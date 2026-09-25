@@ -992,11 +992,19 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const stockOnHandText=p=>{const n=Number(p?.stock);return Number.isFinite(n)?n.toLocaleString('en-MY',{maximumFractionDigits:2}):'0'};
  const categoryTile=name=><button type="button" className="ar-category-tile" key={name} onClick={()=>{
    const categoryName=String(name||"");
-   // Category is a dedicated level. Do NOT skip the Main Group even when the
-   // Main Group has the same name as the category (for example Tinted Film).
    setPosCategory(categoryName);
-   setGroup("");
-   setCatLevel("group");
+   // The category itself is the POS entry point. If a root Product Group has
+   // the same name, enter that Main Group immediately instead of rendering a
+   // duplicate one-tile screen. This is the original V1.1.16 navigation flow.
+   const sameNameRoot=allGroupNames.find(g=>String(g)===categoryName&&!parentOf(g));
+   if(sameNameRoot&&groupHasItems(sameNameRoot)){
+     const children=childGroupNames(sameNameRoot);
+     setGroup(sameNameRoot);
+     setCatLevel(children.length?"group":"items");
+   }else{
+     setGroup("");
+     setCatLevel("group");
+   }
  }}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>(p.category||p.group)===String(name)).length} products</small></button>;
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")};
