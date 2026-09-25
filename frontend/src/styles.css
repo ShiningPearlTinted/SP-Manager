@@ -4934,3 +4934,45 @@
 
   .ar-pos-shell .ar-topbar::after{display:none !important;content:none !important;}
 }
+
+
+/* ============================================================
+   SP-MANAGER V18 — MOBILE NORMAL PAGE SCROLL GUARD
+   POS layout/navigation LOCKED — do not affect .ar-pos-shell.
+   Normal modules (including Products/Management) must scroll with
+   the document on phones.
+   ============================================================ */
+@media (max-width:700px){
+  html:not(:has(.ar-pos-shell)),
+  body:not(:has(.ar-pos-shell)),
+  #root:not(:has(.ar-pos-shell)){
+    width:100% !important;
+    max-width:100% !important;
+    height:auto !important;
+    min-height:100% !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    overscroll-behavior-y:auto !important;
+  }
+
+  .app:not(:has(.ar-pos-shell)),
+  .app:not(:has(.ar-pos-shell)) > main,
+  .app:not(:has(.ar-pos-shell)) > main > .content,
+  .app:not(:has(.ar-pos-shell)) .management-page,
+  .app:not(:has(.ar-pos-shell)) .users-modern{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    overflow:visible !important;
+  }
+
+  .app:not(:has(.ar-pos-shell)) > main{
+    position:relative !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .app:not(:has(.ar-pos-shell)) > main > .content{
+    padding-bottom:64px !important;
+  }
+}

@@ -19,6 +19,14 @@ const seedProducts=[
 {id:7,code:"SP007",name:"Security Film",group:"Security",category:"Security",price:520,cost:260,stock:4,reorder:5},
 {id:8,code:"SP008",name:"UV Protection Film",group:"Protection",category:"Protection",price:320,cost:160,stock:9,reorder:5}
 ];
+const LOCKED_TINTED_FILM_HIERARCHY={
+ "Tinted Film":{parent:"",category:"Tinted Film",rank:1},
+ "Sputter":{parent:"Tinted Film",category:"Tinted Film",rank:2},
+ "Nano":{parent:"Tinted Film",category:"Tinted Film",rank:3},
+ "Premium":{parent:"Sputter",category:"Tinted Film",rank:4},
+ "Standard":{parent:"Sputter",category:"Tinted Film",rank:5}
+};
+
 const priceChangeAllowedFor=p=>{const v=p?.priceChangeAllowed??p?.allowPriceChangeAtPOS??p?.allowPriceChange??p?.priceChangeAtPOS;return v===true||v===1||String(v??"").trim().toLowerCase()==="true"||String(v??"").trim()==="1"};
 
 const normalizeProductStockControl=p=>{
@@ -196,6 +204,43 @@ function App(){
  const[editing,setEditing]=useState(null);
  const[productGroups,setProductGroups]=useState(()=>load("productGroups",[...new Set(seedProducts.map(p=>p.group||p.category).filter(Boolean))]));
  const[groupMeta,setGroupMeta]=useState(()=>load("productGroupMeta",{}));
+
+ // Shared Product Group metadata hydration: Product Management and POS must use
+ // the same persisted hierarchy on every device. Only fills missing metadata;
+ // existing complete hierarchy is left untouched.
+ useEffect(()=>{
+   const hasTinted=products.some(p=>String(p?.category||p?.group||"").trim()==="Tinted Film");
+   if(!hasTinted)return;
+   const currentMeta=load("productGroupMeta",{});
+   const currentCats=load("productGroupCategories",{});
+   const required=["Sputter","Nano","Premium","Standard"];
+   const complete=required.every(name=>{
+     const expected=LOCKED_TINTED_FILM_HIERARCHY[name].parent;
+     return String(currentMeta?.[name]?.parent||currentCats?.[name]||"")===expected;
+   });
+   if(complete)return;
+   const nextMeta={...LOCKED_TINTED_FILM_HIERARCHY,...(currentMeta||{})};
+   const nextCats={...Object.fromEntries(Object.entries(LOCKED_TINTED_FILM_HIERARCHY).map(([name,v])=>[name,v.parent||v.category])),...(currentCats||{})};
+   // Ensure the locked hierarchy wins only for the known Tinted Film groups when
+   // their parent data is missing/incorrect; unrelated groups remain untouched.
+   for(const name of required){
+     const expected=LOCKED_TINTED_FILM_HIERARCHY[name].parent;
+     const actual=String(currentMeta?.[name]?.parent||currentCats?.[name]||"");
+     if(actual!==expected){
+       nextMeta[name]={...(currentMeta?.[name]||{}),...LOCKED_TINTED_FILM_HIERARCHY[name]};
+       nextCats[name]=expected;
+     }
+   }
+   if(!nextMeta["Tinted Film"])nextMeta["Tinted Film"]=LOCKED_TINTED_FILM_HIERARCHY["Tinted Film"];
+   nextCats["Tinted Film"]="Tinted Film";
+   const currentGroups=load("productGroups",productGroups);
+   const nextGroups=[...new Set([...(Array.isArray(currentGroups)?currentGroups:[]),...Object.keys(LOCKED_TINTED_FILM_HIERARCHY)])];
+   save("productGroupMeta",nextMeta);
+   save("productGroupCategories",nextCats);
+   save("productGroups",nextGroups);
+   setGroupMeta(nextMeta);
+   setProductGroups(nextGroups);
+ },[products]);
  const[lastSale,setLastSale]=useState(null);
  const[showCashInOutModal,setShowCashInOutModal]=useState(false);
  const[posOrderMeta,setPosOrderMeta]=useState({name:"",comment:"",serviceType:"Dine In",table:""});
@@ -940,13 +985,7 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const hasTintedProducts=products.some(p=>String(p?.category||p?.group||"").trim()==="Tinted Film");
  const storedParent=name=>String(groupMeta?.[name]?.parent||storedGroupCategories?.[name]||"");
  const hasRequiredTintedHierarchy=storedParent("Sputter")==="Tinted Film"&&storedParent("Nano")==="Tinted Film"&&storedParent("Premium")==="Sputter"&&storedParent("Standard")==="Sputter";
- const fallbackHierarchy=(hasTintedProducts&&!hasRequiredTintedHierarchy)?{
-   "Tinted Film":{parent:"",category:"Tinted Film",rank:1},
-   "Sputter":{parent:"Tinted Film",category:"Tinted Film",rank:2},
-   "Nano":{parent:"Tinted Film",category:"Tinted Film",rank:3},
-   "Premium":{parent:"Sputter",category:"Tinted Film",rank:4},
-   "Standard":{parent:"Sputter",category:"Tinted Film",rank:5}
- }:{};
+ const fallbackHierarchy=(hasTintedProducts&&!hasRequiredTintedHierarchy)?LOCKED_TINTED_FILM_HIERARCHY:{};
  const fallbackActive=Object.keys(fallbackHierarchy).length>0;
  const effectiveGroupMeta={...fallbackHierarchy,...(groupMeta||{})};
  const effectiveGroupCategories={...Object.fromEntries(Object.entries(fallbackHierarchy).filter(([,v])=>v.category).map(([k,v])=>[k,v.parent||v.category])),...(storedGroupCategories||{})};
@@ -1416,9 +1455,10 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
  const[editGroupName,setEditGroupName]=useState("");
  const[showEditor,setShowEditor]=useState(false);
  const[editorTab,setEditorTab]=useState("General");
- const groups=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{})])];
- const childrenOf=name=>groups.filter(g=>String(groupMeta?.[g]?.parent||"")===String(name));
- const rootGroup=name=>{let current=String(name||"");const seen=new Set();while(current&&groupMeta?.[current]?.parent&&!seen.has(current)){seen.add(current);current=String(groupMeta[current].parent||"")}return current};
+ const groups=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{}),...Object.keys(groupCategories||{})])];
+ const storedParentFor=name=>String(groupMeta?.[name]?.parent||groupCategories?.[name]||"");
+ const childrenOf=name=>groups.filter(g=>String(g)!==String(name)&&storedParentFor(g)===String(name));
+ const rootGroup=name=>{let current=String(name||"");const seen=new Set();while(current&&storedParentFor(current)&&!seen.has(current)){seen.add(current);current=storedParentFor(current)}return current};
  const inferGroupCategory=name=>{const direct=products.find(p=>String(p.group||"")===String(name)&&String(p.category||"").trim());if(direct?.category)return direct.category;let root=rootGroup(name);const rootProduct=products.find(p=>String(p.group||"")===String(root)&&String(p.category||"").trim());if(rootProduct?.category)return rootProduct.category;const metaCat=groupMeta?.[name]?.category||groupMeta?.[root]?.category;if(metaCat)return metaCat;const mapped=groupCategories?.[name];if(mapped&&categories.includes(mapped))return mapped;const rootMapped=groupCategories?.[root];if(rootMapped&&categories.includes(rootMapped))return rootMapped;return selectedCategory!=="All Products"?selectedCategory:""};
  const mainGroups=groups.filter(g=>!groupMeta?.[g]?.parent);
  const groupDescendants=name=>{const out=[];const walk=n=>{childrenOf(n).forEach(c=>{out.push(c);walk(c)})};walk(name);return out};
