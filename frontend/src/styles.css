@@ -4628,3 +4628,201 @@
 .customer-display-main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:0}.customer-display-media{min-height:0;background:#0b1018;display:flex;align-items:center;justify-content:center;overflow:hidden;border-right:1px solid rgba(255,255,255,.08)}.customer-display-media img{width:100%;height:100%;object-fit:cover}.customer-display-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#dbe5ef;gap:10px;text-align:center}.customer-display-placeholder b{font-size:clamp(32px,4vw,72px);letter-spacing:.12em}.customer-display-placeholder span{color:#8ea0b3;font-size:clamp(14px,1.2vw,22px)}
 .customer-display-order{display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#111821,#0a0f16);padding:clamp(24px,3vw,48px)}.customer-display-order-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:22px}.customer-display-order-head span{font-size:12px;letter-spacing:.2em;color:#8ea0b3}.customer-display-order-head h1{margin:8px 0 0;font-size:clamp(28px,3vw,54px)}.customer-display-item-count{color:#aab8c7;font-size:15px;padding-top:8px}.customer-display-items{flex:1;overflow:auto;padding:18px 0}.customer-display-item{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(110px,160px);gap:14px;align-items:center;padding:17px 0;border-bottom:1px solid rgba(255,255,255,.07)}.customer-display-item b{display:block;font-size:clamp(18px,1.55vw,30px)}.customer-display-item small{display:block;margin-top:4px;color:#8292a4}.customer-display-item strong{font-size:clamp(17px,1.4vw,26px);text-align:right}.customer-display-totals{border-top:1px solid rgba(255,255,255,.1);padding-top:18px}.customer-display-totals>div,.customer-display-payment>div{display:flex;justify-content:space-between;padding:7px 0;color:#aebdca;font-size:clamp(15px,1.2vw,22px)}.customer-display-totals .grand{margin-top:10px;padding-top:18px;border-top:2px solid rgba(255,255,255,.15);color:#fff;font-size:clamp(24px,2.2vw,40px)}.customer-display-payment{margin-top:20px;padding:16px 20px;background:rgba(33,150,243,.1);border:1px solid rgba(33,150,243,.25);border-radius:16px}.customer-display-payment b{color:#fff}.customer-display-idle{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.customer-display-idle-logo{width:110px;height:110px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(135deg,#d9b15b,#8d6726);color:#0b1018;font-size:42px;font-weight:900;box-shadow:0 20px 60px rgba(0,0,0,.35)}.customer-display-idle h1{font-size:clamp(38px,4vw,72px);margin:26px 0 8px}.customer-display-idle p{font-size:clamp(16px,1.4vw,24px);color:#9aaaba}.customer-display-idle small{margin-top:18px;color:#65768a}.customer-display-footer{height:42px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;color:#647488;font-size:12px;border-top:1px solid rgba(255,255,255,.07)}
 @media(max-width:800px){.customer-display-main{grid-template-columns:1fr}.customer-display-media{height:42vh;min-height:240px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.customer-display-order{min-height:58vh}.customer-display-status{right:14px;top:12px}.customer-display-brand{padding-right:150px}.customer-display-item{grid-template-columns:minmax(0,1fr) 40px minmax(90px,120px)}}
+
+
+/* ============================================================
+   SP-MANAGER CUSTOMER DISPLAY — FULLSCREEN TV UI FIX V1
+   UI ONLY — existing transaction/API logic LOCKED
+   ============================================================ */
+html:has(.customer-display-screen),
+body:has(.customer-display-screen),
+body:has(.customer-display-screen) #root{
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+}
+
+.customer-display-screen{
+  width:100vw;
+  height:100dvh;
+  min-height:0;
+  min-width:0;
+  overflow:hidden;
+  box-sizing:border-box;
+}
+
+.customer-display-screen *,
+.customer-display-screen *::before,
+.customer-display-screen *::after{
+  box-sizing:border-box;
+}
+
+.customer-display-brand{
+  flex:0 0 auto;
+  min-height:78px;
+  padding:18px clamp(24px,3.4vw,58px) 15px;
+}
+
+.customer-display-brand-name{
+  font-size:clamp(22px,2.25vw,40px);
+  line-height:1.05;
+}
+
+.customer-display-brand-sub{
+  margin-top:5px;
+  font-size:10px;
+}
+
+.customer-display-status{
+  top:17px;
+  right:clamp(18px,2.2vw,38px);
+  font-size:12px;
+}
+
+.customer-display-main{
+  flex:1 1 auto;
+  width:100%;
+  height:auto;
+  min-height:0;
+  overflow:hidden;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+}
+
+.customer-display-media{
+  min-width:0;
+  min-height:0;
+  width:100%;
+  height:100%;
+  padding:0;
+  background:#fff;
+}
+
+.customer-display-media img{
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  object-position:center;
+  background:#fff;
+}
+
+.customer-display-order{
+  min-width:0;
+  min-height:0;
+  height:100%;
+  overflow:hidden;
+  padding:clamp(18px,2.15vw,34px) clamp(22px,2.5vw,42px);
+}
+
+.customer-display-order-head{
+  flex:0 0 auto;
+  padding-bottom:15px;
+}
+
+.customer-display-order-head h1{
+  margin-top:5px;
+  line-height:1.05;
+}
+
+.customer-display-items{
+  min-height:0;
+  overflow:auto;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  padding:8px 0;
+}
+
+.customer-display-items::-webkit-scrollbar{
+  width:0;
+  height:0;
+  display:none;
+}
+
+.customer-display-item{
+  padding:13px 0;
+}
+
+.customer-display-item b{
+  line-height:1.15;
+}
+
+.customer-display-totals{
+  flex:0 0 auto;
+  padding-top:12px;
+}
+
+.customer-display-totals>div,
+.customer-display-payment>div{
+  padding:5px 0;
+}
+
+.customer-display-totals .grand{
+  margin-top:7px;
+  padding-top:12px;
+}
+
+.customer-display-payment{
+  flex:0 0 auto;
+  margin-top:12px;
+  padding:12px 16px;
+}
+
+.customer-display-footer{
+  flex:0 0 30px;
+  height:30px;
+  min-height:30px;
+  padding:0 clamp(18px,2.2vw,38px);
+}
+
+.customer-display-idle{
+  min-height:0;
+  overflow:hidden;
+}
+
+@media (max-width:800px){
+  html:has(.customer-display-screen),
+  body:has(.customer-display-screen),
+  body:has(.customer-display-screen) #root{
+    overflow:hidden;
+  }
+
+  .customer-display-brand{
+    min-height:64px;
+    padding:14px 18px 11px;
+  }
+
+  .customer-display-status{
+    top:12px;
+    right:14px;
+  }
+
+  .customer-display-main{
+    grid-template-columns:1fr;
+    grid-template-rows:minmax(0,42%) minmax(0,58%);
+  }
+
+  .customer-display-media{
+    height:auto;
+    min-height:0;
+    border-right:0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .customer-display-order{
+    min-height:0;
+    height:auto;
+    padding:18px;
+  }
+
+  .customer-display-footer{
+    flex-basis:26px;
+    height:26px;
+    min-height:26px;
+  }
+}
