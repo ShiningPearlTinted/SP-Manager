@@ -931,8 +931,10 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  // Build the POS hierarchy from the complete Product Group dataset first.
  // Do not filter products before resolving parents/children: a child group can
  // contain products whose Category field differs from the parent category.
- const allGroupNames=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{})])];
- const parentOf=name=>String(groupMeta?.[name]?.parent||"");
+ const storedGroupCategories=load("productGroupCategories",{});
+ const allGroupNames=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{}),...Object.keys(storedGroupCategories||{})])];
+ const storedParentOf=name=>{const v=String(storedGroupCategories?.[name]||"");return v&&allGroupNames.includes(v)?v:""};
+ const parentOf=name=>String(groupMeta?.[name]?.parent||storedParentOf(name)||"");
  const rootOf=name=>{let cur=String(name||"");const seen=new Set();while(cur&&parentOf(cur)&&!seen.has(cur)){seen.add(cur);cur=parentOf(cur)}return cur};
  const productGroupName=p=>String(p?.group||p?.category||"");
  const productBelongsToPosCategory=p=>{
