@@ -932,38 +932,65 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  // Do not filter products before resolving parents/children: a child group can
  // contain products whose Category field differs from the parent category.
  const storedGroupCategories=load("productGroupCategories",{});
- const allGroupNames=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{}),...Object.keys(storedGroupCategories||{})])];
- const storedParentOf=name=>{const v=String(storedGroupCategories?.[name]||"");return v&&allGroupNames.includes(v)?v:""};
- const parentOf=name=>String(groupMeta?.[name]?.parent||storedParentOf(name)||"");
+ // Mobile-safe hierarchy hydration: Product Groups are stored in localStorage, so a
+ // fresh phone can have the product records but not the hierarchy metadata created
+ // on the PC. Do not touch layout or product data. When the hierarchy metadata is
+ // genuinely missing, reconstruct the currently locked Tinted Film hierarchy from
+ // the existing product names/group values so POS navigation matches the PC flow.
+ const hasTintedProducts=products.some(p=>String(p?.category||p?.group||"").trim()==="Tinted Film");
+ const storedParent=name=>String(groupMeta?.[name]?.parent||storedGroupCategories?.[name]||"");
+ const hasRequiredTintedHierarchy=storedParent("Sputter")==="Tinted Film"&&storedParent("Nano")==="Tinted Film"&&storedParent("Premium")==="Sputter"&&storedParent("Standard")==="Sputter";
+ const fallbackHierarchy=(hasTintedProducts&&!hasRequiredTintedHierarchy)?{
+   "Tinted Film":{parent:"",category:"Tinted Film",rank:1},
+   "Sputter":{parent:"Tinted Film",category:"Tinted Film",rank:2},
+   "Nano":{parent:"Tinted Film",category:"Tinted Film",rank:3},
+   "Premium":{parent:"Sputter",category:"Tinted Film",rank:4},
+   "Standard":{parent:"Sputter",category:"Tinted Film",rank:5}
+ }:{};
+ const fallbackActive=Object.keys(fallbackHierarchy).length>0;
+ const effectiveGroupMeta={...fallbackHierarchy,...(groupMeta||{})};
+ const effectiveGroupCategories={...Object.fromEntries(Object.entries(fallbackHierarchy).filter(([,v])=>v.category).map(([k,v])=>[k,v.parent||v.category])),...(storedGroupCategories||{})};
+ const allGroupNames=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(effectiveGroupMeta||{}),...Object.keys(effectiveGroupCategories||{})])];
+ const storedParentOf=name=>{const v=String(effectiveGroupCategories?.[name]||"");return v&&allGroupNames.includes(v)?v:""};
+ const parentOf=name=>String(effectiveGroupMeta?.[name]?.parent||storedParentOf(name)||"");
  const rootOf=name=>{let cur=String(name||"");const seen=new Set();while(cur&&parentOf(cur)&&!seen.has(cur)){seen.add(cur);cur=parentOf(cur)}return cur};
- const productGroupName=p=>String(p?.group||p?.category||"");
+ const productGroupName=p=>{
+   const raw=String(p?.group||p?.category||"");
+   if(fallbackActive&&String(p?.category||"")==="Tinted Film"&&raw==="Tinted Film"){
+     const n=String(p?.name||"").toLowerCase();
+     if(n.includes("ceramic"))return "Nano";
+     if(n.includes("premium"))return "Standard";
+     if(n.includes("standard"))return "Premium";
+   }
+   return raw;
+ };
  const productBelongsToPosCategory=p=>{
    if(!posCategory||posCategory==="All Categories")return true;
    const directCategory=String(p?.category||"");
    const groupName=productGroupName(p);
    const rootGroup=groupName?rootOf(groupName):"";
-   const rootMetaCategory=String(groupMeta?.[rootGroup]?.category||"");
-   const groupMetaCategory=String(groupMeta?.[groupName]?.category||"");
+   const rootMetaCategory=String(effectiveGroupMeta?.[rootGroup]?.category||"");
+   const groupMetaCategory=String(effectiveGroupMeta?.[groupName]?.category||"");
    return directCategory===String(posCategory)||groupName===String(posCategory)||rootGroup===String(posCategory)||rootMetaCategory===String(posCategory)||groupMetaCategory===String(posCategory);
  };
  const categoryProducts=products.filter(productBelongsToPosCategory);
  const childrenOf=name=>allGroupNames.filter(g=>String(g)!==String(name)&&String(parentOf(g)||"")===String(name));
- const groupProductCount=name=>{const descendants=[];const walk=n=>{if(descendants.includes(n))return;descendants.push(n);childrenOf(n).forEach(walk)};walk(name);return categoryProducts.filter(p=>descendants.includes(String(p.group||p.category||""))).length};
+ const groupProductCount=name=>{const descendants=[];const walk=n=>{if(descendants.includes(n))return;descendants.push(n);childrenOf(n).forEach(walk)};walk(name);return categoryProducts.filter(p=>descendants.includes(productGroupName(p))).length};
  const groupHasItems=name=>groupProductCount(name)>0;
- const groupOrder=name=>{const rank=Number(groupMeta?.[name]?.rank);if(Number.isFinite(rank)&&rank>0)return rank;const i=allGroupNames.indexOf(name);return i<0?999999:i};
+ const groupOrder=name=>{const rank=Number(effectiveGroupMeta?.[name]?.rank);if(Number.isFinite(rank)&&rank>0)return rank;const i=allGroupNames.indexOf(name);return i<0?999999:i};
  const categoryGroupNames=()=>{
    const candidates=allGroupNames.filter(Boolean);
    const roots=candidates.filter(g=>!parentOf(g));
    return roots.filter(g=>{
-     const metaCat=String(groupMeta?.[g]?.category||"");
-     const rootProduct=categoryProducts.find(p=>rootOf(p.group||p.category)===g);
-     const directProduct=categoryProducts.find(p=>String(p.group||p.category||"")===g);
+     const metaCat=String(effectiveGroupMeta?.[g]?.category||"");
+     const rootProduct=categoryProducts.find(p=>rootOf(productGroupName(p))===g);
+     const directProduct=categoryProducts.find(p=>productGroupName(p)===g);
      const catMatch=!posCategory||posCategory==="All Categories"||metaCat===posCategory||String(rootProduct?.category||directProduct?.category||"")===posCategory;
      return catMatch&&groupHasItems(g);
    }).sort((a,b)=>groupOrder(a)-groupOrder(b)||String(a).localeCompare(String(b)));
  };
  const childGroupNames=name=>childrenOf(name).filter(groupHasItems).sort((a,b)=>groupOrder(a)-groupOrder(b)||String(a).localeCompare(String(b)));
- const groupProducts=group?categoryProducts.filter(p=>String(p.group||p.category||"")===String(group)):categoryProducts;
+ const groupProducts=group?categoryProducts.filter(p=>productGroupName(p)===String(group)):categoryProducts;
  const shown=groupProducts;
  const currentGroup=group?String(group):"";
  const currentChildren=currentGroup?childGroupNames(currentGroup):categoryGroupNames();
@@ -980,7 +1007,7 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
    setPosCategory("All Categories");
    setCatLevel("root");
  };
- const groupTile=name=><button type="button" className="ar-category-tile ar-group-tile" key={name} onClick={()=>openPosGroup(name)}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{groupProductCount(name)} products</small></button>;
+ const groupTile=name=><button type="button" className="ar-category-tile ar-group-tile" key={name} onClick={()=>openPosGroup(name)}><div className="ar-cat-icon">{effectiveGroupMeta?.[name]?.image?<img className="group-tile-image" src={effectiveGroupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{groupProductCount(name)} products</small></button>;
  const applyDiscount=()=>{
    if(!cart.length){setNoticeLocal("Add at least one item before discount.");setDiscountScreen(false);return}
    const n=Math.max(0,Number(discountValue||0));
@@ -1020,7 +1047,7 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
      setGroup("");
      setCatLevel("group");
    }
- }}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>(p.category||p.group)===String(name)).length} products</small></button>;
+ }}><div className="ar-cat-icon">{effectiveGroupMeta?.[name]?.image?<img className="group-tile-image" src={effectiveGroupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>(p.category||p.group)===String(name)).length} products</small></button>;
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")};
  useEffect(()=>{
