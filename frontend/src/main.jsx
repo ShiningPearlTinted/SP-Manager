@@ -928,11 +928,24 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  // IMPORTANT: Product Management stores the hierarchy in productGroups + productGroupMeta.
  // productGroups must be included here; using only groupMeta makes a root group such as
  // "Tinted Film" disappear from the POS navigation even though Product Management shows it.
- const categoryProducts=products.filter(p=>posCategory==="All Categories"||(p.category||p.group||"")===posCategory||(p.group||"")===posCategory);
- const allGroupNames=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...categoryProducts.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{})])];
- const childrenOf=name=>allGroupNames.filter(g=>String(groupMeta?.[g]?.parent||"")===String(name));
+ // Build the POS hierarchy from the complete Product Group dataset first.
+ // Do not filter products before resolving parents/children: a child group can
+ // contain products whose Category field differs from the parent category.
+ const allGroupNames=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{})])];
  const parentOf=name=>String(groupMeta?.[name]?.parent||"");
  const rootOf=name=>{let cur=String(name||"");const seen=new Set();while(cur&&parentOf(cur)&&!seen.has(cur)){seen.add(cur);cur=parentOf(cur)}return cur};
+ const productGroupName=p=>String(p?.group||p?.category||"");
+ const productBelongsToPosCategory=p=>{
+   if(!posCategory||posCategory==="All Categories")return true;
+   const directCategory=String(p?.category||"");
+   const groupName=productGroupName(p);
+   const rootGroup=groupName?rootOf(groupName):"";
+   const rootMetaCategory=String(groupMeta?.[rootGroup]?.category||"");
+   const groupMetaCategory=String(groupMeta?.[groupName]?.category||"");
+   return directCategory===String(posCategory)||groupName===String(posCategory)||rootGroup===String(posCategory)||rootMetaCategory===String(posCategory)||groupMetaCategory===String(posCategory);
+ };
+ const categoryProducts=products.filter(productBelongsToPosCategory);
+ const childrenOf=name=>allGroupNames.filter(g=>String(groupMeta?.[g]?.parent||"")===String(name));
  const groupProductCount=name=>{const descendants=[];const walk=n=>{if(descendants.includes(n))return;descendants.push(n);childrenOf(n).forEach(walk)};walk(name);return categoryProducts.filter(p=>descendants.includes(String(p.group||p.category||""))).length};
  const groupHasItems=name=>groupProductCount(name)>0;
  const groupOrder=name=>{const rank=Number(groupMeta?.[name]?.rank);if(Number.isFinite(rank)&&rank>0)return rank;const i=allGroupNames.indexOf(name);return i<0?999999:i};
