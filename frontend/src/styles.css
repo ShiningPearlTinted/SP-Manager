@@ -4621,311 +4621,249 @@
 }
 
 
-/* Customer Display — isolated TV/Kiosk UI */
-.customer-display-screen{min-height:100vh;background:#070b12;color:#f7fafc;font-family:"Segoe UI",Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden}
-.customer-display-status{position:fixed;right:24px;top:18px;z-index:10;font-size:13px;color:#a9b7c7;letter-spacing:.04em}.customer-display-status .online{color:#22c55e;margin-right:7px}.customer-display-status .offline{color:#ef4444;margin-right:7px}
-.customer-display-brand{padding:28px 4vw 20px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,#111a29,#0b111b)}.customer-display-brand-name{font-size:clamp(24px,2.5vw,44px);font-weight:800;letter-spacing:.08em}.customer-display-brand-sub{margin-top:5px;font-size:12px;color:#8ea0b3;letter-spacing:.24em}
-.customer-display-main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:0}.customer-display-media{min-height:0;background:#0b1018;display:flex;align-items:center;justify-content:center;overflow:hidden;border-right:1px solid rgba(255,255,255,.08)}.customer-display-media img{width:100%;height:100%;object-fit:cover}.customer-display-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#dbe5ef;gap:10px;text-align:center}.customer-display-placeholder b{font-size:clamp(32px,4vw,72px);letter-spacing:.12em}.customer-display-placeholder span{color:#8ea0b3;font-size:clamp(14px,1.2vw,22px)}
-.customer-display-order{display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#111821,#0a0f16);padding:clamp(24px,3vw,48px)}.customer-display-order-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:22px}.customer-display-order-head span{font-size:12px;letter-spacing:.2em;color:#8ea0b3}.customer-display-order-head h1{margin:8px 0 0;font-size:clamp(28px,3vw,54px)}.customer-display-item-count{color:#aab8c7;font-size:15px;padding-top:8px}.customer-display-items{flex:1;overflow:auto;padding:18px 0}.customer-display-item{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(110px,160px);gap:14px;align-items:center;padding:17px 0;border-bottom:1px solid rgba(255,255,255,.07)}.customer-display-item b{display:block;font-size:clamp(18px,1.55vw,30px)}.customer-display-item small{display:block;margin-top:4px;color:#8292a4}.customer-display-item strong{font-size:clamp(17px,1.4vw,26px);text-align:right}.customer-display-totals{border-top:1px solid rgba(255,255,255,.1);padding-top:18px}.customer-display-totals>div,.customer-display-payment>div{display:flex;justify-content:space-between;padding:7px 0;color:#aebdca;font-size:clamp(15px,1.2vw,22px)}.customer-display-totals .grand{margin-top:10px;padding-top:18px;border-top:2px solid rgba(255,255,255,.15);color:#fff;font-size:clamp(24px,2.2vw,40px)}.customer-display-payment{margin-top:20px;padding:16px 20px;background:rgba(33,150,243,.1);border:1px solid rgba(33,150,243,.25);border-radius:16px}.customer-display-payment b{color:#fff}.customer-display-idle{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.customer-display-idle-logo{width:110px;height:110px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(135deg,#d9b15b,#8d6726);color:#0b1018;font-size:42px;font-weight:900;box-shadow:0 20px 60px rgba(0,0,0,.35)}.customer-display-idle h1{font-size:clamp(38px,4vw,72px);margin:26px 0 8px}.customer-display-idle p{font-size:clamp(16px,1.4vw,24px);color:#9aaaba}.customer-display-idle small{margin-top:18px;color:#65768a}.customer-display-footer{height:42px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;color:#647488;font-size:12px;border-top:1px solid rgba(255,255,255,.07)}
-@media(max-width:800px){.customer-display-main{grid-template-columns:1fr}.customer-display-media{height:42vh;min-height:240px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.customer-display-order{min-height:58vh}.customer-display-status{right:14px;top:12px}.customer-display-brand{padding-right:150px}.customer-display-item{grid-template-columns:minmax(0,1fr) 40px minmax(90px,120px)}}
-
-
 /* ============================================================
-   SP-MANAGER CUSTOMER DISPLAY — FULLSCREEN TV UI FIX V1
-   UI ONLY — existing transaction/API logic LOCKED
+   SP-MANAGER CUSTOMER DISPLAY — MODERN TV UI V3
+   UI ONLY — POS / API / MYSQL / REALTIME LOGIC LOCKED
    ============================================================ */
-html:has(.customer-display-screen),
-body:has(.customer-display-screen),
-body:has(.customer-display-screen) #root{
-  width:100%;
-  height:100%;
-  min-width:0;
-  min-height:0;
-  margin:0;
-  padding:0;
-  overflow:hidden;
-}
 
-.customer-display-screen{
-  width:100vw;
-  height:100dvh;
-  min-height:0;
-  min-width:0;
-  overflow:hidden;
-  box-sizing:border-box;
-}
-
-.customer-display-screen *,
-.customer-display-screen *::before,
-.customer-display-screen *::after{
-  box-sizing:border-box;
-}
-
-.customer-display-brand{
-  flex:0 0 auto;
-  min-height:78px;
-  padding:18px clamp(24px,3.4vw,58px) 15px;
-}
-
-.customer-display-brand-name{
-  font-size:clamp(22px,2.25vw,40px);
-  line-height:1.05;
-}
-
-.customer-display-brand-sub{
-  margin-top:5px;
-  font-size:10px;
-}
-
-.customer-display-status{
-  top:17px;
-  right:clamp(18px,2.2vw,38px);
-  font-size:12px;
-}
-
-.customer-display-main{
-  flex:1 1 auto;
-  width:100%;
-  height:auto;
-  min-height:0;
-  overflow:hidden;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-}
-
-.customer-display-media{
-  min-width:0;
-  min-height:0;
-  width:100%;
-  height:100%;
-  padding:0;
-  background:#fff;
-}
-
-.customer-display-media img{
-  display:block;
-  width:100%;
-  height:100%;
-  max-width:100%;
-  max-height:100%;
-  object-fit:contain;
-  object-position:center;
-  background:#fff;
-}
-
-.customer-display-order{
-  min-width:0;
-  min-height:0;
-  height:100%;
-  overflow:hidden;
-  padding:clamp(18px,2.15vw,34px) clamp(22px,2.5vw,42px);
-}
-
-.customer-display-order-head{
-  flex:0 0 auto;
-  padding-bottom:15px;
-}
-
-.customer-display-order-head h1{
-  margin-top:5px;
-  line-height:1.05;
-}
-
-.customer-display-items{
-  min-height:0;
-  overflow:auto;
-  scrollbar-width:none;
-  -ms-overflow-style:none;
-  padding:8px 0;
-}
-
-.customer-display-items::-webkit-scrollbar{
-  width:0;
-  height:0;
-  display:none;
-}
-
-.customer-display-item{
-  padding:13px 0;
-}
-
-.customer-display-item b{
-  line-height:1.15;
-}
-
-.customer-display-totals{
-  flex:0 0 auto;
-  padding-top:12px;
-}
-
-.customer-display-totals>div,
-.customer-display-payment>div{
-  padding:5px 0;
-}
-
-.customer-display-totals .grand{
-  margin-top:7px;
-  padding-top:12px;
-}
-
-.customer-display-payment{
-  flex:0 0 auto;
-  margin-top:12px;
-  padding:12px 16px;
-}
-
-.customer-display-footer{
-  flex:0 0 30px;
-  height:30px;
-  min-height:30px;
-  padding:0 clamp(18px,2.2vw,38px);
-}
-
-.customer-display-idle{
-  min-height:0;
-  overflow:hidden;
-}
-
-@media (max-width:800px){
-  html:has(.customer-display-screen),
-  body:has(.customer-display-screen),
-  body:has(.customer-display-screen) #root{
-    overflow:hidden;
-  }
-
-  .customer-display-brand{
-    min-height:64px;
-    padding:14px 18px 11px;
-  }
-
-  .customer-display-status{
-    top:12px;
-    right:14px;
-  }
-
-  .customer-display-main{
-    grid-template-columns:1fr;
-    grid-template-rows:minmax(0,42%) minmax(0,58%);
-  }
-
-  .customer-display-media{
-    height:auto;
-    min-height:0;
-    border-right:0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-  }
-
-  .customer-display-order{
-    min-height:0;
-    height:auto;
-    padding:18px;
-  }
-
-  .customer-display-footer{
-    flex-basis:26px;
-    height:26px;
-    min-height:26px;
-  }
-}
-
-/* ============================================================
-   SP-MANAGER CUSTOMER DISPLAY — FULLSCREEN TV UI FIX V2
-   UI ONLY — preserve all transaction/API logic
-   ============================================================ */
 html:has(.customer-display-screen),
 body:has(.customer-display-screen),
 body:has(.customer-display-screen) #root{
   width:100% !important;
-  max-width:100% !important;
-  min-width:0 !important;
   height:100% !important;
-  max-height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:none !important;
+  max-height:none !important;
   margin:0 !important;
   padding:0 !important;
   overflow:hidden !important;
+  background:#070b12 !important;
 }
 
 .customer-display-screen{
   position:fixed !important;
   inset:0 !important;
-  width:100% !important;
-  max-width:100% !important;
+  z-index:99999 !important;
+  width:100vw !important;
   height:100dvh !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:100vw !important;
   max-height:100dvh !important;
-  min-width:0 !important;
-  min-height:0 !important;
-  overflow:hidden !important;
-}
-
-.customer-display-main{
   display:grid !important;
-  grid-template-columns:minmax(0, 1.08fr) minmax(0, .92fr) !important;
-  width:100% !important;
-  max-width:100% !important;
+  grid-template-rows:76px minmax(0,1fr) 30px !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+  background:#070b12 !important;
+  color:#f7fafc !important;
+  font-family:"Segoe UI",Inter,Arial,sans-serif !important;
+}
+
+.customer-display-screen *,
+.customer-display-screen *::before,
+.customer-display-screen *::after{
+  box-sizing:border-box !important;
+}
+
+/* ---------- Premium header ---------- */
+.customer-display-brand{
+  position:relative !important;
   min-width:0 !important;
-  height:auto !important;
   min-height:0 !important;
+  padding:13px clamp(24px,3vw,52px) 10px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  border-bottom:1px solid rgba(255,255,255,.09) !important;
+  background:linear-gradient(135deg,#101a29 0%,#0b111b 58%,#080d15 100%) !important;
+}
+
+.customer-display-brand-name{
+  margin:0 !important;
+  font-size:clamp(25px,2.35vw,43px) !important;
+  line-height:1 !important;
+  font-weight:850 !important;
+  letter-spacing:.075em !important;
+  color:#f8fafc !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+.customer-display-brand-sub{
+  margin-top:6px !important;
+  font-size:9px !important;
+  line-height:1 !important;
+  letter-spacing:.28em !important;
+  color:#8ea0b3 !important;
+}
+
+.customer-display-status{
+  position:absolute !important;
+  top:50% !important;
+  right:clamp(20px,2.5vw,46px) !important;
+  transform:translateY(-50%) !important;
+  z-index:5 !important;
+  display:flex !important;
+  align-items:center !important;
+  font-size:11px !important;
+  font-weight:600 !important;
+  color:#aab7c5 !important;
+  letter-spacing:.03em !important;
+}
+
+.customer-display-status .online{color:#22c55e !important;margin-right:7px !important}
+.customer-display-status .offline{color:#ef4444 !important;margin-right:7px !important}
+
+/* ---------- Main 55 / 45 TV layout ---------- */
+.customer-display-main{
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  display:grid !important;
+  grid-template-columns:minmax(0,1.10fr) minmax(0,.90fr) !important;
+  gap:0 !important;
   overflow:hidden !important;
 }
 
-.customer-display-media,
-.customer-display-order{
-  width:100% !important;
-  max-width:100% !important;
-  min-width:0 !important;
-  min-height:0 !important;
-  overflow:hidden !important;
-}
-
+/* ---------- Advertisement panel ---------- */
 .customer-display-media{
+  position:relative !important;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  overflow:hidden !important;
   display:flex !important;
   align-items:center !important;
   justify-content:center !important;
-  background:#fff !important;
+  padding:0 !important;
+  background:#f4f5f7 !important;
+  border-right:1px solid rgba(255,255,255,.10) !important;
+}
+
+.customer-display-media::after{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  pointer-events:none !important;
+  box-shadow:inset 0 0 80px rgba(0,0,0,.08) !important;
 }
 
 .customer-display-media img{
   display:block !important;
   width:100% !important;
   height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
   max-width:100% !important;
   max-height:100% !important;
   object-fit:contain !important;
-  object-position:center center !important;
-  flex:0 0 auto !important;
+  object-position:center !important;
+  background:#fff !important;
 }
 
-.customer-display-order{
-  box-sizing:border-box !important;
-  padding-left:clamp(18px,2vw,34px) !important;
-  padding-right:clamp(18px,2vw,34px) !important;
-}
-
-.customer-display-order-head,
-.customer-display-items,
-.customer-display-totals,
-.customer-display-payment{
+.customer-display-placeholder{
   width:100% !important;
-  max-width:100% !important;
+  height:100% !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:8px !important;
+  text-align:center !important;
+  color:#17324a !important;
+  background:radial-gradient(circle at center,#fff 0%,#eef3f7 100%) !important;
+}
+
+.customer-display-placeholder b{font-size:clamp(34px,4vw,68px) !important;letter-spacing:.12em !important}
+.customer-display-placeholder span{font-size:clamp(13px,1.1vw,20px) !important;color:#718397 !important}
+
+/* ---------- Order panel ---------- */
+.customer-display-order{
+  width:100% !important;
+  height:100% !important;
   min-width:0 !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+  padding:clamp(20px,2.15vw,34px) clamp(22px,2.35vw,40px) !important;
+  background:linear-gradient(180deg,#111923 0%,#090e15 100%) !important;
+}
+
+.customer-display-order-head{
+  width:100% !important;
+  min-width:0 !important;
+  flex:0 0 auto !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  gap:16px !important;
+  padding:0 0 16px !important;
+  border-bottom:1px solid rgba(255,255,255,.10) !important;
+}
+
+.customer-display-order-head span{
+  display:block !important;
+  font-size:9px !important;
+  line-height:1 !important;
+  letter-spacing:.24em !important;
+  color:#6f91ad !important;
+  font-weight:800 !important;
 }
 
 .customer-display-order-head h1{
+  margin:7px 0 0 !important;
   max-width:100% !important;
+  font-size:clamp(28px,2.65vw,48px) !important;
+  line-height:1 !important;
+  font-weight:800 !important;
+  color:#f7fafc !important;
+  white-space:nowrap !important;
   overflow:hidden !important;
   text-overflow:ellipsis !important;
+}
+
+.customer-display-item-count{
+  flex:0 0 auto !important;
+  margin-top:2px !important;
+  padding:7px 11px !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  border-radius:999px !important;
+  background:rgba(255,255,255,.045) !important;
+  color:#aab8c7 !important;
+  font-size:10px !important;
+  font-weight:700 !important;
   white-space:nowrap !important;
 }
 
+/* ---------- Cart list ---------- */
 .customer-display-items{
+  width:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  flex:1 1 auto !important;
   overflow-x:hidden !important;
   overflow-y:auto !important;
+  scrollbar-width:none !important;
+  -ms-overflow-style:none !important;
+  padding:6px 0 !important;
 }
+
+.customer-display-items::-webkit-scrollbar{display:none !important;width:0 !important;height:0 !important}
 
 .customer-display-item{
   width:100% !important;
-  max-width:100% !important;
   min-width:0 !important;
-  grid-template-columns:minmax(0,1fr) 42px minmax(90px,auto) !important;
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) 42px minmax(100px,145px) !important;
+  align-items:center !important;
+  gap:12px !important;
+  padding:15px 0 !important;
+  border-bottom:1px solid rgba(255,255,255,.075) !important;
 }
 
 .customer-display-item > div,
@@ -4934,55 +4872,173 @@ body:has(.customer-display-screen) #root{
   max-width:100% !important;
 }
 
-.customer-display-item b,
+.customer-display-item b{
+  display:block !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+  font-size:clamp(16px,1.25vw,24px) !important;
+  line-height:1.15 !important;
+  font-weight:750 !important;
+  color:#f4f7fa !important;
+}
+
 .customer-display-item small{
+  display:block !important;
+  margin-top:4px !important;
+  color:#71869a !important;
+  font-size:9px !important;
   overflow:hidden !important;
   text-overflow:ellipsis !important;
   white-space:nowrap !important;
 }
 
-.customer-display-item strong:last-child,
-.customer-display-totals b,
-.customer-display-payment b{
-  white-space:nowrap !important;
-  overflow:hidden !important;
-  text-overflow:ellipsis !important;
-}
-
-.customer-display-totals>div,
-.customer-display-payment>div{
+.customer-display-item strong{
+  display:block !important;
   min-width:0 !important;
-  gap:16px !important;
-}
-
-.customer-display-totals>div span,
-.customer-display-totals>div b,
-.customer-display-payment>div span,
-.customer-display-payment>div b{
-  min-width:0 !important;
-}
-
-.customer-display-totals>div b,
-.customer-display-payment>div b{
+  color:#f4f7fa !important;
+  font-size:clamp(15px,1.05vw,21px) !important;
+  font-weight:750 !important;
   text-align:right !important;
-  flex:0 1 auto !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
 }
 
+/* ---------- Totals ---------- */
+.customer-display-totals{
+  width:100% !important;
+  min-width:0 !important;
+  flex:0 0 auto !important;
+  padding-top:12px !important;
+  border-top:1px solid rgba(255,255,255,.10) !important;
+}
+
+.customer-display-totals > div,
+.customer-display-payment > div{
+  width:100% !important;
+  min-width:0 !important;
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) auto !important;
+  align-items:center !important;
+  gap:14px !important;
+  padding:5px 0 !important;
+  color:#9aabba !important;
+  font-size:clamp(13px,1vw,18px) !important;
+}
+
+.customer-display-totals > div span,
+.customer-display-totals > div b,
+.customer-display-payment > div span,
+.customer-display-payment > div b{
+  min-width:0 !important;
+}
+
+.customer-display-totals > div b,
+.customer-display-payment > div b{
+  text-align:right !important;
+  white-space:nowrap !important;
+  color:#f7fafc !important;
+}
+
+.customer-display-totals .grand{
+  margin-top:9px !important;
+  padding:13px 0 0 !important;
+  border-top:1px solid rgba(255,255,255,.13) !important;
+  color:#fff !important;
+  font-size:clamp(23px,1.9vw,34px) !important;
+  font-weight:850 !important;
+}
+
+.customer-display-totals .grand span{
+  color:#fff !important;
+  font-weight:850 !important;
+  letter-spacing:.04em !important;
+}
+
+.customer-display-totals .grand b{
+  color:#f5c451 !important;
+  font-size:clamp(25px,2vw,36px) !important;
+  font-weight:900 !important;
+}
+
+/* ---------- Payment summary ---------- */
+.customer-display-payment{
+  width:100% !important;
+  min-width:0 !important;
+  flex:0 0 auto !important;
+  margin-top:12px !important;
+  padding:11px 15px !important;
+  border:1px solid rgba(76,168,255,.22) !important;
+  border-radius:13px !important;
+  background:linear-gradient(135deg,rgba(30,119,190,.16),rgba(30,119,190,.045)) !important;
+}
+
+.customer-display-payment b{font-weight:850 !important}
+
+/* ---------- Idle state ---------- */
+.customer-display-idle{
+  width:100% !important;
+  height:100% !important;
+  min-height:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  overflow:hidden !important;
+}
+
+.customer-display-idle-logo{
+  width:88px !important;
+  height:88px !important;
+  border-radius:24px !important;
+  display:grid !important;
+  place-items:center !important;
+  background:linear-gradient(135deg,#e5c66c,#9b7328) !important;
+  color:#0b1018 !important;
+  font-size:35px !important;
+  font-weight:950 !important;
+  box-shadow:0 18px 45px rgba(0,0,0,.32) !important;
+}
+
+.customer-display-idle h1{margin:22px 0 6px !important;font-size:clamp(34px,3.4vw,60px) !important}
+.customer-display-idle p{margin:0 !important;font-size:clamp(14px,1.2vw,20px) !important;color:#9aaaba !important}
+.customer-display-idle small{margin-top:14px !important;color:#627589 !important}
+
+/* ---------- Bottom status bar ---------- */
 .customer-display-footer{
   width:100% !important;
-  max-width:100% !important;
-  box-sizing:border-box !important;
+  min-width:0 !important;
+  height:30px !important;
+  min-height:30px !important;
+  padding:0 clamp(18px,2.2vw,38px) !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  border-top:1px solid rgba(255,255,255,.07) !important;
+  background:#070b12 !important;
+  color:#65768a !important;
+  font-size:9px !important;
+}
+
+@media (max-width:1000px){
+  .customer-display-screen{grid-template-rows:66px minmax(0,1fr) 27px !important}
+  .customer-display-main{grid-template-columns:minmax(0,1fr) minmax(0,.95fr) !important}
+  .customer-display-brand{padding-left:20px !important;padding-right:150px !important}
+  .customer-display-order{padding:17px 20px !important}
 }
 
 @media (max-width:800px){
-  .customer-display-main{
-    grid-template-columns:minmax(0,1fr) !important;
-    grid-template-rows:minmax(0,42%) minmax(0,58%) !important;
-  }
-
-  .customer-display-media,
-  .customer-display-order{
-    width:100% !important;
-    max-width:100% !important;
-  }
+  .customer-display-screen{position:fixed !important;grid-template-rows:60px minmax(0,1fr) 25px !important}
+  .customer-display-main{grid-template-columns:minmax(0,1fr) !important;grid-template-rows:minmax(0,38%) minmax(0,62%) !important}
+  .customer-display-media{border-right:0 !important;border-bottom:1px solid rgba(255,255,255,.10) !important}
+  .customer-display-order{padding:14px 16px !important}
+  .customer-display-order-head{padding-bottom:11px !important}
+  .customer-display-order-head h1{font-size:28px !important}
+  .customer-display-item{grid-template-columns:minmax(0,1fr) 35px minmax(90px,120px) !important;padding:10px 0 !important}
+  .customer-display-item b{font-size:15px !important}
+  .customer-display-footer{height:25px !important;min-height:25px !important}
 }
