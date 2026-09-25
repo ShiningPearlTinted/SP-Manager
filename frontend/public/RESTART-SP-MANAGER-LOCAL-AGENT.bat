@@ -3,11 +3,12 @@ setlocal EnableExtensions
 set "BASE_URL=https://shiningpearltinted.github.io/SP-Manager/sp-manager-agent"
 set "INSTALL_DIR=%LOCALAPPDATA%\SP-Manager\agent"
 set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+set "TASK_NAME=SP-Manager Local Agent Watchdog"
 if not exist "%PS_EXE%" echo [ERROR] Windows PowerShell was not found.&pause&exit /b 1
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" >nul 2>nul
 
 echo ==================================================
-echo SP-Manager Local Agent Installer / Restart V1.1.17
+echo SP-Manager Local Agent Installer / Restart V1.1.18
 echo ==================================================
 echo.
 
@@ -16,8 +17,16 @@ echo [1/4] Downloading Local Agent files...
 if errorlevel 1 echo [ERROR] Could not download Local Agent files.&pause&exit /b 1
 
 echo [2/4] Registering Auto-start + Auto-restart...
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$task='SP-Manager Local Agent Watchdog'; $wd='%INSTALL_DIR%\watchdog.ps1'; $ps='%PS_EXE%'; schtasks.exe /Delete /TN $task /F 2>$null ^| Out-Null; schtasks.exe /Create /TN $task /SC ONLOGON /DELAY 0000:10 /TR ('\"'+$ps+'\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"'+$wd+'\"') /RU $env:USERNAME /RL LIMITED /F ^| Out-Null; if($LASTEXITCODE -ne 0){exit 1}"
-if errorlevel 1 echo [ERROR] Could not register the Windows watchdog task.&pause&exit /b 1
+schtasks.exe /Delete /TN "%TASK_NAME%" /F >nul 2>&1
+schtasks.exe /Create /TN "%TASK_NAME%" /SC ONLOGON /DELAY 0000:10 /TR "\"%PS_EXE%\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%INSTALL_DIR%\watchdog.ps1\"" /RU "%USERNAME%" /RL LIMITED /F >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Could not register the Windows watchdog task.
+  echo Try running this installer as Administrator once.
+  echo.
+  pause
+  exit /b 1
+)
+echo [OK] Auto-start watchdog task registered for user %USERNAME%.
 
 echo [3/4] Starting Local Agent...
 start "SP-Manager Local Agent" /min "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%INSTALL_DIR%\agent.ps1"
@@ -36,7 +45,7 @@ goto WAIT
 echo.
 echo [OK] SP-Manager Local Agent is READY.
 :DONE
- echo.
+echo.
 echo ==================================================
 echo Auto-start + Auto-restart is ENABLED.
 echo ==================================================
