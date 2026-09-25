@@ -157,7 +157,7 @@ function playPosBeep(kind="ok"){try{const C=window.AudioContext||window.webkitAu
 
 const CUSTOMER_DISPLAY_DEFAULTS={apiBase:"",terminalId:"POS-PC-01",terminalName:"POS PC 01",terminalType:"PC POS",outletId:"SP01",displayId:"CD-001",displayName:"Customer Display 001",enabled:true};
 const customerDisplayApiBase=()=>{const t=load("customerDisplayTerminal",CUSTOMER_DISPLAY_DEFAULTS);return String(t?.apiBase||"").trim().replace(/\/$/,"")};
-const customerDisplayRequest=async(path,options={})=>{const base=customerDisplayApiBase();if(!base)throw new Error("Customer Display API URL is not configured. Set it in Settings > Customer display.");const endpoint=base.endsWith("/api")?base+path.replace(/^\/api/,""):base+path;const r=await fetch(endpoint,{cache:"no-store",...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});let data=null;try{data=await r.json()}catch{}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data||{ok:true}};
+const customerDisplayRequest=async(path,options={})=>{const base=customerDisplayApiBase();if(!base)throw new Error("Customer Display API URL is not configured. Set it in Settings > Customer display.");const endpoint=base+path.replace(/^\/api/,"");const r=await fetch(endpoint,{cache:"no-store",...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});let data=null;try{data=await r.json()}catch{}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data||{ok:true}};
 
 function CustomerDisplay(){
  const params=new URLSearchParams(window.location.search);const displayCode=String(params.get("display")||"").trim();const terminalCode=String(params.get("terminal")||"").trim();
