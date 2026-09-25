@@ -2,8 +2,6 @@ $ErrorActionPreference='Stop'
 $Port=18765
 $HostName='127.0.0.1'
 $StartedAt=(Get-Date).ToUniversalTime().ToString('o')
-$AgentDir=Split-Path -Parent $MyInvocation.MyCommand.Path
-$PowerShell=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $script:DisplayState=@{line1='WELCOME!';line2='';chars=20;updatedAt=$StartedAt}
 function Send-Bytes($stream,[int]$status,[string]$contentType,[byte[]]$bytes,[string]$disposition=''){
   $reason=if($status -eq 200){'OK'}elseif($status -eq 204){'No Content'}else{'Error'}
@@ -36,52 +34,11 @@ function Read-Request($client){
   $body=if($cl -gt 0){[Text.Encoding]::UTF8.GetString($bodyBytes,$headerBytes,$cl)}else{''}
   return @{stream=$stream;method=$method;path=$path;body=$body}
 }
-function Test-AutoStartInstalled {
-  try {
-    $task = Get-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -ErrorAction Stop
-    return ($task.State -ne 'Disabled')
-  } catch {
-    try {
-      $q = & schtasks.exe /Query /TN 'SP-Manager Local Agent Watchdog' /FO CSV /NH 2>$null
-      return ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($q -join '')))
-    } catch { return $false }
-  }
-}
-function Install-AutoStart {
-  $watchdog=Join-Path $AgentDir 'watchdog.ps1'
-  if(-not (Test-Path $watchdog)){ throw 'watchdog.ps1 was not found.' }
-  $taskName='SP-Manager Local Agent Watchdog'
-  try {
-    $action = New-ScheduledTaskAction -Execute $PowerShell -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"')
-    $principalUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $principalUser
-    $principal = New-ScheduledTaskPrincipal -UserId $principalUser -LogonType Interactive -RunLevel Limited
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Keeps the SP-Manager Local Agent running and restarts it if it stops.' -Force | Out-Null
-  } catch {
-    # Fallback to schtasks without embedded-quote parsing problems by using a generated launcher BAT.
-    $launcher=Join-Path $AgentDir 'run-watchdog.bat'
-    $launcherText='@echo off' + "`r`n" + '"' + $PowerShell + '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"' + "`r`n"
-    [IO.File]::WriteAllText($launcher,$launcherText,(New-Object Text.UTF8Encoding($false)))
-    & schtasks.exe /Delete /TN $taskName /F 2>$null | Out-Null
-    & schtasks.exe /Create /TN $taskName /SC ONLOGON /TR $launcher /RU $env:USERNAME /RL LIMITED /F 2>&1 | Out-Null
-    if($LASTEXITCODE -ne 0){ throw ('Windows could not register the Local Agent auto-start task. '+$_.Exception.Message) }
-  }
-  if(-not (Test-AutoStartInstalled)){ throw 'Windows task was not created or is disabled.' }
-  try {
-    $flagDir=Join-Path $env:ProgramData 'SP-Manager'
-    if(-not (Test-Path $flagDir)){New-Item -ItemType Directory -Path $flagDir -Force | Out-Null}
-    'SP-Manager Local Agent Auto-Start installed' | Set-Content -LiteralPath (Join-Path $flagDir 'agent-autostart.flag') -Encoding UTF8
-  } catch {}
-  return $true
-}
 function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.10';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
-    if($req.method -eq 'POST' -and $req.path -eq '/install-autostart'){Install-AutoStart|Out-Null;Send-Json $s 200 @{ok=$true;autoStartInstalled=$true;message='Auto-start + auto-restart is installed.'};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.8';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     $b=if($req.body){$req.body|ConvertFrom-Json}else{[pscustomobject]@{}}
     if($req.method -eq 'POST' -and $req.path -eq '/price-tags/raw'){$printer=[string]$b.printer;if(!$printer){throw 'Printer is required'};$lang=[string]$b.language;if(@('ZPL','TSPL') -notcontains $lang.ToUpper()){throw 'Unsupported Price Tags printer language'};$data=[Text.Encoding]::UTF8.GetBytes([string]$b.data);$copies=[Math]::Max(1,[int]$b.copies);$all=New-Object Collections.Generic.List[byte];1..$copies|%{$all.AddRange($data)};[SPRawPrinter]::Send($printer,$all.ToArray());Send-Json $s 200 @{ok=$true;language=$lang.ToUpper()};return}

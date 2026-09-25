@@ -8,7 +8,7 @@ set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 
 echo ==================================================
-echo SP-Manager Local Agent Installer v1.1.10
+echo SP-Manager Local Agent Installer v1.1.8
 echo ==================================================
 echo.
 if not exist "%PS_EXE%" (
@@ -37,24 +37,16 @@ if defined PID_IN_USE (
 
 rem Register a per-user logon watchdog. It runs in the interactive Windows session so
 rem Customer Display / secondary monitor functions continue to work.
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $task='%TASK_NAME%'; $ps='%PS_EXE%'; $wd='%AGENT_DIR%watchdog.ps1'; $a=New-ScheduledTaskAction -Execute $ps -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File ' + [char]34 + $wd + [char]34); $u=[System.Security.Principal.WindowsIdentity]::GetCurrent().Name; $tr=New-ScheduledTaskTrigger -AtLogOn -User $u; $pr=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited; $st=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1); Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue; Register-ScheduledTask -TaskName $task -Action $a -Trigger $tr -Principal $pr -Settings $st -Description 'SP-Manager Local Agent watchdog' -Force | Out-Null; if(-not (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue)){throw 'Task registration verification failed'}"
+schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>nul
+schtasks /Create /TN "%TASK_NAME%" /SC ONLOGON /DELAY 0000:10 /TR "\"%PS_EXE%\" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%AGENT_DIR%watchdog.ps1\"" /RU "%USERNAME%" /RL LIMITED /F >nul 2>nul
 if errorlevel 1 (
- echo [WARNING] Windows Scheduled Task API registration failed. Trying schtasks fallback...
- set "FALLBACK_DIR=%ProgramData%\SP-Manager"
- if not exist "%FALLBACK_DIR%" mkdir "%FALLBACK_DIR%" >nul 2>nul
- >"%FALLBACK_DIR%\run-watchdog.bat" echo @echo off
- >>"%FALLBACK_DIR%\run-watchdog.bat" echo "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%AGENT_DIR%watchdog.ps1"
- schtasks.exe /Delete /TN "%TASK_NAME%" /F >nul 2>nul
- schtasks.exe /Create /TN "%TASK_NAME%" /SC ONLOGON /TR "%FALLBACK_DIR%\run-watchdog.bat" /RU "%USERDOMAIN%\%USERNAME%" /RL LIMITED /F >nul 2>nul
- if errorlevel 1 (
-  echo [ERROR] Could not create the Windows auto-start watchdog task.
-  echo Please run this installer as Administrator once.
-  echo.
-  pause
-  exit /b 1
- )
+ echo [ERROR] Could not create the Windows auto-start watchdog task.
+ echo Try running this installer as Administrator once.
+ echo.
+ pause
+ exit /b 1
 )
-echo [OK] Auto-start watchdog task registered.
+
 echo [OK] Auto-start watchdog task registered for user %USERNAME%.
 
 echo [OK] The watchdog will restart Local Agent automatically if it stops.
@@ -79,7 +71,7 @@ goto WAIT
 echo [OK] SP-Manager Local Agent 1.1.8 is READY.
 
 :DONE
-"%PS_EXE%" -NoProfile -Command "'SP-Manager Local Agent 1.1.10' | Set-Content -LiteralPath '%LOG_DIR%\agent-installed.flag' -Encoding UTF8"
+"%PS_EXE%" -NoProfile -Command "'SP-Manager Local Agent 1.1.8' | Set-Content -LiteralPath '%LOG_DIR%\agent-installed.flag' -Encoding UTF8"
 echo.
 echo ==================================================
 echo Auto-start + Auto-restart is ENABLED.

@@ -1,63 +1,64 @@
 @echo off
 setlocal EnableExtensions
-set "BASE_URL=https://shiningpearltinted.github.io/SP-Manager/sp-manager-agent"
-set "INSTALL_DIR=%LOCALAPPDATA%\SP-Manager\agent"
+cd /d "%~dp0"
+title SP-Manager Local Agent - Restart
 set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
-set "TASK_NAME=SP-Manager Local Agent Watchdog"
-if not exist "%PS_EXE%" echo [ERROR] Windows PowerShell was not found.&pause&exit /b 1
-if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" >nul 2>nul
+set "AGENT_PS=%~dp0agent\agent.ps1"
+set "LOG_DIR=%ProgramData%\SP-Manager"
+if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 
 echo ==================================================
-echo SP-Manager Local Agent Installer / Restart V1.1.19
-echo ==================================================
+echo SP-Manager Local Agent - RESTART
+ echo ==================================================
 echo.
 
-echo [1/4] Downloading Local Agent files...
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $base='%BASE_URL%'; $dir='%INSTALL_DIR%'; foreach($f in @('agent.ps1','watchdog.ps1')){Invoke-WebRequest -UseBasicParsing -Uri ($base+'/'+$f) -OutFile (Join-Path $dir $f)}"
-if errorlevel 1 echo [ERROR] Could not download Local Agent files.&pause&exit /b 1
-
-echo [2/4] Registering Auto-start + Auto-restart...
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $task='SP-Manager Local Agent Watchdog'; $ps='%PS_EXE%'; $wd=Join-Path '%INSTALL_DIR%' 'watchdog.ps1'; $a=New-ScheduledTaskAction -Execute $ps -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File ' + [char]34 + $wd + [char]34); $u=[System.Security.Principal.WindowsIdentity]::GetCurrent().Name; $t=New-ScheduledTaskTrigger -AtLogOn -User $u; $p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited; $s=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1); Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue; Register-ScheduledTask -TaskName $task -Action $a -Trigger $t -Principal $p -Settings $s -Description 'SP-Manager Local Agent watchdog' -Force | Out-Null; if(-not (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue)){throw 'Task registration verification failed'}"
-if errorlevel 1 (
-  echo [WARNING] Windows Scheduled Task API registration failed. Trying schtasks fallback...
-  set "FALLBACK_DIR=%ProgramData%\SP-Manager"
-  if not exist "%FALLBACK_DIR%" mkdir "%FALLBACK_DIR%" >nul 2>nul
-  >"%FALLBACK_DIR%\run-watchdog.bat" echo @echo off
-  >>"%FALLBACK_DIR%\run-watchdog.bat" echo "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%INSTALL_DIR%\watchdog.ps1"
-  schtasks.exe /Delete /TN "%TASK_NAME%" /F >nul 2>nul
-  schtasks.exe /Create /TN "%TASK_NAME%" /SC ONLOGON /TR "%FALLBACK_DIR%\run-watchdog.bat" /RU "%USERDOMAIN%\%USERNAME%" /RL LIMITED /F >nul 2>nul
-  if errorlevel 1 (
-    echo [ERROR] Could not register the Windows watchdog task.
-    echo Please run this installer as Administrator once.
-    echo.
-    pause
-    exit /b 1
-  )
+if not exist "%AGENT_PS%" (
+  echo [ERROR] agent\agent.ps1 not found.
+  pause
+  exit /b 1
 )
-echo [OK] Auto-start watchdog task registered.
-echo [OK] Auto-start watchdog task registered.
 
-echo [3/4] Starting Local Agent...
-start "SP-Manager Local Agent" /min "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%INSTALL_DIR%\agent.ps1"
+echo [1/4] Stopping existing SP-Manager Agent processes...
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$ps=Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and ($_.CommandLine -match 'agent\\agent\.ps1' -or $_.CommandLine -match 'SP-Manager Local Agent' -or $_.CommandLine -match 'agent[\/]server\.js') -and $_.ProcessId -ne $PID }; foreach($p in $ps){ try{Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop; Write-Host ('Stopped PID '+$p.ProcessId+' '+$p.Name)}catch{Write-Host ('Could not stop PID '+$p.ProcessId+': '+$_.Exception.Message)} }"
+
+timeout /t 2 /nobreak >nul
+
+echo [2/4] Checking port 18765...
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$c=Get-NetTCPConnection -LocalPort 18765 -State Listen -ErrorAction SilentlyContinue; if($c){$c|Format-Table LocalAddress,LocalPort,State,OwningProcess -AutoSize; Write-Host '[WARNING] Port 18765 is still occupied.'}else{Write-Host '[OK] Port 18765 is free.'}"
+
+echo [3/4] Starting Agent v1.1.6 from this folder...
+start "SP-Manager Local Agent" /min "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%AGENT_PS%" > "%LOG_DIR%\agent-console.log" 2>&1
 
 echo [4/4] Waiting for Agent...
 set /a TRY=0
 :WAIT
 set /a TRY+=1
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "try{$r=Invoke-RestMethod 'http://127.0.0.1:18765/status' -TimeoutSec 2;Write-Host ('[OK] Agent connected. Version: '+$r.version);exit 0}catch{exit 1}"
-if not errorlevel 1 goto READY
-if %TRY% GEQ 20 goto DONE
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command ^
+ "try{$r=Invoke-RestMethod 'http://127.0.0.1:18765/status' -TimeoutSec 2;Write-Host ('[OK] Agent connected. Version: '+$r.version);exit 0}catch{exit 1}"
+if not errorlevel 1 goto TEST
+if %TRY% GEQ 15 goto FAIL
 timeout /t 1 /nobreak >nul
 goto WAIT
-:READY
+
+:TEST
 echo.
-echo [OK] SP-Manager Local Agent is READY.
-:DONE
+echo Testing Customer Display routes...
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command ^
+ "try{$r=Invoke-WebRequest 'http://127.0.0.1:18765/customer-display' -UseBasicParsing -TimeoutSec 3;if($r.StatusCode -eq 200){Write-Host '[OK] /customer-display is available.'}else{Write-Host ('[WARNING] /customer-display returned '+$r.StatusCode)}}catch{Write-Host ('[ERROR] /customer-display failed: '+$_.Exception.Message)}"
 echo.
 echo ==================================================
-echo Auto-start + Auto-restart is ENABLED.
+echo Local Agent restart completed.
 echo ==================================================
-echo You do NOT need to run this installer every time you open SP-Manager.
 echo.
 pause
 exit /b 0
+
+:FAIL
+echo.
+echo [ERROR] Agent did not start on port 18765.
+echo Log: %LOG_DIR%\agent-console.log
+echo.
+pause
+exit /b 1

@@ -1,1 +1,1 @@
-1.0.37 - Hardware Install Button + Local Agent Auto-Start/Auto-Restart V1.1.17
+1.0.36 - POS Product Group Navigation V1.1.16
