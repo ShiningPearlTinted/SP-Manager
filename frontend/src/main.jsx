@@ -926,61 +926,44 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const iconFor=name=>({"Accessories":"🧰","Car Detailing":"✨","Coating":"◈","Installation Service":"🛠","PPF":"◆","Tint":"◉","Wrapping":"◇","Windscreen":"▱","Glass":"◫","Security":"⬡","Protection":"✦"}[name]||"✦");
  // POS group navigation follows the stored parent/child hierarchy. A category is only the
  // top-level POS context; it must never be rendered again as a group tile.
- // POS Group Navigation: use the stored recursive parent/child hierarchy, while
- // tolerating older group metadata field names and whitespace/case differences.
  const posGroups=[...new Set([...(Object.keys(groupMeta||{})),...(products.map(p=>p.group).filter(Boolean))])];
- const posKey=v=>String(v??"").trim().toLowerCase();
- const posGroupName=name=>posGroups.find(g=>posKey(g)===posKey(name))||String(name||"");
- const posMetaFor=name=>{
-   const canonical=posGroupName(name);
-   return groupMeta?.[canonical]||groupMeta?.[name]||{};
- };
- const posParentOf=name=>{
-   const meta=posMetaFor(name);
-   const raw=meta?.parent ?? meta?.parentGroup ?? meta?.parentName ?? meta?.parentId ?? "";
-   if(!raw)return "";
-   return posGroupName(raw);
- };
- const posRootOf=name=>{let cur=posGroupName(name);const seen=new Set();while(cur&&posParentOf(cur)&&!seen.has(posKey(cur))){seen.add(posKey(cur));cur=posParentOf(cur)}return cur};
- const posChildrenOf=name=>{
-   const parent=posKey(name);
-   return posGroups.filter(g=>posKey(posParentOf(g))===parent);
- };
+ const posParentOf=name=>String(groupMeta?.[name]?.parent||"");
+ const posRootOf=name=>{let cur=String(name||"");const seen=new Set();while(cur&&posParentOf(cur)&&!seen.has(cur)){seen.add(cur);cur=posParentOf(cur)}return cur};
+ const posChildrenOf=name=>posGroups.filter(g=>posParentOf(g)===String(name));
  const posGroupCategory=name=>{
-   const meta=posMetaFor(name);
+   const meta=groupMeta?.[name];
    if(meta?.category)return String(meta.category);
-   const direct=products.find(p=>posKey(p.group)===posKey(name)&&String(p.category||""));
+   const direct=products.find(p=>String(p.group||"")===String(name)&&String(p.category||""));
    if(direct?.category)return String(direct.category);
    const seen=new Set();
    const descendantCategory=g=>{
-     const key=posKey(g); if(seen.has(key))return ""; seen.add(key);
-     const directProduct=products.find(p=>posKey(p.group)===key&&String(p.category||""));
+     if(seen.has(g))return "";
+     seen.add(g);
+     const directProduct=products.find(p=>String(p.group||"")===String(g)&&String(p.category||""));
      if(directProduct?.category)return String(directProduct.category);
      for(const child of posChildrenOf(g)){const c=descendantCategory(child);if(c)return c;}
      return "";
    };
    const root=posRootOf(name);
-   const rootMeta=posMetaFor(root);
+   const rootMeta=groupMeta?.[root];
    if(rootMeta?.category)return String(rootMeta.category);
    return descendantCategory(root);
  };
- const posGroupProducts=name=>products.filter(p=>posKey(p.group)===posKey(name));
+ const posGroupProducts=name=>products.filter(p=>String(p.group||"")===String(name));
  const posGroupProductCount=name=>{
    const seen=new Set();
-   const walk=g=>{const key=posKey(g);if(seen.has(key))return 0;seen.add(key);return posGroupProducts(g).length+posChildrenOf(g).reduce((n,c)=>n+walk(c),0)};
+   const walk=g=>{if(seen.has(g))return 0;seen.add(g);return posGroupProducts(g).length+posChildrenOf(g).reduce((n,c)=>n+walk(c),0)};
    return walk(name);
  };
  const posGroupHasContent=name=>posGroupProductCount(name)>0;
  const posRootGroups=posGroups.filter(g=>!posParentOf(g)&&(!posCategory||posCategory==="All Categories"||posGroupCategory(g)===String(posCategory))).filter(posGroupHasContent);
  const categoryProducts=products.filter(p=>posCategory==="All Categories"||(p.category||"")===posCategory);
- const currentGroup=group?posGroupName(group):"";
- const currentChildren=currentGroup?posChildrenOf(currentGroup).filter(posGroupHasContent):posRootGroups;
+ const currentGroup=group?String(group):"";
+ const currentChildren= currentGroup ? posChildrenOf(currentGroup).filter(posGroupHasContent) : posRootGroups;
  const directGroupProducts=currentGroup?posGroupProducts(currentGroup):categoryProducts.filter(p=>!p.group);
- // When a group has children, POS shows the children first. Direct products in
- // that parent are intentionally held until the user reaches a leaf group.
- const shown=currentGroup?(currentChildren.length?[]:directGroupProducts):categoryProducts;
+ const shown= currentGroup ? directGroupProducts : categoryProducts;
  const parentGroup=currentGroup?posParentOf(currentGroup):"";
- const hasCurrentChildren=currentGroup?currentChildren.length>0:posRootGroups.length>0;
+ const hasCurrentChildren=currentGroup ? currentChildren.length>0 : posRootGroups.length>0;
  const goBackGroup=()=>{
    if(!currentGroup){setCatLevel("root");setGroup("");setPosCategory("All Categories");return;}
    // A root group with the same name as the selected category is the
@@ -1029,28 +1012,15 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
    // enter that group immediately. Do not render the category itself as a
    // second tile. This matches the expected POS hierarchy: Category ->
    // Main Group(s) -> Subgroup(s) -> Product(s).
-   const sameNameRoot=posGroups.find(g=>posKey(g)===posKey(categoryName) && !posParentOf(g));
+   const sameNameRoot=posGroups.find(g=>String(g)===categoryName && !posParentOf(g));
    if(sameNameRoot && posGroupHasContent(sameNameRoot)){
-     const root=posGroupName(sameNameRoot);
-     setGroup(root);
-     setCatLevel(posChildrenOf(root).some(posGroupHasContent)?"group":"items");
+     setGroup(sameNameRoot);
+     setCatLevel(posChildrenOf(sameNameRoot).some(posGroupHasContent)?"group":"items");
    }else{
      setGroup("");
      setCatLevel("group");
    }
  }}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>String(p.category||"")===String(name)).length} products</small></button>;
- // Safety guard for POS category -> group navigation. If a category has a root group
- // with the same name, entering that category must immediately open its children;
- // the root group itself must never be rendered as a second tile.
- useEffect(()=>{
-   if(catLevel!=="root"||!posCategory||posCategory==="All Categories")return;
-   const sameNameRoot=posGroups.find(g=>posKey(g)===posKey(posCategory)&&!posParentOf(g));
-   if(!sameNameRoot||!posGroupHasContent(sameNameRoot))return;
-   const root=posGroupName(sameNameRoot);
-   const children=posChildrenOf(root).filter(posGroupHasContent);
-   if(posKey(group)!==posKey(root)){setGroup(root);}
-   setCatLevel(children.length?"group":"items");
- },[catLevel,posCategory,group,posGroups.length,products.length,JSON.stringify(groupMeta)]);
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")};
  useEffect(()=>{
