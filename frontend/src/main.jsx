@@ -954,7 +954,22 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const currentChildren=currentGroup?childGroupNames(currentGroup):categoryGroupNames();
  const parentGroup=currentGroup?parentOf(currentGroup):"";
  const openPosGroup=name=>{const children=childGroupNames(name);setGroup(name);setCatLevel(children.length?"group":"items")};
- const goBackGroup=()=>{if(!currentGroup){setCatLevel("root");setGroup("");setPosCategory("All Categories");return}const parent=parentOf(currentGroup);if(parent){setGroup(parent);setCatLevel("group");return}setGroup("");setCatLevel("group")};
+ const goBackGroup=()=>{
+   // At the top Categories level, Back must leave the category browser and return
+   // to the main POS product menu instead of rendering Categories again.
+   if(!currentGroup){
+     setGroup("");
+     setPosCategory("All Categories");
+     setQ("");
+     setCatLevel("home");
+     return;
+   }
+   const parent=parentOf(currentGroup);
+   if(parent){setGroup(parent);setCatLevel("group");return}
+   // Back from a root/main group returns to the Categories screen.
+   setGroup("");
+   setCatLevel("group");
+ };
  const groupTile=name=><button type="button" className="ar-category-tile ar-group-tile" key={name} onClick={()=>openPosGroup(name)}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{groupProductCount(name)} products</small></button>;
  const applyDiscount=()=>{
    if(!cart.length){setNoticeLocal("Add at least one item before discount.");setDiscountScreen(false);return}
@@ -1077,7 +1092,17 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
     {q&&<div className="ar-search-hint">{filtered.length} product(s) found</div>}
     {settings.general.layout==="Standard" ? <div className="ar-standard-list">{filtered.length?<div className="ar-standard-table">{filtered.map(p=><button type="button" key={p.id} className="ar-standard-product-button" onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><span><b>{p.name}</b><small>{p.code||"No code"}{p.barcode?" · "+p.barcode:""}</small></span><strong>{money(p.price)}</strong></button>)}</div>:<Empty text="No products found."/>}</div> : <>
     {q?<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Search results</strong></div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{filtered.length?filtered.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}{p.barcode?" · "+p.barcode:""}</small><b>{money(p.price)}</b></div></button>):<Empty text="No products found."/>}</div></>:null}
-    {!q&&catLevel==='root'&&<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Categories</strong></div><div className="ar-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{rootCats.map(categoryTile)}</div></>}
+    {!q&&catLevel==='home'&&<div className="ar-pos-home-menu">
+      <div className="ar-breadcrumb"><strong>POS</strong></div>
+      <div className="ar-pos-home-actions">
+        <button type="button" className="ar-category-tile" onClick={()=>{setPosCategory("All Categories");setGroup("");setCatLevel("root")}}>
+          <div className="ar-cat-icon"><span>✦</span></div>
+          <strong>Categories</strong>
+          <small>Browse product groups</small>
+        </button>
+      </div>
+    </div>}
+    {!q&&catLevel==='root'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← POS</button><b>›</b><strong>Categories</strong></div><div className="ar-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{rootCats.map(categoryTile)}</div></>}
     {catLevel==='group'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← {currentGroup?(parentGroup||posCategory):'Start'}</button>{currentGroup&&<><b>›</b><strong>{currentGroup}</strong></>}</div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}><button type="button" className="ar-back-tile ar-back-primary" onClick={goBackGroup}><span>←</span><small>Back to {currentGroup?(parentGroup||posCategory):'Start'}</small></button>{currentChildren.length?currentChildren.map(groupTile):(!currentGroup&&shown.length?shown.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}</small><b>{money(p.price)}</b></div></button>):<Empty text="No groups found in this category."/>)}</div></>}
     {catLevel==='items'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← {parentGroup||posCategory}</button><b>›</b><strong>{currentGroup}</strong></div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}><button type="button" className="ar-back-tile" onClick={goBackGroup}><span>←</span><small>Back to {parentGroup||posCategory}</small></button>{shown.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}</small><b>{money(p.price)}</b></div></button>)}</div></>}
     </>}
