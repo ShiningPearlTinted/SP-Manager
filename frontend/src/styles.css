@@ -4482,13 +4482,16 @@
 .ar-pos-home-actions{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,260px));gap:10px}
 
 /* ============================================================
-   SP-MANAGER POS — MOBILE PHONE FINAL OVERRIDE V12
+   SP-MANAGER POS — MOBILE PHONE FIT SCREEN V13
    UI/LAYOUT ONLY — FUNCTION/CALCULATION LOCK
    ------------------------------------------------------------
-   This is the last mobile rule block so it wins over older mobile
-   patches in this stylesheet. It uses the VisualViewport value
-   already supplied by main.jsx and keeps the POS inside the real
-   phone viewport with no page area underneath.
+   Root cause fixed:
+   - Do NOT size the POS from visualViewport.height. On mobile browsers
+     that value can be smaller than the layout viewport while browser
+     chrome is visible, leaving a white strip below a fixed POS shell.
+   - The POS now owns the full dynamic viewport using 100dvh and flex
+     sizing. The main workspace consumes the exact remaining height.
+   - No JavaScript viewport height is required for POS geometry.
    ============================================================ */
 @media (max-width:700px){
   html,body,#root{
@@ -4496,6 +4499,7 @@
     max-width:100% !important;
     min-width:0 !important;
     height:100% !important;
+    min-height:100% !important;
     margin:0 !important;
     padding:0 !important;
     overflow:hidden !important;
@@ -4506,6 +4510,8 @@
     width:100% !important;
     height:100% !important;
     min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
     display:block !important;
     overflow:hidden !important;
   }
@@ -4521,27 +4527,27 @@
     height:100% !important;
     min-height:0 !important;
     margin:0 !important;
+    padding:0 !important;
     overflow:hidden !important;
   }
 
+  /* POS is a true viewport layer. No height is taken from JS. */
   .ar-pos-shell{
     position:fixed !important;
-    top:0 !important;
-    left:0 !important;
-    right:0 !important;
-    bottom:auto !important;
-    width:100% !important;
-    height:var(--sp-pos-viewport-h, 100dvh) !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
     min-width:0 !important;
-    min-height:0 !important;
+    min-height:100dvh !important;
     max-width:none !important;
-    max-height:none !important;
+    max-height:100dvh !important;
     margin:0 !important;
     padding:0 !important;
+    box-sizing:border-box !important;
     overflow:hidden !important;
     display:flex !important;
     flex-direction:column !important;
-    box-sizing:border-box !important;
+    background:#222 !important;
     z-index:2147483647 !important;
   }
 
@@ -4552,14 +4558,17 @@
     min-height:58px !important;
     max-height:58px !important;
     box-sizing:border-box !important;
-    overflow-x:auto !important;
-    overflow-y:hidden !important;
-    flex-wrap:nowrap !important;
     padding:3px 56px 3px 3px !important;
+    gap:3px !important;
     position:relative !important;
     z-index:100 !important;
-    isolation:isolate !important;
+    display:flex !important;
+    flex-wrap:nowrap !important;
+    align-items:stretch !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
     scrollbar-width:none !important;
+    -webkit-overflow-scrolling:touch !important;
   }
   .ar-pos-shell .ar-topbar::-webkit-scrollbar{display:none !important}
 
@@ -4572,6 +4581,8 @@
     min-height:52px !important;
     max-height:52px !important;
     box-sizing:border-box !important;
+    margin:0 !important;
+    touch-action:manipulation !important;
   }
 
   .ar-pos-shell .ar-menu-btn{
@@ -4592,19 +4603,23 @@
     align-items:center !important;
     justify-content:center !important;
     box-sizing:border-box !important;
+    touch-action:manipulation !important;
   }
 
+  /* Main area fills every pixel left after the 58px action bar. */
   .ar-pos-shell .ar-main{
     flex:1 1 auto !important;
     width:100% !important;
-    height:calc(var(--sp-pos-viewport-h, 100dvh) - 58px) !important;
+    height:auto !important;
+    min-width:0 !important;
     min-height:0 !important;
     max-height:none !important;
     overflow:hidden !important;
     display:grid !important;
     grid-template-columns:1fr !important;
-    grid-template-rows:minmax(0,1fr) minmax(210px,36%) !important;
+    grid-template-rows:minmax(0,1fr) minmax(270px,40%) !important;
     grid-template-areas:"products" "order" !important;
+    box-sizing:border-box !important;
   }
 
   .ar-pos-shell .ar-product-panel{
@@ -4645,7 +4660,7 @@
     grid-area:order !important;
     width:100% !important;
     min-width:0 !important;
-    min-height:210px !important;
+    min-height:270px !important;
     height:100% !important;
     max-height:none !important;
     overflow:hidden !important;
@@ -4657,50 +4672,35 @@
 
   .ar-pos-shell .ar-order-tools{grid-row:1 !important;height:38px !important;min-height:38px !important;max-height:38px !important}
   .ar-pos-shell .ar-order-customer{grid-row:2 !important;height:43px !important;min-height:43px !important;max-height:43px !important}
-  .ar-pos-shell .ar-order-items{grid-row:3 !important;min-width:0 !important;min-height:42px !important;height:auto !important;max-height:none !important;overflow-y:auto !important;overflow-x:hidden !important;-webkit-overflow-scrolling:touch !important}
+  .ar-pos-shell .ar-order-items{grid-row:3 !important;min-width:0 !important;min-height:42px !important;height:auto !important;max-height:none !important;overflow-y:auto !important;overflow-x:hidden !important;-webkit-overflow-scrolling:touch !important;box-sizing:border-box !important}
   .ar-pos-shell .ar-order-total{grid-row:4 !important;width:100% !important;min-width:0 !important;box-sizing:border-box !important}
-  .ar-pos-shell .ar-bottom-actions{grid-row:5 !important;height:45px !important;min-height:45px !important;max-height:45px !important}
-
+  .ar-pos-shell .ar-bottom-actions{grid-row:5 !important;width:100% !important;height:45px !important;min-height:45px !important;max-height:45px !important;box-sizing:border-box !important}
   .ar-pos-shell .ar-order-item{width:100% !important;min-width:0 !important;box-sizing:border-box !important}
 
-  /* The POS itself, not the surrounding application, owns the mobile viewport. */
+  /* No document-level white strip can appear underneath the POS. */
   body:has(.ar-pos-shell),
   #root:has(.ar-pos-shell){
-    overflow:hidden !important;
+    width:100% !important;
     height:100% !important;
+    min-height:100% !important;
+    overflow:hidden !important;
+    background:#222 !important;
   }
 
-  /* Fullscreen uses exactly the same geometry, so the top bar never disappears. */
+  /* Fullscreen uses the exact same geometry. */
   .ar-pos-shell:fullscreen,
   .ar-pos-shell:-webkit-full-screen,
   .ar-pos-shell.pos-browser-fullscreen,
   html:fullscreen .ar-pos-shell,
   html:-webkit-full-screen .ar-pos-shell{
     position:fixed !important;
-    top:0 !important;
-    left:0 !important;
-    right:0 !important;
-    bottom:auto !important;
-    width:100% !important;
-    height:var(--sp-pos-viewport-h, 100dvh) !important;
-    min-height:0 !important;
-    max-height:none !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
+    min-height:100dvh !important;
+    max-height:100dvh !important;
     overflow:hidden !important;
-  }
-
-  .ar-pos-shell:fullscreen .ar-topbar,
-  .ar-pos-shell:-webkit-full-screen .ar-topbar,
-  .ar-pos-shell.pos-browser-fullscreen .ar-topbar,
-  html:fullscreen .ar-pos-shell .ar-topbar,
-  html:-webkit-full-screen .ar-pos-shell .ar-topbar{
-    flex:0 0 58px !important;
-    height:58px !important;
-    min-height:58px !important;
-    max-height:58px !important;
-    flex-wrap:nowrap !important;
-    overflow-x:auto !important;
-    overflow-y:hidden !important;
-    z-index:10000 !important;
+    background:#222 !important;
   }
 
   .ar-pos-shell:fullscreen .ar-main,
@@ -4708,7 +4708,7 @@
   .ar-pos-shell.pos-browser-fullscreen .ar-main,
   html:fullscreen .ar-pos-shell .ar-main,
   html:-webkit-full-screen .ar-pos-shell .ar-main{
-    height:calc(var(--sp-pos-viewport-h, 100dvh) - 58px) !important;
+    height:auto !important;
     min-height:0 !important;
     overflow:hidden !important;
   }
@@ -4727,7 +4727,7 @@
 
 @media (max-width:380px){
   .ar-pos-shell .ar-main{
-    grid-template-rows:minmax(0,1fr) minmax(200px,38%) !important;
+    grid-template-rows:minmax(0,1fr) 275px !important;
   }
   .ar-pos-shell .ar-action{flex-basis:54px !important;width:54px !important;min-width:54px !important;max-width:54px !important}
   .ar-pos-shell .ar-menu-btn{width:48px !important;min-width:48px !important;max-width:48px !important}
@@ -4743,7 +4743,6 @@
     grid-template-columns:minmax(0,1.55fr) minmax(240px,.8fr) !important;
     grid-template-rows:minmax(0,1fr) !important;
     grid-template-areas:"products order" !important;
-    height:calc(var(--sp-pos-viewport-h, 100dvh) - 58px) !important;
   }
   .ar-pos-shell .ar-product-panel{border-right:1px solid #3b3f42 !important;border-bottom:0 !important}
   .ar-pos-shell .ar-order-panel{border-top:0 !important;height:100% !important;min-height:0 !important}
