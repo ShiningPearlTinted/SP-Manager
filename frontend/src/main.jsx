@@ -956,11 +956,13 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const openPosGroup=name=>{const children=childGroupNames(name);setGroup(name);setCatLevel(children.length?"group":"items")};
  const goBackGroup=()=>{
    // Locked POS navigation: Product -> Third Group -> Second Group -> Main Group -> Categories.
-   // A Main Group (root group) always returns to Categories.
-   if(!currentGroup)return;
+   // Back from a root/Main Group must open the complete Categories level, never a
+   // single-category screen.
+   if(!currentGroup){setGroup("");setPosCategory("All Categories");setCatLevel("root");return;}
    const parent=parentOf(currentGroup);
    if(parent){setGroup(parent);setCatLevel("group");return}
    setGroup("");
+   setPosCategory("All Categories");
    setCatLevel("root");
  };
  const groupTile=name=><button type="button" className="ar-category-tile ar-group-tile" key={name} onClick={()=>openPosGroup(name)}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{groupProductCount(name)} products</small></button>;
