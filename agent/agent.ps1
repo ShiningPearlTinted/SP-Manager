@@ -39,11 +39,11 @@ function Read-Request($client){
 function Test-AutoStartInstalled {
   try {
     $task = Get-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -ErrorAction Stop
-    return ($null -ne $task)
+    return ($task.State -ne 'Disabled')
   } catch {
     try {
-      $q = & schtasks.exe /Query /TN 'SP-Manager Local Agent Watchdog' 2>$null
-      return ($LASTEXITCODE -eq 0 -and $q)
+      $q = & schtasks.exe /Query /TN 'SP-Manager Local Agent Watchdog' /FO CSV /NH 2>$null
+      return ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($q -join '')))
     } catch { return $false }
   }
 }
@@ -51,10 +51,24 @@ function Install-AutoStart {
   $watchdog=Join-Path $AgentDir 'watchdog.ps1'
   if(-not (Test-Path $watchdog)){ throw 'watchdog.ps1 was not found.' }
   $taskName='SP-Manager Local Agent Watchdog'
-  $tr='"' + $PowerShell + '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"'
-  & schtasks.exe /Delete /TN $taskName /F 2>$null | Out-Null
-  & schtasks.exe /Create /TN $taskName /SC ONLOGON /DELAY 0000:10 /TR $tr /RU $env:USERNAME /RL LIMITED /F 2>&1 | Out-Null
-  if($LASTEXITCODE -ne 0){ throw 'Windows could not register the Local Agent auto-start task.' }
+  try {
+    $action = New-ScheduledTaskAction -Execute $PowerShell -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"')
+    $principalUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $principalUser
+    $principal = New-ScheduledTaskPrincipal -UserId $principalUser -LogonType Interactive -RunLevel Limited
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Keeps the SP-Manager Local Agent running and restarts it if it stops.' -Force | Out-Null
+  } catch {
+    # Fallback to schtasks without embedded-quote parsing problems by using a generated launcher BAT.
+    $launcher=Join-Path $AgentDir 'run-watchdog.bat'
+    $launcherText='@echo off' + "`r`n" + '"' + $PowerShell + '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"' + "`r`n"
+    [IO.File]::WriteAllText($launcher,$launcherText,(New-Object Text.UTF8Encoding($false)))
+    & schtasks.exe /Delete /TN $taskName /F 2>$null | Out-Null
+    & schtasks.exe /Create /TN $taskName /SC ONLOGON /TR $launcher /RU $env:USERNAME /RL LIMITED /F 2>&1 | Out-Null
+    if($LASTEXITCODE -ne 0){ throw ('Windows could not register the Local Agent auto-start task. '+$_.Exception.Message) }
+  }
+  if(-not (Test-AutoStartInstalled)){ throw 'Windows task was not created or is disabled.' }
   try {
     $flagDir=Join-Path $env:ProgramData 'SP-Manager'
     if(-not (Test-Path $flagDir)){New-Item -ItemType Directory -Path $flagDir -Force | Out-Null}
@@ -66,7 +80,7 @@ function Handle($req){
   $s=$req.stream
   try{
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.9';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.1.10';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
     if($req.method -eq 'POST' -and $req.path -eq '/install-autostart'){Install-AutoStart|Out-Null;Send-Json $s 200 @{ok=$true;autoStartInstalled=$true;message='Auto-start + auto-restart is installed.'};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     $b=if($req.body){$req.body|ConvertFrom-Json}else{[pscustomobject]@{}}
