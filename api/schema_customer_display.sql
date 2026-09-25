@@ -1,0 +1,38 @@
+CREATE TABLE IF NOT EXISTS terminals (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  terminal_code VARCHAR(64) NOT NULL,
+  terminal_name VARCHAR(120) NOT NULL,
+  terminal_type VARCHAR(40) NOT NULL DEFAULT 'PC POS',
+  outlet_id VARCHAR(64) NOT NULL DEFAULT 'SP01',
+  customer_display_id BIGINT UNSIGNED NULL,
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id), UNIQUE KEY uq_terminal_code (terminal_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS customer_displays (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  display_code VARCHAR(64) NOT NULL,
+  display_name VARCHAR(120) NOT NULL,
+  outlet_id VARCHAR(64) NOT NULL DEFAULT 'SP01',
+  terminal_id VARCHAR(64) NULL,
+  status ENUM('Connected','Disconnected','Inactive') NOT NULL DEFAULT 'Disconnected',
+  last_connected DATETIME NULL,
+  image_data LONGTEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id), UNIQUE KEY uq_display_code (display_code), KEY idx_display_terminal (terminal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS customer_display_sessions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  display_code VARCHAR(64) NOT NULL,
+  terminal_id VARCHAR(64) NOT NULL,
+  outlet_id VARCHAR(64) NOT NULL DEFAULT 'SP01',
+  state ENUM('IDLE','CART','PAYMENT','COMPLETED','ERROR') NOT NULL DEFAULT 'IDLE',
+  state_json LONGTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  expires_at DATETIME NULL,
+  PRIMARY KEY (id), UNIQUE KEY uq_display_session (display_code), KEY idx_terminal (terminal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

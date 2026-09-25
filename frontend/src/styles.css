@@ -4481,15 +4481,150 @@
 .ar-pos-home-menu{min-height:220px;padding:4px 0 24px}
 .ar-pos-home-actions{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,260px));gap:10px}
 
+/* ============================================================
+   SP-MANAGER POS — MODERN ORDER/SERVICE MODALS
+   UI ONLY — FUNCTION LOCK
+   Based on the existing Transfer/Split Order modal styling.
+   No POS logic or modal actions are changed.
+   ============================================================ */
+.pos-integration-modal{
+  width:min(520px,92vw) !important;
+  max-height:80vh !important;
+  overflow:auto !important;
+  padding:0 !important;
+  background:#272b2e !important;
+  color:#f2f4f5 !important;
+  border:1px solid #4d565d !important;
+  border-radius:11px !important;
+  box-shadow:0 30px 80px #0000008c !important;
+}
+.pos-integration-modal .ar-modal-head{
+  padding:16px 18px !important;
+  background:linear-gradient(180deg,#2d3236,#272b2e) !important;
+  border-bottom:1px solid #41474b !important;
+}
+.pos-integration-modal .ar-modal-head small{
+  font-size:9px !important;
+  color:#8f999f !important;
+  letter-spacing:.12em !important;
+}
+.pos-integration-modal .ar-modal-head h3{
+  margin:4px 0 0 !important;
+  font-size:19px !important;
+  line-height:1.2 !important;
+  letter-spacing:-.01em !important;
+  color:#f2f4f5 !important;
+}
+.pos-integration-modal .ar-modal-head>button{
+  width:34px !important;
+  height:34px !important;
+  border:0 !important;
+  border-radius:7px !important;
+  display:grid !important;
+  place-items:center !important;
+  background:transparent !important;
+  color:#dfe4e7 !important;
+  font-size:22px !important;
+  padding:0 !important;
+}
+.pos-integration-modal .ar-modal-head>button:hover{
+  background:#343b40 !important;
+}
+.pos-integration-modal>label{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:7px !important;
+  margin:0 !important;
+  padding:12px 18px 4px !important;
+  color:#8f999f !important;
+  font-size:10px !important;
+  font-weight:500 !important;
+}
+.pos-integration-modal>input,
+.pos-integration-modal>select,
+.pos-integration-modal>label>input,
+.pos-integration-modal>label>select{
+  box-sizing:border-box !important;
+  width:100% !important;
+  min-height:38px !important;
+  margin:0 !important;
+  padding:9px 11px !important;
+  border:1px solid #159bd7 !important;
+  border-radius:9px !important;
+  outline:none !important;
+  background:#fff !important;
+  color:#173b5b !important;
+  font-size:14px !important;
+}
+.pos-integration-modal>label>input:focus,
+.pos-integration-modal>select:focus{
+  border-color:#20a9df !important;
+  box-shadow:0 0 0 2px #159bd733 !important;
+}
+.pos-integration-modal>select{
+  margin:12px 18px 4px !important;
+  width:calc(100% - 36px) !important;
+}
+.pos-integration-modal>.secondary:not(.modal-actions .secondary){
+  margin:8px 18px 4px !important;
+  width:calc(100% - 36px) !important;
+  min-height:38px !important;
+  border-radius:7px !important;
+  background:#30363b !important;
+  color:#e8edf0 !important;
+  border:1px solid #505a62 !important;
+}
+.pos-integration-modal .modal-actions{
+  margin-top:12px !important;
+  padding:12px 14px 14px !important;
+  background:#25292c !important;
+  border-top:1px solid #3b4247 !important;
+  gap:8px !important;
+}
+.pos-integration-modal .modal-actions button{
+  min-width:90px !important;
+  height:38px !important;
+  padding:0 16px !important;
+  border-radius:7px !important;
+  font-size:12px !important;
+  font-weight:700 !important;
+  transition:.15s ease !important;
+}
+.pos-integration-modal .modal-actions .secondary{
+  background:#30363b !important;
+  color:#e8edf0 !important;
+  border:1px solid #505a62 !important;
+}
+.pos-integration-modal .modal-actions .secondary:hover{
+  background:#3a4248 !important;
+  border-color:#65717a !important;
+}
+.pos-integration-modal .modal-actions button:not(.secondary){
+  background:linear-gradient(180deg,#20a9df,#168dcc) !important;
+  color:#fff !important;
+  border:1px solid #159bd7 !important;
+}
+.pos-integration-modal .modal-actions button:not(.secondary):hover{
+  filter:brightness(1.06) !important;
+}
+@media(max-width:700px){
+  .pos-integration-modal{
+    width:min(520px,calc(100vw - 16px)) !important;
+    max-width:calc(100vw - 16px) !important;
+    max-height:90dvh !important;
+  }
+  .pos-integration-modal .ar-modal-head{padding:13px 14px !important}
+  .pos-integration-modal>label{padding-left:14px !important;padding-right:14px !important}
+  .pos-integration-modal>select{margin-left:14px !important;margin-right:14px !important;width:calc(100% - 28px) !important}
+  .pos-integration-modal>.secondary:not(.modal-actions .secondary){margin-left:14px !important;margin-right:14px !important;width:calc(100% - 28px) !important}
+  .pos-integration-modal .modal-actions{padding:10px 12px 12px !important}
+}
 
-/* Customer Display V21 — settings UI only; POS layout/functions remain locked. */
-.customer-display-settings-v21{display:flex;flex-direction:column;gap:18px;padding:4px 0 24px}
-.customer-display-hero{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 26px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025));box-shadow:0 16px 45px rgba(0,0,0,.22)}
-.customer-display-eyebrow{display:block;font-size:10px;letter-spacing:.18em;font-weight:800;color:#d7b46b;margin-bottom:6px;text-transform:uppercase}
-.customer-display-hero h2{margin:0;font-size:26px;line-height:1.1;color:#fff}.customer-display-hero p{margin:8px 0 0;color:#9da8b8;font-size:13px;max-width:720px;line-height:1.55}
-.customer-display-status-pill{display:flex;align-items:center;gap:8px;white-space:nowrap;padding:9px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.2);color:#aab4c3;font-size:11px;font-weight:800;letter-spacing:.06em}.customer-display-status-pill i{width:8px;height:8px;border-radius:50%;background:#7d8795;box-shadow:0 0 0 4px rgba(125,135,149,.1)}.customer-display-status-pill i.on{background:#25c47a;box-shadow:0 0 0 4px rgba(37,196,122,.12)}
-.customer-display-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.customer-display-option{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border:1px solid rgba(255,255,255,.1);border-radius:15px;background:rgba(255,255,255,.045)}.customer-display-option b{display:block;color:#fff;font-size:14px}.customer-display-option small{display:block;margin-top:5px;color:#8994a5;font-size:11px}
-.customer-display-layout-card{display:grid;grid-template-columns:minmax(360px,1.15fr) 1fr;gap:22px;align-items:center;padding:20px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#151922}.customer-display-layout-preview{display:grid;grid-template-columns:1fr 1fr;min-height:230px;overflow:hidden;border-radius:13px;border:1px solid rgba(255,255,255,.12);background:#080b10;box-shadow:0 12px 35px rgba(0,0,0,.3)}.cd-preview-media{display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0a0d12;color:#d7b46b;font-size:18px;font-weight:900;text-align:center}.cd-preview-media img{width:100%;height:100%;object-fit:cover}.cd-preview-media small{display:block;color:#8994a5;font-size:9px;letter-spacing:.12em;margin-top:5px}.cd-preview-order{display:flex;flex-direction:column;justify-content:center;padding:22px;background:linear-gradient(145deg,#171b24,#0d1016)}.cd-preview-order span{font-size:9px;letter-spacing:.15em;color:#d7b46b;font-weight:800}.cd-preview-order b{font-size:22px;margin-top:10px;color:#fff}.cd-preview-order em{font-style:normal;color:#8e99aa;font-size:11px;margin-top:5px}.cd-preview-order strong{font-size:28px;margin-top:22px;color:#fff}.customer-display-layout-copy h3{margin:0;color:#fff;font-size:20px}.customer-display-layout-copy p{color:#929cad;font-size:12px;line-height:1.6;margin:9px 0}.customer-display-layout-copy ul{margin:10px 0 0;padding-left:18px;color:#b6bfcc;font-size:11px;line-height:1.8}
-.customer-display-image-card{padding:20px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:rgba(255,255,255,.035)}.customer-display-image-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.customer-display-image-head h3{margin:0;color:#fff;font-size:18px}.customer-display-image-head p{margin:7px 0 0;color:#8994a5;font-size:11px;line-height:1.5;max-width:700px}.customer-display-remove{border:1px solid rgba(255,255,255,.14)!important;background:rgba(193,18,31,.12)!important;color:#ff9ca2!important;border-radius:9px!important;padding:8px 12px!important;font-size:11px!important}.customer-display-upload{display:flex;align-items:center;gap:14px;margin-top:16px;padding:17px;border:1px dashed rgba(215,180,107,.4);border-radius:13px;background:rgba(215,180,107,.035);cursor:pointer}.customer-display-upload input{display:none}.customer-display-upload .upload-icon{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:11px;background:rgba(215,180,107,.12);color:#e4c27b;font-size:23px}.customer-display-upload b{display:block;color:#fff;font-size:13px}.customer-display-upload small{display:block;color:#8e99aa;margin-top:3px;font-size:10px}.customer-display-image-preview-v21{position:relative;margin-top:14px;height:220px;border-radius:12px;overflow:hidden;background:#090c11;border:1px solid rgba(255,255,255,.1)}.customer-display-image-preview-v21 img{width:100%;height:100%;object-fit:cover;display:block}.customer-display-image-preview-v21 span{position:absolute;left:10px;bottom:10px;padding:6px 9px;border-radius:7px;background:rgba(0,0,0,.68);color:#fff;font-size:10px}
-.customer-display-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.customer-display-actions-v21{display:flex;align-items:center;gap:14px}.customer-display-test{border:0!important;border-radius:10px!important;background:linear-gradient(135deg,#1aa7df,#0c82ba)!important;color:#fff!important;padding:11px 16px!important;font-weight:800!important;box-shadow:0 8px 20px rgba(12,130,186,.22)}.customer-display-actions-v21>span{color:#818c9e;font-size:10px}
-@media(max-width:900px){.customer-display-hero{padding:19px;flex-direction:column;align-items:flex-start}.customer-display-mode-grid,.customer-display-layout-card,.customer-display-fields{grid-template-columns:1fr}.customer-display-layout-preview{min-height:190px}.customer-display-image-preview-v21{height:180px}.customer-display-actions-v21{align-items:flex-start;flex-direction:column}}
+
+/* Customer Display — isolated TV/Kiosk UI */
+.customer-display-screen{min-height:100vh;background:#070b12;color:#f7fafc;font-family:"Segoe UI",Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+.customer-display-status{position:fixed;right:24px;top:18px;z-index:10;font-size:13px;color:#a9b7c7;letter-spacing:.04em}.customer-display-status .online{color:#22c55e;margin-right:7px}.customer-display-status .offline{color:#ef4444;margin-right:7px}
+.customer-display-brand{padding:28px 4vw 20px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,#111a29,#0b111b)}.customer-display-brand-name{font-size:clamp(24px,2.5vw,44px);font-weight:800;letter-spacing:.08em}.customer-display-brand-sub{margin-top:5px;font-size:12px;color:#8ea0b3;letter-spacing:.24em}
+.customer-display-main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:0}.customer-display-media{min-height:0;background:#0b1018;display:flex;align-items:center;justify-content:center;overflow:hidden;border-right:1px solid rgba(255,255,255,.08)}.customer-display-media img{width:100%;height:100%;object-fit:cover}.customer-display-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#dbe5ef;gap:10px;text-align:center}.customer-display-placeholder b{font-size:clamp(32px,4vw,72px);letter-spacing:.12em}.customer-display-placeholder span{color:#8ea0b3;font-size:clamp(14px,1.2vw,22px)}
+.customer-display-order{display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,#111821,#0a0f16);padding:clamp(24px,3vw,48px)}.customer-display-order-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:22px}.customer-display-order-head span{font-size:12px;letter-spacing:.2em;color:#8ea0b3}.customer-display-order-head h1{margin:8px 0 0;font-size:clamp(28px,3vw,54px)}.customer-display-item-count{color:#aab8c7;font-size:15px;padding-top:8px}.customer-display-items{flex:1;overflow:auto;padding:18px 0}.customer-display-item{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(110px,160px);gap:14px;align-items:center;padding:17px 0;border-bottom:1px solid rgba(255,255,255,.07)}.customer-display-item b{display:block;font-size:clamp(18px,1.55vw,30px)}.customer-display-item small{display:block;margin-top:4px;color:#8292a4}.customer-display-item strong{font-size:clamp(17px,1.4vw,26px);text-align:right}.customer-display-totals{border-top:1px solid rgba(255,255,255,.1);padding-top:18px}.customer-display-totals>div,.customer-display-payment>div{display:flex;justify-content:space-between;padding:7px 0;color:#aebdca;font-size:clamp(15px,1.2vw,22px)}.customer-display-totals .grand{margin-top:10px;padding-top:18px;border-top:2px solid rgba(255,255,255,.15);color:#fff;font-size:clamp(24px,2.2vw,40px)}.customer-display-payment{margin-top:20px;padding:16px 20px;background:rgba(33,150,243,.1);border:1px solid rgba(33,150,243,.25);border-radius:16px}.customer-display-payment b{color:#fff}.customer-display-idle{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.customer-display-idle-logo{width:110px;height:110px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(135deg,#d9b15b,#8d6726);color:#0b1018;font-size:42px;font-weight:900;box-shadow:0 20px 60px rgba(0,0,0,.35)}.customer-display-idle h1{font-size:clamp(38px,4vw,72px);margin:26px 0 8px}.customer-display-idle p{font-size:clamp(16px,1.4vw,24px);color:#9aaaba}.customer-display-idle small{margin-top:18px;color:#65768a}.customer-display-footer{height:42px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;color:#647488;font-size:12px;border-top:1px solid rgba(255,255,255,.07)}
+@media(max-width:800px){.customer-display-main{grid-template-columns:1fr}.customer-display-media{height:42vh;min-height:240px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.customer-display-order{min-height:58vh}.customer-display-status{right:14px;top:12px}.customer-display-brand{padding-right:150px}.customer-display-item{grid-template-columns:minmax(0,1fr) 40px minmax(90px,120px)}}
