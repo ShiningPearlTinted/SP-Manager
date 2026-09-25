@@ -4826,3 +4826,163 @@ body:has(.customer-display-screen) #root{
     min-height:26px;
   }
 }
+
+/* ============================================================
+   SP-MANAGER CUSTOMER DISPLAY — FULLSCREEN TV UI FIX V2
+   UI ONLY — preserve all transaction/API logic
+   ============================================================ */
+html:has(.customer-display-screen),
+body:has(.customer-display-screen),
+body:has(.customer-display-screen) #root{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  height:100% !important;
+  max-height:100% !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+}
+
+.customer-display-screen{
+  position:fixed !important;
+  inset:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  height:100dvh !important;
+  max-height:100dvh !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+
+.customer-display-main{
+  display:grid !important;
+  grid-template-columns:minmax(0, 1.08fr) minmax(0, .92fr) !important;
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  height:auto !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+
+.customer-display-media,
+.customer-display-order{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+
+.customer-display-media{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:#fff !important;
+}
+
+.customer-display-media img{
+  display:block !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:100% !important;
+  max-height:100% !important;
+  object-fit:contain !important;
+  object-position:center center !important;
+  flex:0 0 auto !important;
+}
+
+.customer-display-order{
+  box-sizing:border-box !important;
+  padding-left:clamp(18px,2vw,34px) !important;
+  padding-right:clamp(18px,2vw,34px) !important;
+}
+
+.customer-display-order-head,
+.customer-display-items,
+.customer-display-totals,
+.customer-display-payment{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+}
+
+.customer-display-order-head h1{
+  max-width:100% !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+
+.customer-display-items{
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
+
+.customer-display-item{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  grid-template-columns:minmax(0,1fr) 42px minmax(90px,auto) !important;
+}
+
+.customer-display-item > div,
+.customer-display-item > strong{
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+.customer-display-item b,
+.customer-display-item small{
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+
+.customer-display-item strong:last-child,
+.customer-display-totals b,
+.customer-display-payment b{
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+.customer-display-totals>div,
+.customer-display-payment>div{
+  min-width:0 !important;
+  gap:16px !important;
+}
+
+.customer-display-totals>div span,
+.customer-display-totals>div b,
+.customer-display-payment>div span,
+.customer-display-payment>div b{
+  min-width:0 !important;
+}
+
+.customer-display-totals>div b,
+.customer-display-payment>div b{
+  text-align:right !important;
+  flex:0 1 auto !important;
+}
+
+.customer-display-footer{
+  width:100% !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+
+@media (max-width:800px){
+  .customer-display-main{
+    grid-template-columns:minmax(0,1fr) !important;
+    grid-template-rows:minmax(0,42%) minmax(0,58%) !important;
+  }
+
+  .customer-display-media,
+  .customer-display-order{
+    width:100% !important;
+    max-width:100% !important;
+  }
+}
