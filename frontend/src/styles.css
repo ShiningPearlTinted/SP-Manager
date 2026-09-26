@@ -5155,3 +5155,212 @@ body:has(.customer-display-screen) #root{
   .cd-modern-v4 .customer-display-order{padding:15px 18px !important}
   .cd-modern-v4 .customer-display-item{grid-template-columns:minmax(0,1fr) 34px 100px !important}
 }
+
+
+/* ============================================================
+   CUSTOMER DISPLAY — MODERN TV UI V5
+   FINAL VIEWPORT / FIT-SCREEN OVERRIDE
+   UI ONLY — DO NOT CHANGE POS / API / MYSQL / TRANSACTION LOGIC
+   ============================================================ */
+.cd-modern-v4{
+  position:fixed !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:none !important;
+  max-height:none !important;
+  display:grid !important;
+  grid-template-rows:58px minmax(0,1fr) 22px !important;
+  overflow:hidden !important;
+  background:#05080d !important;
+}
+
+.cd-modern-v4 .customer-display-brand{
+  min-width:0 !important;
+  min-height:0 !important;
+  padding:0 22px !important;
+  overflow:hidden !important;
+}
+.cd-modern-v4 .customer-display-brand-name{
+  font-size:clamp(22px,2.0vw,34px) !important;
+  line-height:1 !important;
+  letter-spacing:.055em !important;
+}
+.cd-modern-v4 .customer-display-brand-sub{
+  margin-top:3px !important;
+  font-size:7px !important;
+  letter-spacing:.28em !important;
+}
+.cd-modern-v4 .customer-display-status{
+  right:20px !important;
+  font-size:9px !important;
+}
+
+.cd-modern-v4 .customer-display-main{
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  display:grid !important;
+  grid-template-columns:minmax(0,52%) minmax(0,48%) !important;
+  grid-template-rows:minmax(0,1fr) !important;
+  gap:0 !important;
+  overflow:hidden !important;
+}
+
+.cd-modern-v4 .customer-display-media{
+  min-width:0 !important;
+  min-height:0 !important;
+  width:100% !important;
+  height:100% !important;
+  padding:8px !important;
+  overflow:hidden !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:radial-gradient(circle at 50% 50%,#17222f 0%,#091019 55%,#05080d 100%) !important;
+}
+.cd-modern-v4 .customer-display-media img{
+  display:block !important;
+  width:auto !important;
+  height:auto !important;
+  max-width:96% !important;
+  max-height:96% !important;
+  object-fit:contain !important;
+  object-position:center !important;
+  border-radius:8px !important;
+  box-shadow:0 12px 38px rgba(0,0,0,.40) !important;
+}
+.cd-modern-v4 .cd-media-label{
+  left:14px !important;
+  top:12px !important;
+  padding:5px 8px !important;
+  font-size:7px !important;
+}
+
+.cd-modern-v4 .customer-display-order{
+  min-width:0 !important;
+  min-height:0 !important;
+  width:100% !important;
+  height:100% !important;
+  padding:22px 26px 16px !important;
+  overflow:hidden !important;
+}
+.cd-modern-v4 .customer-display-order-head{
+  flex:0 0 auto !important;
+  min-width:0 !important;
+  padding-bottom:12px !important;
+}
+.cd-modern-v4 .customer-display-order-head h1{
+  font-size:clamp(27px,2.3vw,42px) !important;
+  margin-top:5px !important;
+}
+.cd-modern-v4 .customer-display-item-count{
+  padding:6px 9px !important;
+  font-size:8px !important;
+}
+
+.cd-modern-v4 .customer-display-items{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  padding:2px 0 !important;
+}
+.cd-modern-v4 .customer-display-item{
+  width:100% !important;
+  min-width:0 !important;
+  grid-template-columns:minmax(0,1fr) 42px minmax(105px,145px) !important;
+  gap:8px !important;
+  padding:12px 0 !important;
+}
+.cd-modern-v4 .customer-display-item b{
+  font-size:clamp(15px,1.05vw,20px) !important;
+}
+.cd-modern-v4 .customer-display-item small{
+  margin-top:3px !important;
+  font-size:8px !important;
+}
+.cd-modern-v4 .customer-display-item strong{
+  font-size:clamp(14px,.95vw,18px) !important;
+}
+
+.cd-modern-v4 .customer-display-totals{
+  flex:0 0 auto !important;
+  min-width:0 !important;
+  padding-top:8px !important;
+}
+.cd-modern-v4 .customer-display-totals>div,
+.cd-modern-v4 .customer-display-payment>div{
+  grid-template-columns:minmax(0,1fr) max-content !important;
+  gap:10px !important;
+  padding:3px 0 !important;
+  font-size:clamp(12px,.9vw,15px) !important;
+}
+.cd-modern-v4 .customer-display-totals .grand{
+  margin-top:6px !important;
+  padding-top:8px !important;
+  font-size:clamp(20px,1.55vw,28px) !important;
+}
+.cd-modern-v4 .customer-display-totals .grand b{
+  font-size:clamp(23px,1.75vw,32px) !important;
+}
+.cd-modern-v4 .customer-display-payment{
+  flex:0 0 auto !important;
+  margin-top:8px !important;
+  padding:8px 12px !important;
+}
+
+.cd-modern-v4 .customer-display-idle{
+  min-width:0 !important;
+  min-height:0 !important;
+  padding:10px !important;
+}
+.cd-modern-v4 .customer-display-idle-logo{
+  width:72px !important;
+  height:72px !important;
+  border-radius:20px !important;
+  font-size:29px !important;
+}
+.cd-modern-v4 .customer-display-idle h1{
+  margin:16px 0 5px !important;
+  font-size:clamp(30px,2.7vw,48px) !important;
+}
+.cd-modern-v4 .customer-display-idle p{
+  font-size:clamp(13px,1.05vw,18px) !important;
+}
+.cd-modern-v4 .customer-display-idle small{
+  margin-top:10px !important;
+  font-size:10px !important;
+}
+
+.cd-modern-v4 .customer-display-footer{
+  height:22px !important;
+  min-height:22px !important;
+  padding:0 16px !important;
+  font-size:7px !important;
+}
+
+@media (max-width:1100px){
+  .cd-modern-v4 .customer-display-main{
+    grid-template-columns:minmax(0,50%) minmax(0,50%) !important;
+  }
+  .cd-modern-v4 .customer-display-order{padding-left:18px !important;padding-right:18px !important}
+}
+
+@media (max-width:800px){
+  .cd-modern-v4{
+    grid-template-rows:52px minmax(0,1fr) 20px !important;
+  }
+  .cd-modern-v4 .customer-display-main{
+    grid-template-columns:1fr !important;
+    grid-template-rows:minmax(0,40%) minmax(0,60%) !important;
+  }
+  .cd-modern-v4 .customer-display-media{padding:7px !important;border-right:0 !important;border-bottom:1px solid var(--cd-line) !important}
+  .cd-modern-v4 .customer-display-media img{max-width:94% !important;max-height:94% !important}
+  .cd-modern-v4 .customer-display-order{padding:12px 14px !important}
+  .cd-modern-v4 .customer-display-item{grid-template-columns:minmax(0,1fr) 34px 95px !important;padding:9px 0 !important}
+}
