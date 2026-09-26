@@ -168,7 +168,7 @@ function CustomerDisplay(){
  const fmt=n=>`${state.currency||"RM"} ${Number(n||0).toFixed(2)}`;
  const idle=state.state==="IDLE"||!state.items?.length;
  return <div className="customer-display-screen cd-customer-display-v9">
-   <div className="customer-display-brand"><div className="customer-display-brand-name">{state.companyName||"Shining Pearl Tinted"}</div><div className="customer-display-brand-sub">CUSTOMER DISPLAY</div></div>
+   <div className="customer-display-brand"><div className="customer-display-brand-name">{state.companyName||"Shining Pearl Tinted"}</div></div>
    <main className="customer-display-main">
     <section className="customer-display-media">{state.imageData?<img src={state.imageData} alt="Promotion"/>:<div className="customer-display-placeholder"><b>SHINING PEARL</b><span>Premium Automotive Care</span></div>}</section>
     <section className="customer-display-order">
