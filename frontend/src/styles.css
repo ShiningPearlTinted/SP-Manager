@@ -6841,3 +6841,9 @@ body:has(.customer-display-screen) #root{
     gap:0 !important;
   }
 }
+
+
+/* V18 - Customer Display locked-function UI fixes only */
+.cd-customer-display-v9 .customer-display-item-count{display:none !important}
+.cd-customer-display-v9 .customer-display-idle-logo.has-company-logo{width:128px !important;height:88px !important;border-radius:18px !important;background:transparent !important;box-shadow:none !important;overflow:hidden !important;display:grid !important;place-items:center !important}
+.cd-customer-display-v9 .customer-display-idle-logo.has-company-logo img{display:block !important;width:100% !important;height:100% !important;object-fit:contain !important;object-position:center !important}

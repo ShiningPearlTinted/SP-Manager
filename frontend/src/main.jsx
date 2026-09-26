@@ -162,6 +162,8 @@ const customerDisplayRequest=async(path,options={})=>{const base=customerDisplay
 function CustomerDisplay(){
  const params=new URLSearchParams(window.location.search);const displayCode=String(params.get("display")||"").trim();const terminalCode=String(params.get("terminal")||"").trim();
  const[connected,setConnected]=useState(false);const[state,setState]=useState({state:"IDLE",items:[],subtotal:0,discount:0,tax:0,total:0,paymentAmount:0,change:0,currency:"RM",companyName:"Shining Pearl Tinted",imageData:"",updatedAt:null});
+ const company=load("company",{name:"Shining Pearl Tinted",logo:"",loginLogo:""});
+ const idleLogo=String(company?.loginLogo||company?.logo||"").trim();
  const[error,setError]=useState("");
  const poll=async()=>{try{const q=displayCode?`/customer-display.php?action=state&display=${encodeURIComponent(displayCode)}`:`/customer-display.php?action=state&terminal=${encodeURIComponent(terminalCode)}`;const r=await customerDisplayRequest(q);setState(r.data||{});setConnected(true);setError("");}catch(e){setConnected(false);setError(String(e?.message||"Connection lost"));}};
  useEffect(()=>{poll();const id=setInterval(poll,1000);return()=>clearInterval(id)},[displayCode,terminalCode]);
@@ -173,8 +175,8 @@ function CustomerDisplay(){
     <section className="customer-display-media">{state.imageData?<img src={state.imageData} alt="Promotion"/>:<div className="customer-display-placeholder"><b>SHINING PEARL</b><span>Premium Automotive Care</span></div>}</section>
     <section className="customer-display-order">
       <div className="cd-order-glow"/>
-      {idle?<div className="customer-display-idle"><div className="customer-display-idle-logo">SP</div><h1>Welcome</h1><p>Thank you for visiting Shining Pearl Tinted</p><small>{error||"Ready for your order"}</small></div>:
-      <><div className="customer-display-order-head"><div><span>{state.state==="PAYMENT"?"PAYMENT":"YOUR ORDER"}</span><h1>{state.state==="PAYMENT"?"Payment Summary":"Shopping Cart"}</h1></div><div className="customer-display-item-count">{(state.items||[]).reduce((a,x)=>a+Number(x.qty||0),0)} <span>ITEMS</span></div></div>
+      {idle?<div className="customer-display-idle"><div className={"customer-display-idle-logo "+(idleLogo?"has-company-logo":"")}>{idleLogo?<img src={idleLogo} alt="Company logo"/>:<span>SP</span>}</div><h1>Welcome</h1><p>Thank you for visiting Shining Pearl Tinted</p><small>{error||"Ready for your order"}</small></div>:
+      <><div className="customer-display-order-head"><div><span>{state.state==="PAYMENT"?"PAYMENT":"YOUR ORDER"}</span><h1>{state.state==="PAYMENT"?"Payment Summary":"Shopping Cart"}</h1></div></div>
       <div className="cd-v9-table-head"><span>PRODUCT</span><span>QTY</span><span>AMOUNT</span></div><div className="cd-v9-items">{(state.items||[]).map((item,i)=>{const qty=Number(item.qty||item.quantity||0);const unit=Number(item.price??item.unitPrice??0);const amount=Number(item.total??item.amount??item.lineTotal??(unit*qty));return <div className="cd-v9-row" key={item.lineId||item.id||i}><div className="cd-v9-product"><b>{item.name||"Product"}</b><small>{item.code||item.sku||""}</small></div><strong className="cd-v9-qty">{qty}</strong><strong className="cd-v9-amount">{fmt(amount)}</strong></div>})}</div>
       <div className="customer-display-totals"><div><span>Subtotal</span><b>{fmt(state.subtotal)}</b></div>{Number(state.discount)>0&&<div><span>Discount</span><b>-{fmt(state.discount)}</b></div>}{Number(state.tax)>0&&<div><span>Tax</span><b>{fmt(state.tax)}</b></div>}<div className="grand"><span>TOTAL</span><b>{fmt(state.total)}</b></div></div>
       {state.state==="PAYMENT"&&<div className="customer-display-payment"><div><span>Payment</span><b>{fmt(state.paymentAmount)}</b></div><div><span>Change</span><b>{fmt(state.change)}</b></div></div>}
