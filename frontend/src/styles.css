@@ -6694,3 +6694,69 @@ body:has(.customer-display-screen) #root{
     grid-template-columns:minmax(0,1fr) 125px !important;
   }
 }
+
+
+/* ============================================================
+   CUSTOMER DISPLAY — V16 FINAL 50/50 MEDIA + ORDER
+   UI ONLY. Keep all transaction/API/database logic unchanged.
+   ============================================================ */
+@media(min-width:801px){
+  .cd-customer-display-v9 .customer-display-main{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    gap:18px !important;
+    padding-left:18px !important;
+    padding-right:18px !important;
+    box-sizing:border-box !important;
+  }
+
+  .cd-customer-display-v9 .customer-display-media,
+  .cd-customer-display-v9 .customer-display-order{
+    min-width:0 !important;
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+  }
+
+  .cd-customer-display-v9 .customer-display-media{
+    padding:18px 18px 22px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    background:transparent !important;
+    border:0 !important;
+    overflow:hidden !important;
+  }
+
+  .cd-customer-display-v9 .customer-display-media img{
+    display:block !important;
+    width:auto !important;
+    height:auto !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    object-fit:contain !important;
+    margin:auto !important;
+    border:0 !important;
+    box-shadow:none !important;
+  }
+
+  .cd-customer-display-v9 .customer-display-order{
+    padding-left:18px !important;
+    padding-right:18px !important;
+  }
+}
+
+/* Transparent-looking presentation for white-backed PNG artwork.
+   White pixels blend into the dark display background instead of
+   appearing as a white rectangular box. The source image is not
+   regenerated or replaced. */
+.cd-customer-display-v9 .customer-display-media img[src^="data:image/png"]{
+  mix-blend-mode:darken !important;
+}
+
+@media(max-width:800px){
+  .cd-customer-display-v9 .customer-display-main{
+    gap:10px !important;
+    padding-left:10px !important;
+    padding-right:10px !important;
+  }
+}
