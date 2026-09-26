@@ -168,10 +168,9 @@ function CustomerDisplay(){
  const fmt=n=>`${state.currency||"RM"} ${Number(n||0).toFixed(2)}`;
  const idle=state.state==="IDLE"||!state.items?.length;
  return <div className="customer-display-screen cd-modern-v4">
-   <div className="customer-display-status"><span className={connected?"online":"offline"}>●</span>{connected?"Connected": "Connection lost"}</div>
    <div className="customer-display-brand"><div className="customer-display-brand-name">{state.companyName||"Shining Pearl Tinted"}</div><div className="customer-display-brand-sub">CUSTOMER DISPLAY</div></div>
    <main className="customer-display-main">
-    <section className="customer-display-media"><div className="cd-media-label">SHINING PEARL TINTED <span>ADVERTISEMENT</span></div>{state.imageData?<img src={state.imageData} alt="Promotion"/>:<div className="customer-display-placeholder"><b>SHINING PEARL</b><span>Premium Automotive Care</span></div>}</section>
+    <section className="customer-display-media">{state.imageData?<img src={state.imageData} alt="Promotion"/>:<div className="customer-display-placeholder"><b>SHINING PEARL</b><span>Premium Automotive Care</span></div>}</section>
     <section className="customer-display-order">
       <div className="cd-order-glow"/>
       {idle?<div className="customer-display-idle"><div className="customer-display-idle-logo">SP</div><h1>Welcome</h1><p>Thank you for visiting Shining Pearl Tinted</p><small>{error||"Ready for your order"}</small></div>:

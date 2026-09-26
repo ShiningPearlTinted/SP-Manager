@@ -5364,3 +5364,132 @@ body:has(.customer-display-screen) #root{
   .cd-modern-v4 .customer-display-order{padding:12px 14px !important}
   .cd-modern-v4 .customer-display-item{grid-template-columns:minmax(0,1fr) 34px 95px !important;padding:9px 0 !important}
 }
+
+
+/* ============================================================
+   CUSTOMER DISPLAY — V6 DETAIL VISIBILITY / CLEAN SCREEN
+   UI ONLY — CUSTOMER DISPLAY ROUTE ONLY
+   ------------------------------------------------------------
+   Remove status/advertisement chrome and force transaction
+   columns to remain visible inside the right-hand viewport.
+   No POS/API/database/transaction logic changes.
+   ============================================================ */
+.cd-modern-v4 .customer-display-status,
+.cd-modern-v4 .cd-media-label{
+  display:none !important;
+}
+
+.cd-modern-v4 .customer-display-main{
+  grid-template-columns:minmax(0,50%) minmax(0,50%) !important;
+}
+
+.cd-modern-v4 .customer-display-order{
+  box-sizing:border-box !important;
+  padding:22px 28px 14px !important;
+  min-width:0 !important;
+  overflow:hidden !important;
+}
+
+.cd-modern-v4 .customer-display-order-head{
+  min-width:0 !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  gap:14px !important;
+}
+
+.cd-modern-v4 .customer-display-order-head > div:first-child{
+  min-width:0 !important;
+  flex:1 1 auto !important;
+}
+
+.cd-modern-v4 .customer-display-order-head h1{
+  max-width:100% !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+
+/* Force item quantity and amount into fixed visible columns. */
+.cd-modern-v4 .customer-display-item{
+  display:flex !important;
+  align-items:center !important;
+  width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+  gap:14px !important;
+  padding:13px 0 !important;
+}
+
+.cd-modern-v4 .customer-display-item > div:first-child{
+  flex:1 1 auto !important;
+  width:auto !important;
+  min-width:0 !important;
+  overflow:hidden !important;
+}
+
+.cd-modern-v4 .customer-display-item > strong:nth-of-type(1){
+  flex:0 0 42px !important;
+  width:42px !important;
+  min-width:42px !important;
+  max-width:42px !important;
+  text-align:center !important;
+  overflow:visible !important;
+}
+
+.cd-modern-v4 .customer-display-item > strong:nth-of-type(2){
+  flex:0 0 150px !important;
+  width:150px !important;
+  min-width:150px !important;
+  max-width:150px !important;
+  text-align:right !important;
+  overflow:visible !important;
+  color:#f5c451 !important;
+}
+
+.cd-modern-v4 .customer-display-item b{
+  display:block !important;
+  width:100% !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+
+.cd-modern-v4 .customer-display-totals > div,
+.cd-modern-v4 .customer-display-payment > div{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  width:100% !important;
+  min-width:0 !important;
+  gap:16px !important;
+}
+
+.cd-modern-v4 .customer-display-totals > div b,
+.cd-modern-v4 .customer-display-payment > div b{
+  flex:0 0 auto !important;
+  min-width:145px !important;
+  text-align:right !important;
+  white-space:nowrap !important;
+}
+
+.cd-modern-v4 .customer-display-totals .grand b{
+  min-width:170px !important;
+}
+
+@media(max-width:1250px){
+  .cd-modern-v4 .customer-display-order{padding-left:20px !important;padding-right:20px !important}
+  .cd-modern-v4 .customer-display-item > strong:nth-of-type(2){
+    flex-basis:125px !important;width:125px !important;min-width:125px !important;max-width:125px !important;
+  }
+  .cd-modern-v4 .customer-display-totals > div b,
+  .cd-modern-v4 .customer-display-payment > div b{min-width:120px !important}
+}
+
+@media(max-width:800px){
+  .cd-modern-v4 .customer-display-main{grid-template-columns:1fr !important;grid-template-rows:minmax(0,40%) minmax(0,60%) !important}
+  .cd-modern-v4 .customer-display-item > strong:nth-of-type(1){flex-basis:34px !important;width:34px !important;min-width:34px !important;max-width:34px !important}
+  .cd-modern-v4 .customer-display-item > strong:nth-of-type(2){flex-basis:100px !important;width:100px !important;min-width:100px !important;max-width:100px !important}
+  .cd-modern-v4 .customer-display-totals > div b,
+  .cd-modern-v4 .customer-display-payment > div b{min-width:100px !important}
+}
