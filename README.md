@@ -27,9 +27,15 @@ LOCK RULE: existing functions and design are preserved unless explicitly request
 ## Local Agent Auto-Start / Auto-Restart V1.1.8
 Run `agent\install-windows.bat` once after installation/update. It registers a per-user Windows Task Scheduler watchdog that starts the Local Agent at Windows logon and restarts it automatically if the agent stops responding. The POS application itself does not need to be changed.
 
+## SP-Central persistence bridge (V2)
 
-## Central MySQL persistence — SP-Central
+`api/app-state.php` provides central persistence for the existing SP-Manager `sp_*` application state without changing the existing POS/UI calculation logic. It uses the existing `u729423317_SPCentral` database and the existing `sp_app_state` table.
 
-This build adds transparent central persistence without rewriting the existing SP-Manager modules. Existing `load()` / `save()` callers are preserved; `save()` queues state to `api/app-state.php`, and startup synchronizes the browser cache with MySQL. The first connected browser initializes an empty outlet state from its existing local data; once central state exists, new devices load that state instead of replacing it with seed/demo data. LocalStorage remains an offline/cache fallback. Outlet scope defaults to `SP01`. The additive table is `sp_app_state`; existing Customer Display and relational SP-Central tables are preserved.
+- GET `?action=health&outlet_id=SP01` checks the connection.
+- GET `?action=all&outlet_id=SP01` returns central application state.
+- POST `?action=save&outlet_id=SP01` saves one state key.
+- POST `?action=save-batch&outlet_id=SP01` initializes the central state in one transaction.
 
-Upload `api/app-state.php` into the existing `public_html/app/SP-Manager-api/` API folder and keep the working private `config.php`. Import `api/schema_app_state.sql` into `u729423317_SPCentral` if preferred; the endpoint also creates the table automatically. The frontend is preconfigured for `https://app.shiningpearltinted.com/SP-Manager-api`. Never commit MySQL credentials to GitHub.
+The browser keeps `activeUser`, `posSearchMode`, and `customerDisplayTerminal` terminal-local. Other existing persisted `sp_*` application state is synchronized to the central database. Existing localStorage remains as an offline/cache fallback.
+
+This bridge is deliberately additive. Existing relational tables such as `products`, `customers`, `sales`, `sale_items`, `stock_movements`, `payments`, `invoices`, etc. are not altered by this bridge. Relational module mapping should be implemented separately and tested module-by-module before replacing the application's current state model.
