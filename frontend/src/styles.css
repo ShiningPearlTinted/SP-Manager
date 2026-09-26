@@ -6214,3 +6214,110 @@ body:has(.customer-display-screen) #root{
     grid-template-columns:minmax(0,1fr) 125px !important;
   }
 }
+
+/* ============================================================
+   CUSTOMER DISPLAY — V13 FINAL SPACING + LEFT COLUMN SHIFT
+   UI ONLY. Keep all transaction/data logic unchanged.
+   ============================================================ */
+.cd-customer-display-v9 .customer-display-media{
+  padding:10px 18px 18px !important;
+}
+
+.cd-customer-display-v9 .customer-display-media img{
+  max-width:calc(100% - 4px) !important;
+  max-height:calc(100% - 14px) !important;
+}
+
+/* Keep PRODUCT / QTY / AMOUNT inside a safe visible area.
+   The extra right reserve deliberately pulls both QTY and AMOUNT
+   left so the full values remain visible on wide TV screens. */
+.cd-customer-display-v9 .cd-v9-table-head,
+.cd-customer-display-v9 .cd-v9-items,
+.cd-customer-display-v9 .customer-display-totals,
+.cd-customer-display-v9 .customer-display-payment{
+  width:calc(100% - 180px) !important;
+  max-width:calc(100% - 180px) !important;
+  min-width:0 !important;
+}
+
+.cd-customer-display-v9 .cd-v9-table-head,
+.cd-customer-display-v9 .cd-v9-row{
+  grid-template-columns:minmax(0,1fr) 72px 180px !important;
+  column-gap:12px !important;
+}
+
+.cd-customer-display-v9 .cd-v9-row{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+}
+
+.cd-customer-display-v9 .cd-v9-product,
+.cd-customer-display-v9 .cd-v9-product b,
+.cd-customer-display-v9 .cd-v9-product small{
+  min-width:0 !important;
+}
+
+.cd-customer-display-v9 .cd-v9-product b{
+  overflow:visible !important;
+  text-overflow:clip !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+}
+
+.cd-customer-display-v9 .cd-v9-qty{
+  width:auto !important;
+  min-width:0 !important;
+  text-align:center !important;
+  justify-self:stretch !important;
+}
+
+.cd-customer-display-v9 .cd-v9-amount{
+  width:auto !important;
+  min-width:0 !important;
+  text-align:right !important;
+  justify-self:stretch !important;
+  white-space:nowrap !important;
+}
+
+.cd-customer-display-v9 .customer-display-totals > div,
+.cd-customer-display-v9 .customer-display-payment > div{
+  grid-template-columns:minmax(0,1fr) 180px !important;
+  column-gap:12px !important;
+}
+
+.cd-customer-display-v9 .customer-display-totals > div b,
+.cd-customer-display-v9 .customer-display-payment > div b{
+  width:auto !important;
+  min-width:0 !important;
+  text-align:right !important;
+  white-space:nowrap !important;
+}
+
+@media(max-width:1100px) and (min-width:801px){
+  .cd-customer-display-v9 .cd-v9-table-head,
+  .cd-customer-display-v9 .cd-v9-items,
+  .cd-customer-display-v9 .customer-display-totals,
+  .cd-customer-display-v9 .customer-display-payment{
+    width:calc(100% - 100px) !important;
+    max-width:calc(100% - 100px) !important;
+  }
+  .cd-customer-display-v9 .cd-v9-table-head,
+  .cd-customer-display-v9 .cd-v9-row{
+    grid-template-columns:minmax(0,1fr) 64px 155px !important;
+    column-gap:10px !important;
+  }
+}
+
+@media(max-width:800px){
+  .cd-customer-display-v9 .customer-display-media{
+    padding:10px 14px 14px !important;
+  }
+  .cd-customer-display-v9 .cd-v9-table-head,
+  .cd-customer-display-v9 .cd-v9-items,
+  .cd-customer-display-v9 .customer-display-totals,
+  .cd-customer-display-v9 .customer-display-payment{
+    width:100% !important;
+    max-width:100% !important;
+  }
+}
