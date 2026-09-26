@@ -6479,3 +6479,218 @@ body:has(.customer-display-screen) #root{
     grid-template-columns:minmax(0,1fr) 125px !important;
   }
 }
+
+/* ============================================================
+   CUSTOMER DISPLAY — V15 MODERN ORDER BOARD
+   UI ONLY. No POS/API/database/transaction logic changes.
+   Purpose:
+   - keep PRODUCT / QTY / AMOUNT inside a fixed visible content rail
+   - remove table-like separator lines
+   - present each item as a modern glass card
+   - keep header and rows on the exact same grid
+   ============================================================ */
+.cd-customer-display-v9 .customer-display-order{
+  padding-left:22px !important;
+  padding-right:22px !important;
+  overflow:hidden !important;
+}
+
+/* A controlled content rail prevents QTY/AMOUNT from ever reaching
+   the physical right edge of the TV viewport. */
+.cd-customer-display-v9 .cd-v9-table-head,
+.cd-customer-display-v9 .cd-v9-items,
+.cd-customer-display-v9 .customer-display-totals,
+.cd-customer-display-v9 .customer-display-payment{
+  width:min(900px, calc(100% - 40px)) !important;
+  max-width:min(900px, calc(100% - 40px)) !important;
+  margin-left:0 !important;
+  margin-right:auto !important;
+  min-width:0 !important;
+}
+
+/* Exact shared columns: PRODUCT | QTY | AMOUNT */
+.cd-customer-display-v9 .cd-v9-table-head,
+.cd-customer-display-v9 .cd-v9-row{
+  grid-template-columns:minmax(0, 1fr) 78px 190px !important;
+  column-gap:18px !important;
+}
+
+/* Modern header — no table borders/lines. */
+.cd-customer-display-v9 .cd-v9-table-head{
+  border:0 !important;
+  padding:8px 16px 10px !important;
+  margin-bottom:8px !important;
+  border-radius:12px !important;
+  background:rgba(255,255,255,.035) !important;
+  color:#9db0c2 !important;
+}
+.cd-customer-display-v9 .cd-v9-table-head span{
+  overflow:visible !important;
+  white-space:nowrap !important;
+  color:#a9bdd0 !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+  letter-spacing:2px !important;
+}
+.cd-customer-display-v9 .cd-v9-table-head span:nth-child(1){text-align:left !important;}
+.cd-customer-display-v9 .cd-v9-table-head span:nth-child(2){text-align:center !important;}
+.cd-customer-display-v9 .cd-v9-table-head span:nth-child(3){text-align:right !important;}
+
+/* Item list itself has no table separators. */
+.cd-customer-display-v9 .cd-v9-items{
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  scrollbar-width:none !important;
+  padding:0 0 6px !important;
+}
+.cd-customer-display-v9 .cd-v9-items::-webkit-scrollbar{display:none !important;}
+
+/* Each product is a clean modern card instead of a table row. */
+.cd-customer-display-v9 .cd-v9-row{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  margin:0 0 8px !important;
+  padding:13px 16px !important;
+  border:1px solid rgba(255,255,255,.07) !important;
+  border-radius:14px !important;
+  background:linear-gradient(135deg, rgba(255,255,255,.055), rgba(255,255,255,.018)) !important;
+  box-shadow:0 6px 18px rgba(0,0,0,.16) !important;
+}
+.cd-customer-display-v9 .cd-v9-row:last-child{margin-bottom:0 !important;}
+
+.cd-customer-display-v9 .cd-v9-product{
+  min-width:0 !important;
+  overflow:visible !important;
+}
+.cd-customer-display-v9 .cd-v9-product b{
+  display:block !important;
+  width:100% !important;
+  max-width:100% !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  line-height:1.15 !important;
+  color:#f8fafc !important;
+  font-size:clamp(17px,1.28vw,25px) !important;
+  font-weight:850 !important;
+}
+.cd-customer-display-v9 .cd-v9-product small{
+  margin-top:4px !important;
+  color:#738aa0 !important;
+  font-size:10px !important;
+}
+
+.cd-customer-display-v9 .cd-v9-qty,
+.cd-customer-display-v9 .cd-v9-amount{
+  align-self:center !important;
+  justify-self:stretch !important;
+  width:auto !important;
+  min-width:0 !important;
+  overflow:visible !important;
+  white-space:nowrap !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+.cd-customer-display-v9 .cd-v9-qty{
+  text-align:center !important;
+  color:#ffffff !important;
+  font-size:clamp(19px,1.3vw,27px) !important;
+  font-weight:900 !important;
+}
+.cd-customer-display-v9 .cd-v9-amount{
+  text-align:right !important;
+  color:#f5c451 !important;
+  font-size:clamp(19px,1.35vw,28px) !important;
+  font-weight:900 !important;
+}
+
+/* Totals use the exact same right edge as AMOUNT. */
+.cd-customer-display-v9 .customer-display-totals,
+.cd-customer-display-v9 .customer-display-payment{
+  width:min(900px, calc(100% - 40px)) !important;
+  max-width:min(900px, calc(100% - 40px)) !important;
+  margin-left:0 !important;
+  margin-right:auto !important;
+}
+.cd-customer-display-v9 .customer-display-totals > div,
+.cd-customer-display-v9 .customer-display-payment > div{
+  grid-template-columns:minmax(0,1fr) 190px !important;
+  column-gap:18px !important;
+  border:0 !important;
+  padding:5px 16px !important;
+}
+.cd-customer-display-v9 .customer-display-totals > div b,
+.cd-customer-display-v9 .customer-display-payment > div b{
+  width:auto !important;
+  min-width:0 !important;
+  text-align:right !important;
+  white-space:nowrap !important;
+}
+.cd-customer-display-v9 .customer-display-totals .grand{
+  margin-top:4px !important;
+  padding-top:10px !important;
+  border-top:0 !important;
+}
+.cd-customer-display-v9 .customer-display-totals .grand span{
+  font-size:clamp(22px,1.7vw,34px) !important;
+  font-weight:900 !important;
+  letter-spacing:1px !important;
+}
+
+/* Give the promotion image a little breathing room without creating
+   a visible panel around the image itself. */
+.cd-customer-display-v9 .customer-display-media{
+  padding:18px 20px 20px !important;
+  border-right:0 !important;
+  background:transparent !important;
+}
+.cd-customer-display-v9 .customer-display-media img{
+  margin:0 auto !important;
+}
+
+@media(max-width:1100px) and (min-width:801px){
+  .cd-customer-display-v9 .cd-v9-table-head,
+  .cd-customer-display-v9 .cd-v9-items,
+  .cd-customer-display-v9 .customer-display-totals,
+  .cd-customer-display-v9 .customer-display-payment{
+    width:min(760px, calc(100% - 28px)) !important;
+    max-width:min(760px, calc(100% - 28px)) !important;
+  }
+  .cd-customer-display-v9 .cd-v9-table-head,
+  .cd-customer-display-v9 .cd-v9-row{
+    grid-template-columns:minmax(0,1fr) 68px 155px !important;
+    column-gap:12px !important;
+  }
+  .cd-customer-display-v9 .customer-display-totals > div,
+  .cd-customer-display-v9 .customer-display-payment > div{
+    grid-template-columns:minmax(0,1fr) 155px !important;
+  }
+}
+
+@media(max-width:800px){
+  .cd-customer-display-v9 .customer-display-order{
+    padding-left:12px !important;
+    padding-right:12px !important;
+  }
+  .cd-customer-display-v9 .cd-v9-table-head,
+  .cd-customer-display-v9 .cd-v9-items,
+  .cd-customer-display-v9 .customer-display-totals,
+  .cd-customer-display-v9 .customer-display-payment{
+    width:100% !important;
+    max-width:100% !important;
+  }
+  .cd-customer-display-v9 .cd-v9-table-head,
+  .cd-customer-display-v9 .cd-v9-row{
+    grid-template-columns:minmax(0,1fr) 52px 125px !important;
+    column-gap:8px !important;
+  }
+  .cd-customer-display-v9 .cd-v9-row{
+    padding:11px 12px !important;
+  }
+  .cd-customer-display-v9 .customer-display-totals > div,
+  .cd-customer-display-v9 .customer-display-payment > div{
+    grid-template-columns:minmax(0,1fr) 125px !important;
+  }
+}
