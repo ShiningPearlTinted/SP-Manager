@@ -74,7 +74,7 @@ const defaultSettings={
 };
 const deepMerge=(base,override)=>{if(!override||typeof override!=="object")return base;const out={...base};Object.keys(override).forEach(k=>{if(override[k]&&typeof override[k]==="object"&&!Array.isArray(override[k]))out[k]=deepMerge(base[k]||{},override[k]);else out[k]=override[k]});return out};
 
-const nav=["Dashboard","POS / Sales","Customer Display","Products","Inventory","Customers","Purchases","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Management","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"];
+const nav=["Dashboard","POS / Sales","Products","Inventory","Customers","Purchases","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Management","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"];
 const money=n=>"RM "+Number(n||0).toFixed(2);
 
 const escapeHtml=value=>String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -522,7 +522,6 @@ function App(){
    {notice&&<div className={"notice notice-"+String(settings.general.notificationPosition||settings.general.messagePosition||"Top").toLowerCase()+(settings.general.slideIn?" notice-slide-in":"")} onClick={()=>settings.general.clickToClose&&setNotice("")}>
     <span>{notice}</span>{settings.general.showClose!==false&&<button onClick={e=>{e.stopPropagation();setNotice("")}}>×</button>}
    </div>}
-   {page==="Customer Display"&&<CustomerDisplay/>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="Management"&&hasManagementAccess(activeUser)&&<Management activeUser={activeUser} setPage={setPage}/>}
    {page==="POS / Sales"&&<POS setCart={setCart} updateLinePrice={updateLinePrice} activeUser={activeUser} posOrderMeta={posOrderMeta} setPosOrderMeta={setPosOrderMeta} retrieveOpenOrder={retrieveOpenOrder} signOut={signOut} filtered={filtered} q={q} setQ={setQ} posSearchMode={posSearchMode} setPosSearchMode={setPosSearchMode} add={add} cart={cart} changeQty={changeQty} customers={customers} setCustomers={v=>{persist("customers",v,setCustomers)}} customer={customer} setCustomer={setCustomer} discount={discount} setDiscount={setDiscount} discountFixed={discountFixed} setDiscountFixed={setDiscountFixed} payment={payment} setPayment={setPayment} paymentTypes={paymentTypes} subtotal={subtotal} disc={disc} taxRate={taxRate} setTaxRate={setTaxRate} tax={tax} grand={grand} sale={completeSale} saveOpenOrder={saveOpenOrder} orders={orders} setOrders={setOrders} updateSaleNote={updateSaleNote} setNoteBox={setNoteBox} clearCurrentSale={clearCurrentSale} printReceipt={printReceipt} closeLastSale={()=>setLastSale(null)} categories={categories} settings={settings} posCategory={posCategory} setPosCategory={setPosCategory} products={products} productGroups={productGroups} company={company} lastSale={lastSale} menuOpen={posMenu} setMenuOpen={setPosMenu} setPage={setPage} sales={sales} emailReceipt={emailReceipt} openCashInOut={openCashInOut} openCashDrawer={cashDrawer} openEndOfDayFromPOS={openEndOfDayFromPOS} groupMeta={groupMeta}/>}
