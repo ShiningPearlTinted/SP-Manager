@@ -42,6 +42,33 @@ function resolveOutletId(PDO $pdo, mixed $value): int {
   $q->execute([$v ?: 'SP01']);
   return (int)($q->fetchColumn() ?: 0);
 }
+function ensureCategory(PDO $pdo, int $outletId, mixed $categoryId, mixed $categoryName): ?int {
+  $name=trim((string)($categoryName ?? ''));
+  $id=(int)($categoryId ?? 0);
+  $hasOutlet=hasColumnCached($pdo,'product_categories','outlet_id');
+  if($id>0){
+    $sql='SELECT id FROM product_categories WHERE id=?'; $args=[$id];
+    if($hasOutlet){$sql.=' AND (outlet_id=? OR outlet_id IS NULL)';$args[]=$outletId;}
+    $sql.=' LIMIT 1'; $q=$pdo->prepare($sql);$q->execute($args);$found=$q->fetchColumn();
+    if($found!==false)return(int)$found;
+  }
+  if($name==='') return null;
+  $resolved=resolveCategoryId($pdo,$outletId,0,$name);
+  if($resolved!==null)return $resolved;
+  $cols=tableColumns($pdo,'product_categories');
+  $data=[];
+  if(isset($cols['outlet_id']))$data['outlet_id']=$outletId;
+  if(isset($cols['category_name']))$data['category_name']=$name;
+  if(isset($cols['category_code']))$data['category_code']='';
+  if(isset($cols['image_url']))$data['image_url']='';
+  if(isset($cols['sort_order']))$data['sort_order']=0;
+  if(isset($cols['active']))$data['active']=1;
+  if(!$data)throw new RuntimeException('Product category table has no writable columns.');
+  $q=$pdo->prepare('INSERT INTO product_categories (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');
+  $q->execute(array_values($data));
+  return (int)$pdo->lastInsertId();
+}
+
 function resolveCategoryId(PDO $pdo, int $outletId, mixed $categoryId, mixed $categoryName): ?int {
   $id=(int)($categoryId ?? 0);
   if($id>0){
@@ -147,7 +174,7 @@ try {
     $b=jsonBody(); $g=$b['group']??$b;
     if(!is_array($g)) throw new InvalidArgumentException('group is required.');
     $name=trim((string)($g['group_name']??$g['name']??'')); if($name==='') throw new InvalidArgumentException('Product group name is required.');
-    $categoryId=resolveCategoryId($pdo,$outletId,$g['category_id']??null,$g['category']??$g['category_name']??null);
+    $categoryId=ensureCategory($pdo,$outletId,$g['category_id']??null,$g['category']??$g['category_name']??null);
     $parentName=trim((string)($g['parent']??$g['parent_name']??'')); $parentId=(int)($g['parent_id']??0);
     if($parentId<=0 && $parentName!==''){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$parentName,$outletId,$outletId]);$parentId=(int)($q->fetchColumn()?:0);}
     $id=(int)($g['id']??0);
@@ -196,12 +223,32 @@ try {
     // Resolve Product Master names to relational foreign keys. The UI may send
     // category/group names, while MySQL products stores category_id/group_id.
     if(isset($columns['category_id'])){
-      $resolvedCategoryId=resolveCategoryId($pdo,$outletId,$p['category_id']??null,$p['category']??$p['category_name']??null);
+      $resolvedCategoryId=ensureCategory($pdo,$outletId,$p['category_id']??null,$p['category']??$p['category_name']??null);
       if($resolvedCategoryId!==null) $p['category_id']=$resolvedCategoryId;
       else if(array_key_exists('category_id',$p) && $p['category_id']!==null && (int)$p['category_id']>0) throw new InvalidArgumentException('Selected product category was not found.');
     }
     if(isset($columns['group_id'])){
-      $resolvedGroupId=resolveGroupId($pdo,$outletId,$p['group_id']??null,$p['group']??$p['group_name']??null,isset($p['category_id'])?(int)$p['category_id']:null);
+      $groupName=$p['group']??$p['group_name']??null;
+      $resolvedGroupId=resolveGroupId($pdo,$outletId,$p['group_id']??null,$groupName,isset($p['category_id'])?(int)$p['category_id']:null);
+      if($resolvedGroupId===null && trim((string)$groupName)!==''){
+        // Product Groups must also exist relationally. Create the selected group when it is missing.
+        $groupCategoryId=isset($p['category_id'])?(int)$p['category_id']:null;
+        $parentId=(int)($p['parent_id']??0);
+        $groupData=[];
+        $groupCols=tableColumns($pdo,'product_groups');
+        if(isset($groupCols['outlet_id']))$groupData['outlet_id']=$outletId;
+        if(isset($groupCols['category_id']))$groupData['category_id']=$groupCategoryId?:null;
+        if(isset($groupCols['parent_id']))$groupData['parent_id']=$parentId?:null;
+        if(isset($groupCols['group_name']))$groupData['group_name']=trim((string)$groupName);
+        if(isset($groupCols['group_code']))$groupData['group_code']='';
+        if(isset($groupCols['image_url']))$groupData['image_url']='';
+        if(isset($groupCols['sort_order']))$groupData['sort_order']=0;
+        if(isset($groupCols['active']))$groupData['active']=1;
+        if(!$groupData)throw new RuntimeException('Product group table has no writable columns.');
+        $q=$pdo->prepare('INSERT INTO product_groups (`'.implode('`,`',array_keys($groupData)).'`) VALUES ('.implode(',',array_fill(0,count($groupData),'?')).')');
+        $q->execute(array_values($groupData));
+        $resolvedGroupId=(int)$pdo->lastInsertId();
+      }
       if($resolvedGroupId!==null) $p['group_id']=$resolvedGroupId;
       else if(array_key_exists('group_id',$p) && $p['group_id']!==null && (int)$p['group_id']>0) throw new InvalidArgumentException('Selected product group was not found.');
     }
@@ -247,7 +294,7 @@ try {
       $cols=array_keys($data);$ph=array_fill(0,count($cols),'?');$vals=array_values($data);
       $q=$pdo->prepare('INSERT INTO `products` (`'.implode('`,`',$cols).'`) VALUES ('.implode(',',$ph).')');$q->execute($vals);$savedId=(int)$pdo->lastInsertId();
     }
-    respond(['ok'=>true,'id'=>$savedId,'outletId'=>$outletId]);
+    respond(['ok'=>true,'id'=>$savedId,'outletId'=>$outletId,'category_id'=>isset($p['category_id'])?(int)$p['category_id']:null,'group_id'=>isset($p['group_id'])?(int)$p['group_id']:null,'selling_price'=>isset($p['price'])?(float)$p['price']:null]);
   }
   respond(['ok'=>false,'error'=>'Unknown action.'],404);
 }catch(Throwable $e){respond(['ok'=>false,'error'=>$e->getMessage()],500);}
