@@ -5,159 +5,46 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
-
-$config = require __DIR__ . '/config.php';
-$db = $config['db'] ?? null;
-$host = (string)($db['host'] ?? $config['db_host'] ?? 'localhost');
-$port = (string)($db['port'] ?? $config['db_port'] ?? '3306');
-$name = (string)($db['name'] ?? $config['db_name'] ?? '');
-$user = (string)($db['user'] ?? $config['db_user'] ?? '');
-$pass = (string)($db['pass'] ?? $config['db_pass'] ?? '');
-
-function body(): array {
-    $v = json_decode(file_get_contents('php://input') ?: '', true);
-    return is_array($v) ? $v : [];
+$config=require __DIR__.'/config.php';
+$db=$config['db']??null;
+$host=(string)($db['host']??$config['db_host']??'localhost');
+$port=(string)($db['port']??$config['db_port']??'3306');
+$name=(string)($db['name']??$config['db_name']??'');
+$user=(string)($db['user']??$config['db_user']??'');
+$pass=(string)($db['pass']??$config['db_pass']??'');
+function body():array{ $v=json_decode(file_get_contents('php://input')?:'',true); return is_array($v)?$v:[]; }
+function cols(PDO $pdo,string $table):array{ $q=$pdo->query('DESCRIBE `'.str_replace('`','``',$table).'`');$o=[];foreach($q->fetchAll() as $r)$o[$r['Field']]=$r;return $o; }
+function pick(array $a,array $keys,$default=null){foreach($keys as $k){if(array_key_exists($k,$a)&&$a[$k]!==null&&$a[$k]!=='')return $a[$k];}return $default;}
+function dt($v):?string{if($v===null||$v==='')return null;$s=str_replace('T',' ',(string)$v);$s=preg_replace('/\.\d+(Z)?$/','',$s);$s=str_replace('Z','',$s);$t=strtotime($s);return $t===false?null:date('Y-m-d H:i:s',$t);}
+function writableRow(array $schema,array $map,array $data,int $outletId):array{
+ $row=[];foreach($map as $f=>$keys){if(isset($schema[$f])){$v=pick($data,(array)$keys,null);if($v!==null)$row[$f]=$v;}}
+ if(isset($schema['outlet_id']))$row['outlet_id']=$outletId;
+ foreach(['sale_date','created_at','updated_at','payment_date','paid_at'] as $f){if(isset($row[$f]))$row[$f]=dt($row[$f]);}
+ foreach($schema as $f=>$c){if($f==='id'||array_key_exists($f,$row))continue;if($c['Null']==='NO'&&$c['Default']===null&&stripos((string)$c['Extra'],'auto_increment')===false){$type=strtolower((string)$c['Type']);$row[$f]=str_contains($type,'int')||str_contains($type,'decimal')||str_contains($type,'double')||str_contains($type,'float')?'0':'';}}
+ return $row;
 }
-function pick(array $a, array $keys, $default = null) {
-    foreach ($keys as $k) if (array_key_exists($k, $a) && $a[$k] !== null && $a[$k] !== '') return $a[$k];
-    return $default;
-}
-function cols(PDO $pdo, string $table): array {
-    $q = $pdo->query('DESCRIBE `' . str_replace('`', '``', $table) . '`');
-    $out = [];
-    foreach ($q->fetchAll() as $r) $out[$r['Field']] = $r;
-    return $out;
-}
-function hasTable(PDO $pdo, string $table): bool {
-    $q = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
-    $q->execute([$table]);
-    return (int)$q->fetchColumn() > 0;
-}
-function outletId(PDO $pdo, $outlet): int {
-    if (ctype_digit((string)$outlet)) return (int)$outlet;
-    $q = $pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? LIMIT 1');
-    $q->execute([(string)$outlet]);
-    return (int)($q->fetchColumn() ?: 0);
-}
-function optionalOutletFk(PDO $pdo, string $table, $id, int $outletId): ?int {
-    if ($id === null || $id === '' || !ctype_digit((string)$id) || !(int)$id) return null;
-    if (!hasTable($pdo, $table)) return null;
-    $schema = cols($pdo, $table);
-    $sql = isset($schema['outlet_id'])
-        ? "SELECT id FROM `$table` WHERE id=? AND outlet_id=? LIMIT 1"
-        : "SELECT id FROM `$table` WHERE id=? LIMIT 1";
-    $q = $pdo->prepare($sql);
-    isset($schema['outlet_id']) ? $q->execute([(int)$id, $outletId]) : $q->execute([(int)$id]);
-    $v = $q->fetchColumn();
-    return $v === false ? null : (int)$v;
-}
-function productId(PDO $pdo, array $item, int $outletId): ?int {
-    $id = pick($item, ['productId', 'id']);
-    if ($id !== null && ctype_digit((string)$id) && (int)$id) {
-        $q = $pdo->prepare('SELECT id FROM products WHERE id=? AND outlet_id=? LIMIT 1');
-        $q->execute([(int)$id, $outletId]);
-        $v = $q->fetchColumn();
-        if ($v !== false) return (int)$v;
-    }
-    $code = trim((string)pick($item, ['code', 'sku'], ''));
-    if ($code !== '') {
-        $q = $pdo->prepare('SELECT id FROM products WHERE outlet_id=? AND sku=? LIMIT 1');
-        $q->execute([$outletId, $code]);
-        $v = $q->fetchColumn();
-        if ($v !== false) return (int)$v;
-    }
-    return null;
-}
-function saveSale(PDO $pdo, array $sale, int $outletId): int {
-    if (!hasTable($pdo, 'sales')) throw new RuntimeException('Table sales does not exist.');
-    $schema = cols($pdo, 'sales');
-    $saleNo = trim((string)pick($sale, ['no','saleNo','invoiceNo','invoice_number'], ''));
-    if ($saleNo === '') throw new InvalidArgumentException('Sale number is required.');
-
-    $customerId = optionalOutletFk($pdo, 'customers', pick($sale, ['customerId','customer_id']), $outletId);
-    $createdBy = optionalOutletFk($pdo, 'users', pick($sale, ['userId','created_by','createdBy']), $outletId);
-    $rawDate = (string)pick($sale, ['date','saleDate'], date('Y-m-d H:i:s'));
-    $ts = strtotime($rawDate);
-    $saleDate = $ts ? date('Y-m-d H:i:s', $ts) : date('Y-m-d H:i:s');
-
-    $row = [
-        'outlet_id'=>$outletId,
-        'sale_no'=>$saleNo,
-        'sale_date'=>$saleDate,
-        'customer_id'=>$customerId,
-        'order_name'=>(string)pick($sale,['orderName','name'],''),
-        'service_type'=>(string)pick($sale,['serviceType'],''),
-        'subtotal'=>(float)pick($sale,['subtotal'],0),
-        'discount'=>(float)pick($sale,['discount'],0),
-        'tax'=>(float)pick($sale,['tax'],0),
-        'total'=>(float)pick($sale,['total'],0),
-        'payment_status'=>(string)pick($sale,['paymentStatus'],((bool)pick($sale,['paid'],false)?'PAID':'UNPAID')),
-        'status'=>(string)pick($sale,['status'],'COMPLETED'),
-        'created_by'=>$createdBy,
-    ];
-    $row = array_filter($row, fn($v,$k)=>isset($schema[$k]), ARRAY_FILTER_USE_BOTH);
-
-    $q = $pdo->prepare('SELECT id FROM sales WHERE outlet_id=? AND sale_no=? LIMIT 1');
-    $q->execute([$outletId,$saleNo]);
-    $dbId = (int)($q->fetchColumn() ?: 0);
-    if ($dbId) {
-        $set=[]; $vals=[];
-        foreach ($row as $k=>$v) { if ($k==='outlet_id') continue; $set[]="`$k`=?"; $vals[]=$v; }
-        $vals[]=$dbId; $vals[]=$outletId;
-        $pdo->prepare('UPDATE sales SET '.implode(',',$set).' WHERE id=? AND outlet_id=?')->execute($vals);
-    } else {
-        $fields=array_keys($row);
-        $pdo->prepare('INSERT INTO sales (`'.implode('`,`',$fields).'`) VALUES ('.implode(',',array_fill(0,count($fields),'?')).')')->execute(array_values($row));
-        $dbId=(int)$pdo->lastInsertId();
-    }
-
-    if (hasTable($pdo,'sale_items')) {
-        $pdo->prepare('DELETE FROM sale_items WHERE sale_id=?')->execute([$dbId]);
-        $cs=cols($pdo,'sale_items');
-        foreach (($sale['items']??[]) as $it) {
-            $pid=productId($pdo,is_array($it)?$it:[],$outletId);
-            if (!$pid) throw new RuntimeException('Product not found in MySQL for sale item: '.(string)pick((array)$it,['name','productName'],'Unknown product'));
-            $qty=(float)pick((array)$it,['qty','quantity'],0);
-            $price=(float)pick((array)$it,['price','unitPrice'],0);
-            $child=['sale_id'=>$dbId,'product_id'=>$pid,'product_name'=>(string)pick((array)$it,['name','productName'],''),'barcode'=>pick((array)$it,['barcode']),'quantity'=>$qty,'unit_price'=>$price,'discount'=>(float)pick((array)$it,['discount'],0),'tax'=>(float)pick((array)$it,['tax'],0),'line_total'=>(float)($qty*$price)];
-            $child=array_filter($child,fn($v,$k)=>isset($cs[$k]),ARRAY_FILTER_USE_BOTH);
-            $fields=array_keys($child);
-            $pdo->prepare('INSERT INTO sale_items (`'.implode('`,`',$fields).'`) VALUES ('.implode(',',array_fill(0,count($fields),'?')).')')->execute(array_values($child));
-        }
-    }
-
-    if (hasTable($pdo,'sale_payments')) {
-        $pdo->prepare('DELETE FROM sale_payments WHERE sale_id=?')->execute([$dbId]);
-        $cs=cols($pdo,'sale_payments');
-        $payments=$sale['payments']??[];
-        if (!$payments) $payments=[['paymentTypeId'=>pick($sale,['paymentTypeId']),'payment'=>pick($sale,['payment'],'Cash'),'amount'=>pick($sale,['paymentAmount'],0),'change'=>pick($sale,['change'],0)]];
-        foreach ($payments as $it) {
-            $it=(array)$it;
-            $ptid=optionalOutletFk($pdo,'payment_types',pick($it,['paymentTypeId']),$outletId);
-            $ptname=(string)pick($it,['payment','name'],'Payment');
-            if (!$ptid) {
-                $q=$pdo->prepare('SELECT id,payment_name FROM payment_types WHERE outlet_id=? AND payment_name=? LIMIT 1');
-                $q->execute([$outletId,$ptname]);
-                $x=$q->fetch();
-                if ($x) { $ptid=(int)$x['id']; $ptname=(string)$x['payment_name']; }
-            }
-            $child=['sale_id'=>$dbId,'payment_type_id'=>$ptid,'payment_type_name'=>$ptname,'amount'=>(float)pick($it,['amount'],0),'tendered'=>pick($it,['tendered']),'change_amount'=>(float)pick($it,['change','changeAmount'],0),'reference_no'=>pick($it,['referenceNo','reference']),'created_at'=>date('Y-m-d H:i:s')];
-            $child=array_filter($child,fn($v,$k)=>isset($cs[$k]),ARRAY_FILTER_USE_BOTH);
-            $fields=array_keys($child);
-            $pdo->prepare('INSERT INTO sale_payments (`'.implode('`,`',$fields).'`) VALUES ('.implode(',',array_fill(0,count($fields),'?')).')')->execute(array_values($child));
-        }
-    }
-    return $dbId;
-}
-
-try {
-    if ($name===''||$user==='') throw new RuntimeException('Database configuration is incomplete.');
-    $pdo=new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
-    $b=body(); $action=(string)($b['action']??($_GET['action']??'health')); $outlet=trim((string)($b['outlet_id']??($_GET['outlet_id']??'SP01'))); $oid=outletId($pdo,$outlet); if(!$oid)throw new RuntimeException('Outlet not found: '.$outlet);
-    if($action==='health'){echo json_encode(['ok'=>true,'service'=>'SP-Manager Sales API','database'=>$name,'outlet_id'=>$oid]);exit;}
-    if($action==='list'){ $q=$pdo->prepare('SELECT * FROM sales WHERE outlet_id=? ORDER BY id DESC');$q->execute([$oid]);echo json_encode(['ok'=>true,'sales'=>$q->fetchAll()]);exit; }
-    if($action!=='save'&&$action!=='save-batch')throw new RuntimeException('Unsupported action: '.$action);
-    $sales=$action==='save'?[$b['sale']??null]:($b['sales']??[]); if(!is_array($sales))throw new InvalidArgumentException('sales must be an array.');
-    $pdo->beginTransaction();$saved=[];foreach($sales as $sale){if(!is_array($sale))continue;$saved[]=saveSale($pdo,$sale,$oid);} $pdo->commit();
-    echo json_encode(['ok'=>true,'count'=>count($saved),'sale_ids'=>$saved]);
+function insertRow(PDO $pdo,string $table,array $row):int{$fields=array_keys($row);if(!$fields)throw new RuntimeException("No writable columns for $table");$sql="INSERT INTO `$table` (`".implode('`,`',$fields)."`) VALUES (".implode(',',array_fill(0,count($fields),'?')).")";$st=$pdo->prepare($sql);$st->execute(array_values($row));return (int)$pdo->lastInsertId();}
+function updateRow(PDO $pdo,string $table,array $row,int $id):void{$u=$row;unset($u['id']);if(!$u)return;$set=implode(',',array_map(fn($k)=>"`$k`=?",array_keys($u)));$st=$pdo->prepare("UPDATE `$table` SET $set WHERE id=?");$st->execute([...array_values($u),$id]);}
+try{
+ if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
+ $pdo=new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+ $b=body();$sale=$b['sale']??null;if(!is_array($sale))throw new InvalidArgumentException('sale is required.');
+ $outlet=trim((string)($b['outlet_id']??'SP01'));if(ctype_digit($outlet))$outletId=(int)$outlet;else{$q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? LIMIT 1');$q->execute([$outlet]);$outletId=(int)($q->fetchColumn()?:0);}if(!$outletId)throw new RuntimeException('Outlet not found: '.$outlet);
+ $ss=cols($pdo,'sales');
+ $map=['outlet_id'=>['outlet_id'],'sale_no'=>['no','saleNo','invoiceNo','invoice_number'],'sale_date'=>['date','saleDate'],'customer_id'=>['customerId','customer_id'],'order_name'=>['orderName','name'],'service_type'=>['serviceType'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'payment_status'=>['paymentStatus'],'status'=>['status'],'created_by'=>['createdBy','created_by','userId']];
+ $row=writableRow($ss,$map,$sale,$outletId);
+ $saleNo=(string)($row['sale_no']??'');if($saleNo==='')throw new RuntimeException('Sale number is required.');
+ $q=$pdo->prepare('SELECT id FROM sales WHERE outlet_id=? AND sale_no=? LIMIT 1');$q->execute([$outletId,$saleNo]);$dbId=(int)($q->fetchColumn()?:0);
+ $pdo->beginTransaction();
+ if($dbId){updateRow($pdo,'sales',$row,$dbId);}else{$dbId=insertRow($pdo,'sales',$row);}
+ if(isset($ss['payment_status'])){$st=$pdo->prepare('UPDATE sales SET payment_status=? WHERE id=?');$st->execute([(string)($sale['paymentStatus']??(isset($sale['paid'])&&$sale['paid']?'PAID':'UNPAID')),$dbId]);}
+ if($pdo->query("SHOW TABLES LIKE 'sale_items'")->fetchColumn()){
+   $is=cols($pdo,'sale_items');$del=$pdo->prepare('DELETE FROM sale_items WHERE sale_id=?');$del->execute([$dbId]);
+   foreach($sale['items'] as $it){if(!is_array($it))continue;$cm=['sale_id'=>['sale_id'],'product_id'=>['productId','product_id','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'qty'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total']];$child=['sale_id'=>$dbId,'product_id'=>pick($it,['productId','product_id','id']), 'product_name'=>pick($it,['name','productName'],''),'barcode'=>pick($it,['barcode']), 'quantity'=>pick($it,['qty','quantity'],0),'qty'=>pick($it,['qty','quantity'],0),'unit_price'=>pick($it,['price','unitPrice'],0),'price'=>pick($it,['price','unitPrice'],0),'discount'=>pick($it,['discount'],0),'tax'=>pick($it,['tax'],0),'line_total'=>pick($it,['lineTotal','total'],((float)pick($it,['price','unitPrice'],0))*((float)pick($it,['qty','quantity'],0)))];$cr=writableRow($is,$cm,$child,$outletId);insertRow($pdo,'sale_items',$cr);}
+ }
+ if($pdo->query("SHOW TABLES LIKE 'sale_payments'")->fetchColumn()){
+   $ps=cols($pdo,'sale_payments');$del=$pdo->prepare('DELETE FROM sale_payments WHERE sale_id=?');$del->execute([$dbId]);
+   foreach(($sale['payments']??[]) as $pay){if(!is_array($pay))continue;$pm=['sale_id'=>['sale_id'],'payment_type_id'=>['paymentTypeId','payment_type_id'],'payment_type_name'=>['payment','name','paymentTypeName'],'amount'=>['amount'],'tendered'=>['tendered'],'change_amount'=>['change','changeAmount'],'reference_no'=>['referenceNo','reference'],'paid_at'=>['date','paidAt'],'created_at'=>['date','paidAt']];$child=['sale_id'=>$dbId,'payment_type_id'=>pick($pay,['paymentTypeId','payment_type_id']),'payment_type_name'=>pick($pay,['payment','name','paymentTypeName'],'Payment'),'amount'=>pick($pay,['amount'],0),'tendered'=>pick($pay,['tendered']), 'change_amount'=>pick($pay,['change','changeAmount'],0),'reference_no'=>pick($pay,['referenceNo','reference']),'paid_at'=>pick($pay,['date','paidAt'],date('Y-m-d H:i:s')),'created_at'=>pick($pay,['date','paidAt'],date('Y-m-d H:i:s'))];$cr=writableRow($ps,$pm,$child,$outletId);insertRow($pdo,'sale_payments',$cr);}
+ }
+ $pdo->commit();echo json_encode(['ok'=>true,'sale_id'=>$dbId,'sale_no'=>$saleNo]);
 }catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);}
