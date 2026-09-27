@@ -294,6 +294,15 @@ try {
       $cols=array_keys($data);$ph=array_fill(0,count($cols),'?');$vals=array_values($data);
       $q=$pdo->prepare('INSERT INTO `products` (`'.implode('`,`',$cols).'`) VALUES ('.implode(',',$ph).')');$q->execute($vals);$savedId=(int)$pdo->lastInsertId();
     }
+    // Product code/SKU is the stable identity used by the Product Master.
+    // If an earlier sync created a duplicate row with the same code, keep the
+    // row that was just saved and remove only the other exact-code duplicates
+    // for this outlet. This prevents Edit + Save from creating/retaining twins.
+    if($code!=='' && ($codeCol=firstColumn($columns,['sku','product_code','code']))){
+      $sql='DELETE FROM `products` WHERE `'.$codeCol.'`=? AND id<>?'.(isset($columns['outlet_id'])?' AND outlet_id=?':'');
+      $q=$pdo->prepare($sql);
+      $q->execute(isset($columns['outlet_id'])?[$code,$savedId,$outletId]:[$code,$savedId]);
+    }
     respond(['ok'=>true,'id'=>$savedId,'outletId'=>$outletId,'category_id'=>isset($p['category_id'])?(int)$p['category_id']:null,'group_id'=>isset($p['group_id'])?(int)$p['group_id']:null,'selling_price'=>isset($p['price'])?(float)$p['price']:null]);
   }
   respond(['ok'=>false,'error'=>'Unknown action.'],404);

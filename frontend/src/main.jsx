@@ -354,6 +354,11 @@ function App(){
          return {...x,category:x.category||local?.category||"",categoryId:x.categoryId||local?.categoryId||null,group:x.group||local?.group||"",groupId:x.groupId||local?.groupId||null};
        });
        if(mapped.length){
+         // Keep one local Product Master row per MySQL id/SKU. Older sync versions
+         // could leave a duplicate local row after Edit + Save.
+         const seenIds=new Set(),seenCodes=new Set(),deduped=[];
+         for(const item of mapped){const iid=String(item?.id??"");const icode=String(item?.code??"").trim();if((iid&&seenIds.has(iid))||(icode&&seenCodes.has(icode)))continue;if(iid)seenIds.add(iid);if(icode)seenCodes.add(icode);deduped.push(item);}
+         mapped.length=0; mapped.push(...deduped);
          localStorage.setItem("sp_products",JSON.stringify(mapped));
          // Backfill relational category_id/group_id for existing products whose names
          // were already present in the local Product Master but the old MySQL row had NULL FKs.
@@ -544,12 +549,12 @@ function App(){
  const saveCentralGroup=async(group)=>{try{const r=await centralProductsRequest("save-group",{outlet_id:"SP01",group});return Number(r?.id)||null}catch(e){console.warn("Central group sync failed",e?.message||e);return null}};
  const addProduct=async p=>{
   const localProduct=normalizeProductStockControl({...p,id:uid(),price:Number(p.price),cost:Number(p.cost),stock:Number(p.stock),reorder:Number(p.reorder),preferredQuantity:Number(p.preferredQuantity),lowStockWarning:Boolean(p.lowStockWarning),lowStockWarningQuantity:Number(p.lowStockWarningQuantity),supplierId:String(p.supplierId||""),priceChangeAllowed:Boolean(p.priceChangeAllowed),isService:Boolean(p.isService),defaultQuantity:Boolean(p.defaultQuantity),active:p.active!==false});
-  try{const r=await centralProductsRequest("save",{outlet_id:"SP01",product:localProduct});const saved=normalizeProductStockControl({...localProduct,id:Number(r.id)||localProduct.id,categoryId:Number(r.category_id)||localProduct.categoryId||null,groupId:Number(r.group_id)||localProduct.groupId||null});const np=[...products,saved];persist("products",np,setProducts);setNotice("Product added successfully and saved to SP-Central.");}
+  try{const r=await centralProductsRequest("save",{outlet_id:"SP01",product:localProduct});const saved=normalizeProductStockControl({...localProduct,id:Number(r.id)||localProduct.id,categoryId:Number(r.category_id)||localProduct.categoryId||null,groupId:Number(r.group_id)||localProduct.groupId||null});const np=[...products.filter(x=>String(x?.id)!==String(saved.id)&&String(x?.code||"").trim()!==String(saved.code||"").trim()),saved];persist("products",np,setProducts);setNotice("Product added successfully and saved to SP-Central.");}
   catch(e){const np=[...products,localProduct];persist("products",np,setProducts);setNotice("Product saved locally, but MySQL sync failed: "+(e?.message||"Unknown error"));}
  };
  const updateProduct=async p=>{
   const normalized=normalizeProductStockControl({...p});
-  try{const r=await centralProductsRequest("save",{outlet_id:"SP01",product:normalized});const saved=normalizeProductStockControl({...normalized,id:Number(r.id)||normalized.id,categoryId:Number(r.category_id)||normalized.categoryId||null,groupId:Number(r.group_id)||normalized.groupId||null});const np=products.map(x=>String(x.id)===String(saved.id)?saved:x);persist("products",np,setProducts);setEditing(null);setNotice("Product updated successfully and saved to SP-Central.");}
+  try{const r=await centralProductsRequest("save",{outlet_id:"SP01",product:normalized});const saved=normalizeProductStockControl({...normalized,id:Number(r.id)||normalized.id,categoryId:Number(r.category_id)||normalized.categoryId||null,groupId:Number(r.group_id)||normalized.groupId||null});const np=[...products.filter(x=>String(x?.id)!==String(saved.id)&&String(x?.code||"").trim()!==String(saved.code||"").trim()),saved];persist("products",np,setProducts);setEditing(null);setNotice("Product updated successfully and saved to SP-Central.");}
   catch(e){const np=products.map(x=>x.id===normalized.id?normalized:x);persist("products",np,setProducts);setEditing(null);setNotice("Product updated locally, but MySQL sync failed: "+(e?.message||"Unknown error"));}
  };
  const addCustomer=c=>{
