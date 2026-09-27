@@ -155,11 +155,21 @@ const centralSave=({outlet_id="SP01",state_key,state,updated_by="SP-Manager"})=>
 const centralCustomersApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/customers.php"};
 const centralCustomersRequest=async(action,body=null)=>{const url=centralCustomersApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);let data=null;try{data=await r.json()}catch{throw new Error(`Invalid customer API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralCustomerToApp=c=>{if(!c||typeof c!=="object")return null;const n=(v)=>v===null||v===undefined?"":String(v);return {id:Number(c.id)||c.id,dbId:Number(c.id)||null,code:n(c.code),name:n(c.name),taxNumber:n(c.tax_number),country:n(c.country||"Malaysia")||"Malaysia",streetName:n(c.street_name),buildingNumber:n(c.building_number),additionalStreetName:n(c.additional_street_name),plotIdentification:n(c.plot_identification),district:n(c.district),postalCode:n(c.postal_code),city:n(c.city),state:n(c.state),phone:n(c.phone),email:n(c.email),vehicleNumber:n(c.vehicle_number),enabled:Number(c.enabled)!==0,isCustomer:Number(c.is_customer)!==0,isSupplier:Number(c.is_supplier)===1,taxExempt:Number(c.tax_exempt)===1,discount:Number(c.discount_percent||0),dueDatePeriod:Number(c.due_date_period||0),loyaltyCard:n(c.loyalty_card),loyaltyPoints:Number(c.loyalty_points||0),visits:Number(c.visits||0),spend:Number(c.spend||0)};};
+const centralSettingsApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/settings.php"};
+const centralSettingsRequest=async(action,body=null)=>{const url=centralSettingsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="all"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`HTTP ${r.status}`);e.status=r.status;throw e}return data};
+const centralUsersApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/users.php"};
+const centralUsersRequest=async(action,body=null)=>{const url=centralUsersApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`HTTP ${r.status}`);e.status=r.status;throw e}return data};
 const centralProductsApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/products.php"};
 const centralProductsRequest=async(action,body=null)=>{const url=centralProductsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health"||action==="catalog";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json();if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralProductToApp=p=>{if(!p||typeof p!=="object")return null;const pick=(...keys)=>{for(const k of keys){if(p[k]!==undefined&&p[k]!==null)return p[k]}return undefined};const rawActive=pick("active","enabled");const rawService=pick("is_service","service");const rawTax=pick("tax_inclusive");const rawPriceChange=pick("price_change_allowed","allow_price_change");return normalizeProductStockControl({id:Number(pick("id"))||pick("id"),code:String(pick("code","sku","product_code")??""),barcode:String(pick("barcode")??""),barcodes:Array.isArray(p.barcodes)?p.barcodes:(pick("barcode")?[String(pick("barcode"))]:[]),name:String(pick("name","product_name")??""),category:String(pick("category","category_name")??""),categoryId:Number(pick("category_id")||0)||null,group:String(pick("group","group_name")??""),groupId:Number(pick("group_id")||0)||null,plu:String(pick("plu")??""),unit:String(pick("unit","unit_name")??"pcs"),price:Number(pick("price","sale_price","selling_price","unit_price")??0),cost:Number(pick("cost","cost_price","purchase_price")??0),margin:Number(pick("margin")??0),stock:Number(pick("stock","stock_qty","quantity","current_stock")??0),reorder:Number(pick("reorder","reorder_point","min_stock")??0),supplierId:String(pick("supplier_id")??""),preferredQuantity:Number(pick("preferred_quantity","preferred_qty")??0),lowStockWarning:Boolean(pick("low_stock_warning")??false),lowStockWarningQuantity:Number(pick("low_stock_warning_quantity")??0),taxInclusive:rawTax===undefined?true:Boolean(Number(rawTax)||rawTax),priceChangeAllowed:rawPriceChange===true||rawPriceChange===1||String(rawPriceChange??"").toLowerCase()==="true"||String(rawPriceChange??"")==="1",isService:rawService===true||rawService===1||String(rawService??"").toLowerCase()==="true"||String(rawService??"")==="1",defaultQuantity:true,active:rawActive===undefined?true:Boolean(Number(rawActive)||rawActive),description:String(pick("description")??""),image:String(pick("image","image_url")??""),rank:Number(pick("rank","sort_order")??0),ageRestriction:String(pick("age_restriction")??""),lastPurchasePrice:Number(pick("last_purchase_price")??0),comments:String(pick("comments","notes")??""),warrantyEnabled:Boolean(pick("warranty_enabled")??false),warrantyYears:Number(pick("warranty_years")??1),maintenanceEnabled:Boolean(pick("maintenance_enabled")??false),maintenanceCount:Number(pick("maintenance_count")??1)});};
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem("sp_"+k))??d}catch{return d}};
-const save=(k,v)=>{localStorage.setItem("sp_"+k,JSON.stringify(v));if(k==="customers"&&Array.isArray(v)){try{centralCustomersRequest("save-batch",{outlet_id:"SP01",customers:v}).catch(e=>console.warn("Central customer save failed",e?.message||e))}catch(e){console.warn("Central customer API unavailable",e?.message||e)}}if(!CENTRAL_STATE_EXCLUDE.has(k)){centralSave({outlet_id:"SP01",state_key:k,state:v}).catch(e=>console.warn("Central save failed",k,e?.message||e));}};
+const save=(k,v)=>{localStorage.setItem("sp_"+k,JSON.stringify(v));
+ if(k==="customers"&&Array.isArray(v)){try{centralCustomersRequest("save-batch",{outlet_id:"SP01",customers:v}).catch(e=>console.warn("Central customer save failed",e?.message||e))}catch(e){console.warn("Central customer API unavailable",e?.message||e)}}
+ if(k==="users"&&Array.isArray(v)){try{centralUsersRequest("save-batch",{outlet_id:"SP01",users:v}).catch(e=>console.warn("Central users save failed",e?.message||e))}catch(e){console.warn("Central users API unavailable",e?.message||e)}}
+ if(k==="settings"){try{centralSettingsRequest("save",{outlet_id:"SP01",settings:v}).catch(e=>console.warn("Central settings save failed",e?.message||e))}catch(e){console.warn("Central settings API unavailable",e?.message||e)}}
+ if(k==="company"){try{centralSettingsRequest("save",{outlet_id:"SP01",company:v}).catch(e=>console.warn("Central company save failed",e?.message||e))}catch(e){console.warn("Central company API unavailable",e?.message||e)}}
+ if(k==="businessDay"||k==="taxRate"||k==="customerDisplayTerminal"){try{centralSettingsRequest("save",{outlet_id:"SP01",[k]:v}).catch(e=>console.warn("Central setting save failed",k,e?.message||e))}catch(e){console.warn("Central settings API unavailable",e?.message||e)}}
+ if(!CENTRAL_STATE_EXCLUDE.has(k)){centralSave({outlet_id:"SP01",state_key:k,state:v}).catch(e=>console.warn("Central save failed",k,e?.message||e));}};
 const persist=(key,val,setter)=>{save(key,val);setter(val)};
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
 const isPermissionAllowed=(user,key)=>Boolean(user&&(user.role==="Administrator"||user.permissions?.[key]===true));
@@ -407,6 +417,45 @@ function App(){
   run();
   return()=>{alive=false};
  },[]);
+ useEffect(()=>{
+  let alive=true;
+  const syncCentralSettingsAndUsers=async()=>{
+   try{
+    const r=await centralSettingsRequest("all",{outlet_id:"SP01"});
+    if(!alive)return;
+    if(r?.settings&&typeof r.settings==="object"&&Object.keys(r.settings).length){
+      const merged=deepMerge(defaultSettings,r.settings);localStorage.setItem("sp_settings",JSON.stringify(merged));setSettings(merged);
+    }else{
+      const localSettings=load("settings",{});
+      if(localSettings&&typeof localSettings==="object"&&Object.keys(localSettings).length)await centralSettingsRequest("save",{outlet_id:"SP01",settings:deepMerge(defaultSettings,localSettings)});
+    }
+    if(r?.company&&typeof r.company==="object"&&Object.keys(r.company).length){localStorage.setItem("sp_company",JSON.stringify(r.company));setCompany(r.company);}
+    else{const localCompany=load("company",{});if(localCompany&&typeof localCompany==="object"&&Object.keys(localCompany).length)await centralSettingsRequest("save",{outlet_id:"SP01",company:localCompany});}
+    if(r?.businessDay&&typeof r.businessDay==="object"){localStorage.setItem("sp_businessDay",JSON.stringify(r.businessDay));setBusinessDay(r.businessDay);}
+    else{const localBusinessDay=load("businessDay",null);if(localBusinessDay)await centralSettingsRequest("save",{outlet_id:"SP01",businessDay:localBusinessDay});}
+    if(r?.taxRate!==null&&r?.taxRate!==undefined){localStorage.setItem("sp_taxRate",JSON.stringify(Number(r.taxRate)||0));setTaxRate(Number(r.taxRate)||0);}
+    else{const localTax=Number(load("taxRate",0)||0);await centralSettingsRequest("save",{outlet_id:"SP01",taxRate:localTax});}
+    if(r?.customerDisplayTerminal&&typeof r.customerDisplayTerminal==="object"){localStorage.setItem("sp_customerDisplayTerminal",JSON.stringify(r.customerDisplayTerminal));setCustomerDisplayTerminal(r.customerDisplayTerminal);}
+    else{const localCd=load("customerDisplayTerminal",CUSTOMER_DISPLAY_DEFAULTS);if(localCd)await centralSettingsRequest("save",{outlet_id:"SP01",customerDisplayTerminal:localCd});}
+   }catch(e){console.warn("Central Settings sync unavailable; local Settings remain active.",e?.message||e)}
+   try{
+    const localUsers=load("users",seedUsers);
+    const r=await centralUsersRequest("list",{outlet_id:"SP01"});
+    if(!alive)return;
+    if(Number(r?.count||0)>0&&Array.isArray(r.users)){
+      localStorage.setItem("sp_users",JSON.stringify(r.users));setUsers(r.users);
+      const current=load("activeUser",null);
+      if(current?.username){const fresh=r.users.find(u=>String(u.username||"").toLowerCase()===String(current.username).toLowerCase());if(fresh){localStorage.setItem("sp_activeUser",JSON.stringify(fresh));setCurrentUser(fresh);}}
+    }else if(Array.isArray(localUsers)&&localUsers.length){
+      await centralUsersRequest("save-batch",{outlet_id:"SP01",users:localUsers});
+      const fresh=await centralUsersRequest("list",{outlet_id:"SP01"});
+      if(Array.isArray(fresh?.users)&&fresh.users.length){localStorage.setItem("sp_users",JSON.stringify(fresh.users));setUsers(fresh.users);}
+    }
+   }catch(e){console.warn("Central Users sync unavailable; local Users remain active.",e?.message||e)}
+  };
+  syncCentralSettingsAndUsers();
+  return()=>{alive=false};
+ },[]);
  const nextDocumentCounter=()=>{const current=Math.max(0,Number(load("orderCounter",0)||0))+1;save("orderCounter",current);return current};
  const formatDocumentNumber=(type="Order",counterOverride)=>{
    const current=counterOverride==null?nextDocumentCounter():Math.max(0,Number(counterOverride||0));
@@ -625,7 +674,16 @@ function App(){
  useEffect(()=>{if(!businessDay.open&&settings.order.resetOrderNumberOnClose)save("orderCounter",0)},[businessDay.open,settings.order.resetOrderNumberOnClose]);
 
  if(new URLSearchParams(window.location.search).has("display")||new URLSearchParams(window.location.search).has("terminal")||window.location.pathname.includes("/customer-display"))return <CustomerDisplay/>;
- if(!signedIn)return <Login users={users} company={company} onLogin={u=>{save("activeUser",u);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(u);setSignedIn(true);setPage("POS / Sales")}}/>;
+ const authenticate=async(username,password)=>{
+  try{const r=await centralUsersRequest("auth",{outlet_id:"SP01",username,password});if(r?.user)return r.user;throw new Error("Invalid username or password.");}
+  catch(e){
+   if(Number(e?.status||0)>=400&&Number(e?.status||0)<500)throw e;
+   const u=users.find(x=>String(x.username||"").toLowerCase()===String(username||"").trim().toLowerCase()&&x.enabled);
+   if(u&&String(u.password||"")===String(password||""))return u;
+   throw new Error("Unable to connect to Central Database. Please check the connection or login credentials.");
+  }
+ };
+ if(!signedIn)return <Login users={users} company={company} onAuthenticate={authenticate} onLogin={u=>{save("activeUser",u);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(u);setSignedIn(true);setPage("POS / Sales")}}/>;
  return <div className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
   <aside className={mobileNavOpen?"mobile-nav is-open":"mobile-nav"}><div className="brand"><button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={()=>setMobileNavOpen(false)}>×</button><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
    {nav.filter(n=>{const map={"Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return n==="Management"?hasManagementAccess(activeUser):(!map[n]||isPermissionAllowed(activeUser,map[n]))}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("");setMobileNavOpen(false)}} key={n}>▸ {n}</button>)}
@@ -666,10 +724,10 @@ function App(){
  </div>
 }
 
-function Login({users,company,onLogin}){
+function Login({users,company,onLogin,onAuthenticate}){
  const[username,setUsername]=useState("");const[password,setPassword]=useState("");const[showPassword,setShowPassword]=useState(false);const[error,setError]=useState("");const[busy,setBusy]=useState(false);
  const companyLogo=company?.loginLogo||company?.logo||"";
- const submit=async e=>{e.preventDefault();setError("");setBusy(true);const u=users.find(x=>String(x.username||"").toLowerCase()===username.trim().toLowerCase()&&x.enabled);await new Promise(r=>setTimeout(r,180));if(!u||u.password!==password){setError("Invalid username or password.");setBusy(false);return}onLogin(u);setBusy(false)};
+ const submit=async e=>{e.preventDefault();setError("");setBusy(true);try{const u=onAuthenticate?await onAuthenticate(username,password):users.find(x=>String(x.username||"").toLowerCase()===username.trim().toLowerCase()&&x.enabled);if(!u)throw new Error("Invalid username or password.");await new Promise(r=>setTimeout(r,120));onLogin(u);}catch(err){setError(String(err?.message||"Invalid username or password."));}finally{setBusy(false)}};
  return <div className="login-screen"><div className="login-glow login-glow-a"></div><div className="login-glow login-glow-b"></div><div className="login-card login-card-premium"><div className={"login-brand-mark "+(companyLogo?"login-brand-mark-image":"login-brand-mark-fallback")}>{companyLogo?<img src={companyLogo} alt="Company logo"/>:<span>SP</span>}</div><div className="login-brand-name login-company-title">SHINING PEARL TINTED</div><form onSubmit={submit}><label><span>Username</span><div className="login-input-wrap"><i>◉</i><input autoFocus value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" placeholder="Enter your username"/></div></label><label><span>Password</span><div className="login-password-wrap login-input-wrap"><i>●</i><input type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" placeholder="Enter your password"/><button type="button" className="login-password-toggle" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Hide password":"Show password"}>{showPassword?"Hide":"Show"}</button></div></label>{error&&<div className="login-error">⚠ {error}</div>}<button className="login-submit" type="submit" disabled={busy}>{busy?<><span className="login-spinner"></span>Signing in…</>:<>Sign in <span>→</span></>}</button></form><div className="login-footer"><span>●</span> Offline-ready business system</div></div></div>
 }
 
@@ -1876,9 +1934,10 @@ function Loyalty({customers,setCustomers}){
 }
 function Users({users,setUsers,activeUser,setCurrentUser}){
  const[editing,setEditing]=useState(null);const[showPassword,setShowPassword]=useState(false);
+ useEffect(()=>{let alive=true;(async()=>{try{const r=await centralUsersRequest("list",{outlet_id:"SP01"});if(alive&&Array.isArray(r?.users)&&r.users.length){setUsers(r.users);}}catch(e){console.warn("Users refresh from Central Database failed",e?.message||e)}})();return()=>{alive=false}},[]);
  const blank={name:"",username:"",role:"Cashier",enabled:true,password:"",permissions:{...CASHIER_PERMISSIONS}};
  const begin=u=>{setEditing({...u,password:u.password||"",permissions:{...CASHIER_PERMISSIONS,...(u.permissions||{}),...(u.role==="Administrator"?ALL_PERMISSIONS:{})}});setShowPassword(false)};
- const saveUser=()=>{if(!editing?.name?.trim()||!editing?.username?.trim()||(!editing.id&&!editing.password)){alert("Name, username and password are required.");return}const next={...editing,name:editing.name.trim(),username:editing.username.trim().toLowerCase(),password:editing.password||"",permissions:editing.role==="Administrator"?{...ALL_PERMISSIONS}:{...editing.permissions}};const out=next.id?users.map(u=>u.id===next.id?next:u):[...users,{...next,id:uid()}];setUsers(out);setEditing(null)};
+ const saveUser=()=>{if(!editing?.name?.trim()||!editing?.username?.trim()||(!editing.id&&!editing.password)){alert("Name, username and password are required.");return}const next={...editing,name:editing.name.trim(),username:editing.username.trim().toLowerCase(),password:editing.password||"",permissions:editing.role==="Administrator"?{...ALL_PERMISSIONS}:{...editing.permissions}};const out=next.id?users.map(u=>u.id===next.id?next:u):[...users,{...next,id:uid()}];setUsers(out);if(activeUser&&((next.id&&String(activeUser.id)===String(next.id))||String(activeUser.username||"").toLowerCase()===next.username)){setCurrentUser({...activeUser,...next});save("activeUser",{...activeUser,...next});}setEditing(null)};
  const remove=u=>{if(u.role==="Administrator"&&users.filter(x=>x.role==="Administrator"&&x.enabled).length<=1){alert("At least one enabled Administrator must remain.");return}if(window.confirm("Delete user "+u.name+"?"))setUsers(users.filter(x=>x.id!==u.id))};
  return <section className="users-modern"><div className="users-topbar"><div><div className="eyebrow">SECURITY & ACCESS</div><h2>Users & Permissions</h2><p>Control which users can access Management functions.</p></div><button className="users-add" onClick={()=>{setEditing({...blank});setShowPassword(false)}}>＋ Add user</button></div>
  <div className="users-role-note"><b>Administrator</b><span>Full access to all functions.</span><b>Cashier</b><span>POS-focused access with controlled Management permissions.</span></div>
