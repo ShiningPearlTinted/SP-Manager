@@ -139,6 +139,104 @@ function valueFor(string $column, array $p, int $outletId): mixed {
   return null;
 }
 
+
+function syncProductRelations(PDO $pdo, int $outletId, int $productId, array $p): void {
+  if ($productId <= 0) return;
+
+  // Barcodes: keep the Product Master list authoritative in product_barcodes.
+  if (tableExists($pdo, 'product_barcodes')) {
+    $bars = [];
+    if (isset($p['barcodes']) && is_array($p['barcodes'])) $bars = $p['barcodes'];
+    if (!$bars && isset($p['barcode'])) $bars = [$p['barcode']];
+    $bars = array_values(array_unique(array_filter(array_map(fn($v)=>trim((string)$v), $bars), fn($v)=>$v!=='')));
+    $pdo->prepare('DELETE FROM product_barcodes WHERE product_id=?')->execute([$productId]);
+    if ($bars) {
+      $cols = tableColumns($pdo, 'product_barcodes');
+      foreach ($bars as $i=>$barcode) {
+        $data=[];
+        if(isset($cols['product_id'])) $data['product_id']=$productId;
+        if(isset($cols['barcode'])) $data['barcode']=$barcode;
+        if(isset($cols['barcode_type'])) $data['barcode_type']=strlen($barcode)===13?'EAN13':'';
+        if(isset($cols['is_primary'])) $data['is_primary']=$i===0?1:0;
+        if(isset($cols['active'])) $data['active']=1;
+        if($data){
+          $q=$pdo->prepare('INSERT INTO product_barcodes (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');
+          $q->execute(array_values($data));
+        }
+      }
+    }
+  }
+
+  // Retail price: keep the current Product Master selling/cost price in product_prices.
+  if (tableExists($pdo, 'product_prices')) {
+    $cols=tableColumns($pdo,'product_prices');
+    $price=(float)($p['price']??0); $cost=array_key_exists('cost',$p)?(float)$p['cost']:null;
+    $q=$pdo->prepare('SELECT id FROM product_prices WHERE outlet_id=? AND product_id=? AND price_type=? LIMIT 1');
+    $q->execute([$outletId,$productId,'RETAIL']); $priceId=(int)($q->fetchColumn()?:0);
+    $data=[];
+    if(isset($cols['outlet_id']))$data['outlet_id']=$outletId;
+    if(isset($cols['product_id']))$data['product_id']=$productId;
+    if(isset($cols['price_type']))$data['price_type']='RETAIL';
+    if(isset($cols['price']))$data['price']=$price;
+    if(isset($cols['cost_price']))$data['cost_price']=$cost;
+    if(isset($cols['active']))$data['active']=1;
+    if($priceId>0){
+      $sets=[];$vals=[];foreach($data as $c=>$v){$sets[]='`'.$c.'`=?';$vals[]=$v;}$vals[]=$priceId;
+      $pdo->prepare('UPDATE product_prices SET '.implode(',',$sets).' WHERE id=? LIMIT 1')->execute($vals);
+    } elseif($data) {
+      $q=$pdo->prepare('INSERT INTO product_prices (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');
+      $q->execute(array_values($data));
+    }
+  }
+
+  // Product image: Product Master has one current image; mirror it as the primary image.
+  if (tableExists($pdo, 'product_images')) {
+    $cols=tableColumns($pdo,'product_images');
+    $image=trim((string)($p['image']??$p['image_url']??''));
+    $pdo->prepare('DELETE FROM product_images WHERE product_id=?')->execute([$productId]);
+    if($image!==''){
+      $data=[];
+      if(isset($cols['product_id']))$data['product_id']=$productId;
+      if(isset($cols['image_url']))$data['image_url']=$image;
+      if(isset($cols['image_name']))$data['image_name']=trim((string)($p['name']??'Product Image'));
+      if(isset($cols['sort_order']))$data['sort_order']=0;
+      if(isset($cols['is_primary']))$data['is_primary']=1;
+      if($data){
+        $q=$pdo->prepare('INSERT INTO product_images (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');
+        $q->execute(array_values($data));
+      }
+    }
+  }
+}
+function tableExists(PDO $pdo, string $table): bool {
+  static $cache=[]; if(isset($cache[$table])) return $cache[$table];
+  try { tableColumns($pdo,$table); return $cache[$table]=true; } catch(Throwable $e) { return $cache[$table]=false; }
+}
+function hydrateProductRelations(PDO $pdo, array &$rows): void {
+  if(!$rows) return;
+  $ids=array_values(array_unique(array_filter(array_map(fn($r)=>(int)($r['id']??0),$rows))));
+  if(!$ids) return;
+  $ph=implode(',',array_fill(0,count($ids),'?'));
+  if(tableExists($pdo,'product_barcodes')){
+    $q=$pdo->prepare('SELECT product_id, barcode FROM product_barcodes WHERE product_id IN ('.$ph.') AND active=1 ORDER BY is_primary DESC,id ASC');
+    $q->execute($ids); $map=[];
+    foreach($q->fetchAll() as $r)$map[(int)$r['product_id']][]=(string)$r['barcode'];
+    foreach($rows as &$r){$b=$map[(int)$r['id']]??[];if($b){$r['barcodes']=$b;$r['barcode']=$b[0];}} unset($r);
+  }
+  if(tableExists($pdo,'product_prices')){
+    $q=$pdo->prepare('SELECT product_id, price, cost_price FROM product_prices WHERE outlet_id=? AND product_id IN ('.$ph.') AND price_type=? AND active=1');
+    $q->execute(array_merge([$rows[0]['outlet_id']??0],$ids,['RETAIL'])); $map=[];
+    foreach($q->fetchAll() as $r)$map[(int)$r['product_id']]=$r;
+    foreach($rows as &$r){$v=$map[(int)$r['id']]??null;if($v){$r['price']=(float)$v['price'];if($v['cost_price']!==null)$r['cost']=(float)$v['cost_price'];}} unset($r);
+  }
+  if(tableExists($pdo,'product_images')){
+    $q=$pdo->prepare('SELECT product_id, image_url FROM product_images WHERE product_id IN ('.$ph.') ORDER BY is_primary DESC,id ASC');
+    $q->execute($ids); $map=[];
+    foreach($q->fetchAll() as $r){$pid=(int)$r['product_id'];if(!isset($map[$pid]))$map[$pid]=(string)$r['image_url'];}
+    foreach($rows as &$r){if(isset($map[(int)$r['id']])){$r['image']=$map[(int)$r['id']];$r['image_url']=$map[(int)$r['id']];}} unset($r);
+  }
+}
+
 try {
   $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
   $columns=tableColumns($pdo,'products');
@@ -200,6 +298,7 @@ try {
     if($outletCol) $sql.=' WHERE p.outlet_id=?';
     $sql.=' ORDER BY p.id ASC';
     $q=$pdo->prepare($sql);$q->execute($outletCol?[$outletId]:[]);$rows=$q->fetchAll();
+    hydrateProductRelations($pdo,$rows);
     respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows]);
   }
 
@@ -303,6 +402,7 @@ try {
       $q=$pdo->prepare($sql);
       $q->execute(isset($columns['outlet_id'])?[$code,$savedId,$outletId]:[$code,$savedId]);
     }
+    syncProductRelations($pdo,$outletId,$savedId,$p);
     respond(['ok'=>true,'id'=>$savedId,'outletId'=>$outletId,'category_id'=>isset($p['category_id'])?(int)$p['category_id']:null,'group_id'=>isset($p['group_id'])?(int)$p['group_id']:null,'selling_price'=>isset($p['price'])?(float)$p['price']:null]);
   }
   respond(['ok'=>false,'error'=>'Unknown action.'],404);
