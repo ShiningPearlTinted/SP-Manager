@@ -355,15 +355,24 @@ function App(){
      const localById=new Map(localProducts.map(x=>[String(x?.id),x]));
      const localByCode=new Map(localProducts.filter(x=>x?.code).map(x=>[String(x.code),x]));
      const cr=await centralProductsRequest("catalog",{outlet_id:"SP01"});
-     if(Array.isArray(cr?.categories)&&cr.categories.length){
+     if(Array.isArray(cr?.categories)){
        const remoteCats=cr.categories.map(x=>String(x.category_name||"").trim()).filter(Boolean);
-       const merged=[...new Set([...remoteCats,...load("categories",[])])];
-       localStorage.setItem("sp_categories",JSON.stringify(merged));
+       if(remoteCats.length){
+         localStorage.setItem("sp_categories",JSON.stringify(remoteCats));
+         setCategories(remoteCats);
+       }
      }
-     if(Array.isArray(cr?.groups)&&cr.groups.length){
+     if(Array.isArray(cr?.groups)){
        const remoteGroups=cr.groups.map(x=>String(x.group_name||"").trim()).filter(Boolean);
-       const merged=[...new Set([...remoteGroups,...load("productGroups",[])])];
-       localStorage.setItem("sp_productGroups",JSON.stringify(merged));
+       if(remoteGroups.length){
+         localStorage.setItem("sp_productGroups",JSON.stringify(remoteGroups));
+         setProductGroups(remoteGroups);
+         const remoteMeta={}; const remoteGroupCats={};
+         cr.groups.forEach(g=>{const n=String(g.group_name||"").trim();if(!n)return;remoteMeta[n]={parent:String(g.parent_name||g.parent||"").trim(),image:String(g.image_url||g.image||"").trim(),rank:Number(g.sort_order||g.rank||0),category:String(g.category_name||"").trim()};if(remoteMeta[n].category)remoteGroupCats[n]=remoteMeta[n].category;});
+         localStorage.setItem("sp_productGroupMeta",JSON.stringify(remoteMeta));
+         localStorage.setItem("sp_productGroupCategories",JSON.stringify(remoteGroupCats));
+         setGroupMeta(remoteMeta);
+       }
      }
      // Ensure existing local Product Master categories/groups are also present in relational tables.
      const localCats=load("categories",[]);
@@ -372,23 +381,25 @@ function App(){
      const localMeta=load("productGroupMeta",{});
      const localGroupCats=load("productGroupCategories",{});
      await Promise.all((Array.isArray(localGroups)?localGroups:[]).filter(Boolean).map(name=>centralProductsRequest("save-group",{outlet_id:"SP01",group:{name,parent:localMeta?.[name]?.parent||"",category:localMeta?.[name]?.category||localGroupCats?.[name]||"",image:localMeta?.[name]?.image||"",rank:Number(localMeta?.[name]?.rank)||0}}).catch(()=>null)));
-     const pr=await centralProductsRequest("list",{outlet_id:"SP01"});
-     if(Number(pr?.count||0)>0){
-       const mapped=(pr.products||[]).map(centralProductToApp).filter(Boolean).map(x=>{
-         const local=localById.get(String(x.id))||localByCode.get(String(x.code||""));
-         return {...x,category:x.category||local?.category||"",categoryId:x.categoryId||local?.categoryId||null,group:x.group||local?.group||"",groupId:x.groupId||local?.groupId||null};
-       });
-       if(mapped.length){
-         // Keep one local Product Master row per MySQL id/SKU. Older sync versions
-         // could leave a duplicate local row after Edit + Save.
-         const seenIds=new Set(),seenCodes=new Set(),deduped=[];
-         for(const item of mapped){const iid=String(item?.id??"");const icode=String(item?.code??"").trim();if((iid&&seenIds.has(iid))||(icode&&seenCodes.has(icode)))continue;if(iid)seenIds.add(iid);if(icode)seenCodes.add(icode);deduped.push(item);}
-         mapped.length=0; mapped.push(...deduped);
-         localStorage.setItem("sp_products",JSON.stringify(mapped));
-         // Backfill relational category_id/group_id for existing products whose names
-         // were already present in the local Product Master but the old MySQL row had NULL FKs.
-         await Promise.all(mapped.filter(x=>x.category||x.group).map(x=>centralProductsRequest("save",{outlet_id:"SP01",product:x}).catch(()=>null)));
+     let pr=await centralProductsRequest("list",{outlet_id:"SP01"});
+     // MySQL is authoritative whenever the Product API responds successfully.
+     // If the relational table is still empty, migrate the existing local Product Master once,
+     // then immediately reload from MySQL. Never merge local-only products into a non-empty DB.
+     if(Number(pr?.count||0)===0 && Array.isArray(localProducts) && localProducts.length){
+       for(const lp of localProducts){
+         try{await centralProductsRequest("save",{outlet_id:"SP01",product:lp});}catch(e){console.warn("Product migration failed",lp?.code||lp?.name,e?.message||e);}
        }
+       pr=await centralProductsRequest("list",{outlet_id:"SP01"});
+     }
+     if(Array.isArray(pr?.products)){
+       const mapped=(pr.products||[]).map(centralProductToApp).filter(Boolean);
+       // Keep one local Product Master row per MySQL id/SKU. The remote result itself is the source of truth.
+       const seenIds=new Set(),seenCodes=new Set(),deduped=[];
+       for(const item of mapped){const iid=String(item?.id??"");const icode=String(item?.code??"").trim();if((iid&&seenIds.has(iid))||(icode&&seenCodes.has(icode)))continue;if(iid)seenIds.add(iid);if(icode)seenCodes.add(icode);deduped.push(item);}
+       localStorage.setItem("sp_products",JSON.stringify(deduped));
+       setProducts(deduped);
+       // Backfill/repair relational Category, Group, Barcode, Price and Image data using the exact MySQL rows.
+       await Promise.all(deduped.filter(x=>x.category||x.group).map(x=>centralProductsRequest("save",{outlet_id:"SP01",product:x}).catch(e=>console.warn("Product relational repair failed",x?.code||x?.name,e?.message||e))));
      }
     }catch(e){console.warn("Central products/catalog sync unavailable; local products remain active.",e?.message||e)}
    }catch(e){console.warn("Central database sync unavailable; local cache remains active.",e?.message||e)}
@@ -1568,18 +1579,30 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
   const code=candidate12+check;
   setForm(f=>{const current=(f.barcodes||[]).map(String).filter(Boolean);const all=f.barcode&&!current.includes(String(f.barcode))?[String(f.barcode),...current]:current;return {...f,barcode:f.barcode||code,barcodes:[...all,code].filter((x,i,a)=>a.indexOf(x)===i)}});
  };
- const refreshProducts=()=>{
-  const nextProducts=load("products",products).map(normalizeProductStockControl);
-  const nextCategories=load("categories",categories);
-  const nextGroups=load("productGroups",productGroups);
-  const nextGroupCategories=load("productGroupCategories",groupCategories);
-  const nextGroupMeta=load("productGroupMeta",groupMeta);
-  setProducts(nextProducts);
-  setCategories(Array.isArray(nextCategories)?nextCategories:categories);
-  setProductGroups(Array.isArray(nextGroups)?nextGroups:productGroups);
-  setGroupCategories(nextGroupCategories&&typeof nextGroupCategories==="object"?nextGroupCategories:groupCategories);
-  setGroupMeta(nextGroupMeta&&typeof nextGroupMeta==="object"?nextGroupMeta:groupMeta);
-  setSelectedProductId(null);
+ const refreshProducts=async()=>{
+  try{
+   const cr=await centralProductsRequest("catalog",{outlet_id:"SP01"});
+   if(Array.isArray(cr?.categories)){
+    const cats=cr.categories.map(x=>String(x.category_name||"").trim()).filter(Boolean);
+    if(cats.length){localStorage.setItem("sp_categories",JSON.stringify(cats));setCategories(cats);}
+   }
+   if(Array.isArray(cr?.groups)){
+    const groupsRemote=cr.groups.map(x=>String(x.group_name||"").trim()).filter(Boolean);
+    if(groupsRemote.length){
+     localStorage.setItem("sp_productGroups",JSON.stringify(groupsRemote));setProductGroups(groupsRemote);
+     const meta={},cats={};cr.groups.forEach(g=>{const n=String(g.group_name||"").trim();if(!n)return;meta[n]={parent:String(g.parent_name||g.parent||"").trim(),image:String(g.image_url||g.image||"").trim(),rank:Number(g.sort_order||g.rank||0),category:String(g.category_name||"").trim()};if(meta[n].category)cats[n]=meta[n].category;});
+     localStorage.setItem("sp_productGroupMeta",JSON.stringify(meta));localStorage.setItem("sp_productGroupCategories",JSON.stringify(cats));setGroupMeta(meta);setGroupCategories(cats);
+    }
+   }
+   const pr=await centralProductsRequest("list",{outlet_id:"SP01"});
+   const remote=(pr.products||[]).map(centralProductToApp).filter(Boolean);
+   const seenIds=new Set(),seenCodes=new Set(),deduped=[];
+   for(const item of remote){const iid=String(item?.id??"");const code=String(item?.code??"").trim();if((iid&&seenIds.has(iid))||(code&&seenCodes.has(code)))continue;if(iid)seenIds.add(iid);if(code)seenCodes.add(code);deduped.push(item);}
+   localStorage.setItem("sp_products",JSON.stringify(deduped));setProducts(deduped);setSelectedProductId(null);setNotice(`Product data refreshed from SP-Central (${deduped.length} product${deduped.length===1?"":"s"}).`);
+  }catch(e){
+   // Preserve offline/local behavior only when the central API is unavailable.
+   const nextProducts=load("products",products).map(normalizeProductStockControl);setProducts(nextProducts);setNotice("SP-Central could not be reached. Local product cache remains active: "+(e?.message||"Unknown error"));
+  }
  };
  const requestDeleteProduct=()=>{
   const product=products.find(p=>p.id===selectedProductId);

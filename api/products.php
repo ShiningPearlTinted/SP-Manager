@@ -249,10 +249,10 @@ try {
 
   if($action==='catalog' && $_SERVER['REQUEST_METHOD']==='GET'){
     $cats=[]; $groups=[];
-    $q=$pdo->prepare('SELECT * FROM product_categories WHERE (outlet_id=? OR outlet_id IS NULL) ORDER BY sort_order ASC,id ASC');
+    $q=$pdo->prepare('SELECT c.*, c.category_name AS category_name FROM product_categories c WHERE (c.outlet_id=? OR c.outlet_id IS NULL) ORDER BY c.sort_order ASC,c.id ASC');
     $q->execute([$outletId]); $cats=$q->fetchAll();
-    $q=$pdo->prepare('SELECT * FROM product_groups WHERE (outlet_id=? OR outlet_id IS NULL) ORDER BY sort_order ASC,id ASC');
-    $q->execute([$outletId]); $groups=$q->fetchAll();
+    $groupSql='SELECT g.*, c.category_name AS category_name, parent.group_name AS parent_name FROM product_groups g LEFT JOIN product_categories c ON c.id=g.category_id LEFT JOIN product_groups parent ON parent.id=g.parent_id WHERE (g.outlet_id=? OR g.outlet_id IS NULL) ORDER BY g.sort_order ASC,g.id ASC';
+    $q=$pdo->prepare($groupSql); $q->execute([$outletId]); $groups=$q->fetchAll();
     respond(['ok'=>true,'outletId'=>$outletId,'categories'=>$cats,'groups'=>$groups]);
   }
 
