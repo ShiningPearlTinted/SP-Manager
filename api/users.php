@@ -23,7 +23,9 @@ function normalizeUser(PDO $pdo,array $u,int $outletId):array{
  if($roleName==='Administrator')$permissions=array_fill_keys(array_keys($permissionLabels),true);
  $roleId=role($pdo,$roleName);$hash='';$plain=(string)($u['password']??'');if($plain!=='')$hash=password_hash($plain,PASSWORD_DEFAULT);
  $id=(int)($u['dbId']??0);if(!$id)$id=(int)($u['id']??0);
- if(!$id){$q=$pdo->prepare('SELECT id FROM users WHERE username=? LIMIT 1');$q->execute([$username]);$id=(int)($q->fetchColumn()?:0);}
+ // A browser/local user id (Date.now()) is not a MySQL user id. Only update when the id exists for this outlet.
+ if($id){$q=$pdo->prepare('SELECT id FROM users WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute([$id,$outletId]);if(!(int)($q->fetchColumn()?:0))$id=0;}
+ if(!$id){$q=$pdo->prepare('SELECT id FROM users WHERE LOWER(username)=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute([$username,$outletId]);$id=(int)($q->fetchColumn()?:0);}
  $cols=['outlet_id','name','username','role_id','enabled','permissions_json'];$vals=[$outletId,$name,$username,$roleId,!empty($u['enabled'])?1:0,json_encode($permissions,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)];
  if($hash!==''){$cols[]='password_hash';$vals[]=$hash;}
  if($id){$sets=[];foreach($cols as $c)$sets[]="`$c`=?";$vals[]=$id;$pdo->prepare('UPDATE users SET '.implode(',',$sets).' WHERE id=?')->execute($vals);}
