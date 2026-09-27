@@ -42,9 +42,49 @@ function resolveOutletId(PDO $pdo, mixed $value): int {
   $q->execute([$v ?: 'SP01']);
   return (int)($q->fetchColumn() ?: 0);
 }
+function resolveCategoryId(PDO $pdo, int $outletId, mixed $categoryId, mixed $categoryName): ?int {
+  $id=(int)($categoryId ?? 0);
+  if($id>0){
+    $q=$pdo->prepare('SELECT id FROM product_categories WHERE id=?'.(hasColumnCached($pdo,'product_categories','outlet_id')?' AND (outlet_id=? OR outlet_id IS NULL)':'').' LIMIT 1');
+    $q->execute(hasColumnCached($pdo,'product_categories','outlet_id')?[$id,$outletId]:[$id]);
+    $found=$q->fetchColumn(); if($found!==false) return (int)$found;
+  }
+  $name=trim((string)($categoryName ?? ''));
+  if($name==='') return null;
+  $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=?'.(hasColumnCached($pdo,'product_categories','outlet_id')?' AND (outlet_id=? OR outlet_id IS NULL)':'').' ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END, id ASC LIMIT 1');
+  $args=hasColumnCached($pdo,'product_categories','outlet_id')?[$name,$outletId,$outletId]:[$name];
+  if(!hasColumnCached($pdo,'product_categories','outlet_id')) $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? ORDER BY id ASC LIMIT 1');
+  $q->execute($args); $found=$q->fetchColumn();
+  return $found===false?null:(int)$found;
+}
+function resolveGroupId(PDO $pdo, int $outletId, mixed $groupId, mixed $groupName, ?int $categoryId=null): ?int {
+  $id=(int)($groupId ?? 0);
+  $hasOutlet=hasColumnCached($pdo,'product_groups','outlet_id');
+  if($id>0){
+    $sql='SELECT id FROM product_groups WHERE id=?'; $args=[$id];
+    if($hasOutlet){$sql.=' AND (outlet_id=? OR outlet_id IS NULL)';$args[]=$outletId;}
+    if($categoryId!==null){$sql.=' AND (category_id=? OR category_id IS NULL)';$args[]=$categoryId;}
+    $sql.=' LIMIT 1'; $q=$pdo->prepare($sql);$q->execute($args);$found=$q->fetchColumn(); if($found!==false)return(int)$found;
+  }
+  $name=trim((string)($groupName ?? ''));
+  if($name==='') return null;
+  $sql='SELECT id FROM product_groups WHERE group_name=?';$args=[$name];
+  if($hasOutlet){$sql.=' AND (outlet_id=? OR outlet_id IS NULL)';$args[]=$outletId;}
+  if($categoryId!==null){$sql.=' AND (category_id=? OR category_id IS NULL)';$args[]=$categoryId;}
+  $sql.=' ORDER BY CASE WHEN category_id IS NULL THEN 1 ELSE 0 END, id ASC LIMIT 1';
+  $q=$pdo->prepare($sql);$q->execute($args);$found=$q->fetchColumn();
+  return $found===false?null:(int)$found;
+}
+function hasColumnCached(PDO $pdo, string $table, string $column): bool {
+  static $cache=[]; $key=$table.'|'.$column;
+  if(array_key_exists($key,$cache)) return $cache[$key];
+  $cols=tableColumns($pdo,$table); return $cache[$key]=isset($cols[$column]);
+}
+
 function valueFor(string $column, array $p, int $outletId): mixed {
   $map=[
     'id'=>['id'], 'outlet_id'=>['outlet_id'],
+    'category_id'=>['category_id'], 'group_id'=>['group_id'],
     'sku'=>['code','sku'], 'product_code'=>['code','sku'], 'code'=>['code','sku'],
     'name'=>['name'], 'product_name'=>['name'], 'description'=>['description'],
     'category'=>['category'], 'group_name'=>['group','category'], 'group'=>['group','category'],
@@ -82,9 +122,56 @@ try {
   $action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
   if($action==='health') respond(['ok'=>true,'service'=>'SP-Manager products API','database'=>$pdo->query('SELECT DATABASE()')->fetchColumn(),'outletId'=>$outletId,'columns'=>array_keys($columns)]);
 
+  if($action==='catalog' && $_SERVER['REQUEST_METHOD']==='GET'){
+    $cats=[]; $groups=[];
+    $q=$pdo->prepare('SELECT * FROM product_categories WHERE (outlet_id=? OR outlet_id IS NULL) ORDER BY sort_order ASC,id ASC');
+    $q->execute([$outletId]); $cats=$q->fetchAll();
+    $q=$pdo->prepare('SELECT * FROM product_groups WHERE (outlet_id=? OR outlet_id IS NULL) ORDER BY sort_order ASC,id ASC');
+    $q->execute([$outletId]); $groups=$q->fetchAll();
+    respond(['ok'=>true,'outletId'=>$outletId,'categories'=>$cats,'groups'=>$groups]);
+  }
+
+  if($action==='save-category' && $_SERVER['REQUEST_METHOD']==='POST'){
+    $b=jsonBody(); $c=$b['category']??$b;
+    if(!is_array($c)) throw new InvalidArgumentException('category is required.');
+    $name=trim((string)($c['category_name']??$c['name']??'')); if($name==='') throw new InvalidArgumentException('Category name is required.');
+    $id=(int)($c['id']??0);
+    $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');
+    $q->execute([$name,$outletId,$outletId]); $existing=(int)($q->fetchColumn()?:0); if($existing>0)$id=$existing;
+    $data=['outlet_id'=>$outletId,'category_name'=>$name,'category_code'=>trim((string)($c['category_code']??$c['code']??'')),'image_url'=>(string)($c['image_url']??$c['image']??''),'sort_order'=>(int)($c['sort_order']??$c['rank']??0),'active'=>($c['active']??true)?1:0];
+    if($id>0){$sets=[];$vals=[];foreach($data as $col=>$v){$sets[]='`'.$col.'`=?';$vals[]=$v;}$vals[]=$id;$vals[]=$outletId;$q=$pdo->prepare('UPDATE product_categories SET '.implode(',',$sets).' WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute($vals);}else{$q=$pdo->prepare('INSERT INTO product_categories (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');$q->execute(array_values($data));$id=(int)$pdo->lastInsertId();}
+    respond(['ok'=>true,'id'=>$id,'category_name'=>$name]);
+  }
+
+  if($action==='save-group' && $_SERVER['REQUEST_METHOD']==='POST'){
+    $b=jsonBody(); $g=$b['group']??$b;
+    if(!is_array($g)) throw new InvalidArgumentException('group is required.');
+    $name=trim((string)($g['group_name']??$g['name']??'')); if($name==='') throw new InvalidArgumentException('Product group name is required.');
+    $categoryId=resolveCategoryId($pdo,$outletId,$g['category_id']??null,$g['category']??$g['category_name']??null);
+    $parentName=trim((string)($g['parent']??$g['parent_name']??'')); $parentId=(int)($g['parent_id']??0);
+    if($parentId<=0 && $parentName!==''){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$parentName,$outletId,$outletId]);$parentId=(int)($q->fetchColumn()?:0);}
+    $id=(int)($g['id']??0);
+    $q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$name,$outletId,$outletId]);$existing=(int)($q->fetchColumn()?:0);if($existing>0)$id=$existing;
+    if($id<=0){
+      $oldName=trim((string)($g['old_name']??''));
+      if($oldName!=='' && strcasecmp($oldName,$name)!==0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$oldName,$outletId,$outletId]);$id=(int)($q->fetchColumn()?:0);}
+    }
+    $data=['outlet_id'=>$outletId,'category_id'=>$categoryId?:null,'parent_id'=>$parentId?:null,'group_name'=>$name,'group_code'=>trim((string)($g['group_code']??$g['code']??'')),'image_url'=>(string)($g['image_url']??$g['image']??''),'sort_order'=>(int)($g['sort_order']??$g['rank']??0),'active'=>($g['active']??true)?1:0];
+    if($id>0){$sets=[];$vals=[];foreach($data as $col=>$v){$sets[]='`'.$col.'`=?';$vals[]=$v;}$vals[]=$id;$vals[]=$outletId;$q=$pdo->prepare('UPDATE product_groups SET '.implode(',',$sets).' WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute($vals);}else{$q=$pdo->prepare('INSERT INTO product_groups (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');$q->execute(array_values($data));$id=(int)$pdo->lastInsertId();}
+    respond(['ok'=>true,'id'=>$id,'group_name'=>$name,'category_id'=>$categoryId,'parent_id'=>$parentId?:null]);
+  }
+
   if($action==='list' && $_SERVER['REQUEST_METHOD']==='GET'){
     $outletCol=isset($columns['outlet_id']);
-    $sql='SELECT * FROM `products`'.($outletCol?' WHERE outlet_id=?':'').' ORDER BY id ASC';
+    $hasCategoryId=isset($columns['category_id']); $hasGroupId=isset($columns['group_id']);
+    $select='p.*';
+    if($hasCategoryId) $select.=', c.category_name AS category_name';
+    if($hasGroupId) $select.=', g.group_name AS group_name';
+    $sql='SELECT '.$select.' FROM `products` p';
+    if($hasCategoryId) $sql.=' LEFT JOIN product_categories c ON c.id=p.category_id';
+    if($hasGroupId) $sql.=' LEFT JOIN product_groups g ON g.id=p.group_id';
+    if($outletCol) $sql.=' WHERE p.outlet_id=?';
+    $sql.=' ORDER BY p.id ASC';
     $q=$pdo->prepare($sql);$q->execute($outletCol?[$outletId]:[]);$rows=$q->fetchAll();
     respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows]);
   }
@@ -105,6 +192,19 @@ try {
     $nameValue=trim((string)($p['name']??''));
     if($nameValue==='') throw new InvalidArgumentException('Product name is required.');
     if($outletId<=0) throw new InvalidArgumentException('Outlet not found.');
+
+    // Resolve Product Master names to relational foreign keys. The UI may send
+    // category/group names, while MySQL products stores category_id/group_id.
+    if(isset($columns['category_id'])){
+      $resolvedCategoryId=resolveCategoryId($pdo,$outletId,$p['category_id']??null,$p['category']??$p['category_name']??null);
+      if($resolvedCategoryId!==null) $p['category_id']=$resolvedCategoryId;
+      else if(array_key_exists('category_id',$p) && $p['category_id']!==null && (int)$p['category_id']>0) throw new InvalidArgumentException('Selected product category was not found.');
+    }
+    if(isset($columns['group_id'])){
+      $resolvedGroupId=resolveGroupId($pdo,$outletId,$p['group_id']??null,$p['group']??$p['group_name']??null,isset($p['category_id'])?(int)$p['category_id']:null);
+      if($resolvedGroupId!==null) $p['group_id']=$resolvedGroupId;
+      else if(array_key_exists('group_id',$p) && $p['group_id']!==null && (int)$p['group_id']>0) throw new InvalidArgumentException('Selected product group was not found.');
+    }
 
     $existsId=null;
     if($id>0 && isset($columns['id'])){
