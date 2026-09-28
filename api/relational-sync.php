@@ -189,6 +189,36 @@ function findSupplierDbId(PDO $pdo, int $outletId, array $item): int {
   if(isset($schema['phone']))$data['phone']=(string)pick($supplier,['phone','phoneNumber'],''); if(isset($schema['email']))$data['email']=(string)pick($supplier,['email'],''); if(isset($schema['address']))$data['address']=(string)pick($supplier,['address'],''); if(isset($schema['tax_number']))$data['tax_number']=(string)pick($supplier,['taxNumber','tax_number'],''); if(isset($schema['active']))$data['active']=1; if(isset($schema['enabled']))$data['enabled']=1; if(isset($schema['balance']))$data['balance']=0;
   validateRequired($schema,$data,'suppliers'); $id=insertRow($pdo,'suppliers',$data); if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id); return $id;
 }
+function purchaseNumberExists(PDO $pdo, int $outletId, string $purchaseNo, ?int $exceptId = null): bool {
+  $purchaseNo = trim($purchaseNo);
+  if ($purchaseNo === '' || !tableExists($pdo, 'purchases')) return false;
+  $schema = cols($pdo, 'purchases');
+  if (!isset($schema['purchase_no'])) return false;
+  $sql = 'SELECT id FROM purchases WHERE purchase_no=?';
+  $args = [$purchaseNo];
+  if (isset($schema['outlet_id'])) { $sql .= ' AND outlet_id=?'; $args[] = $outletId; }
+  if ($exceptId !== null && $exceptId > 0) { $sql .= ' AND id<>?'; $args[] = $exceptId; }
+  $sql .= ' LIMIT 1';
+  $q = $pdo->prepare($sql);
+  $q->execute($args);
+  return (bool)$q->fetchColumn();
+}
+function generatePurchaseNumber(PDO $pdo, int $outletId, ?int $exceptId = null): string {
+  for ($i=0; $i<100; $i++) {
+    $candidate = 'PUR-'.str_pad((string)random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+    if (!purchaseNumberExists($pdo, $outletId, $candidate, $exceptId)) return $candidate;
+  }
+  throw new RuntimeException('Unable to generate a unique purchase number.');
+}
+function existingPurchaseNumber(PDO $pdo, int $purchaseId): string {
+  if ($purchaseId <= 0 || !tableExists($pdo, 'purchases')) return '';
+  $schema = cols($pdo, 'purchases');
+  if (!isset($schema['purchase_no'])) return '';
+  $q = $pdo->prepare('SELECT purchase_no FROM purchases WHERE id=? LIMIT 1');
+  $q->execute([$purchaseId]);
+  return trim((string)($q->fetchColumn() ?: ''));
+}
+
 function findProductDbId(PDO $pdo, int $outletId, array $item): int {
   if(!tableExists($pdo,'products')) return 0;
   $candidate=(int)pick($item,['productDbId','product_id','productId'],0); $direct=scopedFindId($pdo,'products',$candidate,$outletId); if($direct>0)return $direct;
@@ -280,6 +310,7 @@ try {
   $count = 0;
   $childCount = 0;
   $keep = [];
+  $purchaseNumbers = [];
 
   foreach ($items as $item) {
     if (!is_array($item)) continue;
@@ -289,8 +320,34 @@ try {
       $supplierName = trim((string)pick($item, ['name','supplierName','supplier_name'], ''));
       if ($supplierName !== '' && trim((string)pick($item, ['code','supplierCode','supplier_code'], '')) === '') $item['code'] = 'SUP-'.strtoupper(substr(sha1($outletId.'|'.$supplierName),0,8));
     }
-    if ($stateKey === 'purchases') $item['supplierDbId'] = findSupplierDbId($pdo, $outletId, $item);
+    $purchaseDbId = 0;
+    if ($stateKey === 'purchases') {
+      $item['supplierDbId'] = findSupplierDbId($pdo, $outletId, $item);
+      $purchaseCandidate = trim((string)pick($item, ['no','number','purchaseNo','purchase_no'], ''));
+      $isAutoPlaceholder = $purchaseCandidate === '' || in_array(strtolower($purchaseCandidate), ['auto generated','auto-generated','automatic','auto'], true);
+      $purchaseDbId = syncLookup($pdo, $outletId, 'purchases', $localId, 'purchases');
+      if ($purchaseDbId <= 0 && !$isAutoPlaceholder && tableExists($pdo, 'purchases')) {
+        $purchaseDbId = naturalId($pdo, 'purchases', ['outlet_id','purchase_no'], ['outlet_id'=>$outletId,'purchase_no'=>$purchaseCandidate]);
+      }
+      if ($isAutoPlaceholder) {
+        $purchaseCandidate = $purchaseDbId > 0 ? existingPurchaseNumber($pdo, $purchaseDbId) : '';
+        if ($purchaseCandidate === '') $purchaseCandidate = generatePurchaseNumber($pdo, $outletId, $purchaseDbId > 0 ? $purchaseDbId : null);
+      } elseif (purchaseNumberExists($pdo, $outletId, $purchaseCandidate, $purchaseDbId > 0 ? $purchaseDbId : null)) {
+        // A stale/duplicate browser number must never break the database unique key.
+        $purchaseCandidate = generatePurchaseNumber($pdo, $outletId, $purchaseDbId > 0 ? $purchaseDbId : null);
+      }
+      $item['no'] = $purchaseCandidate;
+      $item['number'] = $purchaseCandidate;
+      $item['purchaseNo'] = $purchaseCandidate;
+      $purchaseNumbers[] = ['local_id'=>$localId,'purchase_no'=>$purchaseCandidate,'db_id'=>$purchaseDbId];
+    }
     $dbId = syncParent($pdo, $spec['table'], $schema, $spec['map'], $item, $outletId, $stateKey, $localId, $spec['natural']);
+    if ($stateKey === 'purchases') {
+      foreach ($purchaseNumbers as &$pn) {
+        if ((string)$pn['local_id'] === $localId) { $pn['db_id'] = $dbId; break; }
+      }
+      unset($pn);
+    }
     $count++;
 
     if ($stateKey === 'sales' && tableExists($pdo, 'sale_items')) {
@@ -335,7 +392,9 @@ try {
 
   reconcileDeletes($pdo, $outletId, $stateKey, $spec['table'], '', $keep, (bool)$spec['delete']);
   $pdo->commit();
-  echo json_encode(['ok'=>true,'state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId]);
+  $response = ['ok'=>true,'state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
+  if ($stateKey === 'purchases') $response['purchase_numbers'] = $purchaseNumbers;
+  echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
   http_response_code(500);
