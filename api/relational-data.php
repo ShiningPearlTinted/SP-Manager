@@ -22,10 +22,22 @@ function mapCash(array $r):array{return['id'=>(int)$r['id'],'date'=>dt(val($r,['
 function mapStock(array $r):array{return['id'=>(int)$r['id'],'date'=>dt(val($r,['movement_date','created_at'])),'productId'=>(int)val($r,['product_id'],0),'productName'=>(string)val($r,['product_name','name'],''),'code'=>(string)val($r,['code','product_code'],''),'type'=>(string)val($r,['movement_type','type'],''),'change'=>(float)val($r,['quantity_change','quantity','change','qty'],0),'quantityAfter'=>(float)val($r,['quantity_after'],0),'reference'=>(string)val($r,['reference_no','reference'],''),'notes'=>(string)val($r,['notes','reason'],''),'createdBy'=>(string)val($r,['created_by'],'' )];}
 function mapPaymentType(array $r):array{return['id'=>(int)$r['id'],'dbId'=>(int)$r['id'],'name'=>(string)val($r,['payment_name','name'],''),'code'=>(string)val($r,['payment_code','code'],''),'enabled'=>(bool)val($r,['enabled','active'],1),'active'=>(bool)val($r,['enabled','active'],1),'markPaid'=>(bool)val($r,['mark_paid'],true),'customerRequired'=>(bool)val($r,['customer_required'],false),'position'=>(int)val($r,['sort_order','position'],0),'quickPayment'=>(bool)val($r,['quick_payment'],false),'changeAllowed'=>(bool)val($r,['change_allowed'],false),'printReceipt'=>(bool)val($r,['print_receipt'],true),'shortcutKey'=>(string)val($r,['shortcut_key'],''),'openCashDrawer'=>(bool)val($r,['open_cash_drawer'],false)];}
 function mapPromo(array $r):array{
- $days=val($r,['days_of_week'],[]); if(is_string($days)&&$days!==''){ $decoded=json_decode($days,true); if(is_array($decoded))$days=$decoded; }
- $items=val($r,['items','promotion_items','items_json'],[]); if(is_string($items)&&$items!==''){ $decoded=json_decode($items,true); if(is_array($decoded))$items=$decoded; }
+ $payload=val($r,['data_json'],null);
+ if(is_string($payload)&&$payload!==''){ $decoded=json_decode($payload,true); if(is_array($decoded))$payload=$decoded; }
+ if(!is_array($payload))$payload=[];
+ $days=val($payload,['daysOfWeek','days_of_week'],val($r,['days_of_week'],[]));
+ $items=val($payload,['items','promotion_items','items_json'],val($r,['items','promotion_items','items_json'],[]));
+ if(is_string($days)&&$days!==''){ $decoded=json_decode($days,true); if(is_array($decoded))$days=$decoded; }
+ if(is_string($items)&&$items!==''){ $decoded=json_decode($items,true); if(is_array($decoded))$items=$decoded; }
  if(!is_array($days))$days=[]; if(!is_array($items))$items=[];
- return ['id'=>(int)$r['id'],'dbId'=>(int)$r['id'],'name'=>(string)val($r,['name','title'],''),'title'=>(string)val($r,['title','name'],''),'description'=>(string)val($r,['description'],''),'active'=>(bool)val($r,['active','enabled'],1),'enabled'=>(bool)val($r,['enabled','active'],1),'startDate'=>(string)val($r,['start_date'],''),'endDate'=>(string)val($r,['end_date'],''),'discountType'=>(string)val($r,['discount_type','type'],''),'type'=>(string)val($r,['type','discount_type'],''),'value'=>(float)val($r,['discount_value','value'],0),'discountValue'=>(float)val($r,['discount_value','value'],0),'daysOfWeek'=>$days,'items'=>$items,'notes'=>(string)val($r,['notes'],'')];
+ $startAt=(string)val($r,['start_at'],val($payload,['startAt','start_date'],''));
+ $endAt=(string)val($r,['end_at'],val($payload,['endAt','end_date'],''));
+ $startDate=$startAt?substr($startAt,0,10):(string)val($payload,['startDate','start_date'],'');
+ $endDate=$endAt?substr($endAt,0,10):(string)val($payload,['endDate','end_date'],'');
+ $startTime=strlen($startAt)>=16?substr($startAt,11,5):(string)val($payload,['startTime','start_time'],'');
+ $endTime=strlen($endAt)>=16?substr($endAt,11,5):(string)val($payload,['endTime','end_time'],'');
+ $value=(float)val($payload,['value','discountValue','discount_value'],val($r,['discount_percent'],0));
+ return ['id'=>(int)$r['id'],'dbId'=>(int)$r['id'],'name'=>(string)val($r,['promotion_name'],val($payload,['name','promotionName','title'],'')),'title'=>(string)val($payload,['title','name','promotionName'],val($r,['promotion_name'],'')),'description'=>(string)val($payload,['description'],''),'active'=>(bool)val($r,['active'],1),'enabled'=>(bool)val($r,['active'],1),'startDate'=>$startDate,'startTime'=>$startTime,'endDate'=>$endDate,'endTime'=>$endTime,'discountType'=>(string)val($payload,['discountType','type'],''),'type'=>(string)val($payload,['type','discountType'],''),'value'=>$value,'discountValue'=>$value,'daysOfWeek'=>$days,'items'=>$items,'notes'=>(string)val($payload,['notes'],''), 'price'=>(float)val($r,['price'],0)];
 }
 function mapSupplier(array $r):array{return['id'=>(int)$r['id'],'dbId'=>(int)$r['id'],'code'=>(string)val($r,['code','supplier_code'],''),'name'=>(string)val($r,['name','supplier_name'],''),'phone'=>(string)val($r,['phone','phone_number'],''),'email'=>(string)val($r,['email','email_address'],''),'address'=>(string)val($r,['address','supplier_address'],''),'taxNumber'=>(string)val($r,['tax_number','tax_no'],''),'active'=>(bool)val($r,['active','enabled'],1),'enabled'=>(bool)val($r,['enabled','active'],1)];}
 function mapZReport(array $r):array{

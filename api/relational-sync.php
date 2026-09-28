@@ -236,6 +236,63 @@ function supplierColumn(array $schema, array $candidates): ?string {
   }
   return null;
 }
+
+function findCustomerDbId(PDO $pdo, int $outletId, array $item): int {
+  if (!tableExists($pdo,'customers')) return 0;
+  $schema = cols($pdo,'customers');
+  $candidates = [];
+  foreach (['customerDbId','customer_id','customerId'] as $k) {
+    if (array_key_exists($k,$item) && $item[$k] !== null && $item[$k] !== '') $candidates[] = (int)$item[$k];
+  }
+  foreach ($candidates as $candidate) {
+    $id = scopedFindId($pdo,'customers',$candidate,$outletId);
+    if ($id > 0) return $id;
+  }
+  $customer = is_array($item['customer'] ?? null) ? $item['customer'] : [];
+  $code = trim((string)pick($customer,['code','customerCode','customer_code'],pick($item,['customerCode','customer_code'],'')));
+  $phone = trim((string)pick($customer,['phone','phoneNumber','phone_number'],pick($item,['phone','phoneNumber','phone_number'],'')));
+  $name = trim((string)pick($customer,['name','customerName','customer_name'],pick($item,['customerName','customer_name'],'')));
+  if ($code !== '' && isset($schema['code'])) {
+    $q=$pdo->prepare('SELECT id FROM customers WHERE code=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY id ASC LIMIT 1');
+    $q->execute([$code,$outletId]); $id=(int)($q->fetchColumn()?:0); if($id>0)return $id;
+  }
+  if ($phone !== '' && isset($schema['phone'])) {
+    $q=$pdo->prepare('SELECT id FROM customers WHERE phone=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY id ASC LIMIT 1');
+    $q->execute([$phone,$outletId]); $id=(int)($q->fetchColumn()?:0); if($id>0)return $id;
+  }
+  if ($name !== '' && isset($schema['name'])) {
+    $q=$pdo->prepare('SELECT id FROM customers WHERE name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY id ASC LIMIT 1');
+    $q->execute([$name,$outletId]); $id=(int)($q->fetchColumn()?:0); if($id>0)return $id;
+  }
+  return 0;
+}
+function refreshCustomerLoyalty(PDO $pdo, int $outletId, int $customerId): void {
+  if ($customerId <= 0 || !tableExists($pdo,'customers') || !tableExists($pdo,'sales')) return;
+  $salesSchema = cols($pdo,'sales');
+  $statusSql = " AND UPPER(COALESCE(status,'')) NOT IN ('VOID','VOIDED','REFUND','REFUNDED')";
+  $paidSql = " AND (UPPER(COALESCE(payment_status,''))='PAID' OR (UPPER(COALESCE(payment_status,''))='' AND total > 0))";
+  $sql = 'SELECT COUNT(*) visits, COALESCE(SUM(total),0) spend FROM sales WHERE outlet_id=? AND customer_id=?'.$statusSql.$paidSql;
+  $q=$pdo->prepare($sql); $q->execute([$outletId,$customerId]); $agg=$q->fetch() ?: ['visits'=>0,'spend'=>0];
+  $visits=(int)$agg['visits']; $spend=(float)$agg['spend']; $points=(float)floor(max(0,$spend));
+  $sets=[]; $args=[]; $custSchema=cols($pdo,'customers');
+  foreach ([['visits',$visits],['spend',$spend],['loyalty_points',$points]] as [$col,$val]) {
+    if(isset($custSchema[$col])){$sets[]='`'.$col.'`=?';$args[]=$val;}
+  }
+  if($sets){$args[]=$customerId;$args[]=$outletId;$where='id=?';if(isset($custSchema['outlet_id']))$where.=' AND (outlet_id=? OR outlet_id IS NULL)';$pdo->prepare('UPDATE customers SET '.implode(',',$sets).' WHERE '.$where.' LIMIT 1')->execute($args);}
+  if(tableExists($pdo,'loyalty_accounts')){
+    $la=cols($pdo,'loyalty_accounts');
+    $colsOut=['outlet_id','customer_id','points_balance','visits','total_spend','active'];
+    $vals=[$outletId,$customerId,$points,$visits,$spend,1];
+    $filtered=[];$filteredVals=[];
+    foreach($colsOut as $i=>$col) if(isset($la[$col])){$filtered[]='`'.$col.'`';$filteredVals[]=$vals[$i];}
+    if($filtered){
+      $update=[]; foreach(['points_balance','visits','total_spend','active'] as $col) if(isset($la[$col]))$update[]='`'.$col.'`=VALUES(`'.$col.'`)';
+      $sql2='INSERT INTO loyalty_accounts ('.implode(',',$filtered).') VALUES ('.implode(',',array_fill(0,count($filtered),'?')).')';
+      if($update)$sql2.=' ON DUPLICATE KEY UPDATE '.implode(',',$update);
+      $pdo->prepare($sql2)->execute($filteredVals);
+    }
+  }
+}
 function findSupplierDbId(PDO $pdo, int $outletId, array $item): int {
   if (!tableExists($pdo, 'suppliers')) throw new RuntimeException('Suppliers table is missing.');
   $schema = cols($pdo, 'suppliers');
@@ -409,8 +466,17 @@ try {
       ]
     ],
     'promos' => [
-      'table'=>'promotions','natural'=>['outlet_id','name'],'delete'=>true,
-      'map'=>['outlet_id'=>['outlet_id'],'name'=>['name','title'],'title'=>['title','name'],'description'=>['description'],'active'=>['active','enabled'],'enabled'=>['enabled','active'],'start_date'=>['startDate','start_date'],'end_date'=>['endDate','end_date'],'discount_type'=>['discountType','type'],'type'=>['type','discountType'],'discount_value'=>['value','discountValue','discount_value'],'value'=>['value','discountValue','discount_value'],'days_of_week'=>['daysOfWeek','days_of_week'],'items'=>['items','promotion_items','items_json'],'notes'=>['notes']]
+      'table'=>'promotions','natural'=>['outlet_id','promotion_name'],'delete'=>true,
+      'map'=>[
+        'outlet_id'=>['outlet_id'],
+        'promotion_name'=>['promotionName','name','title','promotion_name'],
+        'price'=>['price'],
+        'discount_percent'=>['discountPercent','discount_percent','value'],
+        'start_at'=>['startAt','start_at'],
+        'end_at'=>['endAt','end_at'],
+        'active'=>['active','enabled'],
+        'data_json'=>['dataJson','data_json','metadata_json']
+      ]
     ],
     'suppliers' => [
       'table'=>'suppliers','natural'=>['outlet_id'],'delete'=>true,
@@ -453,12 +519,16 @@ try {
   $childCount = 0;
   $keep = [];
   $purchaseNumbers = [];
+  $loyaltyCustomerIds = [];
 
   foreach ($items as $item) {
     if (!is_array($item)) continue;
     $localId = (string)($item['id'] ?? $item['no'] ?? $item['number'] ?? $item['name'] ?? uniqid('', true));
     $keep[] = $localId;
     if ($stateKey === 'sales') {
+      $resolvedCustomerId = findCustomerDbId($pdo,$outletId,$item);
+      if ($resolvedCustomerId > 0) $item['customer_id'] = $resolvedCustomerId;
+      else $item['customer_id'] = null;
       $candidate=trim((string)pick($item,['no','saleNo','invoiceNo','invoice_number'],''));
       $saleDbId=syncLookup($pdo,$outletId,'sales',$localId,'sales');
       if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true)){$candidate=$saleDbId>0?(string)val((array)($pdo->query('SELECT sale_no FROM sales WHERE id='.(int)$saleDbId.' LIMIT 1')->fetch()?:[]),['sale_no'],''):'';if($candidate==='')$candidate=generateServerDocumentNumber($pdo,$outletId,'Invoice','INV-',$saleDbId>0?$saleDbId:null);}
@@ -481,6 +551,28 @@ try {
       $item['supplier_name'] = $supplierName;
     }
     $purchaseDbId = 0;
+    if ($stateKey === 'promos') {
+      $promotionName = trim((string)pick($item, ['name','promotionName','promotion_name','title'], ''));
+      if ($promotionName === '') throw new RuntimeException('Promotion name is required.');
+      $payload = $item;
+      if (!isset($payload['items']) || !is_array($payload['items'])) $payload['items'] = [];
+      $payload['name'] = $promotionName;
+      $payload['promotionName'] = $promotionName;
+      $item['promotion_name'] = $promotionName;
+      $item['promotionName'] = $promotionName;
+      $startDate = trim((string)pick($item,['startDate','start_date'],''));
+      $startTime = trim((string)pick($item,['startTime','start_time'],''));
+      $endDate = trim((string)pick($item,['endDate','end_date'],''));
+      $endTime = trim((string)pick($item,['endTime','end_time'],''));
+      $item['start_at'] = $startDate!=='' ? $startDate.' '.($startTime!==''?$startTime.':00':'00:00:00') : null;
+      $item['end_at'] = $endDate!=='' ? $endDate.' '.($endTime!==''?$endTime.':00':'23:59:59') : null;
+      $item['data_json'] = json_encode($payload, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+      $items = is_array($item['items'] ?? null) ? $item['items'] : [];
+      if (count($items) === 1) {
+        $it=$items[0]; $ptype=(string)($it['priceType']??'discount'); $val=(float)($it['value']??0);
+        if($ptype==='fixed') $item['price']=$val; else $item['discount_percent']=$val;
+      }
+    }
     if ($stateKey === 'paymentTypes') {
       $paymentName = trim((string)pick($item, ['name','paymentName','payment_name'], ''));
       if ($paymentName === '') throw new RuntimeException('Payment type name is required.');
@@ -525,6 +617,10 @@ try {
       unset($pn);
     }
     $count++;
+    if ($stateKey === 'sales') {
+      $cid=(int)($item['customer_id']??0);
+      if($cid>0)$loyaltyCustomerIds[$cid]=true;
+    }
 
     if ($stateKey === 'sales' && tableExists($pdo,'sale_items')) {
       // Sales consume stock only while the sale is active. Work out the previous
@@ -605,6 +701,9 @@ try {
   }
 
   reconcileDeletes($pdo, $outletId, $stateKey, $spec['table'], '', $keep, (bool)$spec['delete']);
+  if ($stateKey === 'sales' && $loyaltyCustomerIds) {
+    foreach (array_keys($loyaltyCustomerIds) as $cid) refreshCustomerLoyalty($pdo,$outletId,(int)$cid);
+  }
   $pdo->commit();
   $response = ['ok'=>true,'api_version'=>'V10','state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
   if ($stateKey === 'purchases') $response['purchase_numbers'] = $purchaseNumbers;
