@@ -4,7 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('X-SP-Manager-DB-Version: V7');
+header('X-SP-Manager-DB-Version: V10');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $config = require __DIR__ . '/config.php';
@@ -174,6 +174,9 @@ function syncParent(PDO $pdo, string $table, array $schema, array $aliases, arra
   $row = writableRow($schema, $aliases, $item, $outletId);
   validateRequired($schema, $row, $table);
   $dbId = syncLookup($pdo, $outletId, $stateKey, $localId, $stateKey);
+  // Relational reads intentionally expose the real DB id. Reuse it when the
+  // sync map is missing (for example after a fresh deployment or cache clear).
+  if (!$dbId && ctype_digit((string)$localId)) $dbId = scopedFindId($pdo, $table, (int)$localId, $outletId);
   if (!$dbId && $naturalKeys) $dbId = naturalId($pdo, $table, $naturalKeys, $row);
   if ($dbId) updateRow($pdo, $table, $row, $dbId); else $dbId = insertRow($pdo, $table, $row);
   saveSyncMap($pdo, $outletId, $stateKey, $localId, $stateKey, $dbId);
@@ -192,6 +195,33 @@ function insertChild(PDO $pdo, string $table, array $schema, array $aliases, arr
   insertRow($pdo, $table, $row);
 }
 
+
+function productColumn(array $schema, array $candidates): ?string {
+  foreach ($candidates as $c) if (isset($schema[$c])) return $c;
+  return null;
+}
+function currentProductStock(PDO $pdo, int $outletId, int $productId): float {
+  if ($productId <= 0 || !tableExists($pdo,'products')) return 0.0;
+  $schema=cols($pdo,'products'); $stockCol=productColumn($schema,['stock','stock_qty','quantity','current_stock']); if(!$stockCol)return 0.0;
+  $sql='SELECT `'.$stockCol.'` FROM products WHERE id=?'; $args=[$productId]; if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' LIMIT 1';
+  $q=$pdo->prepare($sql);$q->execute($args);return (float)($q->fetchColumn()??0);
+}
+function adjustProductStock(PDO $pdo,int $outletId,int $productId,float $delta,string $movementType,string $reference='',string $createdBy='SP-Manager',array $extra=[]):void{
+  if($productId<=0||(!abs($delta)&&!$extra)||!tableExists($pdo,'products'))return;
+  $schema=cols($pdo,'products');$stockCol=productColumn($schema,['stock','stock_qty','quantity','current_stock']);if(!$stockCol)return;
+  $sql='UPDATE products SET `'.$stockCol.'`=`'.$stockCol.'`+?';$args=[$delta];
+  foreach([['cost',['cost','cost_price','purchase_price']],['lastPurchasePrice',['last_purchase_price','lastPurchasePrice']]] as [$k,$cands]){if(array_key_exists($k,$extra)){if($col=productColumn($schema,$cands)){$sql.=', `'.$col.'`=?';$args[]=(float)$extra[$k];}}}
+  if(isset($schema['updated_at']))$sql.=', updated_at=NOW()';$sql.=' WHERE id=?';$args[]=$productId;if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' LIMIT 1';$pdo->prepare($sql)->execute($args);
+  if(abs($delta)<0.0000001)return;
+  $after=currentProductStock($pdo,$outletId,$productId);
+  if(tableExists($pdo,'stock_movements')){
+    $ms=cols($pdo,'stock_movements');$child=['product_id'=>$productId,'movement_type'=>$movementType,'type'=>$movementType,'quantity_change'=>$delta,'quantity'=>$delta,'qty'=>$delta,'quantity_after'=>$after,'reference_no'=>$reference,'reference'=>$reference,'movement_date'=>date('Y-m-d H:i:s'),'created_at'=>date('Y-m-d H:i:s'),'created_by'=>$createdBy,'notes'=>''];
+    $aliases=['outlet_id'=>['outlet_id'],'product_id'=>['product_id'],'movement_type'=>['movement_type','type'],'type'=>['type','movement_type'],'quantity_change'=>['quantity_change','quantity','change','qty'],'quantity'=>['quantity','change','qty','quantity_change'],'quantity_after'=>['quantity_after'],'reference_no'=>['reference_no','reference'],'reference'=>['reference','reference_no'],'movement_date'=>['movement_date','date'],'created_at'=>['created_at','date'],'created_by'=>['created_by','user','createdBy'],'notes'=>['notes','reason']];
+    $row=writableRow($ms,$aliases,$child,$outletId);validateRequired($ms,$row,'stock_movements');insertRow($pdo,'stock_movements',$row);
+  }
+}
+function purchaseItemsByProduct(PDO $pdo,int $purchaseId):array{$out=[];foreach(childRows($pdo,'purchase_items','purchase_id',$purchaseId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
+function saleItemsByProduct(PDO $pdo,int $saleId):array{$out=[];foreach(childRows($pdo,'sale_items','sale_id',$saleId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
 function scopedFindId(PDO $pdo, string $table, int $candidateId, int $outletId): int {
   if ($candidateId <= 0 || !tableExists($pdo, $table)) return 0;
   $schema = cols($pdo, $table);
@@ -247,6 +277,16 @@ function findSupplierDbId(PDO $pdo, int $outletId, array $item): int {
   if(isset($schema['created_by']) && !array_key_exists('created_by',$data)) $data['created_by']=(string)pick($item,['createdBy','created_by','userId'],'');
   validateRequired($schema,$data,'suppliers'); $id=insertRow($pdo,'suppliers',$data); if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id); return $id;
 }
+function nextDocumentCounter(PDO $pdo, int $outletId, string $type): int {
+  $pdo->exec("CREATE TABLE IF NOT EXISTS sp_document_counters (outlet_id BIGINT UNSIGNED NOT NULL, doc_type VARCHAR(40) NOT NULL, current_number BIGINT UNSIGNED NOT NULL DEFAULT 0, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY(outlet_id,doc_type)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  $q=$pdo->prepare('SELECT current_number FROM sp_document_counters WHERE outlet_id=? AND doc_type=? FOR UPDATE');$q->execute([$outletId,$type]);$row=$q->fetch();
+  if($row){$n=(int)$row['current_number']+1;$u=$pdo->prepare('UPDATE sp_document_counters SET current_number=?,updated_at=NOW() WHERE outlet_id=? AND doc_type=?');$u->execute([$n,$outletId,$type]);return$n;}
+  $i=$pdo->prepare('INSERT INTO sp_document_counters(outlet_id,doc_type,current_number,updated_at) VALUES(?,?,1,NOW())');$i->execute([$outletId,$type]);return 1;
+}
+function generateServerDocumentNumber(PDO $pdo,int $outletId,string $type,string $prefix,?int $exceptId=null):string {
+  for($i=0;$i<100;$i++){ $n=nextDocumentCounter($pdo,$outletId,$type); $candidate=$prefix.str_pad((string)$n,8,'0',STR_PAD_LEFT); $table=$type==='Invoice'?'sales':($type==='Order'?'open_orders':null); if(!$table||!tableExists($pdo,$table))return$candidate; $schema=cols($pdo,$table); $col=$type==='Invoice'?'sale_no':'order_number'; if(!isset($schema[$col]))return$candidate; $sql='SELECT id FROM `'.$table.'` WHERE `'.$col.'`=?';$args=[$candidate];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}if($exceptId!==null){$sql.=' AND id<>?';$args[]=$exceptId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);if(!$q->fetchColumn())return$candidate; }
+  throw new RuntimeException('Unable to generate a unique document number.');
+}
 function purchaseNumberExists(PDO $pdo, int $outletId, string $purchaseNo, ?int $exceptId = null): bool {
   $purchaseNo = trim($purchaseNo);
   if ($purchaseNo === '' || !tableExists($pdo, 'purchases')) return false;
@@ -286,18 +326,19 @@ function findProductDbId(PDO $pdo, int $outletId, array $item): int {
   return 0;
 }
 
-function reconcileDeletes(PDO $pdo, int $outletId, string $stateKey, string $table, string $parentKey, array $keepLocalIds, bool $allowDelete): void {
-  if (!$allowDelete) return;
-  $q = $pdo->prepare('SELECT local_id,db_id FROM sp_relational_sync WHERE outlet_id=? AND state_key=? AND entity=?');
-  $q->execute([$outletId, $stateKey, $stateKey]);
-  foreach ($q->fetchAll() as $row) {
-    if (in_array((string)$row['local_id'], $keepLocalIds, true)) continue;
-    $dbId = (int)$row['db_id'];
-    if ($dbId > 0) {
-      if ($stateKey === 'purchases') deleteChildren($pdo, 'purchase_items', 'purchase_id', $dbId);
-      if ($stateKey === 'orders') deleteChildren($pdo, 'open_order_items', 'open_order_id', $dbId);
-      if ($stateKey === 'sales') { deleteChildren($pdo, 'sale_items', 'sale_id', $dbId); deleteChildren($pdo, 'sale_payments', 'sale_id', $dbId); }
-      if (tableExists($pdo, $table)) $pdo->prepare('DELETE FROM `'.$table.'` WHERE id=? LIMIT 1')->execute([$dbId]);
+function reconcileDeletes(PDO $pdo,int $outletId,string $stateKey,string $table,string $parentKey,array $keepLocalIds,bool $allowDelete):void{
+  if(!$allowDelete)return;
+  $q=$pdo->prepare('SELECT local_id,db_id FROM sp_relational_sync WHERE outlet_id=? AND state_key=? AND entity=?');$q->execute([$outletId,$stateKey,$stateKey]);
+  foreach($q->fetchAll() as $row){
+    if(in_array((string)$row['local_id'],$keepLocalIds,true))continue;$dbId=(int)$row['db_id'];
+    if($dbId>0){
+      if($stateKey==='purchases'){
+        foreach(purchaseItemsByProduct($pdo,$dbId) as $pid=>$qty)adjustProductStock($pdo,$outletId,(int)$pid,-$qty,'Purchase Delete','PUR-DELETE-'.$dbId);
+        deleteChildren($pdo,'purchase_items','purchase_id',$dbId);
+      }
+      if($stateKey==='orders')deleteChildren($pdo,'open_order_items','open_order_id',$dbId);
+      if($stateKey==='sales'){deleteChildren($pdo,'sale_items','sale_id',$dbId);deleteChildren($pdo,'sale_payments','sale_id',$dbId);}
+      if(tableExists($pdo,$table))$pdo->prepare('DELETE FROM `'.$table.'` WHERE id=? LIMIT 1')->execute([$dbId]);
     }
     $pdo->prepare('DELETE FROM sp_relational_sync WHERE outlet_id=? AND state_key=? AND entity=? AND local_id=?')->execute([$outletId,$stateKey,$stateKey,(string)$row['local_id']]);
   }
@@ -316,11 +357,11 @@ try {
   $maps = [
     'sales' => [
       'table'=>'sales','natural'=>['outlet_id','sale_no'],'delete'=>false,
-      'map'=>['outlet_id'=>['outlet_id'],'sale_no'=>['no','saleNo','invoiceNo','invoice_number'],'sale_date'=>['date','saleDate'],'customer_id'=>['customerId','customer_id'],'order_name'=>['orderName','name'],'service_type'=>['serviceType'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'payment_status'=>['paymentStatus','paid'],'status'=>['status'],'created_by'=>['createdBy','created_by','userId'],'notes'=>['internalNote','note']]
+      'map'=>['outlet_id'=>['outlet_id'],'sale_no'=>['no','saleNo','invoiceNo','invoice_number'],'sale_date'=>['date','saleDate'],'customer_id'=>['customerId','customer_id'],'order_name'=>['orderName','name'],'service_type'=>['serviceType'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'payment_status'=>['paymentStatus','paid'],'status'=>['status'],'created_by'=>['createdBy','created_by','userId'],'notes'=>['internalNote','note'],'voided'=>['voided'],'refunded'=>['refunded'],'void_reason'=>['voidReason','void_reason'],'voided_by'=>['voidedBy','voided_by'],'voided_at'=>['voidedAt','voided_at']]
     ],
     'purchases' => [
       'table'=>'purchases','natural'=>['outlet_id','purchase_no'],'delete'=>true,
-      'map'=>['outlet_id'=>['outlet_id'],'supplier_id'=>['supplierDbId','supplier_id','supplierId'],'purchase_no'=>['no','number','purchaseNo','purchase_no'],'purchase_date'=>['date','purchaseDate','purchase_date'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'status'=>['status'],'notes'=>['internalNote','note','notes'],'created_by'=>['createdBy','created_by','userId']]
+      'map'=>['outlet_id'=>['outlet_id'],'supplier_id'=>['supplierDbId','supplier_id','supplierId'],'purchase_no'=>['no','number','purchaseNo','purchase_no'],'external_document'=>['externalDocument','external_document'],'purchase_date'=>['date','purchaseDate','purchase_date'],'due_date'=>['dueDate','due_date'],'stock_date'=>['stockDate','stock_date'],'paid'=>['paid'],'payment_type'=>['paymentType','payment_type'],'payment_amount'=>['paymentAmount','payment_amount','paidAmount','paid_amount'],'paid_amount'=>['paymentAmount','payment_amount','paidAmount','paid_amount'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'status'=>['status'],'notes'=>['internalNote','note','notes'],'created_by'=>['createdBy','created_by','userId']]
     ],
     'orders' => [
       'table'=>'open_orders','natural'=>['outlet_id','order_number'],'delete'=>true,
@@ -332,7 +373,7 @@ try {
     ],
     'stockHistory' => [
       'table'=>'stock_movements','natural'=>[],'delete'=>false,
-      'map'=>['outlet_id'=>['outlet_id'],'product_id'=>['productId','product_id'],'movement_type'=>['type','movementType'],'type'=>['type','movementType'],'quantity'=>['change','quantity','qty'],'quantity_change'=>['change','quantityChange','quantity','qty'],'quantity_after'=>['quantityAfter','quantity_after'],'reference_no'=>['reference','referenceNo'],'reference'=>['reference','referenceNo'],'movement_date'=>['date','movementDate'],'notes'=>['reason','notes'],'created_by'=>['createdBy','created_by','userId','user']]
+      'map'=>['outlet_id'=>['outlet_id'],'product_id'=>['productId','product_id'],'product_name'=>['productName','product_name','name'],'code'=>['code','productCode','product_code'],'movement_type'=>['type','movementType'],'type'=>['type','movementType'],'quantity'=>['change','quantity','qty'],'quantity_change'=>['change','quantityChange','quantity','qty'],'quantity_after'=>['quantityAfter','quantity_after'],'reference_no'=>['reference','referenceNo'],'reference'=>['reference','referenceNo'],'product_name'=>['productName','product_name'],'code'=>['code','productCode','product_code'],'movement_date'=>['date','movementDate'],'notes'=>['reason','notes'],'created_by'=>['createdBy','created_by','userId','user']]
     ],
     'paymentTypes' => [
       'table'=>'payment_types','natural'=>['outlet_id','name'],'delete'=>true,
@@ -340,7 +381,7 @@ try {
     ],
     'promos' => [
       'table'=>'promotions','natural'=>['outlet_id','name'],'delete'=>true,
-      'map'=>['outlet_id'=>['outlet_id'],'name'=>['name','title'],'title'=>['title','name'],'description'=>['description'],'active'=>['active','enabled'],'enabled'=>['enabled','active'],'start_date'=>['startDate','start_date'],'end_date'=>['endDate','end_date'],'discount_type'=>['discountType','type'],'type'=>['type','discountType'],'discount_value'=>['value','discountValue','discount_value'],'value'=>['value','discountValue','discount_value'],'days_of_week'=>['daysOfWeek','days_of_week'],'notes'=>['notes']]
+      'map'=>['outlet_id'=>['outlet_id'],'name'=>['name','title'],'title'=>['title','name'],'description'=>['description'],'active'=>['active','enabled'],'enabled'=>['enabled','active'],'start_date'=>['startDate','start_date'],'end_date'=>['endDate','end_date'],'discount_type'=>['discountType','type'],'type'=>['type','discountType'],'discount_value'=>['value','discountValue','discount_value'],'value'=>['value','discountValue','discount_value'],'days_of_week'=>['daysOfWeek','days_of_week'],'items'=>['items','promotion_items','items_json'],'notes'=>['notes']]
     ],
     'suppliers' => [
       'table'=>'suppliers','natural'=>['outlet_id'],'delete'=>true,
@@ -388,6 +429,16 @@ try {
     if (!is_array($item)) continue;
     $localId = (string)($item['id'] ?? $item['no'] ?? $item['number'] ?? $item['name'] ?? uniqid('', true));
     $keep[] = $localId;
+    if ($stateKey === 'sales') {
+      $candidate=trim((string)pick($item,['no','saleNo','invoiceNo','invoice_number'],''));
+      $saleDbId=syncLookup($pdo,$outletId,'sales',$localId,'sales');
+      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true)){$candidate=$saleDbId>0?(string)val((array)($pdo->query('SELECT sale_no FROM sales WHERE id='.(int)$saleDbId.' LIMIT 1')->fetch()?:[]),['sale_no'],''):'';if($candidate==='')$candidate=generateServerDocumentNumber($pdo,$outletId,'Invoice','INV-',$saleDbId>0?$saleDbId:null);}
+      $item['no']=$candidate;$item['saleNo']=$candidate;$item['invoiceNo']=$candidate;
+    }
+    if ($stateKey === 'orders') {
+      $candidate=trim((string)pick($item,['no','number','orderNumber','order_number'],''));
+      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true))$item['no']= $item['number']=$item['orderNumber']=generateServerDocumentNumber($pdo,$outletId,'Order','ORD-');
+    }
     if ($stateKey === 'suppliers') {
       $supplierName = trim((string)pick($item, ['name','supplierName','supplier_name'], ''));
       if ($supplierName !== '' && trim((string)pick($item, ['code','supplierCode','supplier_code'], '')) === '') {
@@ -434,12 +485,50 @@ try {
     }
     $count++;
 
+    if ($stateKey === 'sales' && tableExists($pdo,'sale_items')) {
+      // Sales consume stock only while the sale is active. Work out the previous
+      // status BEFORE syncParent updates the parent row so edit/refund/void/reopen
+      // operations adjust inventory by the exact difference.
+      $oldQty = saleItemsByProduct($pdo,$dbId);
+      $oldActive = true;
+      if ($dbId > 0) {
+        $saleSchema = cols($pdo,'sales');
+        $statusParts=[];
+        $selectCols=['id'];
+        foreach(['status','voided','refunded'] as $f) if(isset($saleSchema[$f])) $selectCols[]=$f;
+        $q=$pdo->prepare('SELECT `'.implode('`,`',$selectCols).'` FROM sales WHERE id=? LIMIT 1');
+        $q->execute([$dbId]); $old=$q->fetch() ?: [];
+        $oldStatus=strtolower((string)($old['status']??''));
+        $oldActive=!((bool)($old['voided']??false)||(bool)($old['refunded']??false)||in_array($oldStatus,['voided','refunded'],true));
+      }
+      $newQty=[];
+      foreach(($item['items']??[]) as $it){
+        if(!is_array($it))continue;
+        $pid=findProductDbId($pdo,$outletId,$it);
+        if($pid<=0)throw new RuntimeException('Sale item product was not found in database: '.(string)pick($it,['name','productName','code','productCode','productId'],''));
+        $newQty[$pid]=($newQty[$pid]??0)+(float)pick($it,['qty','quantity'],0);
+      }
+      $newStatus=strtolower((string)pick($item,['status'],'COMPLETED'));
+      $newActive=!((bool)pick($item,['voided'],false)||(bool)pick($item,['refunded'],false)||in_array($newStatus,['voided','refunded'],true));
+      $all=array_unique(array_merge(array_keys($oldQty),array_keys($newQty)));
+      foreach($all as $pid){
+        $oldConsumed=$oldActive?(float)($oldQty[$pid]??0):0.0;
+        $newConsumed=$newActive?(float)($newQty[$pid]??0):0.0;
+        $delta=$oldConsumed-$newConsumed;
+        if(abs($delta)>0.0000001)adjustProductStock($pdo,$outletId,(int)$pid,$delta,'Sale',trim((string)pick($item,['no','saleNo','invoiceNo'],'')),(string)pick($item,['createdBy','created_by','userId'],'SP-Manager'));
+      }
+    }
+    if ($stateKey === 'purchases' && tableExists($pdo,'purchase_items')) {
+      $oldQty=purchaseItemsByProduct($pdo,$dbId);$newQty=[];
+      foreach(($item['items']??[]) as $it){if(!is_array($it))continue;$pid=findProductDbId($pdo,$outletId,$it);if($pid<=0)throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));$qty=(float)pick($it,['qty','quantity'],0);$newQty[$pid]=($newQty[$pid]??0)+$qty;$cost=(float)pick($it,['cost','price','costPrice','cost_price'],0);$delta=$qty-($oldQty[$pid]??0);adjustProductStock($pdo,$outletId,$pid,$delta,'Purchase',trim((string)pick($item,['no','number','purchaseNo'],'')),(string)pick($item,['createdBy','created_by','userId'],'SP-Manager'),['cost'=>$cost,'lastPurchasePrice'=>$cost]);}
+    }
+
     if ($stateKey === 'sales' && tableExists($pdo, 'sale_items')) {
       deleteChildren($pdo, 'sale_items', 'sale_id', $dbId);
       $cs = cols($pdo, 'sale_items');
       foreach (($item['items'] ?? []) as $it) {
         if (!is_array($it)) continue;
-        insertChild($pdo, 'sale_items', $cs, ['sale_id'=>['sale_id'],'product_id'=>['productId','product_id','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'qty'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total']], ['sale_id'=>$dbId]+$it, $outletId);
+        $itDbId=findProductDbId($pdo,$outletId,$it); if($itDbId<=0) throw new RuntimeException('Sale item product was not found in database: '.(string)pick($it,['name','productName','code','productCode','productId'],'')); insertChild($pdo, 'sale_items', $cs, ['sale_id'=>['sale_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'qty'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total']], ['sale_id'=>$dbId,'productDbId'=>$itDbId]+$it, $outletId);
         $childCount++;
       }
     }
@@ -476,11 +565,11 @@ try {
 
   reconcileDeletes($pdo, $outletId, $stateKey, $spec['table'], '', $keep, (bool)$spec['delete']);
   $pdo->commit();
-  $response = ['ok'=>true,'api_version'=>'V7','state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
+  $response = ['ok'=>true,'api_version'=>'V10','state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
   if ($stateKey === 'purchases') $response['purchase_numbers'] = $purchaseNumbers;
   echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
   http_response_code(500);
-  echo json_encode(['ok'=>false,'api_version'=>'V7','state_key'=>$stateKey ?? null,'error'=>$e->getMessage()], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  echo json_encode(['ok'=>false,'api_version'=>'V10','state_key'=>$stateKey ?? null,'error'=>$e->getMessage()], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }

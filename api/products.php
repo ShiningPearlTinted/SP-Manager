@@ -102,6 +102,19 @@ function resolveGroupId(PDO $pdo, int $outletId, mixed $groupId, mixed $groupNam
   $q=$pdo->prepare($sql);$q->execute($args);$found=$q->fetchColumn();
   return $found===false?null:(int)$found;
 }
+function resolveSupplierForeignKey(PDO $pdo, int $outletId, $candidate, array $product): ?int {
+  if (!tableExists($pdo,'suppliers') || ($candidate===null || $candidate==='')) return null;
+  $schema=tableColumns($pdo,'suppliers'); $hasOutlet=isset($schema['outlet_id']);
+  $candidateText=trim((string)$candidate);
+  if (ctype_digit($candidateText)) {
+    $sql='SELECT id FROM suppliers WHERE id=?'; $args=[(int)$candidateText]; if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' LIMIT 1'; $q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0); if($id>0)return$id;
+  }
+  foreach (['supplier_code','code'] as $col) if(isset($schema[$col])&&$candidateText!==''){ $sql='SELECT id FROM suppliers WHERE `'.$col.'`=?';$args=[$candidateText];if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0);if($id>0)return$id; }
+  $name=trim((string)($product['supplierName']??$product['supplier_name']??$product['supplier']['name']??''));
+  foreach (['supplier_name','name'] as $col) if(isset($schema[$col])&&$name!==''){ $sql='SELECT id FROM suppliers WHERE `'.$col.'`=?';$args=[$name];if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0);if($id>0)return$id; }
+  throw new RuntimeException('Selected product supplier was not found in the database.');
+}
+
 function hasColumnCached(PDO $pdo, string $table, string $column): bool {
   static $cache=[]; $key=$table.'|'.$column;
   if(array_key_exists($key,$cache)) return $cache[$key];
@@ -362,6 +375,8 @@ try {
       if($resolvedGroupId!==null) $p['group_id']=$resolvedGroupId;
       else if(array_key_exists('group_id',$p) && $p['group_id']!==null && (int)$p['group_id']>0) throw new InvalidArgumentException('Selected product group was not found.');
     }
+
+    if(isset($columns['supplier_id']) && array_key_exists('supplierId',$p) && $p['supplierId']!=='') $p['supplierId']=resolveSupplierForeignKey($pdo,$outletId,$p['supplierId'],$p);
 
     $existsId=null;
     if($id>0 && isset($columns['id'])){
