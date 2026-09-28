@@ -1833,7 +1833,7 @@ function Customers({customers,addCustomer,setCustomers,setNotice,sales}){
 }
 function Suppliers({suppliers,setSuppliers}){
  const[form,setForm]=useState({name:"",phone:"",email:""});
- return <section className="content"><div className="grid2"><div className="panel"><h3>New Supplier</h3><form className="formgrid" onSubmit={e=>{e.preventDefault();const ns=[...suppliers,{...form,id:uid(),balance:0}];save("suppliers",ns);setSuppliers(ns);setForm({name:"",phone:"",email:""})}}>{["name","phone","email"].map(k=><input key={k} value={form[k]} placeholder={k} onChange={e=>setForm({...form,[k]:e.target.value})} required={k==="name"}/>)}<button>Add Supplier</button></form></div><div className="panel"><h3>Supplier Database</h3><Table cols={["Supplier","Phone","Email","Balance"]} rows={suppliers.map(s=>[s.name,s.phone,s.email,money(s.balance)])}/></div></div></section>
+ return <section className="content"><div className="grid2"><div className="panel"><h3>New Supplier</h3><form className="formgrid" onSubmit={e=>{e.preventDefault();const ns=[...suppliers,{...form,name:String(form.name||"").trim(),code:`SUP-${String(uid()).slice(-8)}`,id:uid(),balance:0}];save("suppliers",ns);setSuppliers(ns);setForm({name:"",phone:"",email:""})}}>{["name","phone","email"].map(k=><input key={k} value={form[k]} placeholder={k} onChange={e=>setForm({...form,[k]:e.target.value})} required={k==="name"}/>)}<button>Add Supplier</button></form></div><div className="panel"><h3>Supplier Database</h3><Table cols={["Supplier","Phone","Email","Balance"]} rows={suppliers.map(s=>[s.name,s.phone,s.email,money(s.balance)])}/></div></div></section>
 }
 function Purchases({products,suppliers,receivePurchase,purchases,setPurchases,setNotice,paymentTypes,activeUser}){
  const empty={supplierId:suppliers[0]?.id||"",number:"",externalDocument:"",date:new Date().toISOString().slice(0,10),dueDate:new Date().toISOString().slice(0,10),stockDate:new Date().toISOString().slice(0,16),paid:true,items:[],discount:0,discountType:"percent",paymentType:"Cash",paymentAmount:0,internalNote:"",note:""};
@@ -1856,7 +1856,7 @@ function Purchases({products,suppliers,receivePurchase,purchases,setPurchases,se
  }).slice().reverse();
  const openNew=()=>{setForm({...empty,supplierId:suppliers[0]?.id||"",items:[]});setTab("Document items");setItemSearch("");setItemCategory("All products");setEditing("new");setView("editor")};
  const openEdit=p=>{setForm({...empty,...p,items:(p.items||[]).map(i=>({...i})),paymentAmount:Number(p.paymentAmount||p.total||0)});setTab("Document items");setEditing(p.id);setView("editor")};
- const addItem=p=>setForm(f=>{const found=f.items.find(i=>i.productId===p.id);return {...f,items:found?f.items.map(i=>i.productId===p.id?{...i,qty:Number(i.qty||0)+1}:i):[...f.items,{productId:p.id,qty:1,cost:Number(p.lastPurchasePrice??p.cost??0),taxRate:Number(p.taxRate||0),discount:0}]}});
+ const addItem=p=>setForm(f=>{const found=f.items.find(i=>i.productId===p.id);return {...f,items:found?f.items.map(i=>i.productId===p.id?{...i,qty:Number(i.qty||0)+1}:i):[...f.items,{productId:p.id,productCode:p.code||"",productName:p.name||"",qty:1,cost:Number(p.lastPurchasePrice??p.cost??0),taxRate:Number(p.taxRate||0),discount:0}]}});
  const updateItem=(id,key,val)=>setForm(f=>({...f,items:f.items.map(i=>i.productId===id?{...i,[key]:val}:i)}));
  const removeItem=id=>setForm(f=>({...f,items:f.items.filter(i=>i.productId!==id)}));
  const subtotal=form.items.reduce((sum,i)=>sum+Number(i.qty||0)*Number(i.cost||0),0);
@@ -1864,18 +1864,19 @@ function Purchases({products,suppliers,receivePurchase,purchases,setPurchases,se
  const taxable=Math.max(0,subtotal-discount);
  const tax=form.items.reduce((sum,i)=>sum+Math.max(0,Number(i.qty||0)*Number(i.cost||0)-discount*(Number(i.qty||0)*Number(i.cost||0)/(subtotal||1)))*Number(i.taxRate||0)/100,0);
  const total=Math.max(0,taxable+tax);
- const savePurchase=()=>{
+ const savePurchase=async()=>{
    if(!form.supplierId||!form.items.length)return;
+   const supplier=suppliers.find(s=>String(s.id)===String(form.supplierId));
+   if(!supplier){setNotice("Please select a valid supplier.");return;}
    const no=form.number.trim()||"PUR-"+String(uid()).slice(-8);
-   const doc={...form,id:form.id||uid(),no,number:no,date:form.date,stockDate:form.stockDate||new Date().toISOString(),total,subtotal,discount,tax,paid:Boolean(form.paid),paymentAmount:Number(form.paymentAmount||0),status:"Received",createdBy:activeUser?.id||activeUser?.username||"",dateUpdated:new Date().toISOString()};
+   const preparedItems=form.items.map(i=>{const p=products.find(x=>String(x.id)===String(i.productId));return {...i,productCode:i.productCode||p?.code||"",productName:i.productName||p?.name||""};});
+   const doc={...form,id:form.id||uid(),no,number:no,date:form.date,stockDate:form.stockDate||new Date().toISOString(),total,subtotal,discount,tax,paid:Boolean(form.paid),paymentAmount:Number(form.paymentAmount||0),status:"Received",createdBy:activeUser?.id||activeUser?.username||"",dateUpdated:new Date().toISOString(),supplierDbId:supplier.dbId||null,supplier:{id:supplier.id,dbId:supplier.dbId||null,code:supplier.code||"",name:supplier.name||"",phone:supplier.phone||"",email:supplier.email||""},items:preparedItems};
    const existing=purchases.find(x=>x.id===doc.id);
-   if(existing){
-     // Editing a received purchase is kept simple and safe: preserve stock movements already posted.
-     const next=purchases.map(x=>x.id===doc.id?doc:x);persist("purchases",next,setPurchases);setNotice("Purchase document updated successfully.");
-   }else{
-     receivePurchase(Number(form.supplierId),form.items.map(i=>({productId:i.productId,qty:Number(i.qty),cost:Number(i.cost||0),taxRate:Number(i.taxRate||0),discount:Number(i.discount||0)})),total,doc);
-   }
-   setEditing(null);setView("list");
+   try{
+     if(existing){const next=purchases.map(x=>x.id===doc.id?doc:x);persist("purchases",next,setPurchases);await centralRelationalSync("suppliers",suppliers);await centralRelationalSync("purchases",next);setNotice("Purchase document updated successfully and saved to database.");}
+     else{receivePurchase(Number(form.supplierId),preparedItems.map(i=>({productId:i.productId,productCode:i.productCode,productName:i.productName,qty:Number(i.qty),cost:Number(i.cost||0),taxRate:Number(i.taxRate||0),discount:Number(i.discount||0)})),total,doc);await centralRelationalSync("suppliers",suppliers);await centralRelationalSync("purchases",[...purchases,doc]);setNotice("Purchase received, stock updated and saved to database.");}
+     setEditing(null);setView("list");
+   }catch(e){setNotice("Database sync failed for purchase: "+(e?.message||String(e)));}
  };
  const printPurchase=p=>downloadReportPDF("Purchase-"+(p.no||p.number||p.id),["Qty","Product","Cost","Total"],(p.items||[]).map(i=>{const pr=products.find(x=>x.id===i.productId);return [i.qty,pr?.name||i.productName||"",money(i.cost||0),money(Number(i.qty||0)*Number(i.cost||0))]}));
  const visibleProducts=products.filter(p=>{const q=itemSearch.toLowerCase();const c=itemCategory==="All products"||(p.category||p.group)===itemCategory;return c&&(!q||[p.name,p.code,p.barcode,p.category,p.group].join(" ").toLowerCase().includes(q))});

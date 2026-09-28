@@ -156,6 +156,48 @@ function insertChild(PDO $pdo, string $table, array $schema, array $aliases, arr
   validateRequired($schema, $row, $table);
   insertRow($pdo, $table, $row);
 }
+
+function scopedFindId(PDO $pdo, string $table, int $candidateId, int $outletId): int {
+  if ($candidateId <= 0 || !tableExists($pdo, $table)) return 0;
+  $schema = cols($pdo, $table);
+  $sql = 'SELECT id FROM `'.$table.'` WHERE id=?'; $args = [$candidateId];
+  if (isset($schema['outlet_id'])) { $sql .= ' AND outlet_id=?'; $args[] = $outletId; }
+  $sql .= ' LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args);
+  return (int)($q->fetchColumn() ?: 0);
+}
+function findSupplierDbId(PDO $pdo, int $outletId, array $item): int {
+  if (!tableExists($pdo, 'suppliers')) throw new RuntimeException('Suppliers table is missing.');
+  $local = pick($item, ['supplierDbId','supplier_id','supplierId'], null);
+  if ($local !== null && $local !== '') {
+    $mapId = syncLookup($pdo, $outletId, 'suppliers', (string)$local, 'suppliers');
+    if ($mapId > 0) return $mapId;
+  }
+  $supplier = $item['supplier'] ?? []; if (!is_array($supplier)) $supplier=[];
+  $code = trim((string)pick($supplier, ['code','supplierCode','supplier_code'], pick($item,['supplierCode','supplier_code'],'')));
+  $name = trim((string)pick($supplier, ['name','supplierName','supplier_name'], pick($item,['supplierName','supplier_name'],'')));
+  $schema=cols($pdo,'suppliers'); $hasOutlet=isset($schema['outlet_id']);
+  if ($code!=='' && isset($schema['code'])) {
+    $sql='SELECT id FROM suppliers WHERE code=?'; $args=[$code]; if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' LIMIT 1';
+    $q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0); if($id>0){if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id);return $id;}
+  }
+  if ($name!=='') {
+    $sql='SELECT id FROM suppliers WHERE name=?'; $args=[$name]; if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' ORDER BY id ASC LIMIT 1';
+    $q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0); if($id>0){if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id);return $id;}
+  }
+  if ($name==='') throw new RuntimeException('Purchase supplier was not found in database. Please save/select a valid supplier first.');
+  $data=[]; if(isset($schema['outlet_id']))$data['outlet_id']=$outletId; if(isset($schema['code']))$data['code']=$code!==''?$code:'SUP-'.strtoupper(substr(sha1($outletId.'|'.$name),0,8)); if(isset($schema['name']))$data['name']=$name;
+  if(isset($schema['phone']))$data['phone']=(string)pick($supplier,['phone','phoneNumber'],''); if(isset($schema['email']))$data['email']=(string)pick($supplier,['email'],''); if(isset($schema['address']))$data['address']=(string)pick($supplier,['address'],''); if(isset($schema['tax_number']))$data['tax_number']=(string)pick($supplier,['taxNumber','tax_number'],''); if(isset($schema['active']))$data['active']=1; if(isset($schema['enabled']))$data['enabled']=1; if(isset($schema['balance']))$data['balance']=0;
+  validateRequired($schema,$data,'suppliers'); $id=insertRow($pdo,'suppliers',$data); if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id); return $id;
+}
+function findProductDbId(PDO $pdo, int $outletId, array $item): int {
+  if(!tableExists($pdo,'products')) return 0;
+  $candidate=(int)pick($item,['productDbId','product_id','productId'],0); $direct=scopedFindId($pdo,'products',$candidate,$outletId); if($direct>0)return $direct;
+  $schema=cols($pdo,'products'); $code=trim((string)pick($item,['productCode','code','sku'],''));
+  if($code!==''){foreach(['product_code','sku','code'] as $field){if(!isset($schema[$field]))continue;$sql='SELECT id FROM products WHERE `'.$field.'`=?';$args=[$code];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0);if($id>0)return $id;}}
+  $name=trim((string)pick($item,['productName','name'],'')); if($name!=='' && isset($schema['name'])){$sql='SELECT id FROM products WHERE name=?';$args=[$name];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' ORDER BY id ASC LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0);if($id>0)return $id;}
+  return 0;
+}
+
 function reconcileDeletes(PDO $pdo, int $outletId, string $stateKey, string $table, string $parentKey, array $keepLocalIds, bool $allowDelete): void {
   if (!$allowDelete) return;
   $q = $pdo->prepare('SELECT local_id,db_id FROM sp_relational_sync WHERE outlet_id=? AND state_key=? AND entity=?');
@@ -190,7 +232,7 @@ try {
     ],
     'purchases' => [
       'table'=>'purchases','natural'=>['outlet_id','purchase_no'],'delete'=>true,
-      'map'=>['outlet_id'=>['outlet_id'],'supplier_id'=>['supplierId','supplier_id'],'purchase_no'=>['no','number','purchaseNo','purchase_no'],'purchase_date'=>['date','purchaseDate','purchase_date'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'status'=>['status'],'notes'=>['internalNote','note','notes'],'created_by'=>['createdBy','created_by','userId']]
+      'map'=>['outlet_id'=>['outlet_id'],'supplier_id'=>['supplierDbId','supplier_id','supplierId'],'purchase_no'=>['no','number','purchaseNo','purchase_no'],'purchase_date'=>['date','purchaseDate','purchase_date'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'status'=>['status'],'notes'=>['internalNote','note','notes'],'created_by'=>['createdBy','created_by','userId']]
     ],
     'orders' => [
       'table'=>'open_orders','natural'=>['outlet_id','order_number'],'delete'=>true,
@@ -213,7 +255,7 @@ try {
       'map'=>['outlet_id'=>['outlet_id'],'name'=>['name','title'],'title'=>['title','name'],'description'=>['description'],'active'=>['active','enabled'],'enabled'=>['enabled','active'],'start_date'=>['startDate','start_date'],'end_date'=>['endDate','end_date'],'discount_type'=>['discountType','type'],'type'=>['type','discountType'],'discount_value'=>['value','discountValue','discount_value'],'value'=>['value','discountValue','discount_value'],'days_of_week'=>['daysOfWeek','days_of_week'],'notes'=>['notes']]
     ],
     'suppliers' => [
-      'table'=>'suppliers','natural'=>['outlet_id','code','name'],'delete'=>true,
+      'table'=>'suppliers','natural'=>['outlet_id','name'],'delete'=>true,
       'map'=>['outlet_id'=>['outlet_id'],'code'=>['code','supplierCode','supplier_code'],'name'=>['name','supplierName','supplier_name'],'phone'=>['phone','phoneNumber'],'email'=>['email'],'address'=>['address'],'tax_number'=>['taxNumber','tax_number'],'active'=>['active','enabled'],'enabled'=>['enabled','active'],'balance'=>['balance'],'notes'=>['notes','note']]
     ],
     'zReports' => [
@@ -243,6 +285,11 @@ try {
     if (!is_array($item)) continue;
     $localId = (string)($item['id'] ?? $item['no'] ?? $item['number'] ?? $item['name'] ?? uniqid('', true));
     $keep[] = $localId;
+    if ($stateKey === 'suppliers') {
+      $supplierName = trim((string)pick($item, ['name','supplierName','supplier_name'], ''));
+      if ($supplierName !== '' && trim((string)pick($item, ['code','supplierCode','supplier_code'], '')) === '') $item['code'] = 'SUP-'.strtoupper(substr(sha1($outletId.'|'.$supplierName),0,8));
+    }
+    if ($stateKey === 'purchases') $item['supplierDbId'] = findSupplierDbId($pdo, $outletId, $item);
     $dbId = syncParent($pdo, $spec['table'], $schema, $spec['map'], $item, $outletId, $stateKey, $localId, $spec['natural']);
     $count++;
 
@@ -269,9 +316,9 @@ try {
       $cs = cols($pdo, 'purchase_items');
       foreach (($item['items'] ?? []) as $it) {
         if (!is_array($it)) continue;
-        $qty=(float)pick($it,['qty','quantity'],0); $cost=(float)pick($it,['cost','price','costPrice'],0);
-        $child=['purchase_id'=>$dbId,'product_id'=>pick($it,['productId','product_id','id']),'product_name'=>pick($it,['productName','name'],''),'quantity'=>$qty,'qty'=>$qty,'cost_price'=>$cost,'cost'=>$cost,'unit_price'=>$cost,'tax_rate'=>pick($it,['taxRate','tax_rate'],0),'discount'=>pick($it,['discount'],0),'total'=>$qty*$cost,'line_total'=>$qty*$cost];
-        insertChild($pdo, 'purchase_items', $cs, ['purchase_id'=>['purchase_id'],'product_id'=>['productId','product_id','id'],'product_name'=>['product_name','productName','name'],'quantity'=>['quantity','qty'],'qty'=>['qty','quantity'],'cost_price'=>['cost_price','cost','price','unit_price'],'cost'=>['cost','cost_price','price','unit_price'],'unit_price'=>['unit_price','cost','cost_price','price'],'tax_rate'=>['tax_rate','taxRate','tax'],'tax'=>['tax','taxRate','tax_amount'],'tax_amount'=>['tax_amount','tax','taxRate'],'discount'=>['discount','discount_amount'],'discount_amount'=>['discount_amount','discount'],'total'=>['total','line_total'],'line_total'=>['line_total','total'],'subtotal'=>['subtotal','line_subtotal']], $child, $outletId);
+        $qty=(float)pick($it,['qty','quantity'],0); $cost=(float)pick($it,['cost','price','costPrice'],0); $productDbId=findProductDbId($pdo,$outletId,$it); if($productDbId<=0) throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));
+        $child=['purchase_id'=>$dbId,'product_id'=>$productDbId,'product_name'=>pick($it,['productName','name'],''),'quantity'=>$qty,'qty'=>$qty,'cost_price'=>$cost,'cost'=>$cost,'unit_price'=>$cost,'tax_rate'=>pick($it,['taxRate','tax_rate'],0),'discount'=>pick($it,['discount'],0),'total'=>$qty*$cost,'line_total'=>$qty*$cost];
+        insertChild($pdo, 'purchase_items', $cs, ['purchase_id'=>['purchase_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['product_name','productName','name'],'quantity'=>['quantity','qty'],'qty'=>['qty','quantity'],'cost_price'=>['cost_price','cost','price','unit_price'],'cost'=>['cost','cost_price','price','unit_price'],'unit_price'=>['unit_price','cost','cost_price','price'],'tax_rate'=>['tax_rate','taxRate','tax'],'tax'=>['tax','taxRate','tax_amount'],'tax_amount'=>['tax_amount','tax','taxRate'],'discount'=>['discount','discount_amount'],'discount_amount'=>['discount_amount','discount'],'total'=>['total','line_total'],'line_total'=>['line_total','total'],'subtotal'=>['subtotal','line_subtotal']], $child, $outletId);
         $childCount++;
       }
     }
