@@ -277,6 +277,22 @@ function findSupplierDbId(PDO $pdo, int $outletId, array $item): int {
   if(isset($schema['created_by']) && !array_key_exists('created_by',$data)) $data['created_by']=(string)pick($item,['createdBy','created_by','userId'],'');
   validateRequired($schema,$data,'suppliers'); $id=insertRow($pdo,'suppliers',$data); if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id); return $id;
 }
+function generatePaymentCode(PDO $pdo, int $outletId, string $name): string {
+  $base = 'PAY-' . strtoupper(substr(sha1($outletId.'|'.trim($name)), 0, 8));
+  $candidate = $base; $n = 2;
+  if (!tableExists($pdo, 'payment_types')) return $candidate;
+  $schema = cols($pdo, 'payment_types');
+  $codeCol = isset($schema['payment_code']) ? 'payment_code' : (isset($schema['code']) ? 'code' : null);
+  if (!$codeCol) return $candidate;
+  while (true) {
+    $sql = 'SELECT id FROM payment_types WHERE `'.$codeCol.'`=?'; $args = [$candidate];
+    if (isset($schema['outlet_id'])) { $sql .= ' AND outlet_id=?'; $args[] = $outletId; }
+    $sql .= ' LIMIT 1';
+    $q = $pdo->prepare($sql); $q->execute($args);
+    if (!(int)$q->fetchColumn()) return $candidate;
+    $candidate = $base . '-' . $n++;
+  }
+}
 function nextDocumentCounter(PDO $pdo, int $outletId, string $type): int {
   $pdo->exec("CREATE TABLE IF NOT EXISTS sp_document_counters (outlet_id BIGINT UNSIGNED NOT NULL, doc_type VARCHAR(40) NOT NULL, current_number BIGINT UNSIGNED NOT NULL DEFAULT 0, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY(outlet_id,doc_type)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
   $q=$pdo->prepare('SELECT current_number FROM sp_document_counters WHERE outlet_id=? AND doc_type=? FOR UPDATE');$q->execute([$outletId,$type]);$row=$q->fetch();
@@ -376,8 +392,21 @@ try {
       'map'=>['outlet_id'=>['outlet_id'],'product_id'=>['productId','product_id'],'product_name'=>['productName','product_name','name'],'code'=>['code','productCode','product_code'],'movement_type'=>['type','movementType'],'type'=>['type','movementType'],'quantity'=>['change','quantity','qty'],'quantity_change'=>['change','quantityChange','quantity','qty'],'quantity_after'=>['quantityAfter','quantity_after'],'reference_no'=>['reference','referenceNo'],'reference'=>['reference','referenceNo'],'product_name'=>['productName','product_name'],'code'=>['code','productCode','product_code'],'movement_date'=>['date','movementDate'],'notes'=>['reason','notes'],'created_by'=>['createdBy','created_by','userId','user']]
     ],
     'paymentTypes' => [
-      'table'=>'payment_types','natural'=>['outlet_id','name'],'delete'=>true,
-      'map'=>['outlet_id'=>['outlet_id'],'name'=>['name'],'code'=>['code'],'enabled'=>['enabled','active'],'active'=>['active','enabled'],'mark_paid'=>['markPaid','mark_paid'],'customer_required'=>['customerRequired','customer_required'],'position'=>['position','sortOrder'],'quick_payment'=>['quickPayment','quick_payment'],'change_allowed'=>['changeAllowed','change_allowed'],'print_receipt'=>['printReceipt','print_receipt'],'shortcut_key'=>['shortcutKey','shortcut_key'],'open_cash_drawer'=>['openCashDrawer','open_cash_drawer']]
+      'table'=>'payment_types','natural'=>['outlet_id','payment_code'],'delete'=>true,
+      'map'=>[
+        'outlet_id'=>['outlet_id'],
+        'payment_code'=>['code','paymentCode','payment_code'],
+        'payment_name'=>['name','paymentName','payment_name'],
+        'enabled'=>['enabled','active'],
+        'quick_payment'=>['quickPayment','quick_payment'],
+        'customer_required'=>['customerRequired','customer_required'],
+        'change_allowed'=>['changeAllowed','change_allowed'],
+        'mark_paid'=>['markPaid','mark_paid'],
+        'print_receipt'=>['printReceipt','print_receipt'],
+        'open_cash_drawer'=>['openCashDrawer','open_cash_drawer'],
+        'shortcut_key'=>['shortcutKey','shortcut_key'],
+        'sort_order'=>['position','sortOrder','sort_order']
+      ]
     ],
     'promos' => [
       'table'=>'promotions','natural'=>['outlet_id','name'],'delete'=>true,
@@ -452,6 +481,18 @@ try {
       $item['supplier_name'] = $supplierName;
     }
     $purchaseDbId = 0;
+    if ($stateKey === 'paymentTypes') {
+      $paymentName = trim((string)pick($item, ['name','paymentName','payment_name'], ''));
+      if ($paymentName === '') throw new RuntimeException('Payment type name is required.');
+      $paymentCode = trim((string)pick($item, ['code','paymentCode','payment_code'], ''));
+      if ($paymentCode === '') $paymentCode = generatePaymentCode($pdo, $outletId, $paymentName);
+      $item['code'] = $paymentCode;
+      $item['paymentCode'] = $paymentCode;
+      $item['payment_code'] = $paymentCode;
+      $item['name'] = $paymentName;
+      $item['paymentName'] = $paymentName;
+      $item['payment_name'] = $paymentName;
+    }
     if ($stateKey === 'purchases') {
       $item['supplierDbId'] = findSupplierDbId($pdo, $outletId, $item);
       $purchaseCandidate = trim((string)pick($item, ['no','number','purchaseNo','purchase_no'], ''));
