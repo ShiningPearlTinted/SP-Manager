@@ -6847,3 +6847,16 @@ body:has(.customer-display-screen) #root{
 .cd-customer-display-v9 .customer-display-item-count{display:none !important}
 .cd-customer-display-v9 .customer-display-idle-logo.has-company-logo{width:128px !important;height:88px !important;border-radius:18px !important;background:transparent !important;box-shadow:none !important;overflow:hidden !important;display:grid !important;place-items:center !important}
 .cd-customer-display-v9 .customer-display-idle-logo.has-company-logo img{display:block !important;width:100% !important;height:100% !important;object-fit:contain !important;object-position:center !important}
+
+/* SP-Manager CRUD confirmation / database success message box */
+.sp-action-dialog-backdrop{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(9,15,24,.48);backdrop-filter:blur(4px)}
+.sp-action-dialog{width:min(520px,calc(100vw - 36px));border:1px solid #dbe3ec;border-radius:16px;background:#fff;box-shadow:0 22px 70px rgba(8,15,28,.28);overflow:hidden;font-family:Arial,Helvetica,sans-serif}
+.sp-action-dialog-head{padding:22px 24px 12px;border-bottom:1px solid #eef2f6}
+.sp-action-dialog-kicker{font-size:11px;letter-spacing:.16em;color:#708096;margin-bottom:6px}
+.sp-action-dialog-head h3{margin:0;font-size:21px;line-height:1.2;color:#162131}
+.sp-action-dialog-body{padding:22px 24px;color:#4b5a6c;font-size:15px;line-height:1.55;white-space:pre-line}
+.sp-action-dialog-actions{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 22px;background:#fafbfd;border-top:1px solid #eef2f6}
+.sp-action-dialog-btn{min-width:92px;border:1px solid #cfd9e5;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.sp-action-dialog-btn.secondary{background:#fff;color:#334155}
+.sp-action-dialog-btn.primary{background:#112235;color:#fff;border-color:#112235}
+.sp-action-dialog-btn:focus{outline:3px solid rgba(42,104,170,.18);outline-offset:2px}
