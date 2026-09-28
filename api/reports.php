@@ -1,0 +1,92 @@
+<?php
+declare(strict_types=1);
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('X-SP-Manager-DB-Version: V10');
+header('X-SP-Manager-Reports-Version: V1');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+
+$config = require __DIR__ . '/config.php';
+$db = $config['db'] ?? null;
+$host = (string)($db['host'] ?? $config['db_host'] ?? 'localhost');
+$port = (string)($db['port'] ?? $config['db_port'] ?? '3306');
+$name = (string)($db['name'] ?? $config['db_name'] ?? '');
+$user = (string)($db['user'] ?? $config['db_user'] ?? '');
+$pass = (string)($db['pass'] ?? $config['db_pass'] ?? '');
+
+function tableExists(PDO $pdo, string $table): bool {
+    $q = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
+    $q->execute([$table]);
+    return (int)$q->fetchColumn() > 0;
+}
+function outletId(PDO $pdo, mixed $value): int {
+    $v = trim((string)($value ?? 'SP01')); if ($v === '') $v = 'SP01';
+    if (ctype_digit($v)) { $q=$pdo->prepare('SELECT id FROM outlets WHERE id=? AND active=1 LIMIT 1'); $q->execute([(int)$v]); }
+    else { $q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1'); $q->execute([$v]); }
+    $id=(int)($q->fetchColumn()?:0); if($id<=0) throw new InvalidArgumentException('Outlet not found.'); return $id;
+}
+function scalar(PDO $pdo, string $sql, array $args=[]): float { $q=$pdo->prepare($sql); $q->execute($args); return (float)($q->fetchColumn()?:0); }
+function intScalar(PDO $pdo, string $sql, array $args=[]): int { return (int)scalar($pdo,$sql,$args); }
+
+try {
+    $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+    $action = strtolower(trim((string)($_GET['action'] ?? 'summary')));
+    $oid = outletId($pdo, $_GET['outlet_id'] ?? 'SP01');
+    if ($action !== 'summary') throw new InvalidArgumentException('Unknown reports action.');
+
+    $activeSalesWhere = "outlet_id=? AND UPPER(COALESCE(status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUNDED')";
+    $salesTotal = tableExists($pdo,'sales') ? scalar($pdo,"SELECT COALESCE(SUM(total),0) FROM sales WHERE {$activeSalesWhere}",[$oid]) : 0;
+    $transactions = tableExists($pdo,'sales') ? intScalar($pdo,"SELECT COUNT(*) FROM sales WHERE {$activeSalesWhere}",[$oid]) : 0;
+    $unpaid = tableExists($pdo,'sales') ? scalar($pdo,"SELECT COALESCE(SUM(total),0) FROM sales WHERE outlet_id=? AND UPPER(COALESCE(status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUNDED') AND UPPER(COALESCE(payment_status,'PAID')) <> 'PAID'",[$oid]) : 0;
+    $grossMargin = 0;
+    if (tableExists($pdo,'sale_items') && tableExists($pdo,'sales') && tableExists($pdo,'products')) {
+        $grossMargin = scalar($pdo,
+            "SELECT COALESCE(SUM(((si.unit_price * si.quantity) - si.discount) - (COALESCE(p.cost_price,0) * si.quantity)),0)
+             FROM sale_items si
+             INNER JOIN sales s ON s.id=si.sale_id
+             LEFT JOIN products p ON p.id=si.product_id
+             WHERE s.outlet_id=? AND UPPER(COALESCE(s.status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUNDED')",
+            [$oid]
+        );
+    }
+    $products = tableExists($pdo,'products') ? intScalar($pdo,'SELECT COUNT(*) FROM products WHERE outlet_id=?',[$oid]) : 0;
+    $customers = tableExists($pdo,'customers') ? intScalar($pdo,'SELECT COUNT(*) FROM customers WHERE outlet_id=?',[$oid]) : 0;
+    $purchases = tableExists($pdo,'purchases') ? intScalar($pdo,'SELECT COUNT(*) FROM purchases WHERE outlet_id=?',[$oid]) : 0;
+    $users = tableExists($pdo,'users') ? intScalar($pdo,'SELECT COUNT(*) FROM users WHERE outlet_id=? OR outlet_id IS NULL',[$oid]) : 0;
+    $suppliers = tableExists($pdo,'suppliers') ? intScalar($pdo,'SELECT COUNT(*) FROM suppliers WHERE outlet_id=?',[$oid]) : 0;
+    $paymentTypes = tableExists($pdo,'payment_types') ? intScalar($pdo,'SELECT COUNT(*) FROM payment_types WHERE outlet_id=?',[$oid]) : 0;
+    $stockValue = 0;
+    if (tableExists($pdo,'products')) {
+        // The schema uses stock_qty. Keep the query tolerant of older stock column names.
+        $cols = $pdo->query('DESCRIBE `products`')->fetchAll(PDO::FETCH_COLUMN,0);
+        $stockCol = in_array('stock_qty',$cols,true) ? 'stock_qty' : (in_array('stock',$cols,true) ? 'stock' : (in_array('quantity',$cols,true) ? 'quantity' : null));
+        $costCol = in_array('cost_price',$cols,true) ? 'cost_price' : (in_array('cost',$cols,true) ? 'cost' : null);
+        if($stockCol && $costCol) $stockValue = scalar($pdo,'SELECT COALESCE(SUM(`'.$stockCol.'`*`'.$costCol.'),0) FROM products WHERE outlet_id=?',[$oid]);
+    }
+    echo json_encode([
+        'ok'=>true,
+        'api_version'=>'V10',
+        'reports_version'=>'V1',
+        'outlet_id'=>$oid,
+        'summary'=>[
+            'sales_total'=>$salesTotal,
+            'transactions'=>$transactions,
+            'unpaid'=>$unpaid,
+            'gross_margin'=>$grossMargin,
+            'products'=>$products,
+            'customers'=>$customers,
+            'purchases'=>$purchases,
+            'users'=>$users,
+            'suppliers'=>$suppliers,
+            'payment_types'=>$paymentTypes,
+            'stock_value'=>$stockValue,
+        ],
+        'sql_source'=>true,
+    ],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['ok'=>false,'api_version'=>'V10','reports_version'=>'V1','error'=>'The report database query could not be completed.'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+}

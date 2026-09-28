@@ -10,5 +10,8 @@ echo json_encode([
   'service' => 'SP-Manager Database API',
   'relational_sync' => 'V10',
   'relational_data' => 'V10',
-  'settings_version' => 'V2'
+  'database_service' => 'SQL-100',
+  'database_backup' => 'V1',
+  'reports_version' => 'V1',
+  'settings_version' => 'V3'
 ], JSON_UNESCAPED_SLASHES);

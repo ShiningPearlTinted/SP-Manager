@@ -6,7 +6,7 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-header('X-SP-Manager-Settings-Version: V2');
+header('X-SP-Manager-Settings-Version: V3');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $config = require __DIR__ . '/config.php';
@@ -408,7 +408,7 @@ try {
     $action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
 
     if($action==='health'){
-        out(['ok'=>true,'service'=>'SP-Manager settings API','settings_version'=>'V2','outletId'=>$oid,'tables'=>[
+        out(['ok'=>true,'service'=>'SP-Manager settings API','settings_version'=>'V3','outletId'=>$oid,'tables'=>[
             'app_settings'=>tableExists($pdo,'app_settings'),
             'outlet_settings'=>tableExists($pdo,'outlet_settings'),
             'email_settings'=>tableExists($pdo,'email_settings'),
@@ -424,6 +424,8 @@ try {
         $email=readEmail($pdo,$oid,$name);
         $hardwareRows=readHardware($pdo,$oid);
         $backup=readSetting($pdo,$oid,'SP-MANAGER','database',null);
+        $priceTags=readSetting($pdo,$oid,'SP-MANAGER','priceTagSettings',null);
+        $posSearchMode=readSetting($pdo,$oid,'SP-MANAGER','posSearchMode',null);
         if($email) $settings['email']=array_merge(is_array($settings['email']??null)?$settings['email']:[],$email);
         if($hardwareRows) $settings['hardware']=array_merge(is_array($settings['hardware']??null)?$settings['hardware']:[],$hardwareRows['LOCAL_AGENT']??[],$hardwareRows['CASH_DRAWER']??[],$hardwareRows['CUSTOMER_DISPLAY']??[]);
         if(is_array($backup)) $settings['database']=array_merge(is_array($settings['database']??null)?$settings['database']:[],$backup);
@@ -439,7 +441,7 @@ try {
         $backupQ=$pdo->prepare('SELECT id,backup_type,file_name,storage_location,created_at,expires_at,status,metadata_json FROM backup_records WHERE outlet_id=? ORDER BY id DESC LIMIT 50');
         $backupQ->execute([$oid]);
         out([
-            'ok'=>true,'settings_version'=>'V2','settings'=>$settings,
+            'ok'=>true,'settings_version'=>'V3','settings'=>$settings,
             'email'=>$email,
             'printers'=>$printers,
             'hardware'=>$hardwareRows,
@@ -448,6 +450,8 @@ try {
             'businessDay'=>readSetting($pdo,$oid,'SP-MANAGER','businessDay',null),
             'taxRate'=>readSetting($pdo,$oid,'SP-MANAGER','taxRate',null),
             'customerDisplayTerminal'=>readSetting($pdo,$oid,'SP-MANAGER','customerDisplayTerminal',null),
+            'priceTagSettings'=>$priceTags,
+            'posSearchMode'=>$posSearchMode,
             'settingsStorage'=>'SQL:outlet_settings + dedicated email_settings/printers/hardware_devices/backup_records'
         ]);
     }
@@ -468,15 +472,17 @@ try {
             if($print) savePrinters($pdo,$oid,$print);
             if($hardware) saveHardware($pdo,$oid,$hardware);
             if(isset($settings['database'])&&is_array($settings['database'])) setting($pdo,$oid,'SP-MANAGER','database',$settings['database']);
-            appSetting($pdo,'SP-MANAGER','settings_schema_version','V2');
+            appSetting($pdo,'SP-MANAGER','settings_schema_version','V3');
             appSetting($pdo,'SP-MANAGER','last_settings_write',gmdate('c'));
         }
         if(array_key_exists('businessDay',$b))setting($pdo,$oid,'SP-MANAGER','businessDay',$b['businessDay']);
         if(array_key_exists('taxRate',$b))setting($pdo,$oid,'SP-MANAGER','taxRate',$b['taxRate']);
         if(array_key_exists('customerDisplayTerminal',$b))setting($pdo,$oid,'SP-MANAGER','customerDisplayTerminal',$b['customerDisplayTerminal']);
+        if(array_key_exists('priceTagSettings',$b))setting($pdo,$oid,'SP-MANAGER','priceTagSettings',$b['priceTagSettings']);
+        if(array_key_exists('posSearchMode',$b))setting($pdo,$oid,'SP-MANAGER','posSearchMode',$b['posSearchMode']);
         if(is_array($b['company']??null))saveCompany($pdo,$oid,$b['company']);
         $pdo->commit();
-        out(['ok'=>true,'settings_version'=>'V2','settings'=>readSetting($pdo,$oid,'SP-MANAGER','settings',[]),'email'=>readEmail($pdo,$oid,$name),'printers'=>readPrinters($pdo,$oid),'hardware'=>readHardware($pdo,$oid)]);
+        out(['ok'=>true,'settings_version'=>'V3','settings'=>readSetting($pdo,$oid,'SP-MANAGER','settings',[]),'email'=>readEmail($pdo,$oid,$name),'printers'=>readPrinters($pdo,$oid),'hardware'=>readHardware($pdo,$oid)]);
     }
 
     if($action==='company'&&$_SERVER['REQUEST_METHOD']==='POST'){
@@ -484,7 +490,7 @@ try {
     }
 
     if($action==='setting'&&$_SERVER['REQUEST_METHOD']==='POST'){
-        $b=body();$key=trim((string)($b['key']??''));if($key==='')throw new InvalidArgumentException('Setting key is required.');setting($pdo,$oid,'SP-MANAGER',$key,$b['value']??null);out(['ok'=>true,'settings_version'=>'V2']);
+        $b=body();$key=trim((string)($b['key']??''));if($key==='')throw new InvalidArgumentException('Setting key is required.');setting($pdo,$oid,'SP-MANAGER',$key,$b['value']??null);out(['ok'=>true,'settings_version'=>'V3']);
     }
 
     if($action==='backup_record'&&$_SERVER['REQUEST_METHOD']==='POST'){
@@ -497,5 +503,5 @@ try {
     throw new InvalidArgumentException('Unknown action.');
 } catch(Throwable $e) {
     if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();
-    out(['ok'=>false,'settings_version'=>'V2','error'=>$e->getMessage()],500);
+    out(['ok'=>false,'settings_version'=>'V3','error'=>$e->getMessage()],500);
 }

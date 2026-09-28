@@ -1,4 +1,4 @@
--- SP-Manager Settings V2 - additive / non-destructive
+-- SP-Manager Settings V3 - additive / non-destructive
 -- The API also creates these tables automatically when missing.
 CREATE TABLE IF NOT EXISTS app_settings (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
