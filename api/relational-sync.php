@@ -4,6 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('X-SP-Manager-DB-Version: V7');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $config = require __DIR__ . '/config.php';
@@ -134,6 +135,40 @@ function naturalId(PDO $pdo, string $table, array $keys, array $values): int {
   $q = $pdo->prepare('SELECT id FROM `'.$table.'` WHERE '.$where.' LIMIT 1');
   $q->execute(array_values($usable));
   return (int)($q->fetchColumn() ?: 0);
+}
+function syncSupplierParent(PDO $pdo, array $schema, array $aliases, array $item, int $outletId, string $localId): int {
+  $row = writableRow($schema, $aliases, $item, $outletId);
+  // Supplier tables differ across deployed databases. Resolve required supplier name/code
+  // fields from the live schema rather than assuming `name`/`code`.
+  $name = trim((string)pick($item, ['name','supplierName','supplier_name'], ''));
+  $code = trim((string)pick($item, ['code','supplierCode','supplier_code'], ''));
+  $nameCol = supplierColumn($schema, ['supplier_name','name','supplierName']);
+  $codeCol = supplierColumn($schema, ['supplier_code','code','supplierCode']);
+  if ($nameCol && $name !== '') $row[$nameCol] = $name;
+  if ($codeCol && $code === '') {
+    $code = 'SUP-'.strtoupper(substr(sha1($outletId.'|'.$name),0,8));
+    $row[$codeCol] = $code;
+  } elseif ($codeCol) {
+    $row[$codeCol] = $code;
+  }
+  if (!$nameCol && $name === '') throw new RuntimeException('Supplier name is required.');
+  validateRequired($schema, $row, 'suppliers');
+
+  $dbId = syncLookup($pdo, $outletId, 'suppliers', $localId, 'suppliers');
+  $hasOutlet = isset($schema['outlet_id']);
+  if (!$dbId && $code !== '' && $codeCol) {
+    $sql='SELECT id FROM suppliers WHERE `'.$codeCol.'`=?'; $args=[$code];
+    if ($hasOutlet) { $sql.=' AND outlet_id=?'; $args[]=$outletId; }
+    $sql.=' LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args); $dbId=(int)($q->fetchColumn()?:0);
+  }
+  if (!$dbId && $name !== '' && $nameCol) {
+    $sql='SELECT id FROM suppliers WHERE `'.$nameCol.'`=?'; $args=[$name];
+    if ($hasOutlet) { $sql.=' AND outlet_id=?'; $args[]=$outletId; }
+    $sql.=' ORDER BY id ASC LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args); $dbId=(int)($q->fetchColumn()?:0);
+  }
+  if ($dbId) updateRow($pdo,'suppliers',$row,$dbId); else $dbId=insertRow($pdo,'suppliers',$row);
+  saveSyncMap($pdo,$outletId,'suppliers',$localId,'suppliers',$dbId);
+  return $dbId;
 }
 function syncParent(PDO $pdo, string $table, array $schema, array $aliases, array $item, int $outletId, string $stateKey, string $localId, array $naturalKeys = []): int {
   $row = writableRow($schema, $aliases, $item, $outletId);
@@ -308,7 +343,7 @@ try {
       'map'=>['outlet_id'=>['outlet_id'],'name'=>['name','title'],'title'=>['title','name'],'description'=>['description'],'active'=>['active','enabled'],'enabled'=>['enabled','active'],'start_date'=>['startDate','start_date'],'end_date'=>['endDate','end_date'],'discount_type'=>['discountType','type'],'type'=>['type','discountType'],'discount_value'=>['value','discountValue','discount_value'],'value'=>['value','discountValue','discount_value'],'days_of_week'=>['daysOfWeek','days_of_week'],'notes'=>['notes']]
     ],
     'suppliers' => [
-      'table'=>'suppliers','natural'=>['outlet_id','name'],'delete'=>true,
+      'table'=>'suppliers','natural'=>['outlet_id'],'delete'=>true,
       'map'=>[
         'outlet_id'=>['outlet_id'],
         'code'=>['code','supplierCode','supplier_code'],
@@ -386,7 +421,11 @@ try {
       $item['purchaseNo'] = $purchaseCandidate;
       $purchaseNumbers[] = ['local_id'=>$localId,'purchase_no'=>$purchaseCandidate,'db_id'=>$purchaseDbId];
     }
-    $dbId = syncParent($pdo, $spec['table'], $schema, $spec['map'], $item, $outletId, $stateKey, $localId, $spec['natural']);
+    if ($stateKey === 'suppliers') {
+      $dbId = syncSupplierParent($pdo, $schema, $spec['map'], $item, $outletId, $localId);
+    } else {
+      $dbId = syncParent($pdo, $spec['table'], $schema, $spec['map'], $item, $outletId, $stateKey, $localId, $spec['natural']);
+    }
     if ($stateKey === 'purchases') {
       foreach ($purchaseNumbers as &$pn) {
         if ((string)$pn['local_id'] === $localId) { $pn['db_id'] = $dbId; break; }
@@ -437,11 +476,11 @@ try {
 
   reconcileDeletes($pdo, $outletId, $stateKey, $spec['table'], '', $keep, (bool)$spec['delete']);
   $pdo->commit();
-  $response = ['ok'=>true,'state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
+  $response = ['ok'=>true,'api_version'=>'V7','state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
   if ($stateKey === 'purchases') $response['purchase_numbers'] = $purchaseNumbers;
   echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
   http_response_code(500);
-  echo json_encode(['ok'=>false,'state_key'=>$stateKey ?? null,'error'=>$e->getMessage()], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  echo json_encode(['ok'=>false,'api_version'=>'V7','state_key'=>$stateKey ?? null,'error'=>$e->getMessage()], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
