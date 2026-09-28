@@ -390,6 +390,32 @@ function existingPurchaseNumber(PDO $pdo, int $purchaseId): string {
   return trim((string)($q->fetchColumn() ?: ''));
 }
 
+function findPaymentTypeDbId(PDO $pdo, int $outletId, array $pay): int {
+  if (!tableExists($pdo, 'payment_types')) return 0;
+  $schema = cols($pdo, 'payment_types');
+  $candidate = (int)pick($pay, ['paymentTypeDbId','payment_type_db_id','paymentTypeId','payment_type_id'], 0);
+  if ($candidate > 0) {
+    $direct = scopedFindId($pdo, 'payment_types', $candidate, $outletId);
+    if ($direct > 0) return $direct;
+  }
+  $code = trim((string)pick($pay, ['paymentCode','payment_code','code'], ''));
+  $name = trim((string)pick($pay, ['payment','name','paymentTypeName','payment_name'], ''));
+  $codeCol = isset($schema['payment_code']) ? 'payment_code' : (isset($schema['code']) ? 'code' : null);
+  $nameCol = isset($schema['payment_name']) ? 'payment_name' : (isset($schema['name']) ? 'name' : null);
+  if ($code !== '' && $codeCol) {
+    $sql='SELECT id FROM payment_types WHERE `'.$codeCol.'`=?'; $args=[$code];
+    if (isset($schema['outlet_id'])) { $sql.=' AND outlet_id=?'; $args[]=$outletId; }
+    $sql.=' LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args);
+    $id=(int)($q->fetchColumn() ?: 0); if ($id > 0) return $id;
+  }
+  if ($name !== '' && $nameCol) {
+    $sql='SELECT id FROM payment_types WHERE `'.$nameCol.'`=?'; $args=[$name];
+    if (isset($schema['outlet_id'])) { $sql.=' AND outlet_id=?'; $args[]=$outletId; }
+    $sql.=' ORDER BY id ASC LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args);
+    $id=(int)($q->fetchColumn() ?: 0); if ($id > 0) return $id;
+  }
+  return 0;
+}
 function findProductDbId(PDO $pdo, int $outletId, array $item): int {
   if(!tableExists($pdo,'products')) return 0;
   $candidate=(int)pick($item,['productDbId','product_id','productId'],0); $direct=scopedFindId($pdo,'products',$candidate,$outletId); if($direct>0)return $direct;
@@ -682,7 +708,10 @@ try {
       $ps = cols($pdo, 'sale_payments');
       foreach (($item['payments'] ?? []) as $pay) {
         if (!is_array($pay)) continue;
-        insertChild($pdo, 'sale_payments', $ps, ['sale_id'=>['sale_id'],'payment_type_id'=>['paymentTypeId','payment_type_id'],'payment_type_name'=>['payment','name','paymentTypeName'],'amount'=>['amount'],'tendered'=>['tendered'],'change_amount'=>['change','changeAmount'],'reference_no'=>['referenceNo','reference'],'paid_at'=>['date','paidAt'],'created_at'=>['date','paidAt']], ['sale_id'=>$dbId]+$pay, $outletId);
+        $pay['paymentTypeDbId'] = findPaymentTypeDbId($pdo, $outletId, $pay);
+        $pay['payment_type_id'] = $pay['paymentTypeDbId'] ?: null;
+        $pay['paymentTypeId'] = $pay['paymentTypeDbId'] ?: null;
+        insertChild($pdo, 'sale_payments', $ps, ['sale_id'=>['sale_id'],'payment_type_id'=>['paymentTypeDbId','payment_type_id','paymentTypeId'],'payment_type_name'=>['payment','name','paymentTypeName'],'amount'=>['amount'],'tendered'=>['tendered'],'change_amount'=>['change','changeAmount'],'reference_no'=>['referenceNo','reference'],'paid_at'=>['date','paidAt'],'created_at'=>['date','paidAt']], ['sale_id'=>$dbId]+$pay, $outletId);
         $childCount++;
       }
     }

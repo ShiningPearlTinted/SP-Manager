@@ -626,15 +626,24 @@ function App(){
    const finalSales=ns.map(x=>String(x.id)===String(sale.id)?syncedSale:x);
    localStorage.setItem("sp_sales",JSON.stringify(finalSales));
    setSales(finalSales);
-   const productResponse=await centralProductsRequest("list",{outlet_id:"SP01"});
-   const remoteProducts=(productResponse.products||[]).map(centralProductToApp).filter(Boolean);
-   if(remoteProducts.length){localStorage.setItem("sp_products",JSON.stringify(remoteProducts));setProducts(remoteProducts);}
-   try{
+  }catch(e){
+    console.error("Sale database sync failed:", e);
+    setNotice("Sale could not be completed because the database could not complete the request.");
+    return false;
+  }
+  // A committed sale must remain a success even if a post-save cache refresh
+  // fails. Refresh failures are non-transactional and must not make the cashier
+  // think the sale was rejected after SQL has already committed it.
+  try{
+    const productResponse=await centralProductsRequest("list",{outlet_id:"SP01"});
+    const remoteProducts=(productResponse.products||[]).map(centralProductToApp).filter(Boolean);
+    if(remoteProducts.length){localStorage.setItem("sp_products",JSON.stringify(remoteProducts));setProducts(remoteProducts);}
+  }catch(e){console.warn("Post-sale product refresh failed:",e?.message||e)}
+  try{
     const lr=await centralLoyaltyRequest("sync","SP01");
     const syncedCustomers=(lr?.customers||[]).map(centralCustomerToApp).filter(Boolean);
     if(syncedCustomers.length){localStorage.setItem("sp_customers",JSON.stringify(syncedCustomers));setCustomers(syncedCustomers);}
-   }catch(e){console.warn("Loyalty sync after sale failed",e?.message||e)}
-  }catch(e){setNotice("Sale could not be completed because the database could not complete the request.");return false;}
+  }catch(e){console.warn("Post-sale loyalty refresh failed:",e?.message||e)}
   // Match the Aronium payment flow: complete the document first, then present
   // the post-payment receipt choices. The payment screen is only closed by
   // finishPayment after this async operation confirms success.
