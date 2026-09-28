@@ -519,6 +519,7 @@ try {
   $childCount = 0;
   $keep = [];
   $purchaseNumbers = [];
+  $saleNumbers = [];
   $loyaltyCustomerIds = [];
 
   foreach ($items as $item) {
@@ -533,6 +534,7 @@ try {
       $saleDbId=syncLookup($pdo,$outletId,'sales',$localId,'sales');
       if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true)){$candidate=$saleDbId>0?(string)val((array)($pdo->query('SELECT sale_no FROM sales WHERE id='.(int)$saleDbId.' LIMIT 1')->fetch()?:[]),['sale_no'],''):'';if($candidate==='')$candidate=generateServerDocumentNumber($pdo,$outletId,'Invoice','INV-',$saleDbId>0?$saleDbId:null);}
       $item['no']=$candidate;$item['saleNo']=$candidate;$item['invoiceNo']=$candidate;
+      $saleNumbers[]=['local_id'=>$localId,'sale_no'=>$candidate,'db_id'=>$saleDbId];
     }
     if ($stateKey === 'orders') {
       $candidate=trim((string)pick($item,['no','number','orderNumber','order_number'],''));
@@ -615,6 +617,12 @@ try {
         if ((string)$pn['local_id'] === $localId) { $pn['db_id'] = $dbId; break; }
       }
       unset($pn);
+    }
+    if ($stateKey === 'sales') {
+      foreach ($saleNumbers as &$sn) {
+        if ((string)$sn['local_id'] === $localId) { $sn['db_id'] = $dbId; $sn['sale_no'] = (string)($item['no'] ?? $sn['sale_no']); break; }
+      }
+      unset($sn);
     }
     $count++;
     if ($stateKey === 'sales') {
@@ -707,6 +715,7 @@ try {
   $pdo->commit();
   $response = ['ok'=>true,'api_version'=>'V10','state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
   if ($stateKey === 'purchases') $response['purchase_numbers'] = $purchaseNumbers;
+  if ($stateKey === 'sales') $response['sale_numbers'] = $saleNumbers;
   echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();

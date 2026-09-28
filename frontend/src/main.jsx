@@ -605,16 +605,27 @@ function App(){
   const customerObj=customers.find(c=>c.id===customer);
   const dueDays=Number(customerObj?.dueDatePeriod>0?customerObj.dueDatePeriod:settings.order.defaultDueDate||0);
   const dueDate=new Date(Date.now()+dueDays*86400000).toISOString();
-  const documentCounter=await centralNextDocumentCounter("Invoice");
-  const sale={id:uid(),no:formatDocumentNumber("Invoice",documentCounter),orderNumber:formatDocumentNumber("Order",documentCounter),date:new Date().toISOString(),dueDate,customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment:payments.length>1?"Split payment":(primary?.name||primaryName),paymentTypeId:primary?.id,paid:allPaid,paymentStatus:allPaid?"PAID":"UNPAID",status:"COMPLETED",paymentAmount:totalPaymentAmount,change:Math.max(0,totalPaymentAmount-grand),payments,voided:false,refunded:false,note:String(paymentInfo.note??posOrderMeta.comment??""),internalNote:String(paymentInfo.internalNote??""),orderName:String(paymentInfo.orderName??posOrderMeta.name??""),serviceType:String(paymentInfo.serviceType??posOrderMeta.serviceType??""),table:String(paymentInfo.table??posOrderMeta.table??""),receiptAllowed:paymentInfo.printReceipt!==false};
+  // Generate the sale number on the SQL server during the relational sync.
+  // Do not call document-counter.php directly from the browser here; the deployed
+  // API may be hosted on another origin and older deployments can reject CORS
+  // preflight, which previously made every payment appear to do nothing.
+  const sale={id:uid(),no:"Auto generated",invoiceNo:"Auto generated",orderNumber:"",date:new Date().toISOString(),dueDate,customerId:customer,items:cart,subtotal,discount:disc,tax,total:grand,payment:payments.length>1?"Split payment":(primary?.name||primaryName),paymentTypeId:primary?.id,paid:allPaid,paymentStatus:allPaid?"PAID":"UNPAID",status:"COMPLETED",paymentAmount:totalPaymentAmount,change:Math.max(0,totalPaymentAmount-grand),payments,voided:false,refunded:false,note:String(paymentInfo.note??posOrderMeta.comment??""),internalNote:String(paymentInfo.internalNote??""),orderName:String(paymentInfo.orderName??posOrderMeta.name??""),serviceType:String(paymentInfo.serviceType??posOrderMeta.serviceType??""),table:String(paymentInfo.table??posOrderMeta.table??""),receiptAllowed:paymentInfo.printReceipt!==false};
   const ns=[...sales,sale];
   const np=products.map(p=>{const i=cart.find(x=>x.id===p.id);return i?{...p,stock:Math.max(0,p.stock-i.qty)}:p});
   const lowStockItems=cart.map(i=>{const product=products.find(p=>p.id===i.id);const before=Number(product?.stock||0);const after=Math.max(0,before-Number(i.qty||0));const warningEnabled=product?.lowStockWarning!==false;const warningQty=Math.max(0,Number(product?.lowStockWarningQuantity??product?.reorder??0));return {product,before,after,warningEnabled,warningQty}}).filter(x=>x.product&&x.warningEnabled&&x.warningQty>0&&x.before>=x.warningQty&&x.after<x.warningQty);
   const notifiedIds=(()=>{try{return JSON.parse(sessionStorage.getItem("sp_low_stock_notified")||"[]")}catch{return[]}})();
   const freshLowStockItems=lowStockItems.filter(x=>!notifiedIds.includes(x.product.id));
   if(freshLowStockItems.length){try{sessionStorage.setItem("sp_low_stock_notified",JSON.stringify([...new Set([...notifiedIds,...freshLowStockItems.map(x=>x.product.id)])]))}catch{};setLowStockAlert(freshLowStockItems.map(x=>x.product))}
+  let syncedSale=sale;
   try{
-   await save("sales",ns);
+   const syncResult=await centralRelationalSync("sales",ns);
+   const hit=Array.isArray(syncResult?.sale_numbers)?syncResult.sale_numbers.find(x=>String(x.local_id)===String(sale.id)):null;
+   if(hit?.sale_no){
+     syncedSale={...sale,no:String(hit.sale_no),invoiceNo:String(hit.sale_no),orderNumber:sale.orderNumber||""};
+   }
+   const finalSales=ns.map(x=>String(x.id)===String(sale.id)?syncedSale:x);
+   localStorage.setItem("sp_sales",JSON.stringify(finalSales));
+   setSales(finalSales);
    const productResponse=await centralProductsRequest("list",{outlet_id:"SP01"});
    const remoteProducts=(productResponse.products||[]).map(centralProductToApp).filter(Boolean);
    if(remoteProducts.length){localStorage.setItem("sp_products",JSON.stringify(remoteProducts));setProducts(remoteProducts);}
@@ -627,13 +638,13 @@ function App(){
   // Match the Aronium payment flow: complete the document first, then present
   // the post-payment receipt choices. The payment screen is only closed by
   // finishPayment after this async operation confirms success.
-  if(settings.order.showReceiptDialog===false){setLastSale(null);if(paymentInfo.printReceipt!==false)printReceipt(sale)}else setLastSale(sale);
+  if(settings.order.showReceiptDialog===false){setLastSale(null);if(paymentInfo.printReceipt!==false)printReceipt(syncedSale)}else setLastSale(syncedSale);
   if(paymentInfo.openCashDrawer===true)setTimeout(()=>cashDrawer(),0);
-  publishCustomerDisplay({state:"PAYMENT",items:sale.items||[],subtotal:sale.subtotal||0,discount:sale.discount||0,tax:sale.tax||0,total:sale.total||0,paymentAmount:sale.paymentAmount||0,change:sale.change||0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});
+  publishCustomerDisplay({state:"PAYMENT",items:syncedSale.items||[],subtotal:syncedSale.subtotal||0,discount:syncedSale.discount||0,tax:syncedSale.tax||0,total:syncedSale.total||0,paymentAmount:syncedSale.paymentAmount||0,change:syncedSale.change||0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});
   try{sessionStorage.setItem("sp_customer_display_payment_hold",String(Date.now()+6000))}catch{}
   setTimeout(()=>{publishCustomerDisplay({state:"IDLE",items:[],subtotal:0,discount:0,tax:0,total:0,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});try{sessionStorage.removeItem("sp_customer_display_payment_hold")}catch{}},6000);
-  setCart([]);setDiscount(0);setDiscountFixed(0);setNotice("Sale completed successfully: "+sale.no+" — "+money(grand));setPage("POS / Sales");
-  return sale;
+  setCart([]);setDiscount(0);setDiscountFixed(0);setNotice("Sale completed successfully: "+syncedSale.no+" — "+money(grand));setPage("POS / Sales");
+  return syncedSale;
  };
  const saveOpenOrder=async({newSale=false,name="",comment="",serviceType="",table=""}={})=>{
   if(!cart.length){if(newSale){setNotice("There is no active sale to save.");}return false;}
