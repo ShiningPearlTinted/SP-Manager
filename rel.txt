@@ -165,51 +165,28 @@ function scopedFindId(PDO $pdo, string $table, int $candidateId, int $outletId):
   $sql .= ' LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args);
   return (int)($q->fetchColumn() ?: 0);
 }
-function supplierColumn(array $schema, array $candidates): ?string {
-  foreach ($candidates as $candidate) {
-    if (isset($schema[$candidate])) return $candidate;
-  }
-  return null;
-}
 function findSupplierDbId(PDO $pdo, int $outletId, array $item): int {
   if (!tableExists($pdo, 'suppliers')) throw new RuntimeException('Suppliers table is missing.');
-  $schema = cols($pdo, 'suppliers');
   $local = pick($item, ['supplierDbId','supplier_id','supplierId'], null);
   if ($local !== null && $local !== '') {
     $mapId = syncLookup($pdo, $outletId, 'suppliers', (string)$local, 'suppliers');
     if ($mapId > 0) return $mapId;
-    $direct = scopedFindId($pdo, 'suppliers', (int)$local, $outletId);
-    if ($direct > 0) {
-      saveSyncMap($pdo, $outletId, 'suppliers', (string)$local, 'suppliers', $direct);
-      return $direct;
-    }
   }
   $supplier = $item['supplier'] ?? []; if (!is_array($supplier)) $supplier=[];
   $code = trim((string)pick($supplier, ['code','supplierCode','supplier_code'], pick($item,['supplierCode','supplier_code'],'')));
   $name = trim((string)pick($supplier, ['name','supplierName','supplier_name'], pick($item,['supplierName','supplier_name'],'')));
-  $codeCol = supplierColumn($schema, ['code','supplier_code','supplierCode']);
-  $nameCol = supplierColumn($schema, ['name','supplier_name','supplierName']);
-  $hasOutlet = isset($schema['outlet_id']);
-  if ($code !== '' && $codeCol) {
-    $sql='SELECT id FROM suppliers WHERE `'.$codeCol.'`=?'; $args=[$code]; if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' LIMIT 1';
+  $schema=cols($pdo,'suppliers'); $hasOutlet=isset($schema['outlet_id']);
+  if ($code!=='' && isset($schema['code'])) {
+    $sql='SELECT id FROM suppliers WHERE code=?'; $args=[$code]; if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' LIMIT 1';
     $q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0); if($id>0){if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id);return $id;}
   }
-  if ($name !== '' && $nameCol) {
-    $sql='SELECT id FROM suppliers WHERE `'.$nameCol.'`=?'; $args=[$name]; if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' ORDER BY id ASC LIMIT 1';
+  if ($name!=='') {
+    $sql='SELECT id FROM suppliers WHERE name=?'; $args=[$name]; if($hasOutlet){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' ORDER BY id ASC LIMIT 1';
     $q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0); if($id>0){if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id);return $id;}
   }
   if ($name==='') throw new RuntimeException('Purchase supplier was not found in database. Please save/select a valid supplier first.');
-  if (!$nameCol) throw new RuntimeException('Suppliers table does not contain a supported supplier-name column (expected name or supplier_name).');
-  $data=[];
-  if(isset($schema['outlet_id']))$data['outlet_id']=$outletId;
-  if($codeCol)$data[$codeCol]=$code!==''?$code:'SUP-'.strtoupper(substr(sha1($outletId.'|'.$name),0,8));
-  $data[$nameCol]=$name;
-  $phoneCol=supplierColumn($schema,['phone','phone_number','phoneNumber']); if($phoneCol)$data[$phoneCol]=(string)pick($supplier,['phone','phoneNumber','phone_number'],'');
-  $emailCol=supplierColumn($schema,['email','email_address','emailAddress']); if($emailCol)$data[$emailCol]=(string)pick($supplier,['email','emailAddress','email_address'],'');
-  $addressCol=supplierColumn($schema,['address','supplier_address','supplierAddress']); if($addressCol)$data[$addressCol]=(string)pick($supplier,['address','supplierAddress','supplier_address'],'');
-  $taxCol=supplierColumn($schema,['tax_number','taxNumber','tax_no','tax_number']); if($taxCol)$data[$taxCol]=(string)pick($supplier,['taxNumber','tax_number','tax_no'],'');
-  if(isset($schema['active']))$data['active']=1; if(isset($schema['enabled']))$data['enabled']=1; if(isset($schema['balance']))$data['balance']=0;
-  if(isset($schema['created_by']) && !array_key_exists('created_by',$data)) $data['created_by']=(string)pick($item,['createdBy','created_by','userId'],'');
+  $data=[]; if(isset($schema['outlet_id']))$data['outlet_id']=$outletId; if(isset($schema['code']))$data['code']=$code!==''?$code:'SUP-'.strtoupper(substr(sha1($outletId.'|'.$name),0,8)); if(isset($schema['name']))$data['name']=$name;
+  if(isset($schema['phone']))$data['phone']=(string)pick($supplier,['phone','phoneNumber'],''); if(isset($schema['email']))$data['email']=(string)pick($supplier,['email'],''); if(isset($schema['address']))$data['address']=(string)pick($supplier,['address'],''); if(isset($schema['tax_number']))$data['tax_number']=(string)pick($supplier,['taxNumber','tax_number'],''); if(isset($schema['active']))$data['active']=1; if(isset($schema['enabled']))$data['enabled']=1; if(isset($schema['balance']))$data['balance']=0;
   validateRequired($schema,$data,'suppliers'); $id=insertRow($pdo,'suppliers',$data); if($local!==null&&$local!=='')saveSyncMap($pdo,$outletId,'suppliers',(string)$local,'suppliers',$id); return $id;
 }
 function purchaseNumberExists(PDO $pdo, int $outletId, string $purchaseNo, ?int $exceptId = null): bool {
@@ -309,21 +286,7 @@ try {
     ],
     'suppliers' => [
       'table'=>'suppliers','natural'=>['outlet_id','name'],'delete'=>true,
-      'map'=>[
-        'outlet_id'=>['outlet_id'],
-        'code'=>['code','supplierCode','supplier_code'],
-        'supplier_code'=>['code','supplierCode','supplier_code'],
-        'name'=>['name','supplierName','supplier_name'],
-        'supplier_name'=>['name','supplierName','supplier_name'],
-        'phone'=>['phone','phoneNumber','phone_number'],
-        'email'=>['email','emailAddress','email_address'],
-        'address'=>['address','supplierAddress','supplier_address'],
-        'tax_number'=>['taxNumber','tax_number','tax_no'],
-        'active'=>['active','enabled'],
-        'enabled'=>['enabled','active'],
-        'balance'=>['balance'],
-        'notes'=>['notes','note']
-      ]
+      'map'=>['outlet_id'=>['outlet_id'],'code'=>['code','supplierCode','supplier_code'],'name'=>['name','supplierName','supplier_name'],'phone'=>['phone','phoneNumber'],'email'=>['email'],'address'=>['address'],'tax_number'=>['taxNumber','tax_number'],'active'=>['active','enabled'],'enabled'=>['enabled','active'],'balance'=>['balance'],'notes'=>['notes','note']]
     ],
     'zReports' => [
       'table'=>'end_of_day','natural'=>['outlet_id','business_date'],'delete'=>false,
@@ -355,15 +318,7 @@ try {
     $keep[] = $localId;
     if ($stateKey === 'suppliers') {
       $supplierName = trim((string)pick($item, ['name','supplierName','supplier_name'], ''));
-      if ($supplierName !== '' && trim((string)pick($item, ['code','supplierCode','supplier_code'], '')) === '') {
-        $generatedCode = 'SUP-'.strtoupper(substr(sha1($outletId.'|'.$supplierName),0,8));
-        $item['code'] = $generatedCode;
-        $item['supplierCode'] = $generatedCode;
-        $item['supplier_code'] = $generatedCode;
-      }
-      $item['name'] = $supplierName;
-      $item['supplierName'] = $supplierName;
-      $item['supplier_name'] = $supplierName;
+      if ($supplierName !== '' && trim((string)pick($item, ['code','supplierCode','supplier_code'], '')) === '') $item['code'] = 'SUP-'.strtoupper(substr(sha1($outletId.'|'.$supplierName),0,8));
     }
     $purchaseDbId = 0;
     if ($stateKey === 'purchases') {
