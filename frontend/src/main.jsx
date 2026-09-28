@@ -499,7 +499,25 @@ function App(){
     const r=await centralSettingsRequest("all",{outlet_id:"SP01"});
     if(!alive)return;
     if(r?.settings&&typeof r.settings==="object"&&Object.keys(r.settings).length){
-      const merged=deepMerge(defaultSettings,r.settings);localStorage.setItem("sp_settings",JSON.stringify(merged));setSettings(merged);
+      const merged=deepMerge(defaultSettings,r.settings);
+      if(r?.email&&typeof r.email==="object") merged.email=deepMerge(defaultSettings.email,r.email);
+      if(r?.hardware&&typeof r.hardware==="object"){
+        const hwSql=r.hardware?.LOCAL_AGENT||{};
+        const cashSql=r.hardware?.CASH_DRAWER||{};
+        const displaySql=r.hardware?.CUSTOMER_DISPLAY||{};
+        merged.hardware=deepMerge(merged.hardware,{
+          agentEnabled:hwSql.enabled===true,
+          agentUrl:hwSql.address||merged.hardware.agentUrl,
+          printer:merged.hardware.printer,
+          cashDrawerEnabled:cashSql.enabled===true,
+          cashDrawerPrinter:cashSql.address||merged.hardware.cashDrawerPrinter,
+          customerDisplayEnabled:displaySql.enabled===true,
+          customerDisplayMode:displaySql.connectionType||merged.hardware.customerDisplayMode,
+          customerDisplayPort:displaySql.port||displaySql.address||merged.hardware.customerDisplayPort
+        });
+      }
+      if(r?.database&&typeof r.database==="object") merged.database=deepMerge(defaultSettings.database,r.database);
+      localStorage.setItem("sp_settings",JSON.stringify(merged));setSettings(merged);
     }else{
       const localSettings=load("settings",{});
       if(localSettings&&typeof localSettings==="object"&&Object.keys(localSettings).length)await centralSettingsRequest("save",{outlet_id:"SP01",settings:deepMerge(defaultSettings,localSettings)});

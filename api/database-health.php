@@ -46,7 +46,12 @@ try {
     'promotions'=>['id','name'],
     'end_of_day'=>['id'],
     'users'=>['id','username'],
+    'app_settings'=>['setting_group','setting_key','setting_value'],
     'outlet_settings'=>['outlet_id','setting_group','setting_key','setting_value'],
+    'email_settings'=>['outlet_id','smtp_host','smtp_port','encryption','username','password_encrypted'],
+    'printers'=>['outlet_id','printer_name','printer_type','paper_size','settings_json'],
+    'hardware_devices'=>['outlet_id','device_type','device_name','enabled','settings_json'],
+    'backup_records'=>['outlet_id','backup_type','status','metadata_json'],
     'company_settings'=>['outlet_id','company_name'],
   ];
   $tables=[]; $allOk=true;
@@ -65,8 +70,8 @@ try {
   if(ctype_digit($outlet)){ $q=$pdo->prepare('SELECT id FROM outlets WHERE id=? AND active=1 LIMIT 1'); $q->execute([(int)$outlet]); }
   else { $q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1'); $q->execute([$outlet]); }
   $oid=(int)($q->fetchColumn()?:0); if(!$oid)$allOk=false;
-  echo json_encode(['ok'=>$allOk,'api_version'=>'V10','database'=>$name,'outlet_id'=>$oid,'tables'=>$tables,'sql_first'=>true],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+  echo json_encode(['ok'=>$allOk,'api_version'=>'V10','settings_version'=>'V2','database'=>$name,'outlet_id'=>$oid,'tables'=>$tables,'sql_first'=>true],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
   http_response_code(500);
-  echo json_encode(['ok'=>false,'api_version'=>'V10','sql_first'=>true,'error'=>'Database health check failed.'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+  echo json_encode(['ok'=>false,'api_version'=>'V10','settings_version'=>'V2','sql_first'=>true,'error'=>'Database health check failed.'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 }
