@@ -302,6 +302,17 @@ try {
     respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows]);
   }
 
+  if($action==='delete-group' && $_SERVER['REQUEST_METHOD']==='POST'){
+    $b=jsonBody(); $id=(int)($b['id']??0); $name=trim((string)($b['name']??''));
+    if($id<=0 && $name==='') throw new InvalidArgumentException('Product group id or name is required.');
+    if($id>0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute([$id,$outletId]);$id=(int)($q->fetchColumn()?:0);}
+    if($id<=0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$name,$outletId,$outletId]);$id=(int)($q->fetchColumn()?:0);}
+    if($id<=0) respond(['ok'=>true,'deleted'=>false,'id'=>0]);
+    $q=$pdo->prepare('SELECT COUNT(*) FROM product_groups WHERE parent_id=? AND (outlet_id=? OR outlet_id IS NULL)');$q->execute([$id,$outletId]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because it still has child groups.');
+    $colsNow=tableColumns($pdo,'products');if(isset($colsNow['group_id'])){$q=$pdo->prepare('SELECT COUNT(*) FROM products WHERE group_id=?'.(isset($colsNow['outlet_id'])?' AND outlet_id=?':''));$q->execute(isset($colsNow['outlet_id'])?[$id,$outletId]:[$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because products are still assigned to it.');}
+    $q=$pdo->prepare('DELETE FROM product_groups WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute([$id,$outletId]);respond(['ok'=>true,'deleted'=>$q->rowCount()>0,'id'=>$id]);
+  }
+
   if($action==='delete' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody();$id=(int)($b['id']??0);
     if($id<=0) throw new InvalidArgumentException('Product id is required.');
