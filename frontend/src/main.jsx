@@ -656,7 +656,7 @@ function App(){
  };
  const saveOpenOrder=async({newSale=false,name="",comment="",serviceType="",table=""}={})=>{
   if(!cart.length){if(newSale){setNotice("There is no active sale to save.");}return false;}
-  const order={id:uid(),name:String(name||posOrderMeta.name||("Order "+String(uid()).slice(-6))).trim(),number:"",date:new Date().toISOString(),customerId:customer,items:cart,discount:Number(discount||0),discountFixed:Number(discountFixed||0),taxRate:Number(taxRate||0),status:"Open",confirmed:true,comment:String(comment||posOrderMeta.comment||""),serviceType:String(serviceType||posOrderMeta.serviceType||""),table:String(table||posOrderMeta.table||"")};
+  const order={id:uid(),name:String(name||posOrderMeta.name||("Order "+String(uid()).slice(-6))).trim(),date:new Date().toISOString(),customerId:customer,items:cart,discount:Number(discount||0),discountFixed:Number(discountFixed||0),taxRate:Number(taxRate||0),status:"Open",confirmed:true,comment:String(comment||posOrderMeta.comment||""),serviceType:String(serviceType||posOrderMeta.serviceType||""),table:String(table||posOrderMeta.table||"")};
   const ok=await showActionConfirm("Confirm Open Sale Save",`Save open sale "${order.name}"?`,"Yes");
   if(!ok)return false;
   try{const next=[...orders,order];await persist("orders",next,setOrders);setCart([]);setDiscount(0);setDiscountFixed(0);setPosOrderMeta({name:"",comment:"",serviceType:"Dine In",table:""});setPage("POS / Sales");await showActionMessage("Open Sale Saved",`Open sale "${order.name}" was saved successfully and synchronized with database.`);return true}catch(e){setNotice("Open sale could not be saved because the database could not complete the request.");return false}
@@ -878,9 +878,34 @@ function Login({users,company,onLogin,onAuthenticate}){
 
 function NamedOrders({orders,setOrders,customers,onOpenOrder,setNotice}){
  const refreshOrders=async()=>{const latest=await centralStateRefresh("orders",load("orders",orders));setOrders(Array.isArray(latest)?latest:orders)};
- const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");
+ const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");const nameInputRef=React.useRef(null);
  const visible=orders.filter(o=>String(o.name||o.orderName||"").toLowerCase().includes(search.toLowerCase()));
- const add=async()=>{if(!name.trim())return;const ok=await showActionConfirm("Confirm New Order",`Create named order "${name.trim()}"?`,"Yes");if(!ok)return;const next=[...orders,{id:uid(),name:name.trim(),customerId,date:new Date().toISOString(),status:"Open",items:[]}];try{await save("orders",next);setOrders(next);setName("");await showActionMessage("Named Order Saved","Named order saved successfully and synchronized with database.")}catch(e){setNotice?.("Named order could not be saved because the database could not complete the request.")}};
+ const add=async()=>{
+   const orderName=name.trim();
+   if(!orderName){
+     nameInputRef.current?.focus();
+     await showActionMessage("Order Name Required","Please enter an order name before creating the new order.","warning");
+     return;
+   }
+   const duplicate=orders.some(o=>String(o.name||o.orderName||"").trim().toLowerCase()===orderName.toLowerCase()&&String(o.status||"Open").toLowerCase()==="open");
+   if(duplicate){
+     nameInputRef.current?.focus();
+     await showActionMessage("Duplicate Order Name","An open order with the same name already exists. Please enter a different order name.","warning");
+     return;
+   }
+   const ok=await showActionConfirm("Confirm New Order",`Create named order "${orderName}"?`,"Yes");
+   if(!ok)return;
+   const next=[...orders,{id:uid(),name:orderName,customerId,date:new Date().toISOString(),status:"Open",items:[]}];
+   try{
+     await save("orders",next);
+     const latest=await centralStateRefresh("orders",next);
+     setOrders(Array.isArray(latest)?latest:next);
+     setName("");
+     await showActionMessage("Named Order Saved","Named order saved successfully and synchronized with database.");
+   }catch(e){
+     setNotice?.("Named order could not be saved because the database could not complete the request.");
+   }
+ };
  const closeOrder=async id=>{const target=orders.find(x=>x.id===id);if(!target)return;const ok=await showActionConfirm("Confirm Order Close",`Close named order "${target.name}"?`,"Yes");if(!ok)return;const next=orders.filter(x=>x.id!==id);try{await save("orders",next);setOrders(next);await showActionMessage("Named Order Closed","Named order closed successfully and synchronized with database.")}catch(e){setNotice?.("Named order could not be closed because the database could not complete the request.")}};
  return <section className="named-orders-page">
   <div className="named-orders-topbar">
@@ -888,7 +913,7 @@ function NamedOrders({orders,setOrders,customers,onOpenOrder,setNotice}){
    <div className="named-orders-actions"><button type="button" onClick={refreshOrders} title="Refresh">↻<span>Refresh</span></button><button type="button" onClick={add} title="New order">＋<span>New order</span></button></div>
   </div>
   <div className="named-orders-toolbar">
-   <div className="named-order-create"><input placeholder="Order name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add()}}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="primary" onClick={add}>＋ New order</button></div>
+   <div className="named-order-create"><input ref={nameInputRef} placeholder="Order name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add()}}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button type="button" className="primary" onClick={add}>＋ New order</button></div>
    <div className="named-order-search"><span>⌕</span><input placeholder="Search open orders…" value={search} onChange={e=>setSearch(e.target.value)}/></div>
   </div>
   <div className="named-orders-card">
