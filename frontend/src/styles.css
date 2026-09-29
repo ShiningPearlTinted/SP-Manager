@@ -6866,3 +6866,39 @@ body:has(.customer-display-screen) #root{
 @media(max-width:900px){.payments-search-wrap{width:100%;max-width:none}.payments-toolbar{align-items:stretch;flex-direction:column}}
 
 .delete-sale-button{border:1px solid #efc5c2!important;background:#fff!important;color:#b42318!important;border-radius:5px;padding:5px 8px;font-weight:700;cursor:pointer}
+
+/* Payments / Customer Details - focused layout update for 1.0.37 */
+.payments-tabs-spacer{height:14px}
+.payments-search-wrap{display:flex;align-items:center;position:relative;width:min(560px,52vw)}
+.payments-search-wrap input{width:100%;height:42px;padding:0 42px 0 40px;border:1px solid #d8e0e7;border-radius:10px;background:#fff;color:#17212b;box-sizing:border-box;outline:none;transition:border-color .15s,box-shadow .15s}
+.payments-search-wrap input:focus{border-color:#159bd4;box-shadow:0 0 0 3px rgba(21,155,212,.12)}
+.payments-search-icon{position:absolute;left:14px;z-index:2;color:#6b7b8c;font-size:19px;line-height:1;pointer-events:none}
+.payments-search-clear{position:absolute;right:8px;top:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #d5dde4;border-radius:50%;background:#f4f7f9;color:#425466;font-size:16px;font-weight:700;cursor:pointer;padding:0;line-height:1;box-sizing:border-box}
+.payments-search-clear:hover{background:#eaf0f4;color:#0d2238;border-color:#c4d0da}
+.payments-table td,.payments-table th{vertical-align:middle}
+.payment-customer-cell{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:210px}
+.payment-customer-cell>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.payment-customer-cell small{color:#718096;font-size:12px}
+.view-customer-button{border:1px solid #cbd7e2!important;background:#fff!important;color:#0b5f86!important;border-radius:7px!important;padding:6px 10px!important;font-weight:700;cursor:pointer;white-space:nowrap}
+.view-customer-button:hover{background:#eef7fb!important;border-color:#9fcfe4!important}
+.payment-receipt-actions{display:flex;gap:6px;flex-wrap:wrap}
+.payment-receipt-actions button{border:1px solid #cbd7e2!important;background:#fff!important;color:#243b53!important;border-radius:7px!important;padding:6px 10px!important;cursor:pointer}
+.payment-receipt-actions button:hover{background:#f3f7fa!important;border-color:#aebdca!important}
+.payment-status{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;line-height:1}
+.payment-status.paid{background:#ecfdf3;color:#087443}
+.payment-status.refunded{background:#fff7ed;color:#9a3412}
+.payment-status.voided{background:#fef2f2;color:#b42318}
+.customer-view-backdrop{position:fixed;inset:0;z-index:210000;background:rgba(15,23,42,.48);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+.customer-view-modal{width:min(680px,94vw);max-height:min(760px,90vh);overflow:auto;background:#fff;border:1px solid #d8e2ea;border-radius:16px;box-shadow:0 24px 70px rgba(15,23,42,.22)}
+.customer-view-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid #e6ebef}
+.customer-view-head h3{margin:4px 0 0;font-size:22px;color:#15283d}
+.customer-view-close{width:34px;height:34px;border:0;border-radius:9px;background:#f1f5f8;color:#3b4d5f;font-size:22px;cursor:pointer;line-height:1}
+.customer-view-close:hover{background:#e7eef3}
+.customer-view-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px 22px}
+.customer-view-field{padding:13px 14px;border:1px solid #e1e8ee;border-radius:10px;background:#fbfcfd;min-height:62px;box-sizing:border-box}
+.customer-view-field-wide{grid-column:1/-1}
+.customer-view-field span{display:block;color:#728397;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.customer-view-field strong{display:block;color:#1e3247;font-size:14px;line-height:1.45;word-break:break-word}
+.customer-view-foot{display:flex;justify-content:flex-end;padding:14px 22px 20px;border-top:1px solid #e6ebef}
+.customer-view-foot .secondary{min-width:90px}
+@media(max-width:900px){.payments-search-wrap{width:100%;max-width:none}.payment-customer-cell{align-items:flex-start;flex-direction:column}.customer-view-grid{grid-template-columns:1fr}.customer-view-field-wide{grid-column:auto}}
