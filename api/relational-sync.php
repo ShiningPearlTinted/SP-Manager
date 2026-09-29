@@ -357,7 +357,7 @@ function nextDocumentCounter(PDO $pdo, int $outletId, string $type): int {
   $i=$pdo->prepare('INSERT INTO sp_document_counters(outlet_id,doc_type,current_number,updated_at) VALUES(?,?,1,NOW())');$i->execute([$outletId,$type]);return 1;
 }
 function generateServerDocumentNumber(PDO $pdo,int $outletId,string $type,string $prefix,?int $exceptId=null):string {
-  for($i=0;$i<100;$i++){ $n=nextDocumentCounter($pdo,$outletId,$type); $candidate=$prefix.str_pad((string)$n,8,'0',STR_PAD_LEFT); $table=$type==='Invoice'?'sales':($type==='Order'?'open_orders':null); if(!$table||!tableExists($pdo,$table))return$candidate; $schema=cols($pdo,$table); $col=$type==='Invoice'?'sale_no':'order_number'; if(!isset($schema[$col]))return$candidate; $sql='SELECT id FROM `'.$table.'` WHERE `'.$col.'`=?';$args=[$candidate];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}if($exceptId!==null){$sql.=' AND id<>?';$args[]=$exceptId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);if(!$q->fetchColumn())return$candidate; }
+  for($i=0;$i<100;$i++){ $n=nextDocumentCounter($pdo,$outletId,$type); $candidate=$prefix.str_pad((string)$n,8,'0',STR_PAD_LEFT); $table=$type==='Invoice'?'sales':($type==='Order'?'open_orders':null); if(!$table||!tableExists($pdo,$table))return$candidate; $schema=cols($pdo,$table); $col=$type==='Invoice'?'sale_no':'order_no'; if(!isset($schema[$col]))return$candidate; $sql='SELECT id FROM `'.$table.'` WHERE `'.$col.'`=?';$args=[$candidate];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}if($exceptId!==null){$sql.=' AND id<>?';$args[]=$exceptId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);if(!$q->fetchColumn())return$candidate; }
   throw new RuntimeException('Unable to generate a unique document number.');
 }
 function purchaseNumberExists(PDO $pdo, int $outletId, string $purchaseNo, ?int $exceptId = null): bool {
@@ -463,8 +463,8 @@ try {
       'map'=>['outlet_id'=>['outlet_id'],'supplier_id'=>['supplierDbId','supplier_id','supplierId'],'purchase_no'=>['no','number','purchaseNo','purchase_no'],'external_document'=>['externalDocument','external_document'],'purchase_date'=>['date','purchaseDate','purchase_date'],'due_date'=>['dueDate','due_date'],'stock_date'=>['stockDate','stock_date'],'paid'=>['paid'],'payment_type'=>['paymentType','payment_type'],'payment_amount'=>['paymentAmount','payment_amount','paidAmount','paid_amount'],'paid_amount'=>['paymentAmount','payment_amount','paidAmount','paid_amount'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'status'=>['status'],'notes'=>['internalNote','note','notes'],'created_by'=>['createdBy','created_by','userId']]
     ],
     'orders' => [
-      'table'=>'open_orders','natural'=>['outlet_id','order_number'],'delete'=>true,
-      'map'=>['outlet_id'=>['outlet_id'],'order_name'=>['name','orderName'],'order_number'=>['no','number','orderNumber'],'order_date'=>['date','orderDate'],'customer_id'=>['customerId','customer_id'],'discount'=>['discount'],'tax_rate'=>['taxRate','tax_rate'],'tax'=>['tax','taxAmount'],'status'=>['status'],'comment'=>['comment','notes'],'notes'=>['notes','comment'],'service_type'=>['serviceType'],'table_name'=>['table','tableName'],'total'=>['total'],'created_by'=>['createdBy','created_by','userId']]
+      'table'=>'open_orders','natural'=>['outlet_id','order_no'],'delete'=>true,
+      'map'=>['outlet_id'=>['outlet_id'],'order_name'=>['name','orderName'],'order_no'=>['no','number','orderNumber','order_no'],'order_date'=>['date','orderDate'],'customer_id'=>['customerId','customer_id'],'discount'=>['discount'],'tax_rate'=>['taxRate','tax_rate'],'tax'=>['tax','taxAmount'],'status'=>['status'],'comment'=>['comment','notes'],'notes'=>['notes','comment'],'service_type'=>['serviceType'],'table_name'=>['table','tableName'],'total'=>['total'],'created_by'=>['createdBy','created_by','userId']]
     ],
     'cashMovements' => [
       'table'=>'cash_movements','natural'=>[],'delete'=>false,
@@ -564,7 +564,8 @@ try {
     }
     if ($stateKey === 'orders') {
       $candidate=trim((string)pick($item,['no','number','orderNumber','order_number'],''));
-      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true))$item['no']= $item['number']=$item['orderNumber']=generateServerDocumentNumber($pdo,$outletId,'Order','ORD-');
+      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true))$generatedOrderNo=generateServerDocumentNumber($pdo,$outletId,'Order','ORD-');
+      $item['no']=$item['number']=$item['orderNumber']=$item['order_no']=$generatedOrderNo;
     }
     if ($stateKey === 'suppliers') {
       $supplierName = trim((string)pick($item, ['name','supplierName','supplier_name'], ''));

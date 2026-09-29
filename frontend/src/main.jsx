@@ -95,6 +95,14 @@ const downloadReportPDF=(title,columns,rows)=>{
  openPrintDocument(title,html);
 };
 const formatInvoiceDate=value=>{const d=new Date(value||Date.now());return Number.isNaN(d.getTime())?"":d.toLocaleDateString("en-GB")};
+const formatDisplayDateTime=value=>{const d=new Date(value||Date.now());if(Number.isNaN(d.getTime()))return "";const date=d.toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric"});const time=d.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});return `${date}, ${time}`};
+const customerAddressText=customer=>[
+ [customer?.buildingNumber,customer?.streetName].filter(Boolean).join(", "),
+ [customer?.additionalStreetName,customer?.plotIdentification].filter(Boolean).join(", "),
+ [customer?.district,customer?.postalCode,customer?.city].filter(Boolean).join(", "),
+ [customer?.state,customer?.country].filter(Boolean).join(", ")
+].map(v=>String(v||"").trim()).filter(Boolean).join(", ");
+
 const invoiceAddressLines=company=>{
  const clean=v=>String(v??"").trim();
  const street=[clean(company?.buildingNumber),clean(company?.streetName)].filter(Boolean).join(", ");
@@ -203,7 +211,12 @@ const centralRelationalRead=async(stateKey)=>{const url=centralRelationalDataApi
 const RELATIONAL_STATE_KEYS=new Set(["sales","purchases","orders","cashMovements","stockHistory","paymentTypes","promos","suppliers","zReports"]);
 const centralStateRefresh=async(stateKey, fallback)=>{if(RELATIONAL_STATE_KEYS.has(stateKey)){try{const value=await centralRelationalRead(stateKey);localStorage.setItem("sp_"+stateKey,JSON.stringify(value));return value;}catch(e){console.warn("Relational database refresh failed",stateKey,e?.message||e)}}try{const r=await centralRequest("all",{outlet_id:"SP01"});const remote=r?.data||{};if(Object.prototype.hasOwnProperty.call(remote,stateKey)){const value=remote[stateKey];localStorage.setItem("sp_"+stateKey,JSON.stringify(value));return value;}}catch(e){console.warn("Central state refresh failed",stateKey,e?.message||e)}return fallback};
 const centralRelationalApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/relational-sync.php";
+const centralPromotionsApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/promotions.php";
+const centralPromotionsRequest=async(action="list",body=null)=>{const url=centralPromotionsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Promotion API version mismatch: expected V1, got ${data.api_version}`);return data;};
+
 const centralSalesApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales.php";
+const centralSalesDeleteApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales-delete.php";
+const centralSalesDelete=async(saleId,saleNo)=>{const r=await fetch(centralSalesDeleteApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",sale_id:Number(saleId||0)||0,sale_no:String(saleNo||"")})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales delete API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Sales delete API version mismatch: expected V1, got ${data.api_version}`);return data};
 const centralSalesSave=async sale=>{const r=await fetch(centralSalesApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",sale})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V11")throw new Error(`Sales API version mismatch: expected V11, got ${data.api_version}`);return data};
 const centralRelationalSync=(state_key,state)=>{const keys=new Set(["sales","purchases","orders","cashMovements","stockHistory","paymentTypes","promos","suppliers","zReports"]);if(!keys.has(state_key))return Promise.resolve({ok:true,skipped:true});let fingerprint="";try{fingerprint=JSON.stringify(state)}catch{fingerprint=String(state)}const dedupeKey=`${state_key}|SP01|${fingerprint}`;const existing=centralRelationalInflight.get(dedupeKey);if(existing)return existing;const task=centralRelationalQueue.then(async()=>{const r=await fetch(centralRelationalApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",state_key,state})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid relational API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data});centralRelationalInflight.set(dedupeKey,task);centralRelationalQueue=task.catch(()=>{});task.finally(()=>{centralRelationalInflight.delete(dedupeKey)});return task};
 const applyServerPurchaseNumbers=(state,serverResponse)=>{if(!Array.isArray(state)||!Array.isArray(serverResponse?.purchase_numbers)||!serverResponse.purchase_numbers.length)return state;const map=new Map(serverResponse.purchase_numbers.map(x=>[String(x.local_id),x]));return state.map(item=>{const hit=map.get(String(item?.id??item?.no??item?.number??""));if(!hit?.purchase_no)return item;return {...item,no:hit.purchase_no,number:hit.purchase_no,purchaseNo:hit.purchase_no,dbId:Number(hit.db_id)||item.dbId||null};});};
@@ -221,6 +234,7 @@ const centralDatabaseApi=()=>{const base=centralApiBase().replace(/\/app-state\.
 const centralDatabaseRequest=async(action,body=null)=>{const url=centralDatabaseApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const opts={method:body?"POST":"GET",cache:"no-store",headers:{"Content-Type":"application/json"}};if(body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralUsersApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/users.php"};
 const centralUsersRequest=async(action,body=null)=>{const url=centralUsersApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`HTTP ${r.status}`);e.status=r.status;throw e}return data};
+const centralUserAuth=async(username,password,outlet_id="SP01",timeoutMs=7000)=>{const qs=new URLSearchParams({action:"auth",outlet_id:String(outlet_id||"SP01")});const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),timeoutMs);try{const r=await fetch(centralUsersApi()+"?"+qs.toString(),{method:"POST",cache:"no-store",headers:{},body:new URLSearchParams({username:String(username||""),password:String(password||"")}),signal:ctl.signal});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`HTTP ${r.status}`);e.status=r.status;throw e}return data}finally{clearTimeout(timer)}};
 const centralProductsApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/products.php"};
 const centralProductsRequest=async(action,body=null)=>{const url=centralProductsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health"||action==="catalog";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json();if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralDocumentCounterApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/document-counter.php"};
@@ -656,7 +670,7 @@ function App(){
  };
  const saveOpenOrder=async({newSale=false,name="",comment="",serviceType="",table=""}={})=>{
   if(!cart.length){if(newSale){setNotice("There is no active sale to save.");}return false;}
-  const order={id:uid(),name:String(name||posOrderMeta.name||("Order "+String(uid()).slice(-6))).trim(),date:new Date().toISOString(),customerId:customer,items:cart,discount:Number(discount||0),discountFixed:Number(discountFixed||0),taxRate:Number(taxRate||0),status:"Open",confirmed:true,comment:String(comment||posOrderMeta.comment||""),serviceType:String(serviceType||posOrderMeta.serviceType||""),table:String(table||posOrderMeta.table||"")};
+  const order={id:uid(),name:String(name||posOrderMeta.name||("Order "+String(uid()).slice(-6))).trim(),number:"",date:new Date().toISOString(),customerId:customer,items:cart,discount:Number(discount||0),discountFixed:Number(discountFixed||0),taxRate:Number(taxRate||0),status:"Open",confirmed:true,comment:String(comment||posOrderMeta.comment||""),serviceType:String(serviceType||posOrderMeta.serviceType||""),table:String(table||posOrderMeta.table||"")};
   const ok=await showActionConfirm("Confirm Open Sale Save",`Save open sale "${order.name}"?`,"Yes");
   if(!ok)return false;
   try{const next=[...orders,order];await persist("orders",next,setOrders);setCart([]);setDiscount(0);setDiscountFixed(0);setPosOrderMeta({name:"",comment:"",serviceType:"Dine In",table:""});setPage("POS / Sales");await showActionMessage("Open Sale Saved",`Open sale "${order.name}" was saved successfully and synchronized with database.`);return true}catch(e){setNotice("Open sale could not be saved because the database could not complete the request.");return false}
@@ -809,7 +823,7 @@ function App(){
   });
   persist("products",np,setProducts);recordStockHistory(items.map(i=>{const p=products.find(x=>x.id===i.productId);return {id:uid(),date:new Date().toISOString(),productId:i.productId,productName:p?.name||"",code:p?.code||"",type:"Purchase",change:Number(i.qty),quantityAfter:Number(p?.stock||0)+Number(i.qty),reference:po.no}}));
  };
- const savePromo=async p=>{const np=p.id?promos.map(x=>x.id===p.id?{...p}:x):[...promos,{...p,id:uid()}];await save("promos",np);setPromos(np);setNotice(p.id?"Promotion updated successfully and synchronized with database.":"Promotion saved successfully and synchronized with database.");return true};
+ const savePromo=async p=>{const response=await centralPromotionsRequest("save",{outlet_id:"SP01",promotion:{...p,id:p.id||undefined,daysOfWeek:[...(p.daysOfWeek||[])],items:(p.items||[]).map(i=>({...i,value:Number(i.value||0),quantity:Number(i.quantity||0),quantityLimit:Number(i.quantityLimit||0)}))}});const saved=response?.promotion;if(!saved?.id)throw new Error("Promotion was saved but the database did not return the saved record.");setPromos(current=>{const next=p.id?current.map(x=>x.id===p.id?saved:x):[...current,saved];localStorage.setItem("sp_promos",JSON.stringify(next));return next});return saved};
  const toggleBusiness=async()=>{
   const closing=businessDay.open;
   const b={...businessDay,open:!businessDay.open,closedAt:closing?new Date().toISOString():null};
@@ -819,12 +833,13 @@ function App(){
 
  if(new URLSearchParams(window.location.search).has("display")||new URLSearchParams(window.location.search).has("terminal")||window.location.pathname.includes("/customer-display"))return <CustomerDisplay/>;
  const authenticate=async(username,password)=>{
-  try{const r=await centralUsersRequest("auth",{outlet_id:"SP01",username,password});if(r?.user)return r.user;throw new Error("Invalid username or password.");}
+  try{const r=await centralUserAuth(username,password,"SP01",7000);if(r?.user)return r.user;throw new Error("Invalid username or password.");}
   catch(e){
    if(Number(e?.status||0)>=400&&Number(e?.status||0)<500)throw e;
    const u=users.find(x=>String(x.username||"").toLowerCase()===String(username||"").trim().toLowerCase()&&x.enabled);
    if(u&&String(u.password||"")===String(password||""))return u;
-   throw new Error("Unable to connect to Central Database. Please check the connection or login credentials.");
+   if(e?.name==="AbortError")throw new Error("Database sign-in timed out. Please check your connection and try again.");
+   throw new Error("Unable to connect to database. Please check the connection or login credentials.");
   }
  };
  if(!signedIn)return <Login users={users} company={company} onAuthenticate={authenticate} onLogin={u=>{save("activeUser",u);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(u);setSignedIn(true);setPage("POS / Sales")}}/>;
@@ -843,10 +858,10 @@ function App(){
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} setNotice={setNotice} sales={sales}/>}
    {page==="Purchases"&&<Purchases products={products} suppliers={suppliers} receivePurchase={receivePurchase} purchases={purchases} setPurchases={setPurchases} setNotice={setNotice} paymentTypes={paymentTypes} activeUser={activeUser} setProducts={setProducts}/>}
-   {page==="Payments"&&<Payments sales={sales} customers={customers} emailReceipt={emailReceipt} company={company} settings={settings}/>}
+   {page==="Payments"&&<Payments sales={sales} setSales={setSales} activeUser={activeUser} customers={customers} emailReceipt={emailReceipt} company={company} settings={settings}/>}
    {page==="Payment Types"&&<PaymentTypes paymentTypes={paymentTypes} setPaymentTypes={setPaymentTypes} onRefresh={async()=>{const latest=await centralStateRefresh("paymentTypes",load("paymentTypes",paymentTypes));setPaymentTypes(Array.isArray(latest)?latest:paymentTypes)}}/>}
-   {page==="Refund / Void"&&isPermissionAllowed(activeUser,"managePayments")&&<RefundVoidScreen sales={sales} refund={refund} voidSale={voidSale}/>}
-   {page==="Discount / Promotion"&&<Promotions promos={promos} savePromo={savePromo} products={products} categories={categories} productGroups={productGroups} setNotice={setNotice} onRefresh={async()=>{try{const latest=await centralStateRefresh("promos",promos);if(Array.isArray(latest))setPromos(latest);}catch(e){console.warn("Promotion refresh failed",e?.message||e);setNotice?.("Promotion data could not be refreshed from the database. Current data has been retained.");}}}/>} 
+   {page==="Refund / Void"&&isPermissionAllowed(activeUser,"managePayments")&&<RefundVoid sales={sales} refund={refund} voidSale={voidSale}/>}
+   {page==="Discount / Promotion"&&<Promotions promos={promos} savePromo={savePromo} products={products} categories={categories} productGroups={productGroups} setNotice={setNotice} onRefresh={async()=>{try{const latest=(await centralPromotionsRequest("list",{outlet_id:"SP01"}))?.data||[];setPromos(Array.isArray(latest)?latest:[]);localStorage.setItem("sp_promos",JSON.stringify(Array.isArray(latest)?latest:[]));}catch(e){console.warn("Promotion database refresh failed",e?.message||e);setNotice("Promotions could not be refreshed from the database. Existing data was kept.");}}}/>} 
    {page==="Tax"&&<Tax rate={taxRate} setRate={async r=>{setTaxRate(r);await save("taxRate",r);setNotice("Tax rate saved successfully and synchronized with database.")}}/>}
   {page==="Loyalty"&&<Loyalty customers={customers} setCustomers={setCustomers} setNotice={setNotice}/>}
    {page==="Users & Permissions"&&isPermissionAllowed(activeUser,"manageUsers")&&<Users users={users} setUsers={setUsers} setNotice={setNotice} activeUser={activeUser} setCurrentUser={setCurrentUser}/>}
@@ -871,16 +886,41 @@ function App(){
 function Login({users,company,onLogin,onAuthenticate}){
  const[username,setUsername]=useState("");const[password,setPassword]=useState("");const[showPassword,setShowPassword]=useState(false);const[error,setError]=useState("");const[busy,setBusy]=useState(false);
  const companyLogo=company?.loginLogo||company?.logo||"";
- const submit=async e=>{e.preventDefault();setError("");setBusy(true);try{const u=onAuthenticate?await onAuthenticate(username,password):users.find(x=>String(x.username||"").toLowerCase()===username.trim().toLowerCase()&&x.enabled);if(!u)throw new Error("Invalid username or password.");await new Promise(r=>setTimeout(r,120));onLogin(u);}catch(err){setError(String(err?.message||"Invalid username or password."));}finally{setBusy(false)}};
+ const submit=async e=>{e.preventDefault();setError("");setBusy(true);try{const u=onAuthenticate?await onAuthenticate(username,password):users.find(x=>String(x.username||"").toLowerCase()===username.trim().toLowerCase()&&x.enabled);if(!u)throw new Error("Invalid username or password.");onLogin(u);}catch(err){setError(String(err?.message||"Invalid username or password."));}finally{setBusy(false)}};
  return <div className="login-screen"><div className="login-glow login-glow-a"></div><div className="login-glow login-glow-b"></div><div className="login-card login-card-premium"><div className={"login-brand-mark "+(companyLogo?"login-brand-mark-image":"login-brand-mark-fallback")}>{companyLogo?<img src={companyLogo} alt="Company logo"/>:<span>SP</span>}</div><div className="login-brand-name login-company-title">SHINING PEARL TINTED</div><form onSubmit={submit}><label><span>Username</span><div className="login-input-wrap"><i>◉</i><input autoFocus value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" placeholder="Enter your username"/></div></label><label><span>Password</span><div className="login-password-wrap login-input-wrap"><i>●</i><input type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" placeholder="Enter your password"/><button type="button" className="login-password-toggle" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Hide password":"Show password"}>{showPassword?"Hide":"Show"}</button></div></label>{error&&<div className="login-error">⚠ {error}</div>}<button className="login-submit" type="submit" disabled={busy}>{busy?<><span className="login-spinner"></span>Signing in…</>:<>Sign in <span>→</span></>}</button></form><div className="login-footer"><span>●</span> Offline-ready business system</div></div></div>
 }
 
 
 function NamedOrders({orders,setOrders,customers,onOpenOrder,setNotice}){
  const refreshOrders=async()=>{const latest=await centralStateRefresh("orders",load("orders",orders));setOrders(Array.isArray(latest)?latest:orders)};
- const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");
+ const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");const nameInputRef=React.useRef(null);
  const visible=orders.filter(o=>String(o.name||o.orderName||"").toLowerCase().includes(search.toLowerCase()));
- const add=async()=>{if(!name.trim())return;const ok=await showActionConfirm("Confirm New Order",`Create named order "${name.trim()}"?`,"Yes");if(!ok)return;const next=[...orders,{id:uid(),name:name.trim(),customerId,date:new Date().toISOString(),status:"Open",items:[]}];try{await save("orders",next);setOrders(next);setName("");await showActionMessage("Named Order Saved","Named order saved successfully and synchronized with database.")}catch(e){setNotice?.("Named order could not be saved because the database could not complete the request.")}};
+ const add=async()=>{
+   const orderName=name.trim();
+   if(!orderName){
+     nameInputRef.current?.focus();
+     await showActionMessage("Order Name Required","Please enter an order name before creating the new order.","warning");
+     return;
+   }
+   const duplicate=orders.some(o=>String(o.name||o.orderName||"").trim().toLowerCase()===orderName.toLowerCase()&&String(o.status||"Open").toLowerCase()==="open");
+   if(duplicate){
+     nameInputRef.current?.focus();
+     await showActionMessage("Duplicate Order Name","An open order with the same name already exists. Please enter a different order name.","warning");
+     return;
+   }
+   const ok=await showActionConfirm("Confirm New Order",`Create named order "${orderName}"?`,"Yes");
+   if(!ok)return;
+   const next=[...orders,{id:uid(),name:orderName,customerId,date:new Date().toISOString(),status:"Open",items:[]}];
+   try{
+     await save("orders",next);
+     const latest=await centralStateRefresh("orders",next);
+     setOrders(Array.isArray(latest)?latest:next);
+     setName("");
+     await showActionMessage("Named Order Saved","Named order saved successfully and synchronized with database.");
+   }catch(e){
+     setNotice?.("Named order could not be saved because the database could not complete the request.");
+   }
+ };
  const closeOrder=async id=>{const target=orders.find(x=>x.id===id);if(!target)return;const ok=await showActionConfirm("Confirm Order Close",`Close named order "${target.name}"?`,"Yes");if(!ok)return;const next=orders.filter(x=>x.id!==id);try{await save("orders",next);setOrders(next);await showActionMessage("Named Order Closed","Named order closed successfully and synchronized with database.")}catch(e){setNotice?.("Named order could not be closed because the database could not complete the request.")}};
  return <section className="named-orders-page">
   <div className="named-orders-topbar">
@@ -888,7 +928,7 @@ function NamedOrders({orders,setOrders,customers,onOpenOrder,setNotice}){
    <div className="named-orders-actions"><button type="button" onClick={refreshOrders} title="Refresh">↻<span>Refresh</span></button><button type="button" onClick={add} title="New order">＋<span>New order</span></button></div>
   </div>
   <div className="named-orders-toolbar">
-   <div className="named-order-create"><input placeholder="Order name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add()}}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="primary" onClick={add}>＋ New order</button></div>
+   <div className="named-order-create"><input ref={nameInputRef} placeholder="Order name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add()}}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button type="button" className="primary" onClick={add}>＋ New order</button></div>
    <div className="named-order-search"><span>⌕</span><input placeholder="Search open orders…" value={search} onChange={e=>setSearch(e.target.value)}/></div>
   </div>
   <div className="named-orders-card">
@@ -1041,12 +1081,27 @@ function XZ({sales,businessDay,paymentTypes}){
 function MyCompany({company,setCompany}){
  const[draft,setDraft]=useState(()=>({...company}));
  const[tab,setTab]=useState("General");
+ useEffect(()=>{
+  let cancelled=false;
+  (async()=>{
+   try{
+    const r=await centralSettingsRequest("all",{outlet_id:"SP01"});
+    const fromDb=r?.company;
+    if(!cancelled&&fromDb&&typeof fromDb==="object"&&Object.keys(fromDb).length){
+     setCompany(prev=>({...prev,...fromDb}));
+     setDraft(prev=>({...prev,...fromDb}));
+     try{localStorage.setItem("sp_company",JSON.stringify({...company,...fromDb}));}catch{}
+    }
+   }catch{}
+  })();
+  return()=>{cancelled=true};
+ },[]);
  const[logoName,setLogoName]=useState("");
  const[loginLogoName,setLoginLogoName]=useState("");
  const[message,setMessage]=useState("");
  useEffect(()=>setDraft({...company}),[company]);
  const update=(key,value)=>setDraft(v=>({...v,[key]:value}));
- const saveCompany=async()=>{const ok=await showActionConfirm("Confirm Company Update","Save company information and logo changes?","Yes");if(!ok)return;try{await save("company",{...draft});setCompany({...draft});await showActionMessage("Company Information Saved","Company information saved successfully and synchronized with database.");setTimeout(()=>setMessage(""),2600)}catch(e){setMessage("Company information could not be saved because the database could not complete the request.")}};
+ const saveCompany=async()=>{const ok=await showActionConfirm("Confirm Company Update","Save company information and logo changes?","Yes");if(!ok)return;try{const r=await centralSettingsRequest("company",{outlet_id:"SP01",company:{...draft}});const saved=r?.company||draft;setCompany(saved);setDraft(saved);try{localStorage.setItem("sp_company",JSON.stringify(saved));}catch{}await showActionMessage("Company Information Saved","Company information saved successfully and synchronized with database.");setTimeout(()=>setMessage(""),2600)}catch(e){setMessage("Company information could not be saved because the database could not complete the request.")}};
  const removeLogo=()=>{update("logo","");setLogoName("")};
  const handleLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setMessage("Please select an image file.");return}if(file.size>2*1024*1024){setMessage("Logo image must be 2 MB or smaller.");return}const reader=new FileReader();reader.onload=()=>{update("logo",String(reader.result||""));setLogoName(file.name)};reader.readAsDataURL(file)};
  const handleLoginLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setMessage("Please select an image file.");return}if(file.size>2*1024*1024){setMessage("Login logo image must be 2 MB or smaller.");return}const reader=new FileReader();reader.onload=()=>{update("loginLogo",String(reader.result||""));setLoginLogoName(file.name)};reader.readAsDataURL(file)};
@@ -2077,8 +2132,48 @@ function PaymentTypes({paymentTypes,setPaymentTypes,onRefresh}){
  </section>
 }
 
-function Payments({sales,emailReceipt,company,customers,settings}){return <section className="content"><div className="panel"><div className="toolbar"><div><h3>Payments / Receipt</h3><small>Sales history, receipt PDF and customer email</small></div></div><Table cols={["Document","Date","Payment Type","Amount","Status","Receipt"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Paid",<span className="actions"><button onClick={()=>printInvoice(s,company,customers,settings)}>Invoice</button><button onClick={()=>downloadReportPDF("Receipt-"+s.no,["Qty","Description","Amount"],s.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>PDF</button><button onClick={()=>emailReceipt(s)}>Email</button></span>])}/></div></section>}
-function RefundVoidScreen({sales,refund,voidSale}){return <section className="content"><div className="panel"><h3>Refund / Void</h3><Table cols={["Document","Date","Total","Status","Action"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Completed",<span className="actions">{!s.refunded&&!s.voided&&<><button onClick={()=>refund(s.id)}>Refund</button><button onClick={()=>voidSale(s.id)}>Void</button></>}</span>])}/></div></section>}
+function Payments({sales,setSales,emailReceipt,company,customers,settings,activeUser}){
+ const canDelete=isPermissionAllowed(activeUser,"managePayments");
+ const deleteSale=async sale=>{
+  if(!sale||!canDelete)return;
+  if(sale.refunded||sale.voided||["REFUNDED","VOIDED","REFUND","VOID"].includes(String(sale.status||"").toUpperCase())){
+   await showActionMessage("Sale Cannot Be Deleted","This sale has already been refunded or voided. Please use Refund / Void for transaction changes.");return;
+  }
+  const ok=await showActionConfirm("Confirm Sale Delete",`Delete sale "${sale.no}"? Stock will be restored and the sale will be removed from Sales History.`,"Yes");
+  if(!ok)return;
+  try{
+   await centralSalesDelete(sale.dbId||sale.id,sale.no);
+   const next=(sales||[]).filter(x=>String(x.dbId||x.id||x.no)!==String(sale.dbId||sale.id||sale.no));
+   localStorage.setItem("sp_sales",JSON.stringify(next));
+   setSales(next);
+   await showActionMessage("Sale Deleted",`Sale ${sale.no} was deleted successfully, stock was restored, and the database was synchronized.`);
+  }catch(e){console.error("Sale delete failed:",e);await showActionMessage("Sale Delete Failed",professionalDatabaseError(e));}
+ };
+ const[tab,setTab]=useState("sales");
+ const[search,setSearch]=useState("");
+ const q=search.trim().toLowerCase();
+ const customerMap=useMemo(()=>new Map((customers||[]).map(c=>[String(c.id),c])),[customers]);
+ const matchesCustomer=(customer,text)=>{
+  if(!text)return true;
+  const hay=[customer?.name,customer?.code,customer?.phone,customer?.email,customer?.vehicleNumber,customerAddressText(customer)].filter(Boolean).join(" ").toLowerCase();
+  return hay.includes(text);
+ };
+ const salesRows=(sales||[]).slice().reverse().filter(s=>{
+  if(!q)return true;
+  const c=customerMap.get(String(s.customerId));
+  return [s.no,s.payment,money(s.total),formatDisplayDateTime(s.date),c?.name,c?.phone,c?.email,c?.vehicleNumber,customerAddressText(c)].filter(Boolean).join(" ").toLowerCase().includes(q);
+ });
+ const customerRows=(customers||[]).filter(c=>c?.id!==1&&matchesCustomer(c,q)).sort((a,b)=>String(a?.name||"").localeCompare(String(b?.name||"")));
+ return <section className="content">
+  <div className="panel payments-history-panel">
+   <div className="toolbar payments-toolbar"><div><h3>Payments / Receipt</h3><small>Sales history, receipt PDF and customer email</small></div><div className="payments-search-wrap"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tab==="sales"?"Search invoice, customer, phone, email, vehicle...":"Search customer name, address, phone, email, vehicle..."}/>{search&&<button type="button" className="payments-search-clear" onClick={()=>setSearch("")}>×</button>}</div></div>
+   <div className="payments-tabs" role="tablist"><button type="button" className={tab==="sales"?"active":""} onClick={()=>setTab("sales")}>Sales History</button><button type="button" className={tab==="customers"?"active":""} onClick={()=>setTab("customers")}>Customer Details</button></div>
+   {tab==="sales"?<div className="table payments-table"><table><thead><tr><th>Document</th><th>Date</th><th>Payment Type</th><th>Amount</th><th>Status</th><th>Customer</th><th>Receipt</th><th>Action</th></tr></thead><tbody>{salesRows.length?salesRows.map(s=>{const c=customerMap.get(String(s.customerId));return <tr key={s.id||s.no}><td>{s.no}</td><td>{formatDisplayDateTime(s.date)}</td><td>{s.payment||"Cash"}</td><td>{money(s.total)}</td><td>{s.refunded?"Refunded":s.voided?"Voided":"Paid"}</td><td>{c?.name||"Walk-in customer"}</td><td><span className="actions"><button type="button" onClick={()=>printInvoice(s,company,customers,settings)}>Invoice</button><button type="button" onClick={()=>downloadReportPDF("Receipt-"+s.no,["Qty","Description","Amount"],s.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>PDF</button><button type="button" onClick={()=>emailReceipt(s)}>Email</button></span></td><td>{canDelete&&!s.refunded&&!s.voided?<button type="button" className="delete-sale-button" onClick={()=>deleteSale(s)}>Delete</button>:<span className="muted">—</span>}</td></tr>}) : <tr><td colSpan="8" className="empty">No sales found.</td></tr>}</tbody></table></div>
+   :<div className="table payments-table"><table><thead><tr><th>Name</th><th>Address</th><th>Phone Number</th><th>Email</th><th>Vehicle Number</th></tr></thead><tbody>{customerRows.length?customerRows.map(c=><tr key={c.id}><td><b>{c.name||"—"}</b></td><td>{customerAddressText(c)||"—"}</td><td>{c.phone&&c.phone!=="-"?c.phone:"—"}</td><td>{c.email&&c.email!=="-"?c.email:"—"}</td><td>{c.vehicleNumber||"—"}</td></tr>):<tr><td colSpan="5" className="empty">No customer details found.</td></tr>}</tbody></table></div>}
+  </div>
+ </section>;
+}
+function RefundVoid({sales,refund,voidSale}){return <section className="content"><div className="panel"><h3>Refund / Void</h3><Table cols={["Document","Date","Total","Status","Action"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Completed",<span className="actions">{!s.refunded&&!s.voided&&<><button onClick={()=>refund(s.id)}>Refund</button><button onClick={()=>voidSale(s.id)}>Void</button></>}</span>])}/></div></section>}
 function Promotions({promos,savePromo,products,categories,productGroups,onRefresh,setNotice}){
  const blank={id:null,name:"",active:true,startDate:"",startTime:"",endDate:"",endTime:"",daysOfWeek:[0,1,2,3,4,5,6],items:[]};
  const[editing,setEditing]=useState(null); const[productFilter,setProductFilter]=useState(""); const[tree,setTree]=useState("All Products");
@@ -2087,8 +2182,8 @@ function Promotions({promos,savePromo,products,categories,productGroups,onRefres
  const toggleProduct=id=>setEditing(e=>{const has=e.items.some(i=>i.productId===id);return {...e,items:has?e.items.filter(i=>i.productId!==id):[...e.items,{productId:id,priceType:"discount",value:0,conditional:false,quantity:0,quantityLimit:0}]}});
  const updateItem=(id,key,val)=>setEditing(e=>({...e,items:e.items.map(i=>i.productId===id?{...i,[key]:val}:i)}));
  const filtered=products.filter(p=>{const q=productFilter.toLowerCase();const group=tree==="All Products"||p.category===tree||p.group===tree;return group&&(!q||[p.name,p.code,p.barcode,p.group,p.category].join(" ").toLowerCase().includes(q))});
- const save=async()=>{if(!editing.name.trim())return; if(!editing.items.length)return;const isEdit=Boolean(editing.id);const ok=await showActionConfirm(isEdit?"Confirm Promotion Update":"Confirm Promotion Save",isEdit?`Update promotion "${editing.name}"?`:`Save promotion "${editing.name}"?`,isEdit?"Yes":"Yes");if(!ok)return;await savePromo({...editing,daysOfWeek:[...editing.daysOfWeek],items:editing.items.map(i=>({...i,value:Number(i.value||0),quantity:Number(i.quantity||0),quantityLimit:Number(i.quantityLimit||0)}))});setEditing(null);await showActionMessage(isEdit?"Promotion Updated":"Promotion Saved",`Promotion ${isEdit?"updated":"saved"} successfully and synchronized with database.`)};
- const remove=async p=>{if(!p)return;const ok=await showActionConfirm("Confirm Promotion Delete",`Delete promotion "${p.name}"?`,"Yes");if(!ok)return;const next=promos.filter(x=>x.id!==p.id);try{await save("promos",next);await showActionMessage("Promotion Deleted","Promotion deleted successfully and synchronized with database.");window.location.reload()}catch(e){setNotice?.("Promotion could not be deleted because the database could not complete the request.")}};
+ const save=async()=>{if(!editing?.name?.trim()){setNotice?.("Enter a promotion name.");return} if(!editing.items.length){setNotice?.("Select at least one product for this promotion.");return}const isEdit=Boolean(editing.id);const ok=await showActionConfirm(isEdit?"Confirm Promotion Update":"Confirm Promotion Save",isEdit?`Update promotion "${editing.name}"?`:`Save promotion "${editing.name}"?`,"Yes");if(!ok)return;try{await savePromo({...editing,daysOfWeek:[...editing.daysOfWeek],items:editing.items.map(i=>({...i,value:Number(i.value||0),quantity:Number(i.quantity||0),quantityLimit:Number(i.quantityLimit||0)}))});setEditing(null);await showActionMessage(isEdit?"Promotion Updated":"Promotion Saved",`Promotion ${isEdit?"updated":"saved"} successfully and synchronized with database.`)}catch(e){await showActionMessage(isEdit?"Promotion Update Failed":"Promotion Save Failed",professionalDatabaseError(e))}};
+ const remove=async p=>{if(!p)return;const ok=await showActionConfirm("Confirm Promotion Delete",`Delete promotion "${p.name}"?`,"Yes");if(!ok)return;try{await centralPromotionsRequest("delete",{outlet_id:"SP01",id:Number(p.id)});const next=promos.filter(x=>x.id!==p.id);setPromos(next);localStorage.setItem("sp_promos",JSON.stringify(next));setEditing(null);await showActionMessage("Promotion Deleted","Promotion deleted successfully and synchronized with database.")}catch(e){await showActionMessage("Promotion Delete Failed",professionalDatabaseError(e))}};
  return <section className="promotion-modern">
   <div className="promotion-toolbar"><div><div className="eyebrow">LOYALTY / PROMOTIONS</div><h2>Promotions</h2><p>Create time-based discounts, fixed prices and quantity conditions.</p></div><div className="promotion-actions"><button type="button" onClick={()=>onRefresh?.()}>↻<span>Refresh</span></button><button onClick={openNew}>＋<span>Add promotion</span></button><button disabled={!editing} onClick={()=>editing&&save()}>✎<span>Edit</span></button><button disabled={!editing} onClick={()=>editing&&remove(editing)}>⌫<span>Delete</span></button><button onClick={()=>alert("Promotions can be scheduled by date, time and day, with product-level discounts, fixed prices and quantity conditions.")}>?<span>Help</span></button></div></div>
   <div className="promotion-list-panel"><div className="promotion-list-head"><div><b>{promos.length} promotion(s)</b><small>Promotion rules and schedules</small></div></div>{promos.length?<div className="promotion-table-wrap"><table className="promotion-table"><thead><tr><th></th><th>Name</th><th>Days of week</th><th>Start</th><th>End</th><th>Status</th></tr></thead><tbody>{promos.map(p=><tr key={p.id} className={editing?.id===p.id?"selected":""} onClick={()=>setEditing({...blank,...p})} onDoubleClick={()=>openEdit(p)}><td><input type="checkbox" checked={p.active!==false} readOnly/></td><td><b>{p.name}</b><small>{(p.items||[]).length} item(s)</small></td><td>{p.daysOfWeek?.length===7||!p.daysOfWeek?"All days":p.daysOfWeek.map(d=>["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d]).join(", ")}</td><td>{p.startDate||"—"} {p.startTime||""}</td><td>{p.endDate||"—"} {p.endTime||""}</td><td><span className={p.active===false?"promo-status off":"promo-status"}>{p.active===false?"Disabled":"Enabled"}</span></td></tr>)}</tbody></table></div>:<div className="promotion-empty"><div className="promotion-empty-icon">◉</div><h3>No promotions</h3><button onClick={openNew}>Create new promotion</button></div>}</div>
