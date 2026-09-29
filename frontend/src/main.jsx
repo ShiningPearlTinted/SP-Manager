@@ -205,6 +205,8 @@ const centralStateRefresh=async(stateKey, fallback)=>{if(RELATIONAL_STATE_KEYS.h
 const centralRelationalApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/relational-sync.php";
 const centralSalesApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales.php";
 const centralSalesSave=async sale=>{const r=await fetch(centralSalesApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",sale})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V11")throw new Error(`Sales API version mismatch: expected V11, got ${data.api_version}`);return data};
+const centralSalesDeleteApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales-delete.php";
+const centralSalesDelete=async(saleId,saleNo)=>{const r=await fetch(centralSalesDeleteApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",sale_id:Number(saleId||0)||0,sale_no:String(saleNo||"")})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales delete API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Sales delete API version mismatch: expected V1, got ${data.api_version}`);return data};
 const centralRelationalSync=(state_key,state)=>{const keys=new Set(["sales","purchases","orders","cashMovements","stockHistory","paymentTypes","promos","suppliers","zReports"]);if(!keys.has(state_key))return Promise.resolve({ok:true,skipped:true});let fingerprint="";try{fingerprint=JSON.stringify(state)}catch{fingerprint=String(state)}const dedupeKey=`${state_key}|SP01|${fingerprint}`;const existing=centralRelationalInflight.get(dedupeKey);if(existing)return existing;const task=centralRelationalQueue.then(async()=>{const r=await fetch(centralRelationalApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",state_key,state})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid relational API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data});centralRelationalInflight.set(dedupeKey,task);centralRelationalQueue=task.catch(()=>{});task.finally(()=>{centralRelationalInflight.delete(dedupeKey)});return task};
 const applyServerPurchaseNumbers=(state,serverResponse)=>{if(!Array.isArray(state)||!Array.isArray(serverResponse?.purchase_numbers)||!serverResponse.purchase_numbers.length)return state;const map=new Map(serverResponse.purchase_numbers.map(x=>[String(x.local_id),x]));return state.map(item=>{const hit=map.get(String(item?.id??item?.no??item?.number??""));if(!hit?.purchase_no)return item;return {...item,no:hit.purchase_no,number:hit.purchase_no,purchaseNo:hit.purchase_no,dbId:Number(hit.db_id)||item.dbId||null};});};
 const centralSave=({outlet_id="SP01",state_key,state,updated_by="SP-Manager"})=>{const payload={outlet_id,state_key,state,updated_by};centralWriteQueue=centralWriteQueue.then(async()=>{let last;for(let attempt=1;attempt<=3;attempt++){try{return await centralRequest("save",payload)}catch(e){last=e;if(attempt<3)await new Promise(r=>setTimeout(r,250*attempt))}}throw last||new Error("Central save failed")});return centralWriteQueue};
@@ -843,7 +845,7 @@ function App(){
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} setNotice={setNotice} sales={sales}/>}
    {page==="Purchases"&&<Purchases products={products} suppliers={suppliers} receivePurchase={receivePurchase} purchases={purchases} setPurchases={setPurchases} setNotice={setNotice} paymentTypes={paymentTypes} activeUser={activeUser} setProducts={setProducts}/>}
-   {page==="Payments"&&<Payments sales={sales} customers={customers} emailReceipt={emailReceipt} company={company} settings={settings}/>}
+   {page==="Payments"&&<Payments sales={sales} setSales={setSales} activeUser={activeUser} customers={customers} emailReceipt={emailReceipt} company={company} settings={settings}/>}
    {page==="Payment Types"&&<PaymentTypes paymentTypes={paymentTypes} setPaymentTypes={setPaymentTypes} onRefresh={async()=>{const latest=await centralStateRefresh("paymentTypes",load("paymentTypes",paymentTypes));setPaymentTypes(Array.isArray(latest)?latest:paymentTypes)}}/>}
    {page==="Refund / Void"&&isPermissionAllowed(activeUser,"managePayments")&&<RefundVoid sales={sales} refund={refund} voidSale={voidSale}/>}
    {page==="Discount / Promotion"&&<Promotions promos={promos} savePromo={savePromo} products={products} categories={categories} productGroups={productGroups} setNotice={setNotice} onRefresh={async()=>{const latest=await centralStateRefresh("promos",load("promos",promos));setPromos(Array.isArray(latest)?latest:promos);}}/>} 
@@ -878,34 +880,9 @@ function Login({users,company,onLogin,onAuthenticate}){
 
 function NamedOrders({orders,setOrders,customers,onOpenOrder,setNotice}){
  const refreshOrders=async()=>{const latest=await centralStateRefresh("orders",load("orders",orders));setOrders(Array.isArray(latest)?latest:orders)};
- const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");const nameInputRef=React.useRef(null);
+ const[name,setName]=useState("");const[customerId,setCustomerId]=useState(1);const[search,setSearch]=useState("");
  const visible=orders.filter(o=>String(o.name||o.orderName||"").toLowerCase().includes(search.toLowerCase()));
- const add=async()=>{
-   const orderName=name.trim();
-   if(!orderName){
-     nameInputRef.current?.focus();
-     await showActionMessage("Order Name Required","Please enter an order name before creating the new order.","warning");
-     return;
-   }
-   const duplicate=orders.some(o=>String(o.name||o.orderName||"").trim().toLowerCase()===orderName.toLowerCase()&&String(o.status||"Open").toLowerCase()==="open");
-   if(duplicate){
-     nameInputRef.current?.focus();
-     await showActionMessage("Duplicate Order Name","An open order with the same name already exists. Please enter a different order name.","warning");
-     return;
-   }
-   const ok=await showActionConfirm("Confirm New Order",`Create named order "${orderName}"?`,"Yes");
-   if(!ok)return;
-   const next=[...orders,{id:uid(),name:orderName,customerId,date:new Date().toISOString(),status:"Open",items:[]}];
-   try{
-     await save("orders",next);
-     const latest=await centralStateRefresh("orders",next);
-     setOrders(Array.isArray(latest)?latest:next);
-     setName("");
-     await showActionMessage("Named Order Saved","Named order saved successfully and synchronized with database.");
-   }catch(e){
-     setNotice?.("Named order could not be saved because the database could not complete the request.");
-   }
- };
+ const add=async()=>{if(!name.trim())return;const ok=await showActionConfirm("Confirm New Order",`Create named order "${name.trim()}"?`,"Yes");if(!ok)return;const next=[...orders,{id:uid(),name:name.trim(),customerId,date:new Date().toISOString(),status:"Open",items:[]}];try{await save("orders",next);setOrders(next);setName("");await showActionMessage("Named Order Saved","Named order saved successfully and synchronized with database.")}catch(e){setNotice?.("Named order could not be saved because the database could not complete the request.")}};
  const closeOrder=async id=>{const target=orders.find(x=>x.id===id);if(!target)return;const ok=await showActionConfirm("Confirm Order Close",`Close named order "${target.name}"?`,"Yes");if(!ok)return;const next=orders.filter(x=>x.id!==id);try{await save("orders",next);setOrders(next);await showActionMessage("Named Order Closed","Named order closed successfully and synchronized with database.")}catch(e){setNotice?.("Named order could not be closed because the database could not complete the request.")}};
  return <section className="named-orders-page">
   <div className="named-orders-topbar">
@@ -913,7 +890,7 @@ function NamedOrders({orders,setOrders,customers,onOpenOrder,setNotice}){
    <div className="named-orders-actions"><button type="button" onClick={refreshOrders} title="Refresh">↻<span>Refresh</span></button><button type="button" onClick={add} title="New order">＋<span>New order</span></button></div>
   </div>
   <div className="named-orders-toolbar">
-   <div className="named-order-create"><input ref={nameInputRef} placeholder="Order name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add()}}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button type="button" className="primary" onClick={add}>＋ New order</button></div>
+   <div className="named-order-create"><input placeholder="Order name" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add()}}/><select value={customerId} onChange={e=>setCustomerId(Number(e.target.value))}>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="primary" onClick={add}>＋ New order</button></div>
    <div className="named-order-search"><span>⌕</span><input placeholder="Search open orders…" value={search} onChange={e=>setSearch(e.target.value)}/></div>
   </div>
   <div className="named-orders-card">
@@ -2102,7 +2079,27 @@ function PaymentTypes({paymentTypes,setPaymentTypes,onRefresh}){
  </section>
 }
 
-function Payments({sales,emailReceipt,company,customers,settings}){return <section className="content"><div className="panel"><div className="toolbar"><div><h3>Payments / Receipt</h3><small>Sales history, receipt PDF and customer email</small></div></div><Table cols={["Document","Date","Payment Type","Amount","Status","Receipt"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Paid",<span className="actions"><button onClick={()=>printInvoice(s,company,customers,settings)}>Invoice</button><button onClick={()=>downloadReportPDF("Receipt-"+s.no,["Qty","Description","Amount"],s.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>PDF</button><button onClick={()=>emailReceipt(s)}>Email</button></span>])}/></div></section>}
+function Payments({sales,setSales,emailReceipt,company,customers,settings,activeUser}){
+ const canDelete=isPermissionAllowed(activeUser,"managePayments");
+ const deleteSale=async sale=>{
+  if(!sale||!canDelete)return;
+  if(sale.refunded||sale.voided||["REFUNDED","VOIDED","REFUND","VOID"].includes(String(sale.status||"").toUpperCase())){
+   await showActionMessage("Sale Cannot Be Deleted","This sale has already been refunded or voided. Please use Refund / Void for transaction changes.",);return;
+  }
+  const ok=await showActionConfirm("Confirm Sale Delete",`Delete sale "${sale.no}"? Stock will be restored and the sale will be removed from Sales History.`,"Yes");
+  if(!ok)return;
+  try{
+   await centralSalesDelete(sale.dbId||sale.id,sale.no);
+   const next=sales.filter(x=>String(x.dbId||x.id||x.no)!==String(sale.dbId||sale.id||sale.no));
+   localStorage.setItem("sp_sales",JSON.stringify(next));
+   setSales(next);
+   await showActionMessage("Sale Deleted",`Sale ${sale.no} was deleted successfully, stock was restored, and the database was synchronized.`);
+  }catch(e){
+   console.error("Sale delete failed:",e);
+   await showActionMessage("Sale Delete Failed",professionalDatabaseError(e));
+  }
+ };
+ return <section className="content"><div className="panel"><div className="toolbar"><div><h3>Payments / Receipt</h3><small>Sales history, receipt PDF and customer email</small></div></div><Table cols={["Document","Date","Payment Type","Amount","Status","Receipt","Action"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Paid",<span className="actions"><button onClick={()=>printInvoice(s,company,customers,settings)}>Invoice</button><button onClick={()=>downloadReportPDF("Receipt-"+s.no,["Qty","Description","Amount"],s.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>PDF</button><button onClick={()=>emailReceipt(s)}>Email</button></span>,canDelete&&!s.refunded&&!s.voided?<button className="delete-sale-button" onClick={()=>deleteSale(s)}>Delete</button>:<span className="muted">—</span>])}/></div></section>}
 function RefundVoid({sales,refund,voidSale}){return <section className="content"><div className="panel"><h3>Refund / Void</h3><Table cols={["Document","Date","Total","Status","Action"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Completed",<span className="actions">{!s.refunded&&!s.voided&&<><button onClick={()=>refund(s.id)}>Refund</button><button onClick={()=>voidSale(s.id)}>Void</button></>}</span>])}/></div></section>}
 function Promotions({promos,savePromo,products,categories,productGroups,onRefresh,setNotice}){
  const blank={id:null,name:"",active:true,startDate:"",startTime:"",endDate:"",endTime:"",daysOfWeek:[0,1,2,3,4,5,6],items:[]};

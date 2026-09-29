@@ -6860,3 +6860,5 @@ body:has(.customer-display-screen) #root{
 .sp-action-dialog-btn.secondary{background:#fff;color:#334155}
 .sp-action-dialog-btn.primary{background:#112235;color:#fff;border-color:#112235}
 .sp-action-dialog-btn:focus{outline:3px solid rgba(42,104,170,.18);outline-offset:2px}
+/* Payments / Sales History — delete action */
+.delete-sale-button{border:1px solid #efc5c2!important;background:#fff!important;color:#b42318!important;border-radius:5px;padding:5px 8px;font-weight:700;cursor:pointer}.delete-sale-button:hover{background:#fff1f0!important;border-color:#e5a5a1!important}
