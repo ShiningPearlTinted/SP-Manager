@@ -205,8 +205,6 @@ const centralStateRefresh=async(stateKey, fallback)=>{if(RELATIONAL_STATE_KEYS.h
 const centralRelationalApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/relational-sync.php";
 const centralSalesApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales.php";
 const centralSalesSave=async sale=>{const r=await fetch(centralSalesApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",sale})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V11")throw new Error(`Sales API version mismatch: expected V11, got ${data.api_version}`);return data};
-const centralSalesDeleteApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales-delete.php";
-const centralSalesDelete=async(saleId,saleNo)=>{const r=await fetch(centralSalesDeleteApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",sale_id:Number(saleId||0)||0,sale_no:String(saleNo||"")})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales delete API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Sales delete API version mismatch: expected V1, got ${data.api_version}`);return data};
 const centralRelationalSync=(state_key,state)=>{const keys=new Set(["sales","purchases","orders","cashMovements","stockHistory","paymentTypes","promos","suppliers","zReports"]);if(!keys.has(state_key))return Promise.resolve({ok:true,skipped:true});let fingerprint="";try{fingerprint=JSON.stringify(state)}catch{fingerprint=String(state)}const dedupeKey=`${state_key}|SP01|${fingerprint}`;const existing=centralRelationalInflight.get(dedupeKey);if(existing)return existing;const task=centralRelationalQueue.then(async()=>{const r=await fetch(centralRelationalApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:"SP01",state_key,state})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid relational API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data});centralRelationalInflight.set(dedupeKey,task);centralRelationalQueue=task.catch(()=>{});task.finally(()=>{centralRelationalInflight.delete(dedupeKey)});return task};
 const applyServerPurchaseNumbers=(state,serverResponse)=>{if(!Array.isArray(state)||!Array.isArray(serverResponse?.purchase_numbers)||!serverResponse.purchase_numbers.length)return state;const map=new Map(serverResponse.purchase_numbers.map(x=>[String(x.local_id),x]));return state.map(item=>{const hit=map.get(String(item?.id??item?.no??item?.number??""));if(!hit?.purchase_no)return item;return {...item,no:hit.purchase_no,number:hit.purchase_no,purchaseNo:hit.purchase_no,dbId:Number(hit.db_id)||item.dbId||null};});};
 const centralSave=({outlet_id="SP01",state_key,state,updated_by="SP-Manager"})=>{const payload={outlet_id,state_key,state,updated_by};centralWriteQueue=centralWriteQueue.then(async()=>{let last;for(let attempt=1;attempt<=3;attempt++){try{return await centralRequest("save",payload)}catch(e){last=e;if(attempt<3)await new Promise(r=>setTimeout(r,250*attempt))}}throw last||new Error("Central save failed")});return centralWriteQueue};
@@ -845,7 +843,7 @@ function App(){
    {page==="Inventory"&&<Inventory products={products} setProducts={setProducts} stockHistory={stockHistory} setStockHistory={setStockHistory} categories={categories}/>}
    {page==="Customers"&&<Customers customers={customers} addCustomer={addCustomer} setCustomers={setCustomers} setNotice={setNotice} sales={sales}/>}
    {page==="Purchases"&&<Purchases products={products} suppliers={suppliers} receivePurchase={receivePurchase} purchases={purchases} setPurchases={setPurchases} setNotice={setNotice} paymentTypes={paymentTypes} activeUser={activeUser} setProducts={setProducts}/>}
-   {page==="Payments"&&<Payments sales={sales} setSales={setSales} activeUser={activeUser} customers={customers} emailReceipt={emailReceipt} company={company} settings={settings}/>}
+   {page==="Payments"&&<Payments sales={sales} customers={customers} emailReceipt={emailReceipt} company={company} settings={settings}/>}
    {page==="Payment Types"&&<PaymentTypes paymentTypes={paymentTypes} setPaymentTypes={setPaymentTypes} onRefresh={async()=>{const latest=await centralStateRefresh("paymentTypes",load("paymentTypes",paymentTypes));setPaymentTypes(Array.isArray(latest)?latest:paymentTypes)}}/>}
    {page==="Refund / Void"&&isPermissionAllowed(activeUser,"managePayments")&&<RefundVoid sales={sales} refund={refund} voidSale={voidSale}/>}
    {page==="Discount / Promotion"&&<Promotions promos={promos} savePromo={savePromo} products={products} categories={categories} productGroups={productGroups} setNotice={setNotice} onRefresh={async()=>{const latest=await centralStateRefresh("promos",load("promos",promos));setPromos(Array.isArray(latest)?latest:promos);}}/>} 
@@ -1043,12 +1041,27 @@ function XZ({sales,businessDay,paymentTypes}){
 function MyCompany({company,setCompany}){
  const[draft,setDraft]=useState(()=>({...company}));
  const[tab,setTab]=useState("General");
+ useEffect(()=>{
+  let cancelled=false;
+  (async()=>{
+   try{
+    const r=await centralSettingsRequest("all",{outlet_id:"SP01"});
+    const fromDb=r?.company;
+    if(!cancelled&&fromDb&&typeof fromDb==="object"&&Object.keys(fromDb).length){
+     setCompany(prev=>({...prev,...fromDb}));
+     setDraft(prev=>({...prev,...fromDb}));
+     try{localStorage.setItem("sp_company",JSON.stringify({...company,...fromDb}));}catch{}
+    }
+   }catch{}
+  })();
+  return()=>{cancelled=true};
+ },[]);
  const[logoName,setLogoName]=useState("");
  const[loginLogoName,setLoginLogoName]=useState("");
  const[message,setMessage]=useState("");
  useEffect(()=>setDraft({...company}),[company]);
  const update=(key,value)=>setDraft(v=>({...v,[key]:value}));
- const saveCompany=async()=>{const ok=await showActionConfirm("Confirm Company Update","Save company information and logo changes?","Yes");if(!ok)return;try{await save("company",{...draft});setCompany({...draft});await showActionMessage("Company Information Saved","Company information saved successfully and synchronized with database.");setTimeout(()=>setMessage(""),2600)}catch(e){setMessage("Company information could not be saved because the database could not complete the request.")}};
+ const saveCompany=async()=>{const ok=await showActionConfirm("Confirm Company Update","Save company information and logo changes?","Yes");if(!ok)return;try{const r=await centralSettingsRequest("company",{outlet_id:"SP01",company:{...draft}});const saved=r?.company||draft;setCompany(saved);setDraft(saved);try{localStorage.setItem("sp_company",JSON.stringify(saved));}catch{}await showActionMessage("Company Information Saved","Company information saved successfully and synchronized with database.");setTimeout(()=>setMessage(""),2600)}catch(e){setMessage("Company information could not be saved because the database could not complete the request.")}};
  const removeLogo=()=>{update("logo","");setLogoName("")};
  const handleLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setMessage("Please select an image file.");return}if(file.size>2*1024*1024){setMessage("Logo image must be 2 MB or smaller.");return}const reader=new FileReader();reader.onload=()=>{update("logo",String(reader.result||""));setLogoName(file.name)};reader.readAsDataURL(file)};
  const handleLoginLogo=e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){setMessage("Please select an image file.");return}if(file.size>2*1024*1024){setMessage("Login logo image must be 2 MB or smaller.");return}const reader=new FileReader();reader.onload=()=>{update("loginLogo",String(reader.result||""));setLoginLogoName(file.name)};reader.readAsDataURL(file)};
@@ -2079,27 +2092,7 @@ function PaymentTypes({paymentTypes,setPaymentTypes,onRefresh}){
  </section>
 }
 
-function Payments({sales,setSales,emailReceipt,company,customers,settings,activeUser}){
- const canDelete=isPermissionAllowed(activeUser,"managePayments");
- const deleteSale=async sale=>{
-  if(!sale||!canDelete)return;
-  if(sale.refunded||sale.voided||["REFUNDED","VOIDED","REFUND","VOID"].includes(String(sale.status||"").toUpperCase())){
-   await showActionMessage("Sale Cannot Be Deleted","This sale has already been refunded or voided. Please use Refund / Void for transaction changes.",);return;
-  }
-  const ok=await showActionConfirm("Confirm Sale Delete",`Delete sale "${sale.no}"? Stock will be restored and the sale will be removed from Sales History.`,"Yes");
-  if(!ok)return;
-  try{
-   await centralSalesDelete(sale.dbId||sale.id,sale.no);
-   const next=sales.filter(x=>String(x.dbId||x.id||x.no)!==String(sale.dbId||sale.id||sale.no));
-   localStorage.setItem("sp_sales",JSON.stringify(next));
-   setSales(next);
-   await showActionMessage("Sale Deleted",`Sale ${sale.no} was deleted successfully, stock was restored, and the database was synchronized.`);
-  }catch(e){
-   console.error("Sale delete failed:",e);
-   await showActionMessage("Sale Delete Failed",professionalDatabaseError(e));
-  }
- };
- return <section className="content"><div className="panel"><div className="toolbar"><div><h3>Payments / Receipt</h3><small>Sales history, receipt PDF and customer email</small></div></div><Table cols={["Document","Date","Payment Type","Amount","Status","Receipt","Action"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Paid",<span className="actions"><button onClick={()=>printInvoice(s,company,customers,settings)}>Invoice</button><button onClick={()=>downloadReportPDF("Receipt-"+s.no,["Qty","Description","Amount"],s.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>PDF</button><button onClick={()=>emailReceipt(s)}>Email</button></span>,canDelete&&!s.refunded&&!s.voided?<button className="delete-sale-button" onClick={()=>deleteSale(s)}>Delete</button>:<span className="muted">—</span>])}/></div></section>}
+function Payments({sales,emailReceipt,company,customers,settings}){return <section className="content"><div className="panel"><div className="toolbar"><div><h3>Payments / Receipt</h3><small>Sales history, receipt PDF and customer email</small></div></div><Table cols={["Document","Date","Payment Type","Amount","Status","Receipt"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),s.payment,money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Paid",<span className="actions"><button onClick={()=>printInvoice(s,company,customers,settings)}>Invoice</button><button onClick={()=>downloadReportPDF("Receipt-"+s.no,["Qty","Description","Amount"],s.items.map(i=>[i.qty,i.name,money(i.price*i.qty)]))}>PDF</button><button onClick={()=>emailReceipt(s)}>Email</button></span>])}/></div></section>}
 function RefundVoid({sales,refund,voidSale}){return <section className="content"><div className="panel"><h3>Refund / Void</h3><Table cols={["Document","Date","Total","Status","Action"]} rows={sales.slice().reverse().map(s=>[s.no,new Date(s.date).toLocaleString(),money(s.total),s.refunded?"Refunded":s.voided?"Voided":"Completed",<span className="actions">{!s.refunded&&!s.voided&&<><button onClick={()=>refund(s.id)}>Refund</button><button onClick={()=>voidSale(s.id)}>Void</button></>}</span>])}/></div></section>}
 function Promotions({promos,savePromo,products,categories,productGroups,onRefresh,setNotice}){
  const blank={id:null,name:"",active:true,startDate:"",startTime:"",endDate:"",endTime:"",daysOfWeek:[0,1,2,3,4,5,6],items:[]};
