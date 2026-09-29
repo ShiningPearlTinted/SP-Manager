@@ -12,7 +12,14 @@ $port=(string)($db['port']??$config['db_port']??'3306');
 $name=(string)($db['name']??$config['db_name']??'');
 $user=(string)($db['user']??$config['db_user']??'');
 $pass=(string)($db['pass']??$config['db_pass']??'');
-function body():array{$v=json_decode(file_get_contents('php://input')?:'',true);return is_array($v)?$v:[];}
+function body():array{
+  $raw=file_get_contents('php://input')?:'';
+  $contentType=strtolower((string)($_SERVER['CONTENT_TYPE']??''));
+  if(str_contains($contentType,'application/json')){ $v=json_decode($raw,true); return is_array($v)?$v:[]; }
+  if(!empty($_POST)) return is_array($_POST)?$_POST:[];
+  if($raw!==''){ parse_str($raw,$v); return is_array($v)?$v:[]; }
+  return [];
+}
 function out(array $v,int $s=200):never{http_response_code($s);echo json_encode($v,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;}
 function outlet(PDO $pdo,mixed $v):int{$v=trim((string)($v??'SP01'));if($v==='' )$v='SP01';if(ctype_digit($v))return(int)$v;$q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1');$q->execute([$v]);$id=(int)($q->fetchColumn()?:0);if($id<=0)throw new InvalidArgumentException('Outlet not found.');return$id;}
 function role(PDO $pdo,string $name):int{$name=trim($name)?:'Cashier';$code=preg_replace('/[^A-Z0-9_]+/','_',strtoupper($name));$q=$pdo->prepare('SELECT id FROM roles WHERE role_name=? OR role_code=? LIMIT 1');$q->execute([$name,$code]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;$q=$pdo->prepare('INSERT INTO roles(role_code,role_name,description,active) VALUES(?,?,?,1)');$q->execute([$code,$name,'SP-Manager role']);return(int)$pdo->lastInsertId();}
