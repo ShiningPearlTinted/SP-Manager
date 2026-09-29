@@ -48,4 +48,13 @@ function readState(PDO $pdo,int $oid,string $k):array{
  $map=['sales'=>['t'=>'sales','f'=>fn($r)=>mapSale($pdo,$r)],'purchases'=>['t'=>'purchases','f'=>fn($r)=>mapPurchase($pdo,$r)],'orders'=>['t'=>'open_orders','f'=>fn($r)=>mapOrder($pdo,$r)],'cashMovements'=>['t'=>'cash_movements','f'=>fn($r)=>mapCash($r)],'stockHistory'=>['t'=>'stock_movements','f'=>fn($r)=>mapStock($r)],'paymentTypes'=>['t'=>'payment_types','f'=>fn($r)=>mapPaymentType($r)],'promos'=>['t'=>'promotions','f'=>fn($r)=>mapPromo($r)],'suppliers'=>['t'=>'suppliers','f'=>fn($r)=>mapSupplier($r)],'zReports'=>['t'=>'end_of_day','f'=>fn($r)=>mapZReport($r)]];
  if(!isset($map[$k]))throw new InvalidArgumentException('Unsupported relational state key: '.$k);$rs=rows($pdo,$map[$k]['t'],$oid);return array_map($map[$k]['f'],$rs);
 }
-try{$pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$oid=outletId($pdo,(string)($_GET['outlet_id']??'SP01'));$key=trim((string)($_GET['state_key']??''));if($key==='')throw new InvalidArgumentException('state_key is required.');$data=readState($pdo,$oid,$key);echo json_encode(['ok'=>true,'api_version'=>'V10','state_key'=>$key,'outlet_id'=>$oid,'count'=>count($data),'data'=>$data],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}catch(Throwable $e){http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V10','error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}
+function connectDb(string $dsn,string $user,string $pass):PDO{return new PDO($dsn,$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);}
+try{
+  try{$pdo=connectDb("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass);}catch(PDOException $first){
+    $fallbackAllowed=in_array(strtolower($host),['localhost','127.0.0.1'],true);
+    if(!$fallbackAllowed || stripos($first->getCode().' '.$first->getMessage(),'2002')===false)throw $first;
+    $fallbackHost=(strtolower($host)==='localhost')?'127.0.0.1':'localhost';
+    $pdo=connectDb("mysql:host={$fallbackHost};port={$port};dbname={$name};charset=utf8mb4",$user,$pass);
+  }
+  $oid=outletId($pdo,(string)($_GET['outlet_id']??'SP01'));$key=trim((string)($_GET['state_key']??''));if($key==='')throw new InvalidArgumentException('state_key is required.');$data=readState($pdo,$oid,$key);echo json_encode(['ok'=>true,'api_version'=>'V10','state_key'=>$key,'outlet_id'=>$oid,'count'=>count($data),'data'=>$data],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+}catch(Throwable $e){http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V10','error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}
