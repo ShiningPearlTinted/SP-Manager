@@ -6933,3 +6933,25 @@ body:has(.customer-display-screen) #root{
 .outlet-modal-backdrop{position:fixed;inset:0;z-index:220000;background:rgba(15,23,42,.48);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
 .outlet-modal{width:min(760px,95vw);background:#fff;border-radius:16px;border:1px solid #d9e3eb;box-shadow:0 28px 80px rgba(15,23,42,.28);overflow:hidden}.outlet-modal-head{display:flex;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid #e6edf2}.outlet-modal-head h3{margin:4px 0 0;font-size:24px;color:#17324d}.outlet-modal-close{border:0;width:34px;height:34px;border-radius:9px;background:#f1f5f8;color:#3c5165;font-size:22px;cursor:pointer}.outlet-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px 22px}.outlet-form-grid label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#53697e}.outlet-form-grid label.wide{grid-column:1/-1}.outlet-form-grid input,.outlet-form-grid textarea{border:1px solid #ccd9e3;border-radius:9px;padding:11px 12px;outline:0;font:inherit;color:#23384d;background:#fff}.outlet-form-grid input:focus,.outlet-form-grid textarea:focus{border-color:#5ea8d6;box-shadow:0 0 0 3px rgba(94,168,214,.14)}.outlet-checkbox{flex-direction:row!important;align-items:center;gap:9px!important;align-self:end;padding:10px 12px;border:1px solid #e1e8ee;border-radius:9px;background:#f9fbfc}.outlet-checkbox input{width:17px;height:17px}.outlet-modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px;border-top:1px solid #e6edf2}.outlet-modal-foot button{border-radius:9px;padding:10px 15px;font-weight:700;cursor:pointer}.outlet-modal-foot .secondary{border:1px solid #ccd8e2;background:#fff;color:#27415a}.outlet-modal-foot .primary{border:0;background:#123f61;color:#fff}.outlet-modal-foot .primary:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:900px){.outlet-management-page{padding:20px 16px 32px}.outlet-summary{grid-template-columns:1fr}.outlet-management-head{flex-direction:column}.outlet-add-btn{width:100%}.outlet-toolbar{flex-direction:column}.outlet-refresh{height:44px}.outlet-form-grid{grid-template-columns:1fr}.outlet-form-grid label.wide{grid-column:auto}}
+
+/* SP-Manager 1.0.38 — Outlet Assignment V3
+   Scoped only to Users & Permissions outlet assignment. */
+.users-modal-outlet-aware{width:min(900px,100%)}
+.user-outlet-section{padding:0 22px 8px}
+.user-outlet-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:4px 0 10px}
+.user-outlet-section-head h4{margin:0;color:#173b5b;font-size:13px}
+.user-outlet-section-head p{margin:4px 0 0;color:#8294a5;font-size:10px;line-height:1.5}
+.user-outlet-loading{font-size:10px;color:#8294a5;white-space:nowrap}
+.user-outlet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.user-outlet-option{display:flex;align-items:center;gap:10px;min-height:50px;padding:9px 11px;border:1px solid #dce6ee;border-radius:9px;background:#fff;color:#526579;cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.user-outlet-option:hover{border-color:#9fd5e9;background:#f8fcfe}
+.user-outlet-option.selected{border-color:#159bd4;background:#f2fbff;box-shadow:0 0 0 2px #159bd41a}
+.user-outlet-option input{width:16px;height:16px;margin:0;accent-color:#159bd4;flex:0 0 auto}
+.user-outlet-option span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.user-outlet-option b{font-size:11px;color:#173b5b}
+.user-outlet-option small{font-size:10px;color:#718397;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-outlet-empty{grid-column:1/-1;padding:12px;border:1px dashed #ccd9e4;border-radius:9px;background:#f8fafc;color:#718397;font-size:10px}
+.user-default-outlet{display:flex;flex-direction:column;gap:6px;margin-top:11px;color:#526579;font-size:11px;font-weight:800}
+.user-default-outlet select{height:38px;padding:0 10px;border:1px solid #cbd8e3;border-radius:8px;background:#fff;color:#173b5b;outline:none}
+.user-default-outlet select:disabled{background:#f3f6f8;color:#9aa9b5;cursor:not-allowed}
+@media(max-width:760px){.user-outlet-grid{grid-template-columns:1fr}.user-outlet-section{padding-left:14px;padding-right:14px}.user-outlet-section-head{flex-direction:column}}
