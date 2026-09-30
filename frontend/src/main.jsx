@@ -243,6 +243,8 @@ const centralDatabaseApi=()=>{const base=centralApiBase().replace(/\/app-state\.
 const centralDatabaseRequest=async(action,body=null)=>{const url=centralDatabaseApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const opts={method:body?"POST":"GET",cache:"no-store",headers:{"Content-Type":"application/json"}};if(body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralUsersApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/users.php"};
 const centralUsersRequest=async(action,body=null)=>{const url=centralUsersApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`HTTP ${r.status}`);e.status=r.status;throw e}return data};
+const centralOutletsApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/outlets.php"};
+const centralOutletsRequest=async(action="list",body=null)=>{const url=centralOutletsApi()+"?action="+encodeURIComponent(action);const isGet=action==="list"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Outlet API version mismatch: expected V1, got ${data.api_version}`);return data};
 const centralUserAuth=async(username,password,outlet_id="SP01",timeoutMs=7000)=>{const qs=new URLSearchParams({action:"auth",outlet_id:String(outlet_id||"SP01")});const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),timeoutMs);try{const r=await fetch(centralUsersApi()+"?"+qs.toString(),{method:"POST",cache:"no-store",headers:{},body:new URLSearchParams({username:String(username||""),password:String(password||"")}),signal:ctl.signal});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`HTTP ${r.status}`);e.status=r.status;throw e}return data}finally{clearTimeout(timer)}};
 const centralProductsApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/products.php"};
 const centralProductsRequest=async(action,body=null)=>{const url=centralProductsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health"||action==="catalog";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:{"Content-Type":"application/json"}};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json();if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
@@ -1164,7 +1166,31 @@ function MyCompany({company,setCompany}){
   </div>
  </section>
 }
+function OutletManagement({onBack}){
+ const blank={id:0,outlet_code:"",outlet_name:"",address:"",phone:"",email:"",active:true};
+ const[outlets,setOutlets]=useState([]);
+ const[editing,setEditing]=useState(null);
+ const[loading,setLoading]=useState(true);
+ const[saving,setSaving]=useState(false);
+ const[query,setQuery]=useState("");
+ const loadOutlets=async()=>{setLoading(true);try{const r=await centralOutletsRequest("list");setOutlets(Array.isArray(r?.outlets)?r.outlets:[]);}catch(e){await showActionMessage("Database Error","Outlet data could not be loaded from the database. Please try again.");}finally{setLoading(false)}};
+ useEffect(()=>{loadOutlets()},[]);
+ const visible=outlets.filter(o=>{const text=[o.outlet_code,o.outlet_name,o.address,o.phone,o.email].join(" ").toLowerCase();return text.includes(query.trim().toLowerCase())});
+ const saveOutlet=async()=>{if(!editing)return;const isEdit=Boolean(editing.id);const ok=await showActionConfirm(isEdit?"Confirm Outlet Update":"Confirm Outlet Save",isEdit?`Update outlet "${editing.outlet_name||editing.outlet_code}"?`:`Save outlet "${editing.outlet_name||editing.outlet_code}"?`);if(!ok)return;setSaving(true);try{const r=await centralOutletsRequest("save",{outlet:{...editing,outlet_code:String(editing.outlet_code||"").trim().toUpperCase(),outlet_name:String(editing.outlet_name||"").trim()}});const saved=r?.outlet;if(!saved)throw new Error("Database did not return the saved outlet.");setEditing(null);await loadOutlets();await showActionMessage(isEdit?"Outlet Updated":"Outlet Saved",`Outlet ${isEdit?"updated":"saved"} successfully and synchronized with database.`);}catch(e){await showActionMessage(isEdit?"Outlet Update Failed":"Outlet Save Failed","The database could not complete the outlet request. Please check the information and try again.");}finally{setSaving(false)}};
+ const toggle=async o=>{const target=!o.active;const ok=await showActionConfirm(target?"Confirm Outlet Activation":"Confirm Outlet Deactivation",`${target?"Activate":"Deactivate"} outlet "${o.outlet_name}"?`);if(!ok)return;try{await centralOutletsRequest("set-status",{id:o.id,active:target});await loadOutlets();await showActionMessage(target?"Outlet Activated":"Outlet Deactivated",`Outlet ${target?"activated":"deactivated"} successfully and synchronized with database.`);}catch(e){await showActionMessage("Outlet Status Update Failed","The database could not complete the outlet status change. Please check the outlet users and try again.")}};
+ const activeCount=outlets.filter(o=>o.active).length;
+ return <section className="outlet-management-page">
+   <div className="outlet-management-head"><div><button type="button" className="outlet-back" onClick={onBack}>‹ Back to Management</button><div className="eyebrow">OUTLET MANAGEMENT</div><h2>Outlet Management</h2><p>Create and manage business outlets stored in the SQL database.</p></div><button type="button" className="outlet-add-btn" onClick={()=>setEditing({...blank})}>＋ New outlet</button></div>
+   <div className="outlet-summary"><div><span>Total outlets</span><b>{outlets.length}</b></div><div><span>Active outlets</span><b>{activeCount}</b></div><div><span>Inactive outlets</span><b>{outlets.length-activeCount}</b></div></div>
+   <div className="outlet-toolbar"><div className="outlet-search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search outlet code, name, phone or email..."/><button type="button" onClick={()=>setQuery("")} disabled={!query}>×</button></div><button type="button" className="outlet-refresh" onClick={loadOutlets} disabled={loading}>↻ Refresh</button></div>
+   <div className="outlet-table-card">{loading?<div className="outlet-empty">Loading outlets...</div>:visible.length===0?<div className="outlet-empty"><div className="outlet-empty-icon">▤</div><b>No outlets found</b><span>{query?"Try a different search term.":"Create your first outlet to begin outlet management."}</span></div>:<table><thead><tr><th>Outlet</th><th>Contact</th><th>Status</th><th>Users</th><th>Products</th><th>Sales</th><th>Actions</th></tr></thead><tbody>{visible.map(o=><tr key={o.id}><td><div className="outlet-name-cell"><b>{o.outlet_name}</b><span>{o.outlet_code}</span></div></td><td><div className="outlet-contact-cell"><span>{o.phone||"—"}</span><span>{o.email||"—"}</span></div></td><td><span className={o.active?"outlet-status active":"outlet-status inactive"}>{o.active?"Active":"Inactive"}</span></td><td>{o.user_count??0}</td><td>{o.product_count??0}</td><td>{o.sales_count??0}</td><td><div className="outlet-actions"><button type="button" onClick={()=>setEditing({...blank,...o})}>Edit</button><button type="button" className={o.active?"danger-outline":"success-outline"} onClick={()=>toggle(o)}>{o.active?"Deactivate":"Activate"}</button></div></td></tr>)}</tbody></table>}</div>
+   {editing&&<div className="outlet-modal-backdrop"><div className="outlet-modal" role="dialog" aria-modal="true"><div className="outlet-modal-head"><div><div className="eyebrow">OUTLET PROFILE</div><h3>{editing.id?"Edit outlet":"New outlet"}</h3></div><button type="button" className="outlet-modal-close" onClick={()=>setEditing(null)}>×</button></div><div className="outlet-form-grid"><label>Outlet Code*<input value={editing.outlet_code} onChange={e=>setEditing(v=>({...v,outlet_code:e.target.value.toUpperCase()}))} placeholder="e.g. SP02" /></label><label>Outlet Name*<input value={editing.outlet_name} onChange={e=>setEditing(v=>({...v,outlet_name:e.target.value}))} placeholder="e.g. Shining Pearl Tinted Shah Alam" /></label><label className="wide">Address<textarea value={editing.address||""} onChange={e=>setEditing(v=>({...v,address:e.target.value}))} rows={3} placeholder="Full outlet address" /></label><label>Phone<input value={editing.phone||""} onChange={e=>setEditing(v=>({...v,phone:e.target.value}))} placeholder="03-xxxx xxxx" /></label><label>Email<input value={editing.email||""} onChange={e=>setEditing(v=>({...v,email:e.target.value}))} placeholder="outlet@example.com" /></label><label className="outlet-checkbox"><input type="checkbox" checked={editing.active!==false} onChange={e=>setEditing(v=>({...v,active:e.target.checked}))}/><span>Outlet active</span></label></div><div className="outlet-modal-foot"><button type="button" className="secondary" onClick={()=>setEditing(null)}>Cancel</button><button type="button" className="primary" disabled={saving||!editing.outlet_code.trim()||!editing.outlet_name.trim()} onClick={saveOutlet}>{saving?"Saving...":"Save outlet"}</button></div></div></div>}
+ </section>
+}
+
 function Management({activeUser,setPage}){
+ const[view,setView]=useState("home");
+ if(view==="outlets")return <OutletManagement onBack={()=>setView("home")}/>;
  const items=[
   ["▣","View sales history","Payments","viewSalesHistory"],
   ["▱","View open sales","Named Order / Takeaway","viewOpenSales"],
@@ -1172,6 +1198,7 @@ function Management({activeUser,setPage}){
   ["▤","Credit payments","Credit payments","creditPayments"],
   ["♙","User info","Users & Permissions","userInfo"],
   ["⚙","Users & Permissions","Users & Permissions","manageUsers"],
+  ["◎","Outlet Management",null,"manageManagement"],
   ["◈","Products","Products","manageProducts"],
   ["◫","Inventory","Inventory","manageInventory"],
   ["♙","Customers","Customers","manageCustomers"],
@@ -1184,22 +1211,7 @@ function Management({activeUser,setPage}){
   ["▰","Settings","Settings","manageSettings"]
  ];
  const safePermission=key=>isPermissionAllowed(activeUser,key);
- return (
-  <section className="management-page">
-   <div className="management-head">
-    <div><div className="eyebrow">MANAGEMENT</div><h2>Management</h2><p>Manage business functions available to <b>{activeUser?.name||activeUser?.username||"User"}</b>.</p></div>
-    <span className="management-role">{activeUser?.role||"User"}</span>
-   </div>
-   <div className="management-grid">
-    {items.filter(([,label])=>label!=="End of day").map(([ic,label,target,perm])=>{
-     const allowed=safePermission(perm);
-     return <button type="button" key={label} className={"management-card "+(allowed?"":"is-disabled")} disabled={!allowed} onClick={()=>{if(allowed)setPage(target)}}>
-      <span>{ic}</span><div><b>{label}</b><small>{allowed?"Open function":"Permission required"}</small></div><strong>›</strong>
-     </button>;
-    })}
-   </div>
-  </section>
- );
+ return <section className="management-page"><div className="management-head"><div><div className="eyebrow">MANAGEMENT</div><h2>Management</h2><p>Manage business functions available to <b>{activeUser?.name||activeUser?.username||"User"}</b>.</p></div><span className="management-role">{activeUser?.role||"User"}</span></div><div className="management-grid">{items.filter(([,label])=>label!=="End of day").map(([ic,label,target,perm])=>{const allowed=safePermission(perm);return <button type="button" key={label} className={"management-card "+(allowed?"":"is-disabled")} disabled={!allowed} onClick={()=>{if(!allowed)return;if(label==="Outlet Management")setView("outlets");else if(target)setPage(target)}}><span>{ic}</span><div><b>{label}</b><small>{allowed?"Open function":"Permission required"}</small></div><strong>›</strong></button>})}</div></section>
 }
 
 function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,toggleBusiness}){

@@ -6902,3 +6902,34 @@ body:has(.customer-display-screen) #root{
 .customer-view-foot{display:flex;justify-content:flex-end;padding:14px 22px 20px;border-top:1px solid #e6ebef}
 .customer-view-foot .secondary{min-width:90px}
 @media(max-width:900px){.payments-search-wrap{width:100%;max-width:none}.payment-customer-cell{align-items:flex-start;flex-direction:column}.customer-view-grid{grid-template-columns:1fr}.customer-view-field-wide{grid-column:auto}}
+/* Outlet Management — scoped to Management screen only */
+.outlet-management-page{padding:28px 30px 40px;background:#f5f8fb;min-height:calc(100vh - 74px);box-sizing:border-box}
+.outlet-management-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:20px}
+.outlet-management-head h2{margin:5px 0 6px;font-size:30px;color:#142b43}
+.outlet-management-head p{margin:0;color:#718297}
+.outlet-back{display:inline-flex;align-items:center;border:0;background:transparent;color:#126aa3;font-weight:700;padding:0 0 2px;cursor:pointer;font-size:13px}
+.outlet-add-btn{border:0;background:#123f61;color:#fff;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(18,63,97,.18)}
+.outlet-add-btn:hover{background:#0d3552}
+.outlet-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.outlet-summary>div{background:#fff;border:1px solid #dce5ec;border-radius:12px;padding:16px 18px;box-shadow:0 3px 12px rgba(20,43,67,.04)}
+.outlet-summary span{display:block;color:#7a8b9d;font-size:12px;margin-bottom:7px}
+.outlet-summary b{font-size:24px;color:#16344f}
+.outlet-toolbar{display:flex;gap:12px;margin-bottom:14px}
+.outlet-search{flex:1;display:flex;align-items:center;background:#fff;border:1px solid #d7e1e8;border-radius:10px;overflow:hidden}
+.outlet-search>span{padding-left:14px;color:#8aa0b4;font-size:18px}
+.outlet-search input{flex:1;border:0;outline:0;padding:12px 10px 12px 8px;font-size:14px;color:#1e3348;background:transparent}
+.outlet-search button{border:0;background:#0f2033;color:#fff;width:32px;height:32px;margin-right:6px;border-radius:9px;font-weight:700;cursor:pointer}
+.outlet-search button:disabled{opacity:0;pointer-events:none}
+.outlet-refresh{border:1px solid #cbd8e2;background:#fff;border-radius:10px;padding:0 15px;color:#17324d;font-weight:700;cursor:pointer}
+.outlet-refresh:disabled{opacity:.55;cursor:not-allowed}
+.outlet-table-card{background:#fff;border:1px solid #dce5ec;border-radius:14px;overflow:auto;box-shadow:0 3px 12px rgba(20,43,67,.04)}
+.outlet-table-card table{width:100%;border-collapse:collapse;min-width:820px}
+.outlet-table-card th{background:#f7fafc;color:#60758a;font-size:12px;text-align:left;padding:13px 16px;border-bottom:1px solid #e4ebf0;white-space:nowrap}
+.outlet-table-card td{padding:14px 16px;border-bottom:1px solid #edf1f4;color:#273c50;font-size:13px;vertical-align:middle}
+.outlet-name-cell,.outlet-contact-cell{display:flex;flex-direction:column;gap:3px}.outlet-name-cell b{color:#17324d}.outlet-name-cell span{font-size:11px;color:#8192a3;font-weight:700}.outlet-contact-cell span:first-child{font-weight:600}.outlet-contact-cell span:last-child{color:#768a9d;font-size:12px}
+.outlet-status{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.outlet-status.active{background:#ecfdf3;color:#087443}.outlet-status.inactive{background:#f2f4f7;color:#667085}
+.outlet-actions{display:flex;gap:7px}.outlet-actions button{border:1px solid #ccd8e2;background:#fff;color:#244059;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}.outlet-actions .danger-outline{color:#b42318;border-color:#efc6c1}.outlet-actions .success-outline{color:#087443;border-color:#b9e5c8}
+.outlet-empty{min-height:300px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#73869a;gap:7px}.outlet-empty b{font-size:16px;color:#23415c}.outlet-empty-icon{width:44px;height:44px;border-radius:12px;border:1px solid #d8e2ea;display:flex;align-items:center;justify-content:center;color:#8296aa;font-size:20px;margin-bottom:3px}
+.outlet-modal-backdrop{position:fixed;inset:0;z-index:220000;background:rgba(15,23,42,.48);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+.outlet-modal{width:min(760px,95vw);background:#fff;border-radius:16px;border:1px solid #d9e3eb;box-shadow:0 28px 80px rgba(15,23,42,.28);overflow:hidden}.outlet-modal-head{display:flex;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid #e6edf2}.outlet-modal-head h3{margin:4px 0 0;font-size:24px;color:#17324d}.outlet-modal-close{border:0;width:34px;height:34px;border-radius:9px;background:#f1f5f8;color:#3c5165;font-size:22px;cursor:pointer}.outlet-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px 22px}.outlet-form-grid label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#53697e}.outlet-form-grid label.wide{grid-column:1/-1}.outlet-form-grid input,.outlet-form-grid textarea{border:1px solid #ccd9e3;border-radius:9px;padding:11px 12px;outline:0;font:inherit;color:#23384d;background:#fff}.outlet-form-grid input:focus,.outlet-form-grid textarea:focus{border-color:#5ea8d6;box-shadow:0 0 0 3px rgba(94,168,214,.14)}.outlet-checkbox{flex-direction:row!important;align-items:center;gap:9px!important;align-self:end;padding:10px 12px;border:1px solid #e1e8ee;border-radius:9px;background:#f9fbfc}.outlet-checkbox input{width:17px;height:17px}.outlet-modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px;border-top:1px solid #e6edf2}.outlet-modal-foot button{border-radius:9px;padding:10px 15px;font-weight:700;cursor:pointer}.outlet-modal-foot .secondary{border:1px solid #ccd8e2;background:#fff;color:#27415a}.outlet-modal-foot .primary{border:0;background:#123f61;color:#fff}.outlet-modal-foot .primary:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:900px){.outlet-management-page{padding:20px 16px 32px}.outlet-summary{grid-template-columns:1fr}.outlet-management-head{flex-direction:column}.outlet-add-btn{width:100%}.outlet-toolbar{flex-direction:column}.outlet-refresh{height:44px}.outlet-form-grid{grid-template-columns:1fr}.outlet-form-grid label.wide{grid-column:auto}}
