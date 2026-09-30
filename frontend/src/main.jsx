@@ -230,6 +230,13 @@ const centralPromotionsRequest=async(action="list",body=null)=>{const url=centra
 
 const centralSalesApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales.php";
 const centralSalesDeleteApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/sales-delete.php";
+const centralOutletProvision=async(sourceOutletId,targetOutletId)=>{
+ const url=centralApiBase().replace(/\/app-state\.php$/i,"")+"/outlet-provision.php";
+ const r=await fetch(url,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"provision",source_outlet_id:sourceOutletId,target_outlet_id:targetOutletId})});
+ const data=await r.json().catch(()=>null);
+ if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);
+ return data;
+};
 const centralSalesDelete=async(saleId,saleNo)=>{const r=await fetch(centralSalesDeleteApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:activeOutletId(),sale_id:Number(saleId||0)||0,sale_no:String(saleNo||"")})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales delete API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Sales delete API version mismatch: expected V1, got ${data.api_version}`);return data};
 const centralSalesSave=async sale=>{const r=await fetch(centralSalesApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:activeOutletId(),sale})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid sales API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V11")throw new Error(`Sales API version mismatch: expected V11, got ${data.api_version}`);return data};
 const centralRelationalSync=(state_key,state)=>{const keys=new Set(["sales","purchases","orders","cashMovements","stockHistory","paymentTypes","promos","suppliers","zReports"]);if(!keys.has(state_key))return Promise.resolve({ok:true,skipped:true});let fingerprint="";try{fingerprint=JSON.stringify(state)}catch{fingerprint=String(state)}const dedupeKey=`${state_key}|${activeOutletId()}|${fingerprint}`;const existing=centralRelationalInflight.get(dedupeKey);if(existing)return existing;const task=centralRelationalQueue.then(async()=>{const r=await fetch(centralRelationalApi(),{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({outlet_id:activeOutletId(),state_key,state})});let data=null;try{data=await r.json()}catch{throw new Error(`Invalid relational API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data});centralRelationalInflight.set(dedupeKey,task);centralRelationalQueue=task.catch(()=>{});task.finally(()=>{centralRelationalInflight.delete(dedupeKey)});return task};
@@ -648,6 +655,28 @@ function App(){
   if(freshLowStockItems.length){try{sessionStorage.setItem("sp_low_stock_notified",JSON.stringify([...new Set([...notifiedIds,...freshLowStockItems.map(x=>x.product.id)])]))}catch{};setLowStockAlert(freshLowStockItems.map(x=>x.product))}
   let syncedSale=sale;
   try{
+   // Force the current outlet catalog/payment types to be current before committing a sale.
+   // This prevents a stale SP01 product/payment ID from being submitted after switching to SP02.
+   const [freshProducts,freshPaymentTypes]=await Promise.all([
+     centralProductsRequest("list",{outlet_id:activeOutletId()}),
+     centralRelationalRead("paymentTypes")
+   ]);
+   const remoteProducts=(freshProducts?.products||[]).map(centralProductToApp).filter(Boolean);
+   if(remoteProducts.length){
+     const byCode=new Map(remoteProducts.filter(p=>p.code).map(p=>[String(p.code),p]));
+     const byBarcode=new Map(remoteProducts.filter(p=>p.barcode).map(p=>[String(p.barcode),p]));
+     const byName=new Map(remoteProducts.filter(p=>p.name).map(p=>[String(p.name).trim().toLowerCase(),p]));
+     sale.items=(sale.items||[]).map(it=>{
+       const match=byCode.get(String(it.code||it.productCode||it.sku||""))||byBarcode.get(String(it.barcode||""))||byName.get(String(it.name||it.productName||"").trim().toLowerCase());
+       return match?{...it,id:match.id,productId:match.id,productDbId:match.id}:it;
+     });
+     setProducts(remoteProducts);
+     localStorage.setItem("sp_products",JSON.stringify(remoteProducts));
+   }
+   if(Array.isArray(freshPaymentTypes)&&freshPaymentTypes.length){
+     setPaymentTypes(freshPaymentTypes);
+     localStorage.setItem("sp_paymentTypes",JSON.stringify(freshPaymentTypes));
+   }
    const syncResult=await centralSalesSave(sale);
    if(syncResult?.sale_no){
      syncedSale={...sale,no:String(syncResult.sale_no),invoiceNo:String(syncResult.sale_no),dbId:Number(syncResult.sale_id)||null,orderNumber:sale.orderNumber||""};
@@ -1232,6 +1261,11 @@ function OutletManagement({onBack}){
          await centralProductsRequest("save",{outlet_id:productTarget.outlet_code||productTarget.id,product:payload});
          success++;
        }catch(err){failed.push(`${product.code||product.name}: ${err?.message||"database error"}`)}
+     }
+     try{
+       await centralOutletProvision(source.id,productTarget.id);
+     }catch(err){
+       failed.push(`Payment types: ${err?.message||"could not provision"}`);
      }
      await loadOutlets();
      setProductTarget(null);
