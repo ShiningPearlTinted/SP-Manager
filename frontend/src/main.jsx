@@ -1179,21 +1179,78 @@ function OutletManagement({onBack}){
  const[loading,setLoading]=useState(true);
  const[saving,setSaving]=useState(false);
  const[query,setQuery]=useState("");
+ const[productTarget,setProductTarget]=useState(null);
+ const[sourceOutletId,setSourceOutletId]=useState("");
+ const[sourceProducts,setSourceProducts]=useState([]);
+ const[selectedProducts,setSelectedProducts]=useState(new Set());
+ const[productQuery,setProductQuery]=useState("");
+ const[productsLoading,setProductsLoading]=useState(false);
+ const[productSaving,setProductSaving]=useState(false);
  const loadOutlets=async()=>{setLoading(true);try{const r=await centralOutletsRequest("list");setOutlets(Array.isArray(r?.outlets)?r.outlets:[]);}catch(e){await showActionMessage("Database Error","Outlet data could not be loaded from the database. Please try again.");}finally{setLoading(false)}};
  useEffect(()=>{loadOutlets()},[]);
  const visible=outlets.filter(o=>{const text=[o.outlet_code,o.outlet_name,o.address,o.phone,o.email].join(" ").toLowerCase();return text.includes(query.trim().toLowerCase())});
  const saveOutlet=async()=>{if(!editing)return;const isEdit=Boolean(editing.id);const ok=await showActionConfirm(isEdit?"Confirm Outlet Update":"Confirm Outlet Save",isEdit?`Update outlet "${editing.outlet_name||editing.outlet_code}"?`:`Save outlet "${editing.outlet_name||editing.outlet_code}"?`);if(!ok)return;setSaving(true);try{const r=await centralOutletsRequest("save",{outlet:{...editing,outlet_code:String(editing.outlet_code||"").trim().toUpperCase(),outlet_name:String(editing.outlet_name||"").trim()}});const saved=r?.outlet;if(!saved)throw new Error("Database did not return the saved outlet.");setEditing(null);await loadOutlets();await showActionMessage(isEdit?"Outlet Updated":"Outlet Saved",`Outlet ${isEdit?"updated":"saved"} successfully and synchronized with database.`);}catch(e){await showActionMessage(isEdit?"Outlet Update Failed":"Outlet Save Failed","The database could not complete the outlet request. Please check the information and try again.");}finally{setSaving(false)}};
  const toggle=async o=>{const target=!o.active;const ok=await showActionConfirm(target?"Confirm Outlet Activation":"Confirm Outlet Deactivation",`${target?"Activate":"Deactivate"} outlet "${o.outlet_name}"?`);if(!ok)return;try{await centralOutletsRequest("set-status",{id:o.id,active:target});await loadOutlets();await showActionMessage(target?"Outlet Activated":"Outlet Deactivated",`Outlet ${target?"activated":"deactivated"} successfully and synchronized with database.`);}catch(e){await showActionMessage("Outlet Status Update Failed","The database could not complete the outlet status change. Please check the outlet users and try again.")}};
+ const openProductAssignment=async target=>{
+   setProductTarget(target);setProductQuery("");setSelectedProducts(new Set());setSourceProducts([]);setSourceOutletId("");setProductsLoading(false);
+   const available=outlets.filter(o=>Number(o.id)!==Number(target.id)&&o.active!==false);
+   if(available.length){const first=available[0];setSourceOutletId(String(first.id));await loadSourceProducts(String(first.id));}
+ };
+ const loadSourceProducts=async outletValue=>{
+   if(!outletValue){setSourceProducts([]);return;}
+   const source=outlets.find(o=>String(o.id)===String(outletValue));
+   if(!source){setSourceProducts([]);return;}
+   setProductsLoading(true);setSelectedProducts(new Set());
+   try{
+     const r=await centralProductsRequest("list",{outlet_id:source.outlet_code||source.id});
+     const list=Array.isArray(r?.products)?r.products.map(p=>centralProductToApp(p)).filter(Boolean):[];
+     setSourceProducts(list);
+   }catch(e){setSourceProducts([]);await showActionMessage("Product Loading Failed","Products for the selected source outlet could not be loaded from the database.");}
+   finally{setProductsLoading(false)}
+ };
+ const filteredSourceProducts=sourceProducts.filter(p=>{
+   const text=[p.code,p.name,p.barcode,p.category,p.group].join(" ").toLowerCase();
+   return text.includes(productQuery.trim().toLowerCase());
+ });
+ const allVisibleSelected=filteredSourceProducts.length>0&&filteredSourceProducts.every(p=>selectedProducts.has(String(p.id)));
+ const toggleSourceProduct=id=>setSelectedProducts(prev=>{const n=new Set(prev);const k=String(id);if(n.has(k))n.delete(k);else n.add(k);return n});
+ const toggleAllVisible=()=>setSelectedProducts(prev=>{const n=new Set(prev);if(allVisibleSelected)filteredSourceProducts.forEach(p=>n.delete(String(p.id)));else filteredSourceProducts.forEach(p=>n.add(String(p.id)));return n});
+ const copySelectedProducts=async()=>{
+   if(!productTarget)return;
+   const source=outlets.find(o=>String(o.id)===String(sourceOutletId));
+   const chosen=sourceProducts.filter(p=>selectedProducts.has(String(p.id)));
+   if(!source||!chosen.length){await showActionMessage("Assign Products","Select at least one product to assign to the outlet.");return}
+   const ok=await showActionConfirm("Confirm Product Assignment",`Copy ${chosen.length} product${chosen.length>1?"s":""} from "${source.outlet_name}" to "${productTarget.outlet_name}"? Target stock will start at 0.`);
+   if(!ok)return;
+   setProductSaving(true);
+   try{
+     let success=0;
+     const failed=[];
+     for(const product of chosen){
+       const payload={...product,id:0,outlet_id:undefined,categoryId:null,groupId:null,category_id:null,group_id:null,supplierId:"",stock:0,barcodes:Array.isArray(product.barcodes)?[...product.barcodes]:[],_skipBarcodeRelations:true};
+       try{
+         await centralProductsRequest("save",{outlet_id:productTarget.outlet_code||productTarget.id,product:payload});
+         success++;
+       }catch(err){failed.push(`${product.code||product.name}: ${err?.message||"database error"}`)}
+     }
+     await loadOutlets();
+     setProductTarget(null);
+     setSourceProducts([]);setSelectedProducts(new Set());
+     if(failed.length){await showActionMessage("Product Assignment Completed",`${success} product${success!==1?"s":""} assigned successfully. ${failed.length} product${failed.length>1?"s":""} could not be assigned.`)}
+     else{await showActionMessage("Products Assigned",`${success} product${success!==1?"s":""} copied to ${productTarget.outlet_name} successfully. Target stock starts at 0.`)}
+   }catch(e){await showActionMessage("Product Assignment Failed","The database could not complete the product assignment. No local product changes were applied.");}
+   finally{setProductSaving(false)}
+ };
  const activeCount=outlets.filter(o=>o.active).length;
  return <section className="outlet-management-page">
    <div className="outlet-management-head"><div><button type="button" className="outlet-back" onClick={onBack}>‹ Back to Management</button><div className="eyebrow">OUTLET MANAGEMENT</div><h2>Outlet Management</h2><p>Create and manage business outlets stored in the SQL database.</p></div><button type="button" className="outlet-add-btn" onClick={()=>setEditing({...blank})}>＋ New outlet</button></div>
    <div className="outlet-summary"><div><span>Total outlets</span><b>{outlets.length}</b></div><div><span>Active outlets</span><b>{activeCount}</b></div><div><span>Inactive outlets</span><b>{outlets.length-activeCount}</b></div></div>
    <div className="outlet-toolbar"><div className="outlet-search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search outlet code, name, phone or email..."/><button type="button" onClick={()=>setQuery("")} disabled={!query}>×</button></div><button type="button" className="outlet-refresh" onClick={loadOutlets} disabled={loading}>↻ Refresh</button></div>
-   <div className="outlet-table-card">{loading?<div className="outlet-empty">Loading outlets...</div>:visible.length===0?<div className="outlet-empty"><div className="outlet-empty-icon">▤</div><b>No outlets found</b><span>{query?"Try a different search term.":"Create your first outlet to begin outlet management."}</span></div>:<table><thead><tr><th>Outlet</th><th>Contact</th><th>Status</th><th>Users</th><th>Products</th><th>Sales</th><th>Actions</th></tr></thead><tbody>{visible.map(o=><tr key={o.id}><td><div className="outlet-name-cell"><b>{o.outlet_name}</b><span>{o.outlet_code}</span></div></td><td><div className="outlet-contact-cell"><span>{o.phone||"—"}</span><span>{o.email||"—"}</span></div></td><td><span className={o.active?"outlet-status active":"outlet-status inactive"}>{o.active?"Active":"Inactive"}</span></td><td>{o.user_count??0}</td><td>{o.product_count??0}</td><td>{o.sales_count??0}</td><td><div className="outlet-actions"><button type="button" onClick={()=>setEditing({...blank,...o})}>Edit</button><button type="button" className={o.active?"danger-outline":"success-outline"} onClick={()=>toggle(o)}>{o.active?"Deactivate":"Activate"}</button></div></td></tr>)}</tbody></table>}</div>
+   <div className="outlet-table-card">{loading?<div className="outlet-empty">Loading outlets...</div>:visible.length===0?<div className="outlet-empty"><div className="outlet-empty-icon">▤</div><b>No outlets found</b><span>{query?"Try a different search term.":"Create your first outlet to begin outlet management."}</span></div>:<table><thead><tr><th>Outlet</th><th>Contact</th><th>Status</th><th>Users</th><th>Products</th><th>Sales</th><th>Actions</th></tr></thead><tbody>{visible.map(o=><tr key={o.id}><td><div className="outlet-name-cell"><b>{o.outlet_name}</b><span>{o.outlet_code}</span></div></td><td><div className="outlet-contact-cell"><span>{o.phone||"—"}</span><span>{o.email||"—"}</span></div></td><td><span className={o.active?"outlet-status active":"outlet-status inactive"}>{o.active?"Active":"Inactive"}</span></td><td>{o.user_count??0}</td><td>{o.product_count??0}</td><td>{o.sales_count??0}</td><td><div className="outlet-actions"><button type="button" onClick={()=>openProductAssignment(o)} title="Assign products to this outlet">Products</button><button type="button" onClick={()=>setEditing({...blank,...o})}>Edit</button><button type="button" className={o.active?"danger-outline":"success-outline"} onClick={()=>toggle(o)}>{o.active?"Deactivate":"Activate"}</button></div></td></tr>)}</tbody></table>}</div>
    {editing&&<div className="outlet-modal-backdrop"><div className="outlet-modal" role="dialog" aria-modal="true"><div className="outlet-modal-head"><div><div className="eyebrow">OUTLET PROFILE</div><h3>{editing.id?"Edit outlet":"New outlet"}</h3></div><button type="button" className="outlet-modal-close" onClick={()=>setEditing(null)}>×</button></div><div className="outlet-form-grid"><label>Outlet Code*<input value={editing.outlet_code} onChange={e=>setEditing(v=>({...v,outlet_code:e.target.value.toUpperCase()}))} placeholder="e.g. SP02" /></label><label>Outlet Name*<input value={editing.outlet_name} onChange={e=>setEditing(v=>({...v,outlet_name:e.target.value}))} placeholder="e.g. Shining Pearl Tinted Shah Alam" /></label><label className="wide">Address<textarea value={editing.address||""} onChange={e=>setEditing(v=>({...v,address:e.target.value}))} rows={3} placeholder="Full outlet address" /></label><label>Phone<input value={editing.phone||""} onChange={e=>setEditing(v=>({...v,phone:e.target.value}))} placeholder="03-xxxx xxxx" /></label><label>Email<input value={editing.email||""} onChange={e=>setEditing(v=>({...v,email:e.target.value}))} placeholder="outlet@example.com" /></label><label className="outlet-checkbox"><input type="checkbox" checked={editing.active!==false} onChange={e=>setEditing(v=>({...v,active:e.target.checked}))}/><span>Outlet active</span></label></div><div className="outlet-modal-foot"><button type="button" className="secondary" onClick={()=>setEditing(null)}>Cancel</button><button type="button" className="primary" disabled={saving||!editing.outlet_code.trim()||!editing.outlet_name.trim()} onClick={saveOutlet}>{saving?"Saving...":"Save outlet"}</button></div></div></div>}
+   {productTarget&&<div className="outlet-modal-backdrop outlet-product-backdrop"><div className="outlet-modal outlet-product-modal" role="dialog" aria-modal="true"><div className="outlet-modal-head"><div><div className="eyebrow">PRODUCT ASSIGNMENT</div><h3>{productTarget.outlet_name}</h3><p>Copy products from another outlet into this outlet. New stock starts at 0.</p></div><button type="button" className="outlet-modal-close" onClick={()=>{setProductTarget(null);setSourceProducts([]);setSelectedProducts(new Set())}}>×</button></div><div className="outlet-product-toolbar"><label>Source outlet<select value={sourceOutletId} onChange={e=>{setSourceOutletId(e.target.value);loadSourceProducts(e.target.value)}}><option value="">Select source outlet</option>{outlets.filter(o=>Number(o.id)!==Number(productTarget.id)&&o.active!==false).map(o=><option key={o.id} value={o.id}>{o.outlet_code} — {o.outlet_name}</option>)}</select></label><label>Search products<input value={productQuery} onChange={e=>setProductQuery(e.target.value)} placeholder="Search code, name, barcode, group..."/></label><button type="button" className="secondary" onClick={toggleAllVisible} disabled={!filteredSourceProducts.length}>{allVisibleSelected?"Clear visible":"Select visible"}</button></div><div className="outlet-product-summary"><span>{selectedProducts.size} selected</span><span>{sourceProducts.length} source product{sourceProducts.length!==1?"s":""}</span></div><div className="outlet-product-list">{!sourceOutletId?<div className="outlet-empty">Select a source outlet.</div>:productsLoading?<div className="outlet-empty">Loading source products...</div>:filteredSourceProducts.length===0?<div className="outlet-empty"><b>No products found</b><span>{productQuery?"Try a different search term.":"The source outlet has no products available."}</span></div>:filteredSourceProducts.map(p=><label className="outlet-product-row" key={p.id}><input type="checkbox" checked={selectedProducts.has(String(p.id))} onChange={()=>toggleSourceProduct(p.id)}/><span className="outlet-product-main"><b>{p.name||"Product"}</b><small>{p.code||"—"} {p.barcode?`• ${p.barcode}`:""}</small></span><strong>RM {Number(p.price||0).toFixed(2)}</strong></label>)}</div><div className="outlet-modal-foot"><button type="button" className="secondary" onClick={()=>{setProductTarget(null);setSourceProducts([]);setSelectedProducts(new Set())}}>Cancel</button><button type="button" className="primary" disabled={productSaving||selectedProducts.size===0||!sourceOutletId} onClick={copySelectedProducts}>{productSaving?"Assigning...":`Assign ${selectedProducts.size||""} product${selectedProducts.size===1?"":"s"}`}</button></div></div></div>}
  </section>
 }
-
 function Management({activeUser,setPage}){
  const[view,setView]=useState("home");
  if(view==="outlets")return <OutletManagement onBack={()=>setView("home")}/>;

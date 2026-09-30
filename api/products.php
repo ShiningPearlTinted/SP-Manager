@@ -125,7 +125,7 @@ function valueFor(string $column, array $p, int $outletId): mixed {
   $map=[
     'id'=>['id'], 'outlet_id'=>['outlet_id'],
     'category_id'=>['category_id'], 'group_id'=>['group_id'],
-    'sku'=>['code','sku'], 'product_code'=>['code','sku'], 'code'=>['code','sku'],
+    'sku'=>['code','sku'], 'product_code'=>['code','sku'], 'code'=>['code','sku'], 'barcode'=>['barcode'],
     'name'=>['name'], 'product_name'=>['name'], 'description'=>['description'],
     'category'=>['category'], 'group_name'=>['group','category'], 'group'=>['group','category'],
     'price'=>['price'], 'sale_price'=>['price'], 'selling_price'=>['price'], 'unit_price'=>['price'],

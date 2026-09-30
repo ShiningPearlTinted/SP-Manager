@@ -6955,3 +6955,23 @@ body:has(.customer-display-screen) #root{
 .user-default-outlet select{height:38px;padding:0 10px;border:1px solid #cbd8e3;border-radius:8px;background:#fff;color:#173b5b;outline:none}
 .user-default-outlet select:disabled{background:#f3f6f8;color:#9aa9b5;cursor:not-allowed}
 @media(max-width:760px){.user-outlet-grid{grid-template-columns:1fr}.user-outlet-section{padding-left:14px;padding-right:14px}.user-outlet-section-head{flex-direction:column}}
+
+/* SP-Manager 1.0.38 V5 — Outlet Product Assignment */
+.outlet-product-backdrop{z-index:230000}
+.outlet-product-modal{width:min(980px,96vw);max-height:min(86vh,860px);display:flex;flex-direction:column}
+.outlet-product-modal .outlet-modal-head p{margin:6px 0 0;color:#70849a;font-size:12px}
+.outlet-product-toolbar{display:grid;grid-template-columns:1fr 1.3fr auto;gap:12px;padding:16px 22px;border-bottom:1px solid #e6edf2;align-items:end}
+.outlet-product-toolbar label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#53697e}
+.outlet-product-toolbar input,.outlet-product-toolbar select{border:1px solid #ccd9e3;border-radius:9px;padding:10px 11px;outline:0;font:inherit;color:#23384d;background:#fff}
+.outlet-product-toolbar input:focus,.outlet-product-toolbar select:focus{border-color:#5ea8d6;box-shadow:0 0 0 3px rgba(94,168,214,.14)}
+.outlet-product-toolbar button{height:40px;border-radius:9px;padding:0 14px;font-weight:700;cursor:pointer;border:1px solid #ccd8e2;background:#fff;color:#27415a}
+.outlet-product-summary{display:flex;justify-content:space-between;padding:10px 22px;color:#60758b;font-size:12px;border-bottom:1px solid #eef2f5;background:#fbfcfd}
+.outlet-product-list{padding:10px 22px 16px;overflow:auto;min-height:260px;display:flex;flex-direction:column;gap:7px}
+.outlet-product-row{display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:center;border:1px solid #e2e9ef;border-radius:10px;padding:11px 12px;background:#fff;cursor:pointer}
+.outlet-product-row:hover{border-color:#b9cad8;background:#fbfdff}
+.outlet-product-row input{width:17px;height:17px}
+.outlet-product-main{display:flex;flex-direction:column;gap:3px;min-width:0}.outlet-product-main b{color:#20384f;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.outlet-product-main small{color:#8193a5;font-size:11px}.outlet-product-row strong{color:#123f61;font-size:13px}
+.outlet-product-modal .outlet-modal-foot{margin-top:auto}
+.outlet-actions{flex-wrap:wrap}
+@media(max-width:850px){.outlet-product-toolbar{grid-template-columns:1fr}.outlet-product-row{grid-template-columns:24px 1fr}.outlet-product-row strong{grid-column:2}}
+
