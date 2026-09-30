@@ -24,8 +24,32 @@ function out(array $v,int $s=200):never{http_response_code($s);echo json_encode(
 function outlet(PDO $pdo,mixed $v):int{$v=trim((string)($v??'SP01'));if($v==='' )$v='SP01';if(ctype_digit($v))return(int)$v;$q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1');$q->execute([$v]);$id=(int)($q->fetchColumn()?:0);if($id<=0)throw new InvalidArgumentException('Outlet not found.');return$id;}
 function role(PDO $pdo,string $name):int{$name=trim($name)?:'Cashier';$code=preg_replace('/[^A-Z0-9_]+/','_',strtoupper($name));$q=$pdo->prepare('SELECT id FROM roles WHERE role_name=? OR role_code=? LIMIT 1');$q->execute([$name,$code]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;$q=$pdo->prepare('INSERT INTO roles(role_code,role_name,description,active) VALUES(?,?,?,1)');$q->execute([$code,$name,'SP-Manager role']);return(int)$pdo->lastInsertId();}
 function permission(PDO $pdo,string $key,string $label):int{$q=$pdo->prepare('SELECT id FROM permissions WHERE permission_key=? LIMIT 1');$q->execute([$key]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;$q=$pdo->prepare('INSERT INTO permissions(permission_key,permission_name,description,active) VALUES(?,?,?,1)');$q->execute([$key,$label,'SP-Manager permission']);return(int)$pdo->lastInsertId();}
+function tableExists(PDO $pdo,string $table):bool{
+ $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?");
+ $q->execute([$table]);
+ return (int)$q->fetchColumn()>0;
+}
+function columnExists(PDO $pdo,string $table,string $column):bool{
+ $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?");
+ $q->execute([$table,$column]);
+ return (int)$q->fetchColumn()>0;
+}
 function ensureUserOutletsTable(PDO $pdo):void{
- $pdo->exec("CREATE TABLE IF NOT EXISTS user_outlets (user_id BIGINT UNSIGNED NOT NULL,outlet_id BIGINT UNSIGNED NOT NULL,is_default TINYINT(1) NOT NULL DEFAULT 0,active TINYINT(1) NOT NULL DEFAULT 1,PRIMARY KEY(user_id,outlet_id),CONSTRAINT fk_user_outlets_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,CONSTRAINT fk_user_outlets_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+ if(!tableExists($pdo,'user_outlets')){
+  $pdo->exec("CREATE TABLE user_outlets (user_id BIGINT UNSIGNED NOT NULL,outlet_id BIGINT UNSIGNED NOT NULL,is_default TINYINT(1) NOT NULL DEFAULT 0,active TINYINT(1) NOT NULL DEFAULT 1,PRIMARY KEY(user_id,outlet_id),CONSTRAINT fk_user_outlets_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,CONSTRAINT fk_user_outlets_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  return;
+ }
+ if(!columnExists($pdo,'user_outlets','is_default'))$pdo->exec("ALTER TABLE user_outlets ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0 AFTER outlet_id");
+ if(!columnExists($pdo,'user_outlets','active'))$pdo->exec("ALTER TABLE user_outlets ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1 AFTER is_default");
+}
+function syncRolePermissions(PDO $pdo,int $roleId,array $permissions):void{
+ if(!tableExists($pdo,'role_permissions')||!tableExists($pdo,'permissions'))return;
+ $pdo->prepare('DELETE FROM role_permissions WHERE role_id=?')->execute([$roleId]);
+ foreach($permissions as $k=>$allowed){
+  if(!$allowed)continue;
+  $pid=permission($pdo,(string)$k,$permissionLabels[$k]??(string)$k);
+  $pdo->prepare('INSERT INTO role_permissions(role_id,permission_id,allowed) VALUES(?,?,1) ON DUPLICATE KEY UPDATE allowed=1')->execute([$roleId,$pid]);
+ }
 }
 function normalizeAssignedOutlets(PDO $pdo,array $u,int $fallbackOutletId):array{
  $raw=$u['outlet_ids']??$u['outlets']??[];
@@ -70,11 +94,12 @@ function normalizeUser(PDO $pdo,array $u,int $outletId):array{
  $id=(int)($u['dbId']??0);if(!$id)$id=(int)($u['id']??0);
  if($id){$q=$pdo->prepare('SELECT id FROM users WHERE id=? LIMIT 1');$q->execute([$id]);if(!(int)($q->fetchColumn()?:0))$id=0;}
  if(!$id){$q=$pdo->prepare('SELECT id FROM users WHERE LOWER(username)=? LIMIT 1');$q->execute([$username]);$id=(int)($q->fetchColumn()?:0);}
+ $q=$pdo->prepare('SELECT id FROM users WHERE LOWER(username)=? AND id<>? LIMIT 1');$q->execute([$username,$id]);if((int)($q->fetchColumn()?:0)>0)throw new InvalidArgumentException('Username already exists. Please use a different username.');
  $cols=['outlet_id','name','username','role_id','enabled','permissions_json'];$vals=[$defaultOutletId,$name,$username,$roleId,!empty($u['enabled'])?1:0,json_encode($permissions,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)];
  if($hash!==''){$cols[]='password_hash';$vals[]=$hash;}
  if($id){$sets=[];foreach($cols as $c)$sets[]="`$c`=?";$vals[]=$id;$pdo->prepare('UPDATE users SET '.implode(',',$sets).' WHERE id=?')->execute($vals);}
  else{$pdo->prepare('INSERT INTO users (`'.implode('`,`',$cols).'`) VALUES('.implode(',',array_fill(0,count($cols),'?')).')')->execute($vals);$id=(int)$pdo->lastInsertId();}
- $pdo->prepare('DELETE FROM role_permissions WHERE role_id=?')->execute([$roleId]);foreach($permissions as $k=>$allowed){if(!$allowed)continue;$pid=permission($pdo,(string)$k,$permissionLabels[$k]??(string)$k);$pdo->prepare('INSERT INTO role_permissions(role_id,permission_id,allowed) VALUES(?,?,1) ON DUPLICATE KEY UPDATE allowed=1')->execute([$roleId,$pid]);}
+ syncRolePermissions($pdo,$roleId,$permissions);
  saveAssignedOutlets($pdo,$id,$assignedOutletIds,$defaultOutletId);
  return['id'=>$id,'dbId'=>$id,'name'=>$name,'username'=>$username,'role'=>$roleName,'enabled'=>!empty($u['enabled']),'permissions'=>$permissions,'outlets'=>assignedOutletRows($pdo,$id),'outlet_ids'=>$assignedOutletIds,'default_outlet_id'=>$defaultOutletId];
 }
