@@ -200,25 +200,26 @@ function productColumn(array $schema, array $candidates): ?string {
   foreach ($candidates as $c) if (isset($schema[$c])) return $c;
   return null;
 }
-function currentProductStock(PDO $pdo, int $outletId, int $productId): float {
-  if ($productId <= 0 || !tableExists($pdo,'products')) return 0.0;
-  $schema=cols($pdo,'products'); $stockCol=productColumn($schema,['stock','stock_qty','quantity','current_stock']); if(!$stockCol)return 0.0;
-  $sql='SELECT `'.$stockCol.'` FROM products WHERE id=?'; $args=[$productId]; if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;} $sql.=' LIMIT 1';
-  $q=$pdo->prepare($sql);$q->execute($args);return (float)($q->fetchColumn()??0);
+
+function ensureProductOutletTableRS(PDO $pdo): void {
+  static $done=false; if($done)return;
+  $pdo->exec("CREATE TABLE IF NOT EXISTS product_outlets (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,product_id BIGINT UNSIGNED NOT NULL,outlet_id BIGINT UNSIGNED NOT NULL,active TINYINT(1) NOT NULL DEFAULT 1,selling_price DECIMAL(15,2) NULL,cost_price DECIMAL(15,2) NULL,stock_qty DECIMAL(15,3) NOT NULL DEFAULT 0.000,min_stock DECIMAL(15,3) NOT NULL DEFAULT 0.000,preferred_quantity DECIMAL(15,3) NOT NULL DEFAULT 0.000,allow_price_change TINYINT(1) NULL,last_purchase_price DECIMAL(15,2) NULL,rank INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_product_outlet(product_id,outlet_id),INDEX idx_product_outlets_outlet(outlet_id),INDEX idx_product_outlets_product(product_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $pdo->exec("INSERT IGNORE INTO product_outlets(product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,allow_price_change) SELECT p.id,p.outlet_id,COALESCE(p.active,1),COALESCE(p.selling_price,0),COALESCE(p.cost_price,0),COALESCE(p.stock_qty,0),COALESCE(p.min_stock,0),COALESCE(p.allow_price_change,0) FROM products p WHERE p.outlet_id IS NOT NULL");
+  $done=true;
 }
+function ensureRSProductOutlet(PDO $pdo,int $productId,int $outletId): void { ensureProductOutletTableRS($pdo); $q=$pdo->prepare('SELECT id FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');$q->execute([$productId,$outletId]);if($q->fetchColumn())return; $q=$pdo->prepare('SELECT selling_price,cost_price,stock_qty,min_stock,allow_price_change FROM products WHERE id=? LIMIT 1');$q->execute([$productId]);$p=$q->fetch()?:[]; $st=$pdo->prepare('INSERT INTO product_outlets(product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,allow_price_change) VALUES(?,?,?,?,?,?,?,?)');$st->execute([$productId,$outletId,1,$p['selling_price']??0,$p['cost_price']??0,$p['stock_qty']??0,$p['min_stock']??0,$p['allow_price_change']??0]);}
+
+function currentProductStock(PDO $pdo, int $outletId, int $productId): float { ensureProductOutletTableRS($pdo); ensureRSProductOutlet($pdo,$productId,$outletId); $q=$pdo->prepare('SELECT stock_qty FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');$q->execute([$productId,$outletId]);return (float)($q->fetchColumn()??0); }
 function adjustProductStock(PDO $pdo,int $outletId,int $productId,float $delta,string $movementType,string $reference='',string $createdBy='SP-Manager',array $extra=[]):void{
-  if($productId<=0||(!abs($delta)&&!$extra)||!tableExists($pdo,'products'))return;
-  $schema=cols($pdo,'products');$stockCol=productColumn($schema,['stock','stock_qty','quantity','current_stock']);if(!$stockCol)return;
-  $sql='UPDATE products SET `'.$stockCol.'`=`'.$stockCol.'`+?';$args=[$delta];
-  foreach([['cost',['cost','cost_price','purchase_price']],['lastPurchasePrice',['last_purchase_price','lastPurchasePrice']]] as [$k,$cands]){if(array_key_exists($k,$extra)){if($col=productColumn($schema,$cands)){$sql.=', `'.$col.'`=?';$args[]=(float)$extra[$k];}}}
-  if(isset($schema['updated_at']))$sql.=', updated_at=NOW()';$sql.=' WHERE id=?';$args[]=$productId;if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' LIMIT 1';$pdo->prepare($sql)->execute($args);
+  ensureProductOutletTableRS($pdo); ensureRSProductOutlet($pdo,$productId,$outletId);
+  if($productId<=0||(!abs($delta)&&!$extra))return;
+  $sets=['stock_qty=stock_qty+?'];$args=[$delta];
+  if(array_key_exists('cost',$extra)){$sets[]='cost_price=?';$args[]=(float)$extra['cost'];}
+  if(array_key_exists('lastPurchasePrice',$extra)){$sets[]='last_purchase_price=?';$args[]=(float)$extra['lastPurchasePrice'];}
+  $args[]=$productId;$args[]=$outletId; $pdo->prepare('UPDATE product_outlets SET '.implode(',',$sets).',updated_at=NOW() WHERE product_id=? AND outlet_id=? LIMIT 1')->execute($args);
   if(abs($delta)<0.0000001)return;
   $after=currentProductStock($pdo,$outletId,$productId);
-  if(tableExists($pdo,'stock_movements')){
-    $ms=cols($pdo,'stock_movements');$child=['product_id'=>$productId,'movement_type'=>$movementType,'type'=>$movementType,'quantity_change'=>$delta,'quantity'=>$delta,'qty'=>$delta,'quantity_after'=>$after,'reference_no'=>$reference,'reference'=>$reference,'movement_date'=>date('Y-m-d H:i:s'),'created_at'=>date('Y-m-d H:i:s'),'created_by'=>$createdBy,'notes'=>''];
-    $aliases=['outlet_id'=>['outlet_id'],'product_id'=>['product_id'],'movement_type'=>['movement_type','type'],'type'=>['type','movement_type'],'quantity_change'=>['quantity_change','quantity','change','qty'],'quantity'=>['quantity','change','qty','quantity_change'],'quantity_after'=>['quantity_after'],'reference_no'=>['reference_no','reference'],'reference'=>['reference','reference_no'],'movement_date'=>['movement_date','date'],'created_at'=>['created_at','date'],'created_by'=>['created_by','user','createdBy'],'notes'=>['notes','reason']];
-    $row=writableRow($ms,$aliases,$child,$outletId);validateRequired($ms,$row,'stock_movements');insertRow($pdo,'stock_movements',$row);
-  }
+  if(tableExists($pdo,'stock_movements')){ $ms=cols($pdo,'stock_movements');$child=['product_id'=>$productId,'movement_type'=>$movementType,'type'=>$movementType,'quantity_change'=>$delta,'quantity'=>$delta,'qty'=>$delta,'quantity_after'=>$after,'reference_no'=>$reference,'reference'=>$reference,'movement_date'=>date('Y-m-d H:i:s'),'created_at'=>date('Y-m-d H:i:s'),'created_by'=>$createdBy,'notes'=>''];$aliases=['outlet_id'=>['outlet_id'],'product_id'=>['product_id'],'movement_type'=>['movement_type','type'],'type'=>['type','movement_type'],'quantity_change'=>['quantity_change','quantity','change','qty'],'quantity'=>['quantity','change','qty','quantity_change'],'quantity_after'=>['quantity_after'],'reference_no'=>['reference_no','reference'],'reference'=>['reference','reference_no'],'movement_date'=>['movement_date','date'],'created_at'=>['created_at','date'],'created_by'=>['created_by','user','createdBy'],'notes'=>['notes','reason']];$row=writableRow($ms,$aliases,$child,$outletId);validateRequired($ms,$row,'stock_movements');insertRow($pdo,'stock_movements',$row);}
 }
 function purchaseItemsByProduct(PDO $pdo,int $purchaseId):array{$out=[];foreach(childRows($pdo,'purchase_items','purchase_id',$purchaseId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
 function saleItemsByProduct(PDO $pdo,int $saleId):array{$out=[];foreach(childRows($pdo,'sale_items','sale_id',$saleId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
@@ -417,11 +418,13 @@ function findPaymentTypeDbId(PDO $pdo, int $outletId, array $pay): int {
   return 0;
 }
 function findProductDbId(PDO $pdo, int $outletId, array $item): int {
-  if(!tableExists($pdo,'products')) return 0;
-  $candidate=(int)pick($item,['productDbId','product_id','productId'],0); $direct=scopedFindId($pdo,'products',$candidate,$outletId); if($direct>0)return $direct;
+  if(!tableExists($pdo,'products')) return 0; ensureProductOutletTableRS($pdo);
+  $candidate=(int)pick($item,['productDbId','product_id','productId'],0);
+  if($candidate>0){$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.id=? LIMIT 1');$q->execute([$outletId,$candidate]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
   $schema=cols($pdo,'products'); $code=trim((string)pick($item,['productCode','code','sku'],''));
-  if($code!==''){foreach(['product_code','sku','code'] as $field){if(!isset($schema[$field]))continue;$sql='SELECT id FROM products WHERE `'.$field.'`=?';$args=[$code];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0);if($id>0)return $id;}}
-  $name=trim((string)pick($item,['productName','name'],'')); if($name!=='' && isset($schema['name'])){$sql='SELECT id FROM products WHERE name=?';$args=[$name];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' ORDER BY id ASC LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0);if($id>0)return $id;}
+  if($code!==''){foreach(['product_code','sku','code'] as $field){if(!isset($schema[$field]))continue;$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.`'.$field.'`=? LIMIT 1');$q->execute([$outletId,$code]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}}
+  $barcode=trim((string)pick($item,['barcode'],'')); if($barcode!=='' && isset($schema['barcode'])){$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.barcode=? LIMIT 1');$q->execute([$outletId,$barcode]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
+  $name=trim((string)pick($item,['productName','name'],'')); if($name!=='' && isset($schema['name'])){$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.name=? ORDER BY p.id ASC LIMIT 1');$q->execute([$outletId,$name]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
   return 0;
 }
 
