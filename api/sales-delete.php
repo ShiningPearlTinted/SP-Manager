@@ -1,10 +1,8 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/security.php';
 
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $config = require __DIR__ . '/config.php';
@@ -56,32 +54,24 @@ function isServiceProduct(PDO $pdo, int $productId, int $outletId): bool {
     $q = $pdo->prepare($sql); $q->execute($args);
     return (bool)$q->fetchColumn();
 }
+function ensureDeleteProductOutletTable(PDO $pdo): void {
+    spEnsureProductOutletTable($pdo);
+}
 function currentStock(PDO $pdo, int $outletId, int $productId): float {
-    if (!tableExists($pdo, 'products')) return 0.0;
-    $schema = cols($pdo, 'products');
-    $field = stockField($schema);
-    if (!$field) return 0.0;
-    $sql = 'SELECT `'.$field.'` FROM products WHERE id = ?';
-    $args = [$productId];
-    if (isset($schema['outlet_id'])) { $sql .= ' AND outlet_id = ?'; $args[] = $outletId; }
-    $sql .= ' LIMIT 1';
-    $q = $pdo->prepare($sql); $q->execute($args);
-    return (float)($q->fetchColumn() ?? 0);
+    ensureDeleteProductOutletTable($pdo);
+    $q = $pdo->prepare('SELECT stock_qty FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');
+    $q->execute([$productId,$outletId]);
+    $stock = $q->fetchColumn();
+    if ($stock === false) throw new RuntimeException('The sale product has no inventory assignment for this outlet.');
+    return (float)$stock;
 }
 function restoreStockForDeletedSale(PDO $pdo, int $outletId, int $saleId, string $saleNo, int $productId, float $quantity): void {
     if ($quantity <= 0 || $productId <= 0 || isServiceProduct($pdo, $productId, $outletId)) return;
-    $schema = cols($pdo, 'products');
-    $field = stockField($schema);
-    if (!$field) return;
-
+    ensureDeleteProductOutletTable($pdo);
     $before = currentStock($pdo, $outletId, $productId);
-    $sql = 'UPDATE products SET `'.$field.'` = `'.$field.'` + ?';
-    $args = [$quantity];
-    if (isset($schema['updated_at'])) $sql .= ', updated_at = NOW()';
-    $sql .= ' WHERE id = ?'; $args[] = $productId;
-    if (isset($schema['outlet_id'])) { $sql .= ' AND outlet_id = ?'; $args[] = $outletId; }
-    $sql .= ' LIMIT 1';
-    $pdo->prepare($sql)->execute($args);
+    $updated = $pdo->prepare('UPDATE product_outlets SET stock_qty=stock_qty+?,updated_at=NOW() WHERE product_id=? AND outlet_id=? LIMIT 1');
+    $updated->execute([$quantity,$productId,$outletId]);
+    if ($updated->rowCount() !== 1) throw new RuntimeException('Outlet stock could not be restored for the deleted sale.');
     $after = currentStock($pdo, $outletId, $productId);
 
     if (!tableExists($pdo, 'stock_movements')) return;
@@ -92,7 +82,10 @@ function restoreStockForDeletedSale(PDO $pdo, int $outletId, int $saleId, string
         'movement_type' => 'SALE_DELETE',
         'reference_type' => 'SALE_DELETE',
         'reference_id' => $saleId,
+        'quantity_change' => $quantity,
         'quantity' => $quantity,
+        'qty' => $quantity,
+        'quantity_after' => $after,
         'stock_before' => $before,
         'stock_after' => $after,
         'notes' => 'Stock restored after sale deletion: '.$saleNo,
@@ -160,6 +153,7 @@ try {
     $outletId = resolveOutlet($pdo, trim((string)($b['outlet_id'] ?? 'SP01')));
     if (!$outletId) throw new RuntimeException('Outlet not found.');
     if (!tableExists($pdo,'sales')) throw new RuntimeException('Sales table is missing from the database.');
+    foreach (['sale_items','sale_payments'] as $requiredTable) if (!tableExists($pdo,$requiredTable)) throw new RuntimeException('Required database table is missing: '.$requiredTable.'. This sale cannot be deleted safely.');
 
     $saleId = (int)($b['sale_id'] ?? $b['dbId'] ?? 0);
     $saleNo = trim((string)($b['sale_no'] ?? $b['saleNo'] ?? ''));

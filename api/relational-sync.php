@@ -1,9 +1,7 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/security.php';
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('X-SP-Manager-DB-Version: V10');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
@@ -170,7 +168,7 @@ function syncSupplierParent(PDO $pdo, array $schema, array $aliases, array $item
   saveSyncMap($pdo,$outletId,'suppliers',$localId,'suppliers',$dbId);
   return $dbId;
 }
-function syncParent(PDO $pdo, string $table, array $schema, array $aliases, array $item, int $outletId, string $stateKey, string $localId, array $naturalKeys = []): int {
+function syncParent(PDO $pdo, string $table, array $schema, array $aliases, array $item, int $outletId, string $stateKey, string $localId, array $naturalKeys = [], ?array &$previousRow = null): int {
   $row = writableRow($schema, $aliases, $item, $outletId);
   validateRequired($schema, $row, $table);
   $dbId = syncLookup($pdo, $outletId, $stateKey, $localId, $stateKey);
@@ -178,7 +176,15 @@ function syncParent(PDO $pdo, string $table, array $schema, array $aliases, arra
   // sync map is missing (for example after a fresh deployment or cache clear).
   if (!$dbId && ctype_digit((string)$localId)) $dbId = scopedFindId($pdo, $table, (int)$localId, $outletId);
   if (!$dbId && $naturalKeys) $dbId = naturalId($pdo, $table, $naturalKeys, $row);
-  if ($dbId) updateRow($pdo, $table, $row, $dbId); else $dbId = insertRow($pdo, $table, $row);
+  $previousRow = null;
+  if ($dbId) {
+    $q = $pdo->prepare('SELECT * FROM `'.$table.'` WHERE id=? LIMIT 1');
+    $q->execute([$dbId]);
+    $previousRow = $q->fetch() ?: null;
+    updateRow($pdo, $table, $row, $dbId);
+  } else {
+    $dbId = insertRow($pdo, $table, $row);
+  }
   saveSyncMap($pdo, $outletId, $stateKey, $localId, $stateKey, $dbId);
   return $dbId;
 }
@@ -202,12 +208,9 @@ function productColumn(array $schema, array $candidates): ?string {
 }
 
 function ensureProductOutletTableRS(PDO $pdo): void {
-  static $done=false; if($done)return;
-  $pdo->exec("CREATE TABLE IF NOT EXISTS product_outlets (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,product_id BIGINT UNSIGNED NOT NULL,outlet_id BIGINT UNSIGNED NOT NULL,active TINYINT(1) NOT NULL DEFAULT 1,selling_price DECIMAL(15,2) NULL,cost_price DECIMAL(15,2) NULL,stock_qty DECIMAL(15,3) NOT NULL DEFAULT 0.000,min_stock DECIMAL(15,3) NOT NULL DEFAULT 0.000,preferred_quantity DECIMAL(15,3) NOT NULL DEFAULT 0.000,allow_price_change TINYINT(1) NULL,last_purchase_price DECIMAL(15,2) NULL,rank INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_product_outlet(product_id,outlet_id),INDEX idx_product_outlets_outlet(outlet_id),INDEX idx_product_outlets_product(product_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-  $pdo->exec("INSERT IGNORE INTO product_outlets(product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,allow_price_change) SELECT p.id,p.outlet_id,COALESCE(p.active,1),COALESCE(p.selling_price,0),COALESCE(p.cost_price,0),COALESCE(p.stock_qty,0),COALESCE(p.min_stock,0),COALESCE(p.allow_price_change,0) FROM products p WHERE p.outlet_id IS NOT NULL");
-  $done=true;
+  spEnsureProductOutletTable($pdo);
 }
-function ensureRSProductOutlet(PDO $pdo,int $productId,int $outletId): void { ensureProductOutletTableRS($pdo); $q=$pdo->prepare('SELECT id FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');$q->execute([$productId,$outletId]);if($q->fetchColumn())return; $q=$pdo->prepare('SELECT selling_price,cost_price,stock_qty,min_stock,allow_price_change FROM products WHERE id=? LIMIT 1');$q->execute([$productId]);$p=$q->fetch()?:[]; $st=$pdo->prepare('INSERT INTO product_outlets(product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,allow_price_change) VALUES(?,?,?,?,?,?,?,?)');$st->execute([$productId,$outletId,1,$p['selling_price']??0,$p['cost_price']??0,$p['stock_qty']??0,$p['min_stock']??0,$p['allow_price_change']??0]);}
+function ensureRSProductOutlet(PDO $pdo,int $productId,int $outletId): void { ensureProductOutletTableRS($pdo); $q=$pdo->prepare('SELECT id FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');$q->execute([$productId,$outletId]);if($q->fetchColumn())return; $q=$pdo->prepare('SELECT selling_price,cost_price,min_stock,allow_price_change FROM products WHERE id=? LIMIT 1');$q->execute([$productId]);$p=$q->fetch()?:[]; $st=$pdo->prepare('INSERT INTO product_outlets(product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,allow_price_change) VALUES(?,?,?,?,?,?,?,?)');$st->execute([$productId,$outletId,1,$p['selling_price']??0,$p['cost_price']??0,0,$p['min_stock']??0,$p['allow_price_change']??0]);}
 
 function currentProductStock(PDO $pdo, int $outletId, int $productId): float { ensureProductOutletTableRS($pdo); ensureRSProductOutlet($pdo,$productId,$outletId); $q=$pdo->prepare('SELECT stock_qty FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');$q->execute([$productId,$outletId]);return (float)($q->fetchColumn()??0); }
 function adjustProductStock(PDO $pdo,int $outletId,int $productId,float $delta,string $movementType,string $reference='',string $createdBy='SP-Manager',array $extra=[]):void{
@@ -223,6 +226,7 @@ function adjustProductStock(PDO $pdo,int $outletId,int $productId,float $delta,s
 }
 function purchaseItemsByProduct(PDO $pdo,int $purchaseId):array{$out=[];foreach(childRows($pdo,'purchase_items','purchase_id',$purchaseId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
 function saleItemsByProduct(PDO $pdo,int $saleId):array{$out=[];foreach(childRows($pdo,'sale_items','sale_id',$saleId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
+function ensureSaleItemMetadataColumns(PDO $pdo):void{if(!tableExists($pdo,'sale_items'))return;$schema=cols($pdo,'sale_items');foreach(['warranty_enabled'=>'TINYINT(1) NOT NULL DEFAULT 0','warranty_years'=>'INT NOT NULL DEFAULT 0','maintenance_enabled'=>'TINYINT(1) NOT NULL DEFAULT 0','maintenance_count'=>'INT NOT NULL DEFAULT 0'] as $field=>$definition)if(!isset($schema[$field]))$pdo->exec('ALTER TABLE sale_items ADD COLUMN `'.$field.'` '.$definition);}
 function scopedFindId(PDO $pdo, string $table, int $candidateId, int $outletId): int {
   if ($candidateId <= 0 || !tableExists($pdo, $table)) return 0;
   $schema = cols($pdo, $table);
@@ -527,22 +531,34 @@ try {
     ],
     'zReports' => [
       'table'=>'end_of_day','natural'=>['outlet_id','business_date'],'delete'=>false,
-      'map'=>['outlet_id'=>['outlet_id'],'business_date'=>['businessDate','date','business_date'],'report_json'=>['report_json','data_json','notes','report','reportData'],'report_data'=>['reportData','report_data','report_json'],'total_sales'=>['totalSales','total_sales'],'total_cash'=>['totalCash','total_cash'],'total_transactions'=>['totalTransactions','total_transactions'],'closed_at'=>['closedAt','closed_at','date']]
+      'map'=>['outlet_id'=>['outlet_id'],'business_date'=>['businessDate','date','business_date'],'report_number'=>['number','report_number','z_number'],'report_json'=>['report_json','data_json','report','reportData','payload'],'report_data'=>['reportData','report_data','report_json'],'total_sales'=>['totalSales','total_sales'],'total_cash'=>['totalCash','total_cash'],'total_transactions'=>['totalTransactions','total_transactions'],'closed_at'=>['closedAt','closed_at','date']]
     ],
   ];
 
   if (!isset($maps[$stateKey])) {
-    echo json_encode(['ok'=>true,'skipped'=>true,'reason'=>'No relational mapping for state key','state_key'=>$stateKey]);
-    exit;
+    throw new InvalidArgumentException('No relational mapping exists for state key: '.$stateKey);
   }
   $spec = $maps[$stateKey];
   if (!tableExists($pdo, $spec['table'])) {
-    echo json_encode(['ok'=>true,'skipped'=>true,'reason'=>'Table not present','table'=>$spec['table'],'state_key'=>$stateKey]);
-    exit;
+    throw new RuntimeException('Required database table is missing: '.$spec['table'].'. Apply the SP-Manager database schema before saving this data.');
   }
-
-  $schema = cols($pdo, $spec['table']);
   $items = array_is_list($state) ? $state : [$state];
+  $requiredChildren = match ($stateKey) {
+    'sales' => ['sale_items'],
+    'purchases' => ['purchase_items'],
+    'orders' => ['open_order_items'],
+    default => [],
+  };
+  foreach ($requiredChildren as $childTable) {
+    if (!tableExists($pdo, $childTable)) throw new RuntimeException('Required database table is missing: '.$childTable.'. The parent record cannot be saved safely without its detail rows.');
+  }
+  if ($stateKey === 'sales' && !tableExists($pdo, 'sale_payments')) {
+    foreach ($items as $saleItem) if (is_array($saleItem) && !empty($saleItem['payments'])) throw new RuntimeException('Required database table is missing: sale_payments. Payment details cannot be saved safely.');
+  }
+  $schema = cols($pdo, $spec['table']);
+  if (in_array($stateKey, ['sales','purchases','orders','cashMovements','stockHistory','zReports'], true) && !isset($schema['outlet_id'])) {
+    throw new RuntimeException('Required outlet_id column is missing from '.$spec['table'].'. Refusing to write outlet data into an unscoped table.');
+  }
   $pdo->beginTransaction();
   $count = 0;
   $childCount = 0;
@@ -637,10 +653,14 @@ try {
       $item['purchaseNo'] = $purchaseCandidate;
       $purchaseNumbers[] = ['local_id'=>$localId,'purchase_no'=>$purchaseCandidate,'db_id'=>$purchaseDbId];
     }
+    $previousRow = null;
     if ($stateKey === 'suppliers') {
       $dbId = syncSupplierParent($pdo, $schema, $spec['map'], $item, $outletId, $localId);
     } else {
-      $dbId = syncParent($pdo, $spec['table'], $schema, $spec['map'], $item, $outletId, $stateKey, $localId, $spec['natural']);
+      if ($stateKey === 'zReports') {
+        $item['report_json'] = json_encode($item, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+      }
+      $dbId = syncParent($pdo, $spec['table'], $schema, $spec['map'], $item, $outletId, $stateKey, $localId, $spec['natural'], $previousRow);
     }
     if ($stateKey === 'purchases') {
       foreach ($purchaseNumbers as &$pn) {
@@ -666,15 +686,10 @@ try {
       // operations adjust inventory by the exact difference.
       $oldQty = saleItemsByProduct($pdo,$dbId);
       $oldActive = true;
-      if ($dbId > 0) {
+      if ($previousRow) {
         $saleSchema = cols($pdo,'sales');
-        $statusParts=[];
-        $selectCols=['id'];
-        foreach(['status','voided','refunded'] as $f) if(isset($saleSchema[$f])) $selectCols[]=$f;
-        $q=$pdo->prepare('SELECT `'.implode('`,`',$selectCols).'` FROM sales WHERE id=? LIMIT 1');
-        $q->execute([$dbId]); $old=$q->fetch() ?: [];
-        $oldStatus=strtolower((string)($old['status']??''));
-        $oldActive=!((bool)($old['voided']??false)||(bool)($old['refunded']??false)||in_array($oldStatus,['voided','refunded'],true));
+        $oldStatus=strtolower((string)($previousRow['status']??''));
+        $oldActive=!((bool)($previousRow['voided']??false)||(bool)($previousRow['refunded']??false)||in_array($oldStatus,['void','voided','refund','refunded','cancelled','canceled'],true));
       }
       $newQty=[];
       foreach(($item['items']??[]) as $it){
@@ -684,7 +699,7 @@ try {
         $newQty[$pid]=($newQty[$pid]??0)+(float)pick($it,['qty','quantity'],0);
       }
       $newStatus=strtolower((string)pick($item,['status'],'COMPLETED'));
-      $newActive=!((bool)pick($item,['voided'],false)||(bool)pick($item,['refunded'],false)||in_array($newStatus,['voided','refunded'],true));
+      $newActive=!((bool)pick($item,['voided'],false)||(bool)pick($item,['refunded'],false)||in_array($newStatus,['void','voided','refund','refunded','cancelled','canceled'],true));
       $all=array_unique(array_merge(array_keys($oldQty),array_keys($newQty)));
       foreach($all as $pid){
         $oldConsumed=$oldActive?(float)($oldQty[$pid]??0):0.0;
@@ -694,16 +709,18 @@ try {
       }
     }
     if ($stateKey === 'purchases' && tableExists($pdo,'purchase_items')) {
-      $oldQty=purchaseItemsByProduct($pdo,$dbId);$newQty=[];
-      foreach(($item['items']??[]) as $it){if(!is_array($it))continue;$pid=findProductDbId($pdo,$outletId,$it);if($pid<=0)throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));$qty=(float)pick($it,['qty','quantity'],0);$newQty[$pid]=($newQty[$pid]??0)+$qty;$cost=(float)pick($it,['cost','price','costPrice','cost_price'],0);$delta=$qty-($oldQty[$pid]??0);adjustProductStock($pdo,$outletId,$pid,$delta,'Purchase',trim((string)pick($item,['no','number','purchaseNo'],'')),(string)pick($item,['createdBy','created_by','userId'],'SP-Manager'),['cost'=>$cost,'lastPurchasePrice'=>$cost]);}
+      $oldQty=purchaseItemsByProduct($pdo,$dbId);$newQty=[];$newCost=[];
+      foreach(($item['items']??[]) as $it){if(!is_array($it))continue;$pid=findProductDbId($pdo,$outletId,$it);if($pid<=0)throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));$qty=(float)pick($it,['qty','quantity'],0);$newQty[$pid]=($newQty[$pid]??0)+$qty;$newCost[$pid]=(float)pick($it,['cost','price','costPrice','cost_price'],0);}
+      foreach(array_unique(array_merge(array_keys($oldQty),array_keys($newQty))) as $pid){$delta=(float)($newQty[$pid]??0)-(float)($oldQty[$pid]??0);$cost=(float)($newCost[$pid]??0);if(abs($delta)>0.0000001)adjustProductStock($pdo,$outletId,(int)$pid,$delta,'Purchase',trim((string)pick($item,['no','number','purchaseNo'],'')),(string)pick($item,['createdBy','created_by','userId'],'SP-Manager'),['cost'=>$cost,'lastPurchasePrice'=>$cost]);}
     }
 
     if ($stateKey === 'sales' && tableExists($pdo, 'sale_items')) {
+      ensureSaleItemMetadataColumns($pdo);
       deleteChildren($pdo, 'sale_items', 'sale_id', $dbId);
       $cs = cols($pdo, 'sale_items');
       foreach (($item['items'] ?? []) as $it) {
         if (!is_array($it)) continue;
-        $itDbId=findProductDbId($pdo,$outletId,$it); if($itDbId<=0) throw new RuntimeException('Sale item product was not found in database: '.(string)pick($it,['name','productName','code','productCode','productId'],'')); insertChild($pdo, 'sale_items', $cs, ['sale_id'=>['sale_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'qty'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total']], ['sale_id'=>$dbId,'productDbId'=>$itDbId]+$it, $outletId);
+        $itDbId=findProductDbId($pdo,$outletId,$it); if($itDbId<=0) throw new RuntimeException('Sale item product was not found in database: '.(string)pick($it,['name','productName','code','productCode','productId'],'')); insertChild($pdo, 'sale_items', $cs, ['sale_id'=>['sale_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'qty'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total'],'warranty_enabled'=>['warrantyEnabled','warranty_enabled'],'warranty_years'=>['warrantyYears','warranty_years'],'maintenance_enabled'=>['maintenanceEnabled','maintenance_enabled'],'maintenance_count'=>['maintenanceCount','maintenance_count']], ['sale_id'=>$dbId,'productDbId'=>$itDbId]+$it, $outletId);
         $childCount++;
       }
     }

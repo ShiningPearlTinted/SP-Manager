@@ -1,9 +1,7 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/security.php';
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('X-SP-Manager-DB-Version: V10');
 header('X-SP-Manager-Reports-Version: V1');
@@ -37,35 +35,32 @@ try {
     $oid = outletId($pdo, $_GET['outlet_id'] ?? 'SP01');
     if ($action !== 'summary') throw new InvalidArgumentException('Unknown reports action.');
 
-    $activeSalesWhere = "outlet_id=? AND UPPER(COALESCE(status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUNDED')";
+    $activeSalesWhere = "outlet_id=? AND UPPER(COALESCE(status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUND','REFUNDED')";
     $salesTotal = tableExists($pdo,'sales') ? scalar($pdo,"SELECT COALESCE(SUM(total),0) FROM sales WHERE {$activeSalesWhere}",[$oid]) : 0;
     $transactions = tableExists($pdo,'sales') ? intScalar($pdo,"SELECT COUNT(*) FROM sales WHERE {$activeSalesWhere}",[$oid]) : 0;
-    $unpaid = tableExists($pdo,'sales') ? scalar($pdo,"SELECT COALESCE(SUM(total),0) FROM sales WHERE outlet_id=? AND UPPER(COALESCE(status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUNDED') AND UPPER(COALESCE(payment_status,'PAID')) <> 'PAID'",[$oid]) : 0;
+    $unpaid = tableExists($pdo,'sales') ? scalar($pdo,"SELECT COALESCE(SUM(total),0) FROM sales WHERE outlet_id=? AND UPPER(COALESCE(status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUND','REFUNDED') AND UPPER(COALESCE(payment_status,'PAID')) <> 'PAID'",[$oid]) : 0;
     $grossMargin = 0;
-    if (tableExists($pdo,'sale_items') && tableExists($pdo,'sales') && tableExists($pdo,'products')) {
+    if (tableExists($pdo,'sale_items') && tableExists($pdo,'sales') && tableExists($pdo,'product_outlets')) {
         $grossMargin = scalar($pdo,
-            "SELECT COALESCE(SUM(((si.unit_price * si.quantity) - si.discount) - (COALESCE(p.cost_price,0) * si.quantity)),0)
+            "SELECT COALESCE(SUM(((si.unit_price * si.quantity) - COALESCE(si.discount,0)) - (COALESCE(po.cost_price,0) * si.quantity)),0)
              FROM sale_items si
              INNER JOIN sales s ON s.id=si.sale_id
-             LEFT JOIN products p ON p.id=si.product_id
-             WHERE s.outlet_id=? AND UPPER(COALESCE(s.status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUNDED')",
+             LEFT JOIN product_outlets po ON po.product_id=si.product_id AND po.outlet_id=s.outlet_id AND po.active=1
+             WHERE s.outlet_id=? AND UPPER(COALESCE(s.status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUND','REFUNDED')",
             [$oid]
         );
     }
-    $products = tableExists($pdo,'products') ? intScalar($pdo,'SELECT COUNT(*) FROM products WHERE outlet_id=?',[$oid]) : 0;
+    $products = tableExists($pdo,'product_outlets') ? intScalar($pdo,'SELECT COUNT(*) FROM product_outlets WHERE outlet_id=? AND active=1',[$oid]) : 0;
     $customers = tableExists($pdo,'customers') ? intScalar($pdo,'SELECT COUNT(*) FROM customers WHERE outlet_id=?',[$oid]) : 0;
     $purchases = tableExists($pdo,'purchases') ? intScalar($pdo,'SELECT COUNT(*) FROM purchases WHERE outlet_id=?',[$oid]) : 0;
-    $users = tableExists($pdo,'users') ? intScalar($pdo,'SELECT COUNT(*) FROM users WHERE outlet_id=? OR outlet_id IS NULL',[$oid]) : 0;
+    $users = 0;
+    if (tableExists($pdo,'users')) {
+        if (tableExists($pdo,'user_outlets')) $users=intScalar($pdo,'SELECT COUNT(DISTINCT u.id) FROM users u LEFT JOIN user_outlets uo ON uo.user_id=u.id AND uo.active=1 WHERE u.enabled=1 AND (u.outlet_id=? OR uo.outlet_id=?)',[$oid,$oid]);
+        else $users=intScalar($pdo,'SELECT COUNT(*) FROM users WHERE enabled=1 AND (outlet_id=? OR outlet_id IS NULL)',[$oid]);
+    }
     $suppliers = tableExists($pdo,'suppliers') ? intScalar($pdo,'SELECT COUNT(*) FROM suppliers WHERE outlet_id=?',[$oid]) : 0;
     $paymentTypes = tableExists($pdo,'payment_types') ? intScalar($pdo,'SELECT COUNT(*) FROM payment_types WHERE outlet_id=?',[$oid]) : 0;
-    $stockValue = 0;
-    if (tableExists($pdo,'products')) {
-        // The schema uses stock_qty. Keep the query tolerant of older stock column names.
-        $cols = $pdo->query('DESCRIBE `products`')->fetchAll(PDO::FETCH_COLUMN,0);
-        $stockCol = in_array('stock_qty',$cols,true) ? 'stock_qty' : (in_array('stock',$cols,true) ? 'stock' : (in_array('quantity',$cols,true) ? 'quantity' : null));
-        $costCol = in_array('cost_price',$cols,true) ? 'cost_price' : (in_array('cost',$cols,true) ? 'cost' : null);
-        if($stockCol && $costCol) $stockValue = scalar($pdo,'SELECT COALESCE(SUM(`'.$stockCol.'`*`'.$costCol.'),0) FROM products WHERE outlet_id=?',[$oid]);
-    }
+    $stockValue = tableExists($pdo,'product_outlets') ? scalar($pdo,'SELECT COALESCE(SUM(stock_qty*COALESCE(cost_price,0)),0) FROM product_outlets WHERE outlet_id=? AND active=1',[$oid]) : 0;
     echo json_encode([
         'ok'=>true,
         'api_version'=>'V10',

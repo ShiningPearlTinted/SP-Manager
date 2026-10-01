@@ -1,9 +1,7 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/security.php';
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 if($_SERVER['REQUEST_METHOD']==='OPTIONS'){http_response_code(204);exit;}
 $config=require __DIR__.'/config.php';
 $db=$config['db']??null;
@@ -21,7 +19,9 @@ try{
  $action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
  if($action==='health')out(['ok'=>true,'service'=>'SP-Manager Outlets API','api_version'=>'V1']);
  if($action==='list'&&$_SERVER['REQUEST_METHOD']==='GET'){
-  $sql="SELECT o.id,o.outlet_code,o.outlet_name,o.address,o.phone,o.email,o.active,o.created_at,o.updated_at,(SELECT COUNT(*) FROM users u WHERE u.outlet_id=o.id) user_count,(SELECT COUNT(*) FROM products p WHERE p.outlet_id=o.id) product_count,(SELECT COUNT(*) FROM sales s WHERE s.outlet_id=o.id) sales_count FROM outlets o ORDER BY o.active DESC,o.outlet_name ASC";
+  $userCount=spTableExists($pdo,'user_outlets')?"(SELECT COUNT(DISTINCT u.id) FROM users u LEFT JOIN user_outlets uo ON uo.user_id=u.id AND uo.active=1 WHERE u.enabled=1 AND (u.outlet_id=o.id OR uo.outlet_id=o.id))":"(SELECT COUNT(*) FROM users u WHERE u.enabled=1 AND u.outlet_id=o.id)";
+  $productCount=spTableExists($pdo,'product_outlets')?"(SELECT COUNT(*) FROM product_outlets po WHERE po.outlet_id=o.id AND po.active=1)":"(SELECT COUNT(*) FROM products p WHERE p.outlet_id=o.id)";
+  $sql="SELECT o.id,o.outlet_code,o.outlet_name,o.address,o.phone,o.email,o.active,o.created_at,o.updated_at,{$userCount} user_count,{$productCount} product_count,(SELECT COUNT(*) FROM sales s WHERE s.outlet_id=o.id) sales_count FROM outlets o ORDER BY o.active DESC,o.outlet_name ASC";
   $rows=$pdo->query($sql)->fetchAll();
   foreach($rows as &$r){$r['id']=(int)$r['id'];$r['active']=(int)$r['active']===1;$r['user_count']=(int)$r['user_count'];$r['product_count']=(int)$r['product_count'];$r['sales_count']=(int)$r['sales_count'];}
   unset($r);out(['ok'=>true,'api_version'=>'V1','count'=>count($rows),'outlets'=>$rows]);
@@ -41,7 +41,7 @@ try{
  if($action==='set-status'&&$_SERVER['REQUEST_METHOD']==='POST'){
   $b=body();$id=(int)($b['id']??0);$active=!empty($b['active'])?1:0;if($id<=0)throw new InvalidArgumentException('Outlet id is required.');
   $q=$pdo->prepare('SELECT id,outlet_code FROM outlets WHERE id=? LIMIT 1');$q->execute([$id]);$row=$q->fetch();if(!$row)throw new InvalidArgumentException('Outlet not found.');
-  if($active===0){$q=$pdo->prepare('SELECT COUNT(*) FROM users WHERE outlet_id=? AND enabled=1');$q->execute([$id]);$users=(int)$q->fetchColumn();if($users>0)throw new InvalidArgumentException('This outlet still has enabled users. Disable or reassign those users before deactivating the outlet.');}
+  if($active===0){if(spTableExists($pdo,'user_outlets')){$q=$pdo->prepare('SELECT COUNT(DISTINCT u.id) FROM users u LEFT JOIN user_outlets uo ON uo.user_id=u.id AND uo.active=1 WHERE u.enabled=1 AND (u.outlet_id=? OR uo.outlet_id=?)');$q->execute([$id,$id]);}else{$q=$pdo->prepare('SELECT COUNT(*) FROM users WHERE outlet_id=? AND enabled=1');$q->execute([$id]);}$users=(int)$q->fetchColumn();if($users>0)throw new InvalidArgumentException('This outlet still has enabled users. Disable or reassign those users before deactivating the outlet.');}
   $q=$pdo->prepare('UPDATE outlets SET active=? WHERE id=?');$q->execute([$active,$id]);out(['ok'=>true,'api_version'=>'V1','id'=>$id,'active'=>$active===1]);
  }
  throw new InvalidArgumentException('Unknown action.');

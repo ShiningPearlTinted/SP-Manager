@@ -1,9 +1,7 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/security.php';
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $config = require __DIR__ . '/config.php';
@@ -252,31 +250,7 @@ function hydrateProductRelations(PDO $pdo, array &$rows): void {
 
 
 function ensureProductOutletTable(PDO $pdo): void {
-  static $done=false; if($done)return;
-  $pdo->exec("CREATE TABLE IF NOT EXISTS product_outlets (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    product_id BIGINT UNSIGNED NOT NULL,
-    outlet_id BIGINT UNSIGNED NOT NULL,
-    active TINYINT(1) NOT NULL DEFAULT 1,
-    selling_price DECIMAL(15,2) NULL,
-    cost_price DECIMAL(15,2) NULL,
-    stock_qty DECIMAL(15,3) NOT NULL DEFAULT 0.000,
-    min_stock DECIMAL(15,3) NOT NULL DEFAULT 0.000,
-    preferred_quantity DECIMAL(15,3) NOT NULL DEFAULT 0.000,
-    allow_price_change TINYINT(1) NULL,
-    last_purchase_price DECIMAL(15,2) NULL,
-    rank INT NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_product_outlet (product_id, outlet_id),
-    INDEX idx_product_outlets_outlet (outlet_id),
-    INDEX idx_product_outlets_product (product_id)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-  // Backfill only the legacy outlet-owned rows. Existing rows are untouched.
-  $pdo->exec("INSERT IGNORE INTO product_outlets (product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,preferred_quantity,allow_price_change,last_purchase_price,rank)
-    SELECT p.id,p.outlet_id,COALESCE(p.active,1),COALESCE(p.selling_price,0),COALESCE(p.cost_price,0),COALESCE(p.stock_qty,0),COALESCE(p.min_stock,0),0,COALESCE(p.allow_price_change,0),NULL,0
-    FROM products p WHERE p.outlet_id IS NOT NULL");
-  $done=true;
+  spEnsureProductOutletTable($pdo);
 }
 function productMasterRows(PDO $pdo, int $outletId): array {
   ensureProductOutletTable($pdo);
@@ -351,11 +325,16 @@ function hydrateOutletFields(PDO $pdo,int $outletId,array &$rows): void {
     if(array_key_exists('outlet_rank',$r) && $r['outlet_rank']!==null)$r['rank']=(int)$r['outlet_rank'];
   }unset($r);
 }
-function ensureOutletAssignment(PDO $pdo,int $productId,int $outletId): void {
+function ensureOutletAssignment(PDO $pdo,int $productId,int $outletId,int $active=1): void {
   ensureProductOutletTable($pdo);
-  $q=$pdo->prepare('SELECT id FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');$q->execute([$productId,$outletId]);if($q->fetchColumn())return;
-  $q=$pdo->prepare('SELECT selling_price,cost_price,stock_qty,min_stock,allow_price_change FROM products WHERE id=? LIMIT 1');$q->execute([$productId]);$p=$q->fetch()?:[];
-  productOutletRow($pdo,$productId,$outletId,true,$p);
+  $q=$pdo->prepare('SELECT id FROM product_outlets WHERE product_id=? AND outlet_id=? LIMIT 1');$q->execute([$productId,$outletId]);$existing=(int)($q->fetchColumn()?:0);
+  if($existing){$pdo->prepare('UPDATE product_outlets SET active=?,updated_at=NOW() WHERE id=?')->execute([$active?1:0,$existing]);return;}
+  $q=$pdo->prepare('SELECT selling_price,cost_price,min_stock,allow_price_change FROM products WHERE id=? LIMIT 1');$q->execute([$productId]);$p=$q->fetch()?:[];
+  // A master row may contain legacy stock belonging to a different outlet.
+  // New outlet assignments start at zero unless an explicit opening quantity is provided.
+  $seed=$p;$seed['stock_qty']=0;
+  $row=productOutletRow($pdo,$productId,$outletId,true,$seed);
+  if($row && (int)($row['active']??1)!==($active?1:0))$pdo->prepare('UPDATE product_outlets SET active=?,updated_at=NOW() WHERE id=?')->execute([$active?1:0,(int)$row['id']]);
 }
 
 try {
@@ -431,8 +410,8 @@ try {
   if($action==='assign' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody();$productId=(int)($b['product_id']??$b['id']??0);if($productId<=0)throw new InvalidArgumentException('Product id is required.');
     $q=$pdo->prepare('SELECT * FROM products WHERE id=? LIMIT 1');$q->execute([$productId]);$master=$q->fetch();if(!$master)throw new RuntimeException('Product Master record was not found.');
-    ensureOutletAssignment($pdo,$productId,$outletId);
-    if(isset($b['active'])){$pdo->prepare('UPDATE product_outlets SET active=?,updated_at=NOW() WHERE product_id=? AND outlet_id=?')->execute([(int)(bool)$b['active'],$productId,$outletId]);}
+    $active=array_key_exists('active',$b)?(int)(bool)$b['active']:1;
+    ensureOutletAssignment($pdo,$productId,$outletId,$active);
     $row=productOutletRow($pdo,$productId,$outletId,false);respond(['ok'=>true,'product_id'=>$productId,'outlet_id'=>$outletId,'assignment'=>$row]);
   }
 

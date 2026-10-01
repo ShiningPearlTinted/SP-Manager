@@ -1,10 +1,8 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/security.php';
 
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('X-SP-Manager-Settings-Version: V3');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
@@ -70,6 +68,34 @@ function ensureSettingsTables(PDO $pdo): void {
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_outlet_setting(outlet_id,setting_group,setting_key),
         CONSTRAINT fk_outlet_setting_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS company_settings (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        outlet_id BIGINT UNSIGNED NOT NULL,
+        company_name VARCHAR(180) NOT NULL DEFAULT '',
+        registration_no VARCHAR(100) NULL,
+        tax_number VARCHAR(100) NULL,
+        phone_number VARCHAR(80) NULL,
+        email VARCHAR(180) NULL,
+        website VARCHAR(255) NULL,
+        street_name VARCHAR(255) NULL,
+        building_number VARCHAR(100) NULL,
+        additional_street_name VARCHAR(255) NULL,
+        plot_identification VARCHAR(100) NULL,
+        district VARCHAR(150) NULL,
+        postal_code VARCHAR(40) NULL,
+        city VARCHAR(150) NULL,
+        state VARCHAR(150) NULL,
+        country VARCHAR(100) NOT NULL DEFAULT 'Malaysia',
+        logo_url LONGTEXT NULL,
+        currency_code VARCHAR(12) NOT NULL DEFAULT 'MYR',
+        currency_symbol VARCHAR(12) NOT NULL DEFAULT 'RM',
+        metadata_json LONGTEXT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_company_settings_outlet(outlet_id),
+        CONSTRAINT fk_company_settings_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS email_settings (
@@ -417,6 +443,7 @@ try {
         out(['ok'=>true,'service'=>'SP-Manager settings API','settings_version'=>'V3','outletId'=>$oid,'tables'=>[
             'app_settings'=>tableExists($pdo,'app_settings'),
             'outlet_settings'=>tableExists($pdo,'outlet_settings'),
+            'company_settings'=>tableExists($pdo,'company_settings'),
             'email_settings'=>tableExists($pdo,'email_settings'),
             'printers'=>tableExists($pdo,'printers'),
             'hardware_devices'=>tableExists($pdo,'hardware_devices'),
