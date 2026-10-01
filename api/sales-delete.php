@@ -47,11 +47,9 @@ function isServiceProduct(PDO $pdo, int $productId, int $outletId): bool {
     if (!tableExists($pdo, 'products')) return false;
     $schema = cols($pdo, 'products');
     if (!isset($schema['is_service'])) return false;
-    $sql = 'SELECT is_service FROM products WHERE id = ?';
-    $args = [$productId];
-    if (isset($schema['outlet_id'])) { $sql .= ' AND outlet_id = ?'; $args[] = $outletId; }
-    $sql .= ' LIMIT 1';
-    $q = $pdo->prepare($sql); $q->execute($args);
+    // Products are shared master records; scope the inventory operation through
+    // product_outlets, but read this global product attribute by its unique ID.
+    $q = $pdo->prepare('SELECT is_service FROM products WHERE id = ? LIMIT 1'); $q->execute([$productId]);
     return (bool)$q->fetchColumn();
 }
 function ensureDeleteProductOutletTable(PDO $pdo): void {
@@ -82,6 +80,7 @@ function restoreStockForDeletedSale(PDO $pdo, int $outletId, int $saleId, string
         'movement_type' => 'SALE_DELETE',
         'reference_type' => 'SALE_DELETE',
         'reference_id' => $saleId,
+        'reference_no' => $saleNo,
         'quantity_change' => $quantity,
         'quantity' => $quantity,
         'qty' => $quantity,
@@ -89,14 +88,14 @@ function restoreStockForDeletedSale(PDO $pdo, int $outletId, int $saleId, string
         'stock_before' => $before,
         'stock_after' => $after,
         'notes' => 'Stock restored after sale deletion: '.$saleNo,
-        'created_at' => date('Y-m-d H:i:s')
+        'created_at' => date('Y-m-d H:i:s'),
+        'created_by' => (int)($_SERVER['SP_AUTH_USER_ID'] ?? 0) ?: null
     ];
     $row = [];
     foreach ($data as $fieldName => $value) {
         if (isset($ms[$fieldName])) $row[$fieldName] = $value;
     }
     if (isset($ms['unit_cost']) && !array_key_exists('unit_cost', $row)) $row['unit_cost'] = 0;
-    if (isset($ms['created_by']) && !array_key_exists('created_by', $row)) $row['created_by'] = null;
     if ($row) {
         $fields = array_keys($row);
         $sql = 'INSERT INTO stock_movements (`'.implode('`,`',$fields).'`) VALUES ('.implode(',', array_fill(0,count($fields),'?')).')';
@@ -150,7 +149,7 @@ try {
     ]);
 
     $b = body();
-    $outletId = resolveOutlet($pdo, trim((string)($b['outlet_id'] ?? 'SP01')));
+    $outletId = resolveOutlet($pdo, trim((string)($b['outlet_id'] ?? ($_SERVER['SP_AUTH_OUTLET_ID'] ?? ''))));
     if (!$outletId) throw new RuntimeException('Outlet not found.');
     if (!tableExists($pdo,'sales')) throw new RuntimeException('Sales table is missing from the database.');
     foreach (['sale_items','sale_payments'] as $requiredTable) if (!tableExists($pdo,$requiredTable)) throw new RuntimeException('Required database table is missing: '.$requiredTable.'. This sale cannot be deleted safely.');
@@ -203,6 +202,8 @@ try {
     }
 
     $customerId = (int)($sale['customer_id'] ?? 0);
+    spEnsureStockMovementMetadata($pdo);
+    spEnsureProductOutletTable($pdo);
     $pdo->beginTransaction();
 
     foreach ($items as $item) {

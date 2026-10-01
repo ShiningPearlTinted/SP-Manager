@@ -142,8 +142,8 @@ function valueFor(string $column, array $p, int $outletId): mixed {
     'comments'=>['comments'], 'notes'=>['comments'],
     'image'=>['image'], 'image_url'=>['image'],
     'warranty_enabled'=>['warrantyEnabled'], 'warranty_years'=>['warrantyYears'],
-    'maintenance_enabled'=>['maintenanceEnabled'], 'maintenance_count'=>['maintenanceCount'],
-    'supplier_id'=>['supplierId'],
+    'maintenance_enabled'=>['maintenanceEnabled'], 'maintenance_count'=>['maintenanceCount'], 'maintenance_times'=>['maintenanceCount'],
+    'supplier_id'=>['supplierId'], 'metadata_json'=>['metadata_json'],
   ];
   if ($column==='outlet_id') return $outletId;
   foreach (($map[$column] ?? []) as $k) if (array_key_exists($k,$p)) return $p[$k];
@@ -314,6 +314,10 @@ function upsertProductOutlet(PDO $pdo,int $productId,int $outletId,array $p,arra
 function hydrateOutletFields(PDO $pdo,int $outletId,array &$rows): void {
   ensureProductOutletTable($pdo); if(!$rows)return;
   foreach($rows as &$r){
+    $meta=json_decode((string)($r['metadata_json']??''),true);$app=is_array($meta['app_fields']??null)?$meta['app_fields']:[];
+    foreach(['warranty_enabled'=>'warrantyEnabled','maintenance_enabled'=>'maintenanceEnabled','supplier_id'=>'supplierId','low_stock_warning'=>'lowStockWarning','low_stock_warning_quantity'=>'lowStockWarningQuantity','age_restriction'=>'ageRestriction','plu'=>'plu','comments'=>'comments'] as $column=>$key)if((!array_key_exists($column,$r)||$r[$column]===null)&&array_key_exists($key,$app))$r[$column]=$app[$key];
+    if((!array_key_exists('warranty_years',$r)||$r['warranty_years']===null)&&array_key_exists('warrantyYears',$app))$r['warranty_years']=$app['warrantyYears'];
+    if(!array_key_exists('maintenance_count',$r)||$r['maintenance_count']===null)$r['maintenance_count']=$r['maintenance_times']??($app['maintenanceCount']??null);
     $r['outlet_id']=$outletId;
     if(array_key_exists('outlet_selling_price',$r) && $r['outlet_selling_price']!==null)$r['price']=(float)$r['outlet_selling_price'];
     if(array_key_exists('outlet_cost_price',$r) && $r['outlet_cost_price']!==null)$r['cost']=(float)$r['outlet_cost_price'];
@@ -339,6 +343,7 @@ function ensureOutletAssignment(PDO $pdo,int $productId,int $outletId,int $activ
 
 try {
   $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+  spEnsureProductMetadata($pdo);
   ensureProductOutletTable($pdo);
   $columns=tableColumns($pdo,'products');
   if (!$columns) throw new RuntimeException('Table products not found.');
@@ -487,6 +492,10 @@ try {
     }
 
     if(isset($columns['supplier_id']) && array_key_exists('supplierId',$p) && $p['supplierId']!=='') $p['supplierId']=resolveSupplierForeignKey($pdo,$outletId,$p['supplierId'],$p);
+
+    $productMeta=json_decode((string)($p['metadata_json']??''),true);if(!is_array($productMeta))$productMeta=[];$appFields=is_array($productMeta['app_fields']??null)?$productMeta['app_fields']:[];
+    foreach(['warrantyEnabled','warrantyYears','maintenanceEnabled','supplierId','lowStockWarning','lowStockWarningQuantity','ageRestriction','plu','comments','maintenanceCount'] as $field)if(array_key_exists($field,$p))$appFields[$field]=$p[$field];
+    $productMeta['app_fields']=$appFields;$p['metadata_json']=json_encode($productMeta,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 
     $existsId=null;
     if($id>0 && isset($columns['id'])){

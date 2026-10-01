@@ -91,6 +91,50 @@ function spTableExists(PDO $pdo, string $table): bool {
     return (int)$q->fetchColumn() > 0;
 }
 
+function spEnsureEndOfDayMetadata(PDO $pdo): void {
+    if (!spTableExists($pdo, 'end_of_day')) return;
+    $q = $pdo->prepare('SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=?');
+    $q->execute(['end_of_day']);
+    $columns = array_fill_keys(array_map('strval', $q->fetchAll(PDO::FETCH_COLUMN)), true);
+    foreach ([
+        'report_number' => 'INT UNSIGNED NOT NULL DEFAULT 0',
+        'total_transactions' => 'INT UNSIGNED NOT NULL DEFAULT 0',
+        'report_json' => 'LONGTEXT NULL',
+    ] as $column => $definition) {
+        if (!isset($columns[$column])) $pdo->exec('ALTER TABLE end_of_day ADD COLUMN `'.$column.'` '.$definition);
+    }
+}
+
+function spEnsurePurchaseMetadata(PDO $pdo): void {
+    foreach (['purchases' => 'data_json', 'purchase_items' => 'data_json'] as $table => $column) {
+        if (!spTableExists($pdo, $table)) continue;
+        $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
+        $q->execute([$table, $column]);
+        if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE `'.$table.'` ADD COLUMN `'.$column.'` LONGTEXT NULL');
+    }
+}
+
+function spEnsureSupplierMetadata(PDO $pdo): void {
+    if (!spTableExists($pdo, 'suppliers')) return;
+    $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
+    $q->execute(['suppliers', 'metadata_json']);
+    if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE suppliers ADD COLUMN metadata_json LONGTEXT NULL');
+}
+
+function spEnsureProductMetadata(PDO $pdo): void {
+    if (!spTableExists($pdo, 'products')) return;
+    $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
+    $q->execute(['products', 'metadata_json']);
+    if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE products ADD COLUMN metadata_json LONGTEXT NULL');
+}
+
+function spEnsureStockMovementMetadata(PDO $pdo): void {
+    if (!spTableExists($pdo, 'stock_movements')) return;
+    $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
+    $q->execute(['stock_movements', 'reference_no']);
+    if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE stock_movements ADD COLUMN reference_no VARCHAR(150) NULL');
+}
+
 function spEnsureProductOutletTable(PDO $pdo): void {
     static $done = false;
     if ($done) return;
@@ -261,6 +305,7 @@ function spInstallCorsAndGuard(): void {
         $q->execute([$userId]);
         $user = $q->fetch();
         if (!$user || !(int)$user['enabled']) spApiRespond(['ok'=>false,'error'=>'This user account is disabled. Sign in again.'], 401);
+        $_SERVER['SP_AUTH_USER_ID'] = (string)$userId;
 
         $body = spReadRequestBody();
         if ($action === '') $action = strtolower(trim((string)($body['action'] ?? '')));
@@ -286,6 +331,7 @@ function spInstallCorsAndGuard(): void {
         }
         if ($outletId <= 0) $outletId = spResolveOutlet($pdo, $defaultOutlet);
         if ($outletId <= 0) spApiRespond(['ok'=>false,'error'=>'An active outlet is required.'], 403);
+        $_SERVER['SP_AUTH_OUTLET_ID'] = (string)$outletId;
         // Normalize legacy handlers to the outlet that was authenticated above.
         $_GET['outlet_id'] = (string)$outletId;
         $_POST['outlet_id'] = (string)$outletId;

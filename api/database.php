@@ -98,7 +98,7 @@ try{
     $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     $input=body();
     $action=strtolower(trim((string)($_GET['action']??$input['action']??$_POST['action']??'')));
-    $oid=outletId($pdo,$_GET['outlet_id']??$input['outlet_id']??$_POST['outlet_id']??'SP01');
+    $oid=outletId($pdo,$_GET['outlet_id']??$input['outlet_id']??$_POST['outlet_id']??($_SERVER['SP_AUTH_OUTLET_ID']??''));
 
     if($action==='backup'){
         $snapshot=makeSnapshot($pdo);
