@@ -632,13 +632,33 @@ function App(){
 
  const completeSale=async(paymentInfo={})=>{
   if(!cart.length){setNotice("The cart is empty.");return false;}
+  // Always resolve payment types from the CURRENT outlet before creating the sale.
+  // This prevents a stale SP01 payment id/name from being submitted after switching to SP02.
+  let runtimePaymentTypes=Array.isArray(paymentTypes)?paymentTypes:[];
+  try{
+    const fresh=await centralRelationalRead("paymentTypes");
+    if(Array.isArray(fresh)&&fresh.length)runtimePaymentTypes=fresh;
+  }catch{}
+  const enabledRuntime=runtimePaymentTypes.filter(x=>x&&x.enabled!==false);
   const primaryName=paymentInfo.payment||payment;
-  const primary=paymentTypes.find(x=>x.name===primaryName)||paymentTypes.find(x=>x.enabled)||paymentTypes[0];
+  const primary=runtimePaymentTypes.find(x=>String(x.name)===String(primaryName)&&x.enabled!==false)
+    ||enabledRuntime[0]
+    ||runtimePaymentTypes[0]
+    ||paymentTypes.find(x=>x.name===primaryName)
+    ||paymentTypes.find(x=>x.enabled)
+    ||paymentTypes[0];
+  if(primary?.name&&String(primary.name)!==String(payment))setPayment(String(primary.name));
   if(primary?.customerRequired&&!customer)return setNotice("Please select a customer for this payment type.");
   const paidAmount=Number(paymentInfo.paidAmount??(primary?.markPaid?grand:0));
-  const payments=(paymentInfo.payments&&paymentInfo.payments.length)?paymentInfo.payments.map(x=>({...x,amount:Number(x.amount||0)})):[{paymentTypeId:primary?.id,payment:primary?.name||primaryName,amount:paidAmount,paid:Boolean(primary?.markPaid)}];
+  const rawPayments=(paymentInfo.payments&&paymentInfo.payments.length)?paymentInfo.payments.map(x=>({...x,amount:Number(x.amount||0)})):[{paymentTypeId:primary?.id,payment:primary?.name||primaryName,amount:paidAmount,paid:Boolean(primary?.markPaid)}];
+  const payments=rawPayments.map(x=>{
+    const match=runtimePaymentTypes.find(t=>t&&Number(t.id)===Number(x.paymentTypeId)&&t.enabled!==false)
+      ||runtimePaymentTypes.find(t=>t&&String(t.name)===String(x.payment||x.paymentTypeName||"" )&&t.enabled!==false)
+      ||runtimePaymentTypes.find(t=>t&&String(t.code||"")===String(x.paymentCode||"")&&t.enabled!==false);
+    return match?{...x,paymentTypeId:Number(match.id),payment:match.name,paid:Boolean(match.markPaid)}:{...x,paymentTypeId:null};
+  });
   const totalPaymentAmount=payments.reduce((sum,x)=>sum+Number(x.amount||0),0);
-  const allPaid=payments.every(x=>paymentTypes.find(pt=>pt.id===x.paymentTypeId)?.markPaid!==false)&&totalPaymentAmount>=grand;
+  const allPaid=payments.every(x=>{const pt=runtimePaymentTypes.find(t=>Number(t.id)===Number(x.paymentTypeId));return pt?.markPaid!==false;})&&totalPaymentAmount>=grand;
   const customerObj=customers.find(c=>c.id===customer);
   const dueDays=Number(customerObj?.dueDatePeriod>0?customerObj.dueDatePeriod:settings.order.defaultDueDate||0);
   const dueDate=new Date(Date.now()+dueDays*86400000).toISOString();
@@ -1506,17 +1526,24 @@ function POS({setCart,updateLinePrice,posOrderMeta,setPosOrderMeta,retrieveOpenO
  const openDiscount=()=>{if(!cart.length){setNoticeLocal("Add at least one item before discount.");return}const preferred=settings.order.defaultDiscountType==="Fixed"?"fixed":"percent";setDiscountValue(preferred==="fixed"?(discountFixed||0):(discount||0));setDiscountMode(discountFixed>0?"fixed":preferred);setDiscountScreen(true)};
  const applyPrice=()=>{const n=Number(priceValue);if(!Number.isFinite(n)||n<0){setNoticeLocal("Enter a valid sale price.");return}if(pendingPriceProduct){const ok=add(pendingPriceProduct,pendingPriceQuantity,n);if(ok){setSelectedLineId(pendingPriceProduct.id);setNextQuantity(1);if(settings.order.sounds&&settings.order.soundItemAdded)playPosBeep("ok");setPriceScreen(false);setPendingPriceProduct(null);setPendingPriceQuantity(1)}return}const i=cart.find(x=>(x.lineId||x.id)===selectedLineId||x.productId===selectedLineId);if(!i){setPriceScreen(false);return}const product=products.find(p=>String(p.id)===String(i.productId??i.id))||i;if(!priceChangeAllowedFor(product)){setNoticeLocal("Price change is not allowed for this product.");setPriceScreen(false);return}if(updateLinePrice(i.lineId||i.id,n))setPriceScreen(false)};
  const addCustomer=async()=>{const name=newCustomer.name.trim().toUpperCase();if(!name){return}const ok=await showActionConfirm("Confirm Customer Save",`Save customer "${name}"?`,"Yes");if(!ok)return;const c={id:uid(),name,phone:newCustomer.phone.trim().toUpperCase()||"-",email:newCustomer.email.trim().toUpperCase()||"-",vehicleNumber:newCustomer.vehicleNumber.trim().toUpperCase()||"",visits:0,spend:0,loyaltyPoints:0};const next=[...customers,c];try{await save("customers",next);setCustomers(next);setCustomer(c.id);setNewCustomer({name:"",phone:"",email:"",vehicleNumber:""});setShowAddCustomer(false);setShowCustomer(false);await showActionMessage("Customer Saved","Customer was saved successfully and synchronized with database.")}catch(e){setNoticeLocal("Customer could not be saved because the database could not complete the request.")}};
- const startPayment=()=>{if(!cart.length){setNoticeLocal("Add at least one item before payment.");return}setPaidAmount(paymentTypes.find(x=>x.name===payment)?.markPaid===false?0:grand);setSplitPayments([]);setPaymentScreen(true)};
+ useEffect(()=>{
+   const enabled=Array.isArray(paymentTypes)?paymentTypes.filter(x=>x&&x.enabled!==false):[];
+   if(enabled.length&&!enabled.some(x=>String(x.name)===String(payment)))setPayment(String(enabled[0].name));
+ },[paymentTypes]);
+ const startPayment=()=>{if(!cart.length){setNoticeLocal("Add at least one item before payment.");return}const current=paymentTypes.find(x=>String(x.name)===String(payment))||paymentTypes.find(x=>x&&x.enabled!==false)||paymentTypes[0];setPaidAmount(current?.markPaid===false?0:grand);setSplitPayments([]);setPaymentScreen(true)};
  const finishPayment=async()=>{
-   const pt=paymentTypes.find(x=>x.name===payment)||defaultPayment;
+   let runtimePaymentTypes=Array.isArray(paymentTypes)?paymentTypes:[];
+   try{const fresh=await centralRelationalRead("paymentTypes");if(Array.isArray(fresh)&&fresh.length)runtimePaymentTypes=fresh;}catch{}
+   const pt=runtimePaymentTypes.find(x=>String(x.name)===String(payment)&&x.enabled!==false)||runtimePaymentTypes.find(x=>x&&x.enabled!==false)||runtimePaymentTypes[0]||defaultPayment;
+   if(pt?.name&&String(pt.name)!==String(payment))setPayment(String(pt.name));
    const amount=splitPayments.length?totalPaid:Number(paidAmount||0);
    if(pt?.markPaid!==false && !splitPayments.length && amount<grand){setNoticeLocal("Paid amount is less than the total. Enter the amount received or use Split payments.");return false}
    if(splitPayments.length && totalPaid<grand && pt?.markPaid!==false){setNoticeLocal("Split payment is incomplete. Remaining: "+money(paymentRemaining));return false}
    if(!splitPayments.length && pt?.changeAllowed===false && amount>grand){setNoticeLocal("This payment type does not allow change.");return false}
-   const payments=splitPayments.length?splitPayments:[{paymentTypeId:pt?.id,payment:pt?.name||payment,amount,paid:Boolean(pt?.markPaid)}];
+   const payments=splitPayments.length?splitPayments.map(x=>{const m=runtimePaymentTypes.find(t=>t&&Number(t.id)===Number(x.paymentTypeId)&&t.enabled!==false)||runtimePaymentTypes.find(t=>t&&String(t.name)===String(x.payment||"" )&&t.enabled!==false);return m?{...x,paymentTypeId:Number(m.id),payment:m.name,paid:Boolean(m.markPaid)}:x;}):[{paymentTypeId:pt?.id,payment:pt?.name||payment,amount,paid:Boolean(pt?.markPaid)}];
    const meta=syncOrderMeta({});
-   const paymentPrintAllowed=payments.every(x=>paymentTypes.find(t=>t.id===x.paymentTypeId)?.printReceipt!==false);
-   const paymentDrawerAllowed=payments.some(x=>paymentTypes.find(t=>t.id===x.paymentTypeId)?.openCashDrawer===true);
+   const paymentPrintAllowed=payments.every(x=>runtimePaymentTypes.find(t=>Number(t.id)===Number(x.paymentTypeId))?.printReceipt!==false);
+   const paymentDrawerAllowed=payments.some(x=>runtimePaymentTypes.find(t=>Number(t.id)===Number(x.paymentTypeId))?.openCashDrawer===true);
    const completed=await sale({payment:pt?.name||payment,paidAmount:amount,payments,printReceipt:paymentPrintAllowed,openCashDrawer:paymentDrawerAllowed,note:meta.comment,orderName:meta.name,serviceType:meta.serviceType,table:meta.table});
    if(!completed)return false;
    setPaymentScreen(false);setSplitScreen(false);

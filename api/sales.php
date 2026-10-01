@@ -66,6 +66,40 @@ function resolvePaymentType(PDO $pdo,int $outletId,array $pay): int {
   foreach(['paymentTypeDbId','payment_type_db_id','paymentTypeId','payment_type_id'] as $k){$c=(int)($pay[$k]??0);if($c>0){$id=scopedId($pdo,'payment_types',$c,$outletId);if($id)return$id;}}
   $code=trim((string)pick($pay,['paymentCode','payment_code','code'],''));$name=trim((string)pick($pay,['payment','name','paymentTypeName','payment_name'],''));
   foreach([['payment_code',$code],['code',$code],['payment_name',$name],['name',$name]] as [$field,$value]){if($value!==''&&isset($schema[$field])){ $sql='SELECT id FROM payment_types WHERE `'.$field.'`=?';$args=[$value];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$sql.=' ORDER BY id ASC LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);$id=(int)($q->fetchColumn()?:0);if($id)return$id; }}
+
+  // Multi-outlet safeguard: if the payment type exists in another outlet but is
+  // missing from the current outlet, provision a copy automatically. This keeps
+  // sale_payments.payment_type_id valid without ever attaching a payment row from
+  // another outlet. Existing target-outlet settings are never overwritten.
+  if($code!==''||$name!==''){
+    $sourceSql='SELECT * FROM payment_types WHERE 1=1';$args=[];
+    if($code!==''&&isset($schema['payment_code'])){$sourceSql.=' AND payment_code=?';$args[]=$code;}
+    elseif($name!==''&&isset($schema['payment_name'])){$sourceSql.=' AND payment_name=?';$args[]=$name;}
+    if(isset($schema['outlet_id']))$sourceSql.=' AND outlet_id<>?';
+    if(isset($schema['outlet_id']))$args[]=$outletId;
+    $sourceSql.=' ORDER BY id ASC LIMIT 1';
+    $q=$pdo->prepare($sourceSql);$q->execute($args);$src=$q->fetch();
+    if($src){
+      $fields=[];$vals=[];
+      foreach($schema as $f=>$c){
+        if($f==='id')continue;
+        if($f==='outlet_id'){$fields[]='`outlet_id`';$vals[]=$outletId;continue;}
+        if(array_key_exists($f,$src)){$fields[]='`'.$f.'`';$vals[]=$src[$f];}
+      }
+      if($fields){
+        $ins=$pdo->prepare('INSERT INTO payment_types ('.implode(',',$fields).') VALUES ('.implode(',',array_fill(0,count($fields),'?')).')');
+        try{$ins->execute($vals);return(int)$pdo->lastInsertId();}catch(Throwable $e){
+          // Another request may have created it concurrently; resolve it once more.
+          foreach([['payment_code',$code],['payment_name',$name]] as [$field,$value]){
+            if($value!==''&&isset($schema[$field])){
+              $qq=$pdo->prepare('SELECT id FROM payment_types WHERE `'.$field.'`=?'.(isset($schema['outlet_id'])?' AND outlet_id=?':'').' ORDER BY id ASC LIMIT 1');
+              $qa=isset($schema['outlet_id'])?[$value,$outletId]:[$value];$qq->execute($qa);$rid=(int)($qq->fetchColumn()?:0);if($rid)return$rid;
+            }
+          }
+        }
+      }
+    }
+  }
   return 0;
 }
 function ensureCounterTable(PDO $pdo): void { if(!tableExists($pdo,'sp_document_counters'))$pdo->exec("CREATE TABLE sp_document_counters(outlet_id BIGINT UNSIGNED NOT NULL,doc_type VARCHAR(40) NOT NULL,current_number BIGINT UNSIGNED NOT NULL DEFAULT 0,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,PRIMARY KEY(outlet_id,doc_type)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"); }
@@ -102,7 +136,7 @@ try{
   $newStatus=strtolower((string)pick($sale,['status'],'COMPLETED'));$newActive=!in_array($newStatus,['void','voided','refund','refunded'],true)&&empty($sale['voided'])&&empty($sale['refunded']);
   foreach(array_unique(array_merge(array_keys($oldQty),array_keys($newQty))) as $pid){$oldConsumed=$oldActive?(float)($oldQty[$pid]??0):0.0;$newConsumed=$newActive?(float)($newQty[$pid]??0):0.0;$delta=$oldConsumed-$newConsumed;if(abs($delta)>1e-9)adjustStock($pdo,$outletId,(int)$pid,$delta,$saleNo);}
   if(tableExists($pdo,'sale_items')){$is=cols($pdo,'sale_items');$pdo->prepare('DELETE FROM sale_items WHERE sale_id=?')->execute([$dbId]);$mapI=['sale_id'=>['sale_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total']];foreach($items as $it){if(!is_array($it))continue;$pid=resolveProduct($pdo,$outletId,$it);$child=[...$it,'sale_id'=>$dbId,'productDbId'=>$pid,'product_id'=>$pid,'productId'=>$pid];insertRow($pdo,'sale_items',writeRow($is,$mapI,$child,$outletId));}}
-  if(tableExists($pdo,'sale_payments')){$ps=cols($pdo,'sale_payments');$pdo->prepare('DELETE FROM sale_payments WHERE sale_id=?')->execute([$dbId]);$pays=$sale['payments']??[];if(!is_array($pays))$pays=[];$mapP=['sale_id'=>['sale_id'],'payment_type_id'=>['paymentTypeDbId','payment_type_id','paymentTypeId'],'payment_type_name'=>['payment','name','paymentTypeName','payment_name'],'amount'=>['amount'],'tendered'=>['tendered'],'change_amount'=>['change','changeAmount'],'reference_no'=>['referenceNo','reference'],'paid_at'=>['paidAt','date'],'created_at'=>['paidAt','date']];foreach($pays as $pay){if(!is_array($pay))continue;$ptid=resolvePaymentType($pdo,$outletId,$pay);$child=[...$pay,'sale_id'=>$dbId,'paymentTypeDbId'=>$ptid?:null,'payment_type_id'=>$ptid?:null,'payment_type_name'=>pick($pay,['payment','name','paymentTypeName','payment_name'],'Payment'),'paidAt'=>pick($pay,['paidAt','date'],date('Y-m-d H:i:s'))];insertRow($pdo,'sale_payments',writeRow($ps,$mapP,$child,$outletId));}}
+  if(tableExists($pdo,'sale_payments')){$ps=cols($pdo,'sale_payments');$pdo->prepare('DELETE FROM sale_payments WHERE sale_id=?')->execute([$dbId]);$pays=$sale['payments']??[];if(!is_array($pays))$pays=[];$mapP=['sale_id'=>['sale_id'],'payment_type_id'=>['paymentTypeDbId','payment_type_id','paymentTypeId'],'payment_type_name'=>['payment','name','paymentTypeName','payment_name'],'amount'=>['amount'],'tendered'=>['tendered'],'change_amount'=>['change','changeAmount'],'reference_no'=>['referenceNo','reference'],'paid_at'=>['paidAt','date'],'created_at'=>['paidAt','date']];foreach($pays as $pay){if(!is_array($pay))continue;$ptid=resolvePaymentType($pdo,$outletId,$pay);if(isset($ps['payment_type_id'])&&$ps['payment_type_id']['Null']==='NO'&&$ptid<=0)throw new RuntimeException('Payment type is not available for the current outlet. Please refresh Payment Types and try again.');$child=[...$pay,'sale_id'=>$dbId,'paymentTypeDbId'=>$ptid?:null,'payment_type_id'=>$ptid?:null,'payment_type_name'=>pick($pay,['payment','name','paymentTypeName','payment_name'],'Payment'),'paidAt'=>pick($pay,['paidAt','date'],date('Y-m-d H:i:s'))];insertRow($pdo,'sale_payments',writeRow($ps,$mapP,$child,$outletId));}}
   if($customerId>0)refreshLoyalty($pdo,$outletId,$customerId);
   $pdo->commit();
   echo json_encode(['ok'=>true,'api_version'=>'V11','sale_id'=>$dbId,'sale_no'=>$saleNo,'outlet_id'=>$outletId],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
