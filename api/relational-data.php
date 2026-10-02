@@ -6,6 +6,18 @@ header('X-SP-Manager-DB-Version: V10');
 if ($_SERVER['REQUEST_METHOD']==='OPTIONS'){http_response_code(204);exit;}
 $config=require __DIR__.'/config.php';
 $db=$config['db']??null;$host=(string)($db['host']??$config['db_host']??'localhost');$port=(string)($db['port']??$config['db_port']??'3306');$name=(string)($db['name']??$config['db_name']??'');$user=(string)($db['user']??$config['db_user']??'');$pass=(string)($db['pass']??$config['db_pass']??'');
+function connectPdo(string $host,string $port,string $name,string $user,string $pass):PDO{
+    $hosts=[$host];
+    $normalized=strtolower(trim($host));
+    if($normalized==='localhost')$hosts[]='127.0.0.1';
+    elseif($normalized==='127.0.0.1')$hosts[]='localhost';
+    $last=null;
+    foreach(array_values(array_unique($hosts)) as $candidate){
+        try{return new PDO("mysql:host={$candidate};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);}
+        catch(Throwable $e){$last=$e;}
+    }
+    throw $last??new RuntimeException('Database connection failed.');
+}
 function cols(PDO $pdo,string $table):array{$q=$pdo->query('DESCRIBE `'.str_replace('`','``',$table).'`');$o=[];foreach($q->fetchAll() as $r){$o[(string)$r['Field']]=$r;}return $o;}
 function tableExists(PDO $pdo,string $table):bool{$q=$pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');$q->execute([$table]);return(int)$q->fetchColumn()>0;}
 function val(array $r,array $keys,$default=null){foreach($keys as $k)if(array_key_exists($k,$r)&&$r[$k]!==null)return $r[$k];return $default;}
@@ -49,4 +61,4 @@ function readState(PDO $pdo,int $oid,string $k):array{
  if($k==='zReports')spEnsureEndOfDayMetadata($pdo);if($k==='purchases')spEnsurePurchaseMetadata($pdo);if($k==='suppliers')spEnsureSupplierMetadata($pdo);
  if(!isset($map[$k]))throw new InvalidArgumentException('Unsupported relational state key: '.$k);if(!tableExists($pdo,$map[$k]['t']))throw new RuntimeException('Required database table is missing: '.$map[$k]['t'].'. Apply the SP-Manager database schema before reading this data.');$parentCols=cols($pdo,$map[$k]['t']);if(in_array($k,['sales','purchases','orders','cashMovements','stockHistory','zReports'],true)&&!isset($parentCols['outlet_id']))throw new RuntimeException('Required outlet_id column is missing from '.$map[$k]['t'].'. Refusing to expose unscoped outlet data.');$requiredChildren=match($k){'sales'=>['sale_items','sale_payments'],'purchases'=>['purchase_items'],'orders'=>['open_order_items'],default=>[]};foreach($requiredChildren as $child)if(!tableExists($pdo,$child))throw new RuntimeException('Required detail table is missing: '.$child.'. Apply the SP-Manager database schema before reading this data.');$rs=rows($pdo,$map[$k]['t'],$oid);return array_map($map[$k]['f'],$rs);
 }
-try{$pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$oid=outletId($pdo,(string)($_GET['outlet_id']??'SP01'));$key=trim((string)($_GET['state_key']??''));if($key==='')throw new InvalidArgumentException('state_key is required.');$data=readState($pdo,$oid,$key);echo json_encode(['ok'=>true,'api_version'=>'V10','state_key'=>$key,'outlet_id'=>$oid,'count'=>count($data),'data'=>$data],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}catch(Throwable $e){http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V10','error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}
+try{$pdo=connectPdo($host,$port,$name,$user,$pass);$oid=outletId($pdo,(string)($_GET['outlet_id']??'SP01'));$key=trim((string)($_GET['state_key']??''));if($key==='')throw new InvalidArgumentException('state_key is required.');$data=readState($pdo,$oid,$key);echo json_encode(['ok'=>true,'api_version'=>'V10','state_key'=>$key,'outlet_id'=>$oid,'count'=>count($data),'data'=>$data],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}catch(Throwable $e){http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V10','error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}
