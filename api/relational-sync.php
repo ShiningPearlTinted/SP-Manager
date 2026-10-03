@@ -31,6 +31,15 @@ function cols(PDO $pdo, string $table): array {
   foreach ($q->fetchAll() as $r) $out[(string)$r['Field']] = $r;
   return $cache[$table] = $out;
 }
+function childRows(PDO $pdo, string $table, string $fk, int $id): array {
+  if (!tableExists($pdo, $table)) throw new RuntimeException('Required detail table is missing: '.$table);
+  $schema = cols($pdo, $table);
+  if (!isset($schema[$fk])) throw new RuntimeException('Required detail column is missing: '.$table.'.'.$fk);
+  $q = $pdo->prepare('SELECT * FROM `'.str_replace('`','``',$table).'` WHERE `'.str_replace('`','``',$fk).'`=? ORDER BY id ASC');
+  $q->execute([$id]);
+  return $q->fetchAll();
+}
+
 function pick(array $a, array $names, $default = null) {
   foreach ($names as $n) {
     if (array_key_exists($n, $a) && $a[$n] !== null && $a[$n] !== '') return $a[$n];
@@ -597,7 +606,7 @@ try {
       else $item['customer_id'] = null;
       $candidate=trim((string)pick($item,['no','saleNo','invoiceNo','invoice_number'],''));
       $saleDbId=syncLookup($pdo,$outletId,'sales',$localId,'sales');
-      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true)){$candidate=$saleDbId>0?(string)val((array)($pdo->query('SELECT sale_no FROM sales WHERE id='.(int)$saleDbId.' LIMIT 1')->fetch()?:[]),['sale_no'],''):'';if($candidate==='')$candidate=generateServerDocumentNumber($pdo,$outletId,'Invoice','INV-',$saleDbId>0?$saleDbId:null);}
+      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true)){$candidate=$saleDbId>0?(string)pick((array)($pdo->query('SELECT sale_no FROM sales WHERE id='.(int)$saleDbId.' LIMIT 1')->fetch()?:[]),['sale_no'],''):'';if($candidate==='')$candidate=generateServerDocumentNumber($pdo,$outletId,'Invoice','INV-',$saleDbId>0?$saleDbId:null);}
       $item['no']=$candidate;$item['saleNo']=$candidate;$item['invoiceNo']=$candidate;
       $saleNumbers[]=['local_id'=>$localId,'sale_no'=>$candidate,'db_id'=>$saleDbId];
     }
