@@ -59,6 +59,48 @@ function customer_payload(array $c, int $outletId): array {
     'spend'=>(float)($c['spend'] ?? 0),
   ];
 }
+
+function supplier_address(array $p): ?string {
+  $parts=[];
+  foreach (['building_number','street_name','additional_street_name','district','postal_code','city','state','country'] as $k) {
+    $v=trim((string)($p[$k] ?? ''));
+    if ($v !== '') $parts[]=$v;
+  }
+  $value=implode(', ', $parts);
+  return $value !== '' ? $value : null;
+}
+function sync_supplier_role(PDO $pdo, int $customerId, int $outletId, array $p): void {
+  $code=trim((string)($p['code'] ?? ''));
+  if ($code === '') $code='CUST-'.$customerId;
+  $needle='%\"customerId\":'.$customerId.'%';
+  $q=$pdo->prepare('SELECT id FROM suppliers WHERE outlet_id=? AND (supplier_code=? OR metadata_json LIKE ?) ORDER BY id ASC LIMIT 1');
+  $q->execute([$outletId,$code,$needle]);
+  $supplierId=(int)($q->fetchColumn() ?: 0);
+
+  $meta=json_encode(['customerId'=>$customerId,'source'=>'Customer Master'], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+  $active=((int)($p['enabled'] ?? 1) !== 0 && (int)($p['is_supplier'] ?? 0) === 1) ? 1 : 0;
+  if ((int)($p['is_supplier'] ?? 0) === 1) {
+    $values=[
+      $code,
+      (string)($p['name'] ?? ''),
+      $p['phone'] ?? null,
+      $p['email'] ?? null,
+      supplier_address($p),
+      $active,
+      $meta,
+    ];
+    if ($supplierId > 0) {
+      $values[]=$supplierId;
+      $pdo->prepare('UPDATE suppliers SET supplier_code=?,supplier_name=?,phone=?,email=?,address=?,active=?,metadata_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute($values);
+    } else {
+      array_unshift($values,$outletId);
+      $pdo->prepare('INSERT INTO suppliers (outlet_id,supplier_code,supplier_name,phone,email,address,active,metadata_json) VALUES (?,?,?,?,?,?,?,?)')->execute($values);
+    }
+  } elseif ($supplierId > 0) {
+    $pdo->prepare('UPDATE suppliers SET active=0,metadata_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$meta,$supplierId]);
+  }
+}
+
 function save_one(PDO $pdo, array $c, int $outletId): int {
   $p = customer_payload($c,$outletId);
   if ($p['name'] === '') throw new InvalidArgumentException('Customer name is required.');
@@ -78,11 +120,14 @@ function save_one(PDO $pdo, array $c, int $outletId): int {
     $sets=[]; foreach($cols as $col){$sets[]="`$col`=?";}
     $vals[]=$existing;
     $pdo->prepare('UPDATE customers SET '.implode(',',$sets).' WHERE id=?')->execute($vals);
+    sync_supplier_role($pdo,$existing,$outletId,$p);
     return $existing;
   }
   $marks=implode(',',array_fill(0,count($cols),'?'));
   $pdo->prepare('INSERT INTO customers (`'.implode('`,`',$cols).'`) VALUES ('.$marks.')')->execute($vals);
-  return (int)$pdo->lastInsertId();
+  $newId=(int)$pdo->lastInsertId();
+  sync_supplier_role($pdo,$newId,$outletId,$p);
+  return $newId;
 }
 
 try {
@@ -116,7 +161,7 @@ try {
   }
   if($action==='delete' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=body_json(); $id=(int)($b['id']??0); $code=trim((string)($b['code']??''));
-    if($id>0){$q=$pdo->prepare('DELETE FROM customers WHERE id=? AND outlet_id=?');$q->execute([$id,$outletId]);}
+    if($id>0){$metaNeedle='%\"customerId\":'.$id.'%';$pdo->prepare('UPDATE suppliers SET active=0 WHERE outlet_id=? AND metadata_json LIKE ?')->execute([$outletId,$metaNeedle]);$q=$pdo->prepare('DELETE FROM customers WHERE id=? AND outlet_id=?');$q->execute([$id,$outletId]);}
     elseif($code!==''){$q=$pdo->prepare('DELETE FROM customers WHERE code=? AND outlet_id=?');$q->execute([$code,$outletId]);}
     else throw new InvalidArgumentException('id or code is required.');
     echo json_encode(['ok'=>true,'deleted'=>$q->rowCount()]); exit;
