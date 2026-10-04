@@ -5,15 +5,15 @@ header('Content-Type: application/json; charset=utf-8');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 $config = require __DIR__ . '/config.php';
 try {
-  $pdo = new PDO('mysql:host='.($config['db_host'] ?? 'localhost').';port='.($config['db_port'] ?? '3306').';dbname='.($config['db_name'] ?? '').';charset=utf8mb4', $config['db_user'] ?? '', $config['db_pass'] ?? '', [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
-  $pdo->exec("CREATE TABLE IF NOT EXISTS customer_displays (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,display_id VARCHAR(64) NULL,display_code VARCHAR(64) NULL,display_name VARCHAR(120) NOT NULL DEFAULT '',outlet_id VARCHAR(64) NULL,terminal_id VARCHAR(64) NULL,enabled TINYINT(1) NOT NULL DEFAULT 1,state VARCHAR(20) NOT NULL DEFAULT 'IDLE',state_json LONGTEXT NULL,last_seen_at DATETIME NULL,last_connected DATETIME NULL,idle_image_url TEXT NULL,image_data LONGTEXT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_customer_display_id(display_id),UNIQUE KEY uq_customer_display_code(display_code),KEY idx_customer_display_terminal(terminal_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $pdo=spApiDatabase();
+  spRequireTable($pdo,'customer_displays');
   $displayColumns=[];foreach($pdo->query('DESCRIBE customer_displays')->fetchAll() as $col)$displayColumns[(string)$col['Field']]=true;
   $displayDefinitions=['display_id'=>'VARCHAR(64) NULL','display_code'=>'VARCHAR(64) NULL','display_name'=>"VARCHAR(120) NOT NULL DEFAULT ''",'outlet_id'=>'VARCHAR(64) NULL','terminal_id'=>'VARCHAR(64) NULL','enabled'=>'TINYINT(1) NOT NULL DEFAULT 1','state'=>"VARCHAR(20) NOT NULL DEFAULT 'IDLE'",'state_json'=>'LONGTEXT NULL','last_seen_at'=>'DATETIME NULL','last_connected'=>'DATETIME NULL','idle_image_url'=>'TEXT NULL','image_data'=>'LONGTEXT NULL','created_at'=>'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP','updated_at'=>'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'];
-  foreach($displayDefinitions as $column=>$definition)if(!isset($displayColumns[$column]))$pdo->exec('ALTER TABLE customer_displays ADD COLUMN `'.$column.'` '.$definition);
+  spRequireColumns($pdo,'customer_displays',array_keys($displayDefinitions));
   $pdo->exec("UPDATE customer_displays SET display_id=display_code WHERE (display_id IS NULL OR display_id='') AND display_code IS NOT NULL AND display_code<>''");
   $pdo->exec("UPDATE customer_displays SET display_code=display_id WHERE (display_code IS NULL OR display_code='') AND display_id IS NOT NULL AND display_id<>''");
   $uniqueDisplayId=false;foreach($pdo->query('SHOW INDEX FROM customer_displays')->fetchAll() as $idx)if((string)$idx['Column_name']==='display_id'&&(int)$idx['Non_unique']===0)$uniqueDisplayId=true;
-  if(!$uniqueDisplayId)$pdo->exec('ALTER TABLE customer_displays ADD UNIQUE KEY uq_customer_display_id(display_id)');
+  if(!$uniqueDisplayId)throw new RuntimeException('Customer display migration required.');
   $action=trim((string)($_GET['action']??''));
   $json=static function():array{$v=json_decode(file_get_contents('php://input'),true);return is_array($v)?$v:[];};
   $outletId=static function(PDO $pdo,string $v):int{$v=trim($v);if($v==='')throw new InvalidArgumentException('Outlet is required.');if(ctype_digit($v)){$q=$pdo->prepare('SELECT id FROM outlets WHERE id=? AND active=1 LIMIT 1');$q->execute([(int)$v]);$id=$q->fetchColumn();if($id!==false)return(int)$id;}$q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1');$q->execute([$v]);$id=$q->fetchColumn();if($id===false)throw new InvalidArgumentException('Outlet not found: '.$v);return(int)$id;};

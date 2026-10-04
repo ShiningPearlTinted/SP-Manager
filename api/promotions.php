@@ -43,22 +43,17 @@ function outletId(PDO $pdo, mixed $value): int {
     if ($id <= 0) throw new RuntimeException('Outlet not found.');
     return $id;
 }
+function masterOutletId(PDO $pdo): int {
+    $q=$pdo->query("SELECT id FROM outlets WHERE outlet_code='SP01' AND active=1 LIMIT 1");
+    $id=(int)($q->fetchColumn()?:0);
+    if($id>0)return $id;
+    $q=$pdo->query('SELECT id FROM outlets WHERE active=1 ORDER BY id ASC LIMIT 1');
+    $id=(int)($q->fetchColumn()?:0);
+    if($id<=0)throw new RuntimeException('No active outlet exists for Central Master Data.');
+    return $id;
+}
 function ensurePromotionsTable(PDO $pdo): void {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS promotions (
-        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        outlet_id BIGINT UNSIGNED NULL,
-        product_id BIGINT UNSIGNED NULL,
-        promotion_name VARCHAR(255) NOT NULL,
-        price DECIMAL(15,2) NULL,
-        discount_percent DECIMAL(8,2) NULL,
-        start_at DATETIME NULL,
-        end_at DATETIME NULL,
-        active TINYINT(1) NOT NULL DEFAULT 1,
-        data_json LONGTEXT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT fk_promotions_outlet FOREIGN KEY (outlet_id) REFERENCES outlets(id) ON DELETE CASCADE,
-        CONSTRAINT fk_promotions_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    spRequireTable($pdo,'promotions');
 }
 function jsonArray(mixed $v): array {
     if (is_array($v)) return $v;
@@ -130,10 +125,8 @@ function savePromotion(PDO $pdo, int $outletId, array $promotion): array {
         if ($ptype === 'fixed') $price = $value; else $discountPercent = $value;
     }
     if ($firstProductId !== null && $firstProductId > 0) {
-        $q = $pdo->prepare('SELECT id FROM products WHERE id=?' . (tableExists($pdo, 'products') ? ' AND outlet_id=?' : '') . ' LIMIT 1');
-        $args = [$firstProductId];
-        if (tableExists($pdo, 'products')) $args[] = $outletId;
-        $q->execute($args);
+        $q = $pdo->prepare('SELECT id FROM products WHERE id=? AND active=1 LIMIT 1');
+        $q->execute([$firstProductId]);
         if (!$q->fetchColumn()) $firstProductId = null;
     }
 
@@ -196,7 +189,8 @@ function savePromotion(PDO $pdo, int $outletId, array $promotion): array {
 
 try {
     $pdo=spApiDatabase();
-    $outletId = outletId($pdo, $_REQUEST['outlet_id'] ?? 'SP01');
+    $requestedOutletId = outletId($pdo, $_REQUEST['outlet_id'] ?? 'SP01');
+    $outletId = masterOutletId($pdo);
     if (!tableExists($pdo, 'promotions')) ensurePromotionsTable($pdo);
     $action = strtolower(trim((string)($_REQUEST['action'] ?? 'list')));
 
@@ -204,7 +198,7 @@ try {
         $q = $pdo->prepare('SELECT * FROM promotions WHERE outlet_id=? ORDER BY id ASC');
         $q->execute([$outletId]);
         $rows = array_map('mapPromotion', $q->fetchAll());
-        out(['ok' => true, 'api_version' => 'V1', 'count' => count($rows), 'data' => $rows]);
+        out(['ok' => true, 'api_version' => 'V1', 'count' => count($rows), 'outlet_id'=>$requestedOutletId, 'master_scope_outlet_id'=>$outletId, 'data' => $rows]);
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') out(['ok' => false, 'error' => 'Unsupported request.'], 405);
@@ -214,7 +208,7 @@ try {
         if ($action === 'save') {
             $promotion = is_array($payload['promotion'] ?? null) ? $payload['promotion'] : $payload;
             $saved = savePromotion($pdo, $outletId, $promotion);
-            $pdo->commit();
+            spAdvanceStateRevision($pdo,$outletId,'promos');$pdo->commit();
             out(['ok' => true, 'api_version' => 'V1', 'promotion' => $saved]);
         }
         if ($action === 'delete') {
@@ -223,7 +217,7 @@ try {
             $q = $pdo->prepare('DELETE FROM promotions WHERE id=? AND outlet_id=?');
             $q->execute([$id, $outletId]);
             if ($q->rowCount() < 1) throw new RuntimeException('Promotion was not found.');
-            $pdo->commit();
+            spAdvanceStateRevision($pdo,$outletId,'promos');$pdo->commit();
             out(['ok' => true, 'api_version' => 'V1', 'deleted_id' => $id]);
         }
         throw new InvalidArgumentException('Unsupported promotion action.');

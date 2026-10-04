@@ -2,62 +2,20 @@
 setlocal EnableExtensions
 set "BASE_URL=https://shiningpearltinted.github.io/SP-Manager/sp-manager-agent"
 set "INSTALL_DIR=%LOCALAPPDATA%\SP-Manager\agent"
+set "SP_INSTALL_SOURCE=%~dp0"
 set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
-set "TASK_NAME=SP-Manager Local Agent Watchdog"
-if not exist "%PS_EXE%" echo [ERROR] Windows PowerShell was not found.&pause&exit /b 1
-if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" >nul 2>nul
-
-echo ==================================================
-echo SP-Manager Local Agent Installer / Restart V1.1.19
-echo ==================================================
-echo.
-
-echo [1/4] Downloading Local Agent files...
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $base='%BASE_URL%'; $dir='%INSTALL_DIR%'; foreach($f in @('agent.ps1','watchdog.ps1')){Invoke-WebRequest -UseBasicParsing -Uri ($base+'/'+$f) -OutFile (Join-Path $dir $f)}"
-if errorlevel 1 echo [ERROR] Could not download Local Agent files.&pause&exit /b 1
-
-echo [2/4] Registering Auto-start + Auto-restart...
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $task='SP-Manager Local Agent Watchdog'; $ps='%PS_EXE%'; $wd=Join-Path '%INSTALL_DIR%' 'watchdog.ps1'; $a=New-ScheduledTaskAction -Execute $ps -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File ' + [char]34 + $wd + [char]34); $u=[System.Security.Principal.WindowsIdentity]::GetCurrent().Name; $t=New-ScheduledTaskTrigger -AtLogOn -User $u; $p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited; $s=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1); Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue; Register-ScheduledTask -TaskName $task -Action $a -Trigger $t -Principal $p -Settings $s -Description 'SP-Manager Local Agent watchdog' -Force | Out-Null; if(-not (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue)){throw 'Task registration verification failed'}"
-if errorlevel 1 (
-  echo [WARNING] Windows Scheduled Task API registration failed. Trying schtasks fallback...
-  set "FALLBACK_DIR=%ProgramData%\SP-Manager"
-  if not exist "%FALLBACK_DIR%" mkdir "%FALLBACK_DIR%" >nul 2>nul
-  >"%FALLBACK_DIR%\run-watchdog.bat" echo @echo off
-  >>"%FALLBACK_DIR%\run-watchdog.bat" echo "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%INSTALL_DIR%\watchdog.ps1"
-  schtasks.exe /Delete /TN "%TASK_NAME%" /F >nul 2>nul
-  schtasks.exe /Create /TN "%TASK_NAME%" /SC ONLOGON /TR "%FALLBACK_DIR%\run-watchdog.bat" /RU "%USERDOMAIN%\%USERNAME%" /RL LIMITED /F >nul 2>nul
-  if errorlevel 1 (
-    echo [ERROR] Could not register the Windows watchdog task.
-    echo Please run this installer as Administrator once.
-    echo.
-    pause
-    exit /b 1
-  )
+if not exist "%PS_EXE%" (
+ echo Windows PowerShell missing.
+ pause
+ exit /b 1
 )
-echo [OK] Auto-start watchdog task registered.
-echo [OK] Auto-start watchdog task registered.
-
-echo [3/4] Starting Local Agent...
-start "SP-Manager Local Agent" /min "%PS_EXE%" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%INSTALL_DIR%\agent.ps1"
-
-echo [4/4] Waiting for Agent...
-set /a TRY=0
-:WAIT
-set /a TRY+=1
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "try{$r=Invoke-RestMethod 'http://127.0.0.1:18765/status' -TimeoutSec 2;Write-Host ('[OK] Agent connected. Version: '+$r.version);exit 0}catch{exit 1}"
-if not errorlevel 1 goto READY
-if %TRY% GEQ 20 goto DONE
-timeout /t 1 /nobreak >nul
-goto WAIT
-:READY
-echo.
-echo [OK] SP-Manager Local Agent is READY.
-:DONE
-echo.
-echo ==================================================
-echo Auto-start + Auto-restart is ENABLED.
-echo ==================================================
-echo You do NOT need to run this installer every time you open SP-Manager.
-echo.
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';$dir=$env:INSTALL_DIR;New-Item -ItemType Directory -Path $dir -Force|Out-Null;foreach($f in @('agent.ps1','watchdog.ps1')){$tmp=Join-Path $dir ($f+'.download');$local=Join-Path $env:SP_INSTALL_SOURCE ('agent\'+$f);if(Test-Path -LiteralPath $local){Copy-Item -LiteralPath $local -Destination $tmp -Force}else{Invoke-WebRequest -UseBasicParsing -Uri ($env:BASE_URL+'/'+$f) -OutFile $tmp};$expected=if($f -eq 'agent.ps1'){'85156697b8ee156f83e7ef42611725daa3fcd8c3f0169f0541941bba21b21a02'}else{'78946e1b770de8a606f209b9385aadfe48888bd5a39d3bafc762611ef5e68fb0'};if((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower() -ne $expected){throw 'Agent integrity check failed. Use the complete release ZIP.'};Move-Item -LiteralPath $tmp -Destination (Join-Path $dir $f) -Force};Stop-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -ErrorAction SilentlyContinue;foreach($proc in Get-CimInstance Win32_Process){if($proc.CommandLine -and (($proc.CommandLine -match [regex]::Escape((Join-Path $dir 'agent.ps1'))) -or ($proc.CommandLine -match [regex]::Escape((Join-Path $dir 'watchdog.ps1'))))){Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue}};$ps=$env:PS_EXE;$wd=Join-Path $dir 'watchdog.ps1';$u=[Security.Principal.WindowsIdentity]::GetCurrent().Name;$a=New-ScheduledTaskAction -Execute $ps -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File '+[char]34+$wd+[char]34);$t=New-ScheduledTaskTrigger -AtLogOn -User $u;$p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited;$s=New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 99 -RestartInterval (New-TimeSpan -Minutes 1);Register-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -Action $a -Trigger $t -Principal $p -Settings $s -Force|Out-Null;Start-Process -FilePath $ps -WindowStyle Hidden -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File '+[char]34+(Join-Path $dir 'watchdog.ps1')+[char]34)"
+if errorlevel 1 (
+ echo Installation failed. No unverified script was executed.
+ pause
+ exit /b 1
+)
+echo Pairing token is saved at %LOCALAPPDATA%\SP-Manager\agent-pairing-token.txt
+echo Copy it into Settings - Hardware - Pairing token on this computer.
 pause
 exit /b 0

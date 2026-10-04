@@ -66,10 +66,9 @@ function spBase64UrlDecode(string $value): string|false {
 }
 
 function spIssueApiToken(int $userId): string {
-    $now = time();
-    $payload = spBase64UrlEncode(json_encode(['sub'=>$userId, 'iat'=>$now, 'exp'=>$now + 7200], JSON_UNESCAPED_SLASHES));
-    $signature = spBase64UrlEncode(hash_hmac('sha256', $payload, spAuthSecret(), true));
-    return $payload.'.'.$signature;
+ $q=spApiDatabase()->prepare('SELECT session_version FROM users WHERE id=?');$q->execute([$userId]);$version=(int)$q->fetchColumn();
+ $now=time();$payload=spBase64UrlEncode(json_encode(['sub'=>$userId,'ver'=>$version,'iat'=>$now,'exp'=>$now+7200],JSON_THROW_ON_ERROR));
+ return $payload.'.'.spBase64UrlEncode(hash_hmac('sha256',$payload,spAuthSecret(),true));
 }
 
 function spReadRequestBody(): array {
@@ -97,6 +96,8 @@ function spDecodeApiToken(string $token): int {
     $json = spBase64UrlDecode($payload);
     $data = is_string($json) ? json_decode($json, true) : null;
     if (!is_array($data) || (int)($data['exp'] ?? 0) < time()) return 0;
+    $q=spApiDatabase()->prepare('SELECT session_version FROM users WHERE id=?');$q->execute([(int)($data['sub']??0)]);$version=$q->fetchColumn();
+    if($version===false || !isset($data['ver']) || (int)$data['ver']!==(int)$version)return 0;
     return max(0, (int)($data['sub'] ?? 0));
 }
 
@@ -106,119 +107,17 @@ function spTableExists(PDO $pdo, string $table): bool {
     return (int)$q->fetchColumn() > 0;
 }
 
-function spEnsureEndOfDayMetadata(PDO $pdo): void {
-    if (!spTableExists($pdo, 'end_of_day')) return;
-    $q = $pdo->prepare('SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=?');
-    $q->execute(['end_of_day']);
-    $columns = array_fill_keys(array_map('strval', $q->fetchAll(PDO::FETCH_COLUMN)), true);
-    foreach ([
-        'report_number' => 'INT UNSIGNED NOT NULL DEFAULT 0',
-        'total_transactions' => 'INT UNSIGNED NOT NULL DEFAULT 0',
-        'report_json' => 'LONGTEXT NULL',
-    ] as $column => $definition) {
-        if (!isset($columns[$column])) $pdo->exec('ALTER TABLE end_of_day ADD COLUMN `'.$column.'` '.$definition);
-    }
-}
+function spEnsureEndOfDayMetadata(PDO $pdo): void { spRequireColumns($pdo,'end_of_day',['report_number', 'total_transactions', 'report_json']); }
 
-function spEnsurePurchaseMetadata(PDO $pdo): void {
-    foreach (['purchases' => 'data_json', 'purchase_items' => 'data_json'] as $table => $column) {
-        if (!spTableExists($pdo, $table)) continue;
-        $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
-        $q->execute([$table, $column]);
-        if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE `'.$table.'` ADD COLUMN `'.$column.'` LONGTEXT NULL');
-    }
-}
+function spEnsurePurchaseMetadata(PDO $pdo): void { spRequireColumns($pdo,'purchases',['data_json']);spRequireColumns($pdo,'purchase_items',['data_json']); }
 
-function spEnsureSupplierMetadata(PDO $pdo): void {
-    if (!spTableExists($pdo, 'suppliers')) return;
-    $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
-    $q->execute(['suppliers', 'metadata_json']);
-    if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE suppliers ADD COLUMN metadata_json LONGTEXT NULL');
-}
+function spEnsureSupplierMetadata(PDO $pdo): void { spRequireColumns($pdo,'suppliers',['metadata_json']); }
 
-function spEnsureProductMetadata(PDO $pdo): void {
-    if (!spTableExists($pdo, 'products')) return;
-    $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
-    $q->execute(['products', 'metadata_json']);
-    if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE products ADD COLUMN metadata_json LONGTEXT NULL');
-}
+function spEnsureProductMetadata(PDO $pdo): void { spRequireColumns($pdo,'products',['metadata_json']); }
 
-function spEnsureStockMovementMetadata(PDO $pdo): void {
-    if (!spTableExists($pdo, 'stock_movements')) return;
-    $q = $pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=? LIMIT 1');
-    $q->execute(['stock_movements', 'reference_no']);
-    if (!$q->fetchColumn()) $pdo->exec('ALTER TABLE stock_movements ADD COLUMN reference_no VARCHAR(150) NULL');
-}
+function spEnsureStockMovementMetadata(PDO $pdo): void { spRequireColumns($pdo,'stock_movements',['reference_no']); }
 
-function spEnsureProductOutletTable(PDO $pdo): void {
-    static $done = false;
-    if ($done) return;
-    $pdo->exec("CREATE TABLE IF NOT EXISTS product_outlets (
-      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      product_id BIGINT UNSIGNED NOT NULL,
-      outlet_id BIGINT UNSIGNED NOT NULL,
-      active TINYINT(1) NOT NULL DEFAULT 1,
-      selling_price DECIMAL(15,2) NULL,
-      cost_price DECIMAL(15,2) NULL,
-      stock_qty DECIMAL(15,3) NOT NULL DEFAULT 0.000,
-      min_stock DECIMAL(15,3) NOT NULL DEFAULT 0.000,
-      preferred_quantity DECIMAL(15,3) NOT NULL DEFAULT 0.000,
-      allow_price_change TINYINT(1) NULL,
-      last_purchase_price DECIMAL(15,2) NULL,
-      rank INT NOT NULL DEFAULT 0,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY uq_product_outlet (product_id,outlet_id),
-      INDEX idx_product_outlets_outlet (outlet_id),
-      INDEX idx_product_outlets_product (product_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-    $q = $pdo->prepare('SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=?');
-    $q->execute(['product_outlets']);
-    $columns = array_fill_keys(array_map('strval', $q->fetchAll(PDO::FETCH_COLUMN)), true);
-    foreach (['id','product_id','outlet_id'] as $required) {
-        if (!isset($columns[$required])) throw new RuntimeException('product_outlets is missing required column '.$required.'. Restore the table schema before using inventory.');
-    }
-    $additions = [
-      'active'=>'TINYINT(1) NOT NULL DEFAULT 1',
-      'selling_price'=>'DECIMAL(15,2) NULL',
-      'cost_price'=>'DECIMAL(15,2) NULL',
-      'stock_qty'=>'DECIMAL(15,3) NOT NULL DEFAULT 0.000',
-      'min_stock'=>'DECIMAL(15,3) NOT NULL DEFAULT 0.000',
-      'preferred_quantity'=>'DECIMAL(15,3) NOT NULL DEFAULT 0.000',
-      'allow_price_change'=>'TINYINT(1) NULL',
-      'last_purchase_price'=>'DECIMAL(15,2) NULL',
-      'rank'=>'INT NOT NULL DEFAULT 0',
-      'created_at'=>'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
-      'updated_at'=>'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-    ];
-    foreach ($additions as $column=>$definition) {
-        if (!isset($columns[$column])) $pdo->exec('ALTER TABLE product_outlets ADD COLUMN `'.$column.'` '.$definition);
-    }
-    $index = $pdo->query("SELECT index_name FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='product_outlets' AND non_unique=0 GROUP BY index_name HAVING GROUP_CONCAT(column_name ORDER BY seq_in_index SEPARATOR ',')='product_id,outlet_id' LIMIT 1")->fetchColumn();
-    if (!$index) {
-        $duplicate = $pdo->query('SELECT 1 FROM product_outlets GROUP BY product_id,outlet_id HAVING COUNT(*)>1 LIMIT 1')->fetchColumn();
-        if ($duplicate) throw new RuntimeException('product_outlets contains duplicate product/outlet assignments. Resolve duplicate rows before inventory updates.');
-        $pdo->exec('ALTER TABLE product_outlets ADD UNIQUE KEY uq_sp_product_outlet(product_id,outlet_id)');
-    }
-
-    if (spTableExists($pdo, 'products') && spTableExists($pdo, 'outlets')) {
-        $q->execute(['products']);
-        $productColumns = array_fill_keys(array_map('strval', $q->fetchAll(PDO::FETCH_COLUMN)), true);
-        if (isset($productColumns['id'], $productColumns['outlet_id'])) {
-            $legacy = [
-              'active'=>isset($productColumns['active'])?'COALESCE(p.active,1)':'1',
-              'selling_price'=>isset($productColumns['selling_price'])?'COALESCE(p.selling_price,0)':'0',
-              'cost_price'=>isset($productColumns['cost_price'])?'COALESCE(p.cost_price,0)':'0',
-              'stock_qty'=>isset($productColumns['stock_qty'])?'COALESCE(p.stock_qty,0)':'0',
-              'min_stock'=>isset($productColumns['min_stock'])?'COALESCE(p.min_stock,0)':'0',
-              'allow_price_change'=>isset($productColumns['allow_price_change'])?'COALESCE(p.allow_price_change,0)':'0',
-            ];
-            $pdo->exec('INSERT IGNORE INTO product_outlets (product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,allow_price_change) SELECT p.id,p.outlet_id,'.$legacy['active'].','.$legacy['selling_price'].','.$legacy['cost_price'].','.$legacy['stock_qty'].','.$legacy['min_stock'].','.$legacy['allow_price_change'].' FROM products p WHERE p.outlet_id IS NOT NULL AND EXISTS (SELECT 1 FROM outlets o WHERE o.id=p.outlet_id)');
-        }
-    }
-    $done = true;
-}
+function spEnsureProductOutletTable(PDO $pdo): void { spRequireColumns($pdo,'product_outlets',['active', 'selling_price', 'cost_price', 'stock_qty', 'allow_price_change']); }
 
 function spResolveOutlet(PDO $pdo, string $value): int {
     $value = trim($value);
@@ -235,20 +134,27 @@ function spResolveOutlet(PDO $pdo, string $value): int {
 
 function spPermissionForRequest(string $file, string $action, string $stateKey, string $method): string {
     if ($file === 'customer-display.php' && in_array($action, ['terminals','terminal','image'], true)) return 'manageSettings';
-    if ($file === 'users.php') return 'manageUsers';
+    if ($file === 'users.php') return $action==='logout'?'':'manageUsers';
+    if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
+    if ($file === 'payment-types.php') return 'managePayments';
+    if ($file === 'email.php') return 'managePayments';
+    if ($file === 'document-counter.php')return match(strtolower((string)(spReadRequestBody()['document_type']??$_GET['document_type']??''))){'purchase'=>'managePurchases','quotation'=>'manageQuotation','customer'=>'manageCustomers',default=>'managePayments'};
     if ($file === 'outlets.php' || $file === 'outlet-provision.php') return 'manageManagement';
     if ($file === 'reports.php') return 'manageReports';
     if ($file === 'loyalty.php') return 'manageLoyalty';
     if ($file === 'settings.php') return $method === 'GET' ? '' : 'manageSettings';
     if ($file === 'database.php') return in_array($action, ['restore','backup'], true) ? 'administrator' : '';
     if ($file === 'sales.php') return 'managePayments';
+    if ($file === 'documents.php' && $action==='record-payment') return (spReadRequestBody()['document_type']??'')==='quotation'?'manageQuotation':'manageInvoice';
     if ($file === 'documents.php') return in_array($action, ['list-quotations','save-quotation','delete-quotation','convert'], true) ? 'manageQuotation' : 'manageInvoice';
     if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete'], true) ? 'manageCustomers' : '';
+    if ($file === 'products.php' && $action==='stock-adjust') return 'manageInventory';
     if ($file === 'products.php') return in_array($action, ['save','assign','unassign','delete','save-category','delete-category','save-group','delete-group'], true) ? 'manageProducts' : '';
     if ($file === 'sales-delete.php') return 'managePayments';
     if ($file === 'promotions.php') return in_array($action, ['save','delete'], true) ? 'manageDiscount' : '';
     if ($file === 'relational-data.php') return match ($stateKey) {
         'sales' => 'viewSalesHistory',
+        'orders' => 'viewOpenSales',
         'purchases','suppliers' => 'managePurchases',
         'cashMovements' => 'cashInOut',
         'stockHistory' => 'manageInventory',
@@ -265,6 +171,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
         'promos' => 'manageDiscount',
         'zReports' => 'endOfDay',
         'sales' => 'managePayments',
+        'orders' => 'managePayments',
         default => '',
     };
     if ($file === 'app-state.php' && $action !== 'all' && $action !== 'health') return 'manageSettings';
@@ -284,7 +191,7 @@ function spInstallCorsAndGuard(): void {
         header('Access-Control-Allow-Origin: '.$origin);
         header('Vary: Origin');
     }
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('X-Content-Type-Options: nosniff');
@@ -323,7 +230,9 @@ function spInstallCorsAndGuard(): void {
         if (!$user || !(int)$user['enabled']) spApiRespond(['ok'=>false,'error'=>'This user account is disabled. Sign in again.'], 401);
         $_SERVER['SP_AUTH_USER_ID'] = (string)$userId;
 
+        $GLOBALS['spActor']=$user;
         $body = spReadRequestBody();
+        foreach(['state_key','action'] as $canonical){$values=[];foreach([$_GET[$canonical]??null,$_POST[$canonical]??null,$body[$canonical]??null] as $v){if($v===null)continue;if(!is_string($v))spApiRespond(['ok'=>false,'error'=>'Invalid request selector.'],400);$values[]=trim($v);}if(count(array_unique($values))>1)spApiRespond(['ok'=>false,'error'=>'Conflicting request selectors.'],400);}
         if ($action === '') $action = strtolower(trim((string)($body['action'] ?? '')));
         $defaultOutlet = (string)($user['outlet_id'] ?? '');
         $outletId = 0;
@@ -362,6 +271,7 @@ function spInstallCorsAndGuard(): void {
         $globalManagement = ($user['role_name'] ?? '') === 'Administrator' && in_array($file, ['outlets.php','outlet-provision.php'], true);
         if (!$hasAssignment && !$globalManagement) spApiRespond(['ok'=>false,'error'=>'This user is not assigned to the requested outlet.'], 403);
 
+        if(strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'))==='POST'){$lock='spm:'.substr(hash('sha256',(string)$pdo->query('SELECT DATABASE()')->fetchColumn()),0,40);$l=$pdo->prepare('SELECT GET_LOCK(?,10)');$l->execute([$lock]);if((int)$l->fetchColumn()!==1)spApiRespond(['ok'=>false,'error'=>'Database busy. Retry the same request.'],409);register_shutdown_function(static function()use($pdo,$lock){if($pdo->inTransaction())$pdo->rollBack();try{$pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$lock]);}catch(Throwable $e){}});}
         $permission = spPermissionForRequest($file, $action, trim((string)($_GET['state_key'] ?? $body['state_key'] ?? '')), strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
         $permissions = json_decode((string)($user['permissions_json'] ?? ''), true);
         $isAdmin = ($user['role_name'] ?? '') === 'Administrator';
@@ -372,8 +282,9 @@ function spInstallCorsAndGuard(): void {
             spApiRespond(['ok'=>false,'error'=>'Only an Administrator may restore a database backup.'], 403);
         }
     } catch (Throwable $e) {
-        spApiRespond(['ok'=>false,'error'=>$e->getMessage()], 503);
+        error_log('SP boundary: '.$e->getMessage());spApiRespond(['ok'=>false,'error'=>'API configuration or migration is incomplete.'], 503);
     }
 }
 
-spInstallCorsAndGuard();
+require_once __DIR__.'/hardening.php';
+if (!(PHP_SAPI === 'cli' && defined('SP_MANAGER_CLI') && SP_MANAGER_CLI)) spInstallCorsAndGuard();

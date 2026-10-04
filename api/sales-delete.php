@@ -154,6 +154,7 @@ try {
     $saleId = (int)($b['sale_id'] ?? $b['dbId'] ?? 0);
     $saleNo = trim((string)($b['sale_no'] ?? $b['saleNo'] ?? ''));
 
+    $pdo->beginTransaction();spLockOutlet($pdo,$outletId);
     if ($saleId > 0) {
         $q = $pdo->prepare('SELECT * FROM sales WHERE id=? AND outlet_id=? LIMIT 1');
         $q->execute([$saleId,$outletId]);
@@ -201,7 +202,7 @@ try {
     $customerId = (int)($sale['customer_id'] ?? 0);
     spEnsureStockMovementMetadata($pdo);
     spEnsureProductOutletTable($pdo);
-    $pdo->beginTransaction();
+    spAssertOpenDay($pdo,$outletId,$sale['sale_date']);
 
     foreach ($items as $item) {
         restoreStockForDeletedSale($pdo,$outletId,$saleId,$saleNo,(int)$item['product_id'],(float)$item['quantity']);
@@ -219,6 +220,7 @@ try {
 
     if ($customerId > 0) refreshLoyalty($pdo,$outletId,$customerId);
 
+    spAudit($pdo,'SALE_DELETE','sales',$saleId,$sale,null);spAdvanceStateRevision($pdo,$outletId,'sales');
     $pdo->commit();
     echo json_encode([
         'ok'=>true,

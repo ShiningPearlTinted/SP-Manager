@@ -15,22 +15,11 @@ function tableExists(PDO $pdo,string $table):bool{$q=$pdo->prepare('SHOW TABLES 
 function cols(PDO $pdo,string $table):array{$q=$pdo->query('DESCRIBE `'.str_replace('`','``',$table).'`');$o=[];foreach($q->fetchAll() as $r)$o[$r['Field']]=$r;return$o;}
 function outletId(PDO $pdo,string|int $v):int{$s=trim((string)$v);if($s==='')throw new InvalidArgumentException('Outlet is required.');if(ctype_digit($s)){$q=$pdo->prepare('SELECT id FROM outlets WHERE id=? AND active=1 LIMIT 1');$q->execute([(int)$s]);}else{$q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1');$q->execute([$s]);}$id=(int)($q->fetchColumn()?:0);if(!$id)throw new RuntimeException('Outlet not found: '.$s);return$id;}
 function copyPaymentTypes(PDO $pdo,int $sourceId,int $targetId):int{
- if(!tableExists($pdo,'payment_types'))return 0;
- $s=cols($pdo,'payment_types');
- if(!isset($s['outlet_id'])||!isset($s['payment_code'])||!isset($s['payment_name']))return 0;
- $fields=['outlet_id','payment_code','payment_name','enabled','quick_payment','customer_required','change_allowed','mark_paid','print_receipt','open_cash_drawer','shortcut_key','sort_order'];
- $fields=array_values(array_filter($fields,fn($f)=>isset($s[$f])));
- $q=$pdo->prepare('SELECT `'.implode('`,`',$fields).'` FROM payment_types WHERE outlet_id=? ORDER BY sort_order ASC,id ASC');$q->execute([$sourceId]);$rows=$q->fetchAll();
- $added=0;
- foreach($rows as $r){
-   $code=(string)($r['payment_code']??''); if($code==='')continue;
-   $exists=$pdo->prepare('SELECT id FROM payment_types WHERE outlet_id=? AND payment_code=? LIMIT 1');$exists->execute([$targetId,$code]);
-   if($exists->fetchColumn())continue;
-   $data=$r;$data['outlet_id']=$targetId;
-   $fs=array_keys($data);$st=$pdo->prepare('INSERT INTO payment_types (`'.implode('`,`',$fs).'`) VALUES ('.implode(',',array_fill(0,count($fs),'?')).')');$st->execute(array_values($data));$added++;
- }
- return $added;
+ // CENTRAL MASTER DATABASE LOCK: Payment Types are shared master data.
+ // Online outlets must never receive duplicated copies.
+ return 0;
 }
+
 try{
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
  $pdo=spApiDatabase();
@@ -42,5 +31,5 @@ try{
  $pdo->beginTransaction();
  $paymentsAdded=copyPaymentTypes($pdo,$source,$target);
  $pdo->commit();
- echo json_encode(['ok'=>true,'api_version'=>'V1','source_outlet_id'=>$source,'target_outlet_id'=>$target,'payment_types_added'=>$paymentsAdded],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+ echo json_encode(['ok'=>true,'api_version'=>'V1','source_outlet_id'=>$source,'target_outlet_id'=>$target,'payment_types_added'=>$paymentsAdded,'central_master'=>true,'message'=>'Master Data is shared automatically from Central Database; no outlet copy was performed.'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
 }catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V1','error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}

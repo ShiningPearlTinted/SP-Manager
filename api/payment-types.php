@@ -143,7 +143,7 @@ try {
             $q=$pdo->prepare("INSERT INTO sp_relational_sync(outlet_id,state_key,local_id,entity,db_id,updated_at) VALUES(?, 'paymentTypes', ?, 'paymentTypes', ?, NOW()) ON DUPLICATE KEY UPDATE db_id=VALUES(db_id),updated_at=NOW()");
             $q->execute([$masterOutletId,(string)$id,$id]);
         }
-        $pdo->commit();
+        spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');$pdo->commit();
         $q=$pdo->prepare('SELECT * FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');$q->execute([$id,$masterOutletId]);$row=$q->fetch();
         if(!$row)throw new RuntimeException('Payment type was saved but could not be read back from database.');
         ptOut(['ok'=>true,'api_version'=>'V1','paymentType'=>ptMap($row),'data'=>ptList($pdo,$masterOutletId)]);
@@ -165,7 +165,7 @@ try {
             $q=$pdo->prepare('DELETE FROM payment_types WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);
         }
         if(ptTableExists($pdo,'sp_relational_sync')){$q=$pdo->prepare("DELETE FROM sp_relational_sync WHERE state_key='paymentTypes' AND entity='paymentTypes' AND db_id=? AND outlet_id=?");$q->execute([$id,$masterOutletId]);}
-        ptOut(['ok'=>true,'api_version'=>'V1','disabled_instead_of_deleted'=>$inUse,'data'=>ptList($pdo,$masterOutletId)]);
+        spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');ptOut(['ok'=>true,'api_version'=>'V1','disabled_instead_of_deleted'=>$inUse,'data'=>ptList($pdo,$masterOutletId)]);
     }
 
     ptOut(['ok'=>false,'error'=>'Unsupported action.'],400);

@@ -15,12 +15,12 @@ function out(array $v,int $s=200):never{http_response_code($s);echo json_encode(
 try{
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
  $pdo=spApiDatabase();
- $pdo->exec("CREATE TABLE IF NOT EXISTS outlets (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,outlet_code VARCHAR(50) NOT NULL UNIQUE,outlet_name VARCHAR(150) NOT NULL,address TEXT NULL,phone VARCHAR(50) NULL,email VARCHAR(150) NULL,active TINYINT(1) NOT NULL DEFAULT 1,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+ spRequireTable($pdo,'outlets');
  $action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
  if($action==='health')out(['ok'=>true,'service'=>'SP-Manager Outlets API','api_version'=>'V1']);
  if($action==='list'&&$_SERVER['REQUEST_METHOD']==='GET'){
   $userCount=spTableExists($pdo,'user_outlets')?"(SELECT COUNT(DISTINCT u.id) FROM users u LEFT JOIN user_outlets uo ON uo.user_id=u.id AND uo.active=1 WHERE u.enabled=1 AND (u.outlet_id=o.id OR uo.outlet_id=o.id))":"(SELECT COUNT(*) FROM users u WHERE u.enabled=1 AND u.outlet_id=o.id)";
-  $productCount=spTableExists($pdo,'product_outlets')?"(SELECT COUNT(*) FROM product_outlets po WHERE po.outlet_id=o.id AND po.active=1)":"(SELECT COUNT(*) FROM products p WHERE p.outlet_id=o.id)";
+  $productCount="(SELECT COUNT(*) FROM products p WHERE COALESCE(p.active,1)=1)";
   $sql="SELECT o.id,o.outlet_code,o.outlet_name,o.address,o.phone,o.email,o.active,o.created_at,o.updated_at,{$userCount} user_count,{$productCount} product_count,(SELECT COUNT(*) FROM sales s WHERE s.outlet_id=o.id) sales_count FROM outlets o ORDER BY o.active DESC,o.outlet_name ASC";
   $rows=$pdo->query($sql)->fetchAll();
   foreach($rows as &$r){$r['id']=(int)$r['id'];$r['active']=(int)$r['active']===1;$r['user_count']=(int)$r['user_count'];$r['product_count']=(int)$r['product_count'];$r['sales_count']=(int)$r['sales_count'];}

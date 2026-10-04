@@ -17,18 +17,7 @@ if ($name === '' || $user === '') throw new RuntimeException('Database configura
 try {
   $pdo=spApiDatabase();
 
-  $pdo->exec("CREATE TABLE IF NOT EXISTS sp_app_state (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    outlet_id BIGINT UNSIGNED NOT NULL,
-    state_key VARCHAR(120) NOT NULL,
-    state_json LONGTEXT NOT NULL,
-    updated_by VARCHAR(120) NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_sp_app_state_outlet_key (outlet_id, state_key),
-    KEY idx_sp_app_state_outlet_updated (outlet_id, updated_at)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  spRequireTable($pdo,'sp_app_state');
 
   $outlet = trim((string)($_GET['outlet_id'] ?? $_POST['outlet_id'] ?? ''));
   if ($outlet === '') $outlet = 'SP01';
@@ -60,6 +49,7 @@ try {
     $data = [];
     foreach ($q->fetchAll() as $row) {
       $decoded = json_decode((string)$row['state_json'], true);
+      if(in_array((string)$row['state_key'],['users','sales','purchases','orders','stockHistory','paymentTypes','promos','suppliers','zReports','cashMovements','settings'],true))continue;
       $data[(string)$row['state_key']] = is_array($decoded) || is_object($decoded) ? $decoded : $decoded;
     }
     echo json_encode(['ok'=>true,'outletId'=>$outletId,'data'=>$data], JSON_UNESCAPED_SLASHES);
