@@ -27,8 +27,8 @@ function ri(PDO $p,string $type,int $id):array{$tab=$type==='quotation'?'quotati
 function docPayments(PDO $p,string $type,int $id):array{
  if(!tab($p,'document_payments'))return[];
  $field=$type==='quotation'?'quotation_id':'invoice_id';
- $q=$p->prepare("SELECT id,payment_type_id,payment_type_name,amount,reference_no,notes,paid_at,created_by FROM document_payments WHERE `$field`=? ORDER BY paid_at,id");$q->execute([$id]);$z=[];
- foreach($q->fetchAll() as $r)$z[]=['id'=>(int)$r['id'],'paymentTypeId'=>(int)($r['payment_type_id']??0),'payment'=>(string)($r['payment_type_name']??'Payment'),'amount'=>(float)$r['amount'],'referenceNo'=>(string)($r['reference_no']??''),'notes'=>(string)($r['notes']??''),'paidAt'=>(string)($r['paid_at']??'')];
+ $q=$p->prepare("SELECT id,quotation_id,invoice_id,payment_type_id,payment_type_name,amount,reference_no,notes,paid_at,created_by FROM document_payments WHERE `$field`=? ORDER BY paid_at,id");$q->execute([$id]);$z=[];
+ foreach($q->fetchAll() as $r)$z[]=['id'=>(int)$r['id'],'paymentTypeId'=>(int)($r['payment_type_id']??0),'payment'=>(string)($r['payment_type_name']??'Payment'),'amount'=>(float)$r['amount'],'referenceNo'=>(string)($r['reference_no']??''),'notes'=>(string)($r['notes']??''),'paidAt'=>(string)($r['paid_at']??''),'source'=>(!empty($r['quotation_id'])?'deposit':'payment')];
  return$z;
 }
 function paymentSummary(array $payments,float $total):array{$paid=0.0;foreach($payments as $x)$paid+=(float)($x['amount']??0);$paid=max(0,$paid);$balance=max(0,$total-$paid);$status=$paid<=0?'UNPAID':($balance<=0.00001?'PAID':'PARTIAL');return['paid'=>$paid,'balance'=>$balance,'status'=>$status];}

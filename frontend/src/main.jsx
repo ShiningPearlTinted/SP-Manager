@@ -139,9 +139,14 @@ const buildInvoiceHtml=(sale,company={},customers=[],settings={})=>{
  const due=Math.max(0,total-paid);
  const showTax=p.taxColumn!==false;
  const showDiscount=p.discountColumn!==false;
- const showPaymentTypes=!isQuotation&&p.paymentTypes!==false;
- const showOutstanding=!isQuotation&&p.outstandingBalance!==false;
- const paymentLines=(Array.isArray(sale?.payments)&&sale.payments.length?sale.payments:[{payment:sale?.payment||"Cash",amount:paid}]).map(x=>`<div><span>${escapeHtml(x.payment||"Payment")}</span><b>${escapeHtml(money(x.amount))}</b></div>`).join("");
+ const hasPayments=Array.isArray(sale?.payments)&&sale.payments.length>0;
+ const showPaymentTypes=(isQuotation?hasPayments:p.paymentTypes!==false);
+ const showOutstanding=(isQuotation?hasPayments:p.outstandingBalance!==false);
+ const rawPayments=hasPayments?sale.payments:(!isQuotation&&paid>0?[{payment:sale?.payment||"Cash",amount:paid,source:"payment"}]:[]);
+ const paymentLines=rawPayments.map(x=>{const method=String(x.payment||"Payment");const source=String(x.source||"").toLowerCase();const label=isQuotation?method:(source==="deposit"?`Deposit (${method})`:`Payment (${method})`);return `<div><span>${escapeHtml(label)}</span><b>${escapeHtml(money(x.amount))}</b></div>`}).join("");
+ const paymentHeading=isQuotation?"Deposit received:":"Payment breakdown:";
+ const paidLabel=isQuotation?"Deposit received:":"Paid amount:";
+ const dueLabel=isQuotation?"Balance due:":"Amount due:";
  const itemRows=items.map((i,n)=>{const warranty=Boolean(i.warrantyText)||(Boolean(i.warrantyEnabled)&&Number(i.warrantyYears||0)>0);const maintenance=Boolean(i.maintenanceText)||(Boolean(i.maintenanceEnabled)&&Number(i.maintenanceCount||0)>0);const description=String(i.description||"").trim();const descriptionHtml=description?`<div class="invoice-item-service invoice-item-description">${escapeHtml(description).replace(/\n/g,"<br>")}</div>`:"";const serviceLines=`${descriptionHtml}${warranty?`<div class="invoice-item-service">Warranty ${escapeHtml(Math.max(1,Number(i.warrantyYears)||1))} Year</div>`:""}${maintenance?`<div class="invoice-item-service">Free Maintenance ${escapeHtml(Math.max(1,Number(i.maintenanceCount)||1))} x</div>`:""}`;return `<tr><td class="col-no">${n+1}</td><td class="col-item"><div>${escapeHtml(i.name||"")}</div>${serviceLines}</td><td class="col-qty num">${escapeHtml(i.qty||0)}</td><td class="col-unit num">${escapeHtml(Number(i.price||0).toFixed(2))}</td>${showTax?`<td class="col-tax num">---</td>`:""}${showDiscount?`<td class="col-discount num">0.00%</td>`:""}<td class="col-total num">${escapeHtml(money(Number(i.price||0)*Number(i.qty||0)))}</td></tr>`}).join("");
  const columns=5+(showTax?1:0)+(showDiscount?1:0);
  const publicNote=String(sale?.note||"").trim();
@@ -160,7 +165,7 @@ const buildInvoiceHtml=(sale,company={},customers=[],settings={})=>{
   <div class="invoice-header-line"></div>
   <div class="invoice-info-grid"><div class="billto-block"><b>Bill to</b><div class="billto-name">${escapeHtml(customer?.name||sale?.customerName||"Walk-in customer")}</div>${customerLines}</div><div class="invoice-meta"><div><b>${documentNoLabel}</b> ${escapeHtml(sale?.no||"")}</div><div><b>Date:</b> ${escapeHtml(formatInvoiceDate(sale?.date))}</div><div><b>${documentDueLabel}</b> ${escapeHtml(formatInvoiceDate(dueDate))}</div>${isQuotation?`<div><b>Status:</b> ${escapeHtml(sale?.status||"Draft")}</div>`:`<div><b>Payment status:</b> ${escapeHtml(sale?.paymentStatus||((sale?.paid===false||due>0)?"Unpaid":"Paid"))}</div>`}</div></div>
   <table class="invoice-table"><thead><tr><th class="col-no">#</th><th class="col-item">Item</th><th class="col-qty">Quantity</th><th class="col-unit">Unit price</th>${showTax?`<th class="col-tax">Tax</th>`:""}${showDiscount?`<th class="col-discount">Discount</th>`:""}<th class="col-total">Total</th></tr></thead><tbody>${itemRows||`<tr><td colspan="${columns}">No items</td></tr>`}</tbody></table>
-  <div class="invoice-bottom-row"><div class="invoice-total"><span>Total</span><b>${escapeHtml(money(total))}</b></div>${showPaymentTypes||showOutstanding?`<div class="payment-summary">${showPaymentTypes?`<div class="payment-heading"><b>Payment method:</b></div>${paymentLines}`:""}${showOutstanding?`<div><span>Paid amount:</span><b>${escapeHtml(money(paid))}</b></div><div><span>Amount due:</span><b>${escapeHtml(money(due))}</b></div>`:""}</div>`:""}</div>
+  <div class="invoice-bottom-row"><div class="invoice-total"><span>Total</span><b>${escapeHtml(money(total))}</b></div>${showPaymentTypes||showOutstanding?`<div class="payment-summary">${showPaymentTypes?`<div class="payment-heading"><b>${paymentHeading}</b></div>${paymentLines}`:""}${showOutstanding?`<div><span>${paidLabel}</span><b>${escapeHtml(money(paid))}</b></div><div><span>${dueLabel}</span><b>${escapeHtml(money(due))}</b></div>`:""}</div>`:""}</div>
   ${publicNote?`<div class="invoice-note"><div class="invoice-note-title">Add notes</div><div class="invoice-note-text">${escapeHtml(publicNote).replace(/\n/g,"<br>")}</div></div>`:""}
   ${footerText?`<div class="invoice-footer">${escapeHtml(footerText).replace(/\n/g,"<br>")}</div>`:`<div class="invoice-footer">Page 1</div>`}
  </div>`;
