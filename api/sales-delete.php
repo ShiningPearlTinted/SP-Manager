@@ -18,7 +18,7 @@ function body(): array {
     return is_array($v) ? $v : [];
 }
 function tableExists(PDO $pdo, string $table): bool {
-    $q = $pdo->prepare('SHOW TABLES LIKE ?');
+    $q = $pdo->prepare("SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=? AND table_type='BASE TABLE' LIMIT 1");
     $q->execute([$table]);
     return (bool)$q->fetchColumn();
 }

@@ -429,7 +429,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const lowStock=products.filter(p=>p.stock<=p.reorder).length;
  const filtered=useMemo(()=>{const mode=posSearchMode||"All";const list=products.filter(p=>p.active!==false).filter(p=>{const text=mode==="Barcode"?((p.barcode||"")+" "+(Array.isArray(p.barcodes)?p.barcodes.join(" "):"")):mode==="Code"?(p.code||""):mode==="Name"?(p.name||""):[p.name,p.code,p.barcode,Array.isArray(p.barcodes)?p.barcodes.join(" "):"",p.group,p.category].join(" ");const cat=!q||posCategory==="All Categories"||((p.category||p.group||"")===posCategory);return cat&&text.toLowerCase().includes(q.toLowerCase())});return [...list].sort((a,b)=>{const ar=Number(a.rank||0),br=Number(b.rank||0);if(ar!==br)return ar-br;return settings.products.sorting==="Code"?String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true}):String(a.name||"").localeCompare(String(b.name||""))})},[products,q,posCategory,posSearchMode,settings.order.defaultSearch,settings.products.sorting]);
  const emailReceipt=async(sale)=>{
-  const c=customers.find(x=>x.id===sale.customerId);const to=c?.email&&c.email!=="-"?String(c.email).trim():"";
+  const c=customers.find(x=>String(x.id)===String(sale.customerId));const to=c?.email&&c.email!=="-"?String(c.email).trim():"";
   if(!to){setMessageBox({title:"Email",message:"Customer email is missing. Please add a valid customer email before sending.",type:"warning"});return}
   const e=settings?.email||{};
   if(!String(e.host||"").trim()||!Number(e.port)||!String(e.emailAddress||"").trim()||!e.passwordConfigured){
