@@ -14,7 +14,7 @@ function body():array{$raw=file_get_contents('php://input')?:'';$type=strtolower
 function out(array $v,int $s=200):never{http_response_code($s);echo json_encode($v,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;}
 try{
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
- $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+ $pdo=spApiDatabase();
  $pdo->exec("CREATE TABLE IF NOT EXISTS outlets (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,outlet_code VARCHAR(50) NOT NULL UNIQUE,outlet_name VARCHAR(150) NOT NULL,address TEXT NULL,phone VARCHAR(50) NULL,email VARCHAR(150) NULL,active TINYINT(1) NOT NULL DEFAULT 1,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
  $action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
  if($action==='health')out(['ok'=>true,'service'=>'SP-Manager Outlets API','api_version'=>'V1']);

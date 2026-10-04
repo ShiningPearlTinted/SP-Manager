@@ -314,7 +314,7 @@ function ensureOutletAssignment(PDO $pdo,int $productId,int $outletId,int $activ
 }
 
 try {
-  $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+  $pdo=spApiDatabase();
   spEnsureProductMetadata($pdo);
   ensureProductOutletTable($pdo);
   $columns=tableColumns($pdo,'products');

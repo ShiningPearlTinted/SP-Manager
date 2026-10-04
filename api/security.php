@@ -16,6 +16,8 @@ function spApiRespond(array $payload, int $status): never {
 }
 
 function spApiDatabase(): PDO {
+    static $pdo = null;
+    if ($pdo instanceof PDO) return $pdo;
     $config = spApiConfig();
     $db = $config['db'] ?? null;
     $host = (string)($db['host'] ?? $config['db_host'] ?? 'localhost');
@@ -26,10 +28,23 @@ function spApiDatabase(): PDO {
     if ($name === '' || $user === '' || str_starts_with($name, 'CHANGE_ME') || str_starts_with($user, 'CHANGE_ME')) {
         throw new RuntimeException('Database configuration is incomplete.');
     }
-    return new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
+    $hosts = [$host];
+    $normalized = strtolower(trim($host));
+    if ($normalized === 'localhost') $hosts[] = '127.0.0.1';
+    elseif ($normalized === '127.0.0.1') $hosts[] = 'localhost';
+    $last = null;
+    foreach (array_values(array_unique($hosts)) as $candidate) {
+        try {
+            $pdo = new PDO("mysql:host={$candidate};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_TIMEOUT => 5,
+            ]);
+            return $pdo;
+        } catch (Throwable $e) { $last = $e; }
+    }
+    throw $last ?? new RuntimeException('Database connection failed.');
 }
 
 function spAuthSecret(): string {

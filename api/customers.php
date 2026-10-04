@@ -131,10 +131,7 @@ function save_one(PDO $pdo, array $c, int $outletId): int {
 }
 
 try {
-  $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-  ]);
+  $pdo=spApiDatabase();
   $outletId=outlet_id($pdo,$_GET['outlet_id'] ?? $_POST['outlet_id'] ?? 'SP01');
   $action=strtolower(trim((string)($_GET['action'] ?? $_POST['action'] ?? '')));
 

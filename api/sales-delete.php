@@ -143,10 +143,7 @@ function refreshLoyalty(PDO $pdo, int $outletId, int $customerId): void {
 
 try {
     if ($name === '' || $user === '') throw new RuntimeException('Database configuration is incomplete.');
-    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4", $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
+    $pdo=spApiDatabase();
 
     $b = body();
     $outletId = resolveOutlet($pdo, trim((string)($b['outlet_id'] ?? ($_SERVER['SP_AUTH_OUTLET_ID'] ?? ''))));

@@ -33,7 +33,7 @@ function copyPaymentTypes(PDO $pdo,int $sourceId,int $targetId):int{
 }
 try{
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
- $pdo=new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+ $pdo=spApiDatabase();
  $b=body();$action=strtolower(trim((string)($_GET['action']??$_POST['action']??$b['action']??'provision')));
  if($action!=='provision')throw new InvalidArgumentException('Unsupported outlet provision action.');
  $source=outletId($pdo,$b['source_outlet_id']??$_GET['source_outlet_id']??'');

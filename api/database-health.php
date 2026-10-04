@@ -23,7 +23,7 @@ function cols(PDO $pdo, string $table): array {
   $o=[]; foreach ($q->fetchAll() as $r) $o[(string)$r['Field']]=$r; return $o;
 }
 try {
-  $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+  $pdo=spApiDatabase();
   $required = [
     'outlets'=>['id'=>['id'],'outlet_code'=>['outlet_code'],'active'=>['active']],
     'products'=>['id'=>['id'],'product name'=>['product_name','name']],

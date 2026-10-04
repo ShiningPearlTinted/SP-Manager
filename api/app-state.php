@@ -15,10 +15,7 @@ $pass = (string)($db['pass'] ?? $config['db_pass'] ?? '');
 if ($name === '' || $user === '') throw new RuntimeException('Database configuration is incomplete.');
 
 try {
-  $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-  ]);
+  $pdo=spApiDatabase();
 
   $pdo->exec("CREATE TABLE IF NOT EXISTS sp_app_state (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

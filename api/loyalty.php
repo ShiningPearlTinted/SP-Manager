@@ -42,7 +42,7 @@ function sync(PDO $pdo,int $oid):array{
  return $customers;
 }
 try{
- $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+ $pdo=spApiDatabase();
  $oid=outletId($pdo,(string)($_GET['outlet_id']??$_POST['outlet_id']??'SP01')); $action=strtolower(trim((string)($_GET['action']??$_POST['action']??'summary')));
  if($action==='health'){echo json_encode(['ok'=>true,'api_version'=>'V10','service'=>'SP-Manager loyalty API','outlet_id'=>$oid]);exit;}
  if($action==='sync'||$action==='summary'){$pdo->beginTransaction();$rows=sync($pdo,$oid);$pdo->commit();echo json_encode(['ok'=>true,'api_version'=>'V10','outlet_id'=>$oid,'count'=>count($rows),'customers'=>$rows],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;}

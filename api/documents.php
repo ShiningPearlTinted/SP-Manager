@@ -45,7 +45,7 @@ function md(PDO $p,string $type,array $r):array{$qq=$type==='quotation';$m=j($r[
 function ld(PDO $p,string $type,int $out):array{$t=$type==='quotation'?'quotations':'invoices';$q=$p->prepare("SELECT * FROM `$t` WHERE outlet_id=? ORDER BY id DESC LIMIT 1000");$q->execute([$out]);return array_map(fn($r)=>md($p,$type,$r),$q->fetchAll());}
 try{
  if(!$name||!$user)throw new RuntimeException('Database configuration is incomplete.');
- $p=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$out=oid();$a=strtolower(trim((string)($_GET['action']??'')));$x=b();
+ $p=spApiDatabase();$out=oid();$a=strtolower(trim((string)($_GET['action']??'')));$x=b();
  if($a==='health')o(['ok'=>true,'api_version'=>'V1']);
  if($a==='list-quotations')o(['ok'=>true,'api_version'=>'V1','documents'=>ld($p,'quotation',$out)]);
  if($a==='list-invoices')o(['ok'=>true,'api_version'=>'V1','documents'=>ld($p,'invoice',$out)]);

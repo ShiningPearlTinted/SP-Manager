@@ -222,10 +222,22 @@ const centralRelationalInflight=new Map();
 // Keep SP01 only as a safe fallback for legacy/local sessions.
 const activeOutletId=()=>{try{const u=JSON.parse(localStorage.getItem("sp_activeUser")||"null");const assigned=Array.isArray(u?.outlets)?u.outlets:[];const v=u?.default_outlet_id??u?.outlet_id??u?.defaultOutletId??assigned.find(o=>o?.is_default)?.id??assigned[0]?.id;return(v!==undefined&&v!==null&&String(v).trim()!=="")?v:"SP01";}catch{return"SP01"}};
 const apiHeaders=(headers={})=>{const token=sessionStorage.getItem("sp_api_token");return token?{...headers,Authorization:`Bearer ${token}`}:{...headers};};
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const fetchWithTransientRetry=async(url,opts={},attempts=2)=>{
+ let lastError=null;
+ for(let attempt=0;attempt<attempts;attempt++){
+  try{
+   const r=await fetch(url,opts);
+   if((r.status===502||r.status===503||r.status===504)&&attempt<attempts-1){await sleep(250*(attempt+1));continue}
+   return r;
+  }catch(e){lastError=e;if(attempt<attempts-1){await sleep(250*(attempt+1));continue}throw e}
+ }
+ throw lastError||new Error("Network request failed");
+};
 
 const centralRequest=async(action,body=null)=>{if(action==="all"||action==="health"){try{await centralWriteQueue}catch{}}const base=centralApiBase();const url=base+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="all"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);let data=null;try{data=await r.json()}catch{throw new Error(`Invalid central API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralRelationalDataApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/relational-data.php";
-const centralRelationalRead=async(stateKey)=>{const url=centralRelationalDataApi()+"?state_key="+encodeURIComponent(stateKey)+"&outlet_id="+encodeURIComponent(activeOutletId());const r=await fetch(url,{method:"GET",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data?.data;
+const centralRelationalRead=async(stateKey)=>{const url=centralRelationalDataApi()+"?state_key="+encodeURIComponent(stateKey)+"&outlet_id="+encodeURIComponent(activeOutletId());const r=await fetchWithTransientRetry(url,{method:"GET",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})},2);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data?.data;
 };
 const RELATIONAL_STATE_KEYS=new Set(["sales","purchases","orders","cashMovements","stockHistory","paymentTypes","promos","suppliers","zReports"]);
 const centralStateRefresh=async(stateKey, fallback)=>{if(RELATIONAL_STATE_KEYS.has(stateKey)){try{const value=await centralRelationalRead(stateKey);cacheSetJSON(stateKey,JSON.stringify(value));return value;}catch(e){console.warn("Relational database refresh failed",stateKey,e?.message||e)}}try{const r=await centralRequest("all",{outlet_id:activeOutletId()});const remote=r?.data||{};if(Object.prototype.hasOwnProperty.call(remote,stateKey)){const value=remote[stateKey];cacheSetJSON(stateKey,JSON.stringify(value));return value;}}catch(e){console.warn("Central state refresh failed",stateKey,e?.message||e)}return fallback};
@@ -250,7 +262,7 @@ const centralSave=({outlet_id=activeOutletId(),state_key,state,updated_by="SP-Ma
 const centralLoyaltyApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/loyalty.php";
 const centralLoyaltyRequest=async(action="summary",outlet_id=activeOutletId())=>{const url=centralLoyaltyApi()+"?action="+encodeURIComponent(action)+"&outlet_id="+encodeURIComponent(outlet_id);const r=await fetch(url,{method:"GET",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data};
 const centralCustomersApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/customers.php"};
-const centralCustomersRequest=async(action,body=null)=>{const url=centralCustomersApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);let data=null;try{data=await r.json()}catch{throw new Error(`Invalid customer API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
+const centralCustomersRequest=async(action,body=null)=>{const url=centralCustomersApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetchWithTransientRetry(url,opts,isGet?2:1);let data=null;try{data=await r.json()}catch{throw new Error(`Invalid customer API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralReportsApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/reports.php";
 const centralReportsRequest=async(action="summary",outlet_id=activeOutletId())=>{const url=centralReportsApi()+"?action="+encodeURIComponent(action)+"&outlet_id="+encodeURIComponent(outlet_id);const r=await fetch(url,{method:"GET",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data};
 const centralCustomerToApp=c=>{if(!c||typeof c!=="object")return null;const n=(v)=>v===null||v===undefined?"":String(v);return {id:Number(c.id)||c.id,dbId:Number(c.id)||null,code:n(c.code),name:n(c.name),taxNumber:n(c.tax_number),country:n(c.country||"Malaysia")||"Malaysia",streetName:n(c.street_name),buildingNumber:n(c.building_number),additionalStreetName:n(c.additional_street_name),plotIdentification:n(c.plot_identification),district:n(c.district),postalCode:n(c.postal_code),city:n(c.city),state:n(c.state),phone:n(c.phone),email:n(c.email),vehicleNumber:n(c.vehicle_number),enabled:Number(c.enabled)!==0,isCustomer:Number(c.is_customer)!==0,isSupplier:Number(c.is_supplier)===1,taxExempt:Number(c.tax_exempt)===1,discount:Number(c.discount_percent||0),dueDatePeriod:Number(c.due_date_period||0),loyaltyCard:n(c.loyalty_card),loyaltyPoints:Number(c.loyalty_points||0),visits:Number(c.visits||0),spend:Number(c.spend||0)};};
@@ -266,8 +278,8 @@ const centralOutletsRequest=async(action="list",body=null)=>{const url=centralOu
 const centralUserAuth=async(username,password,timeoutMs=7000)=>{const qs=new URLSearchParams({action:"auth"});const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),timeoutMs);try{const r=await fetch(centralUsersApi()+"?"+qs.toString(),{method:"POST",cache:"no-store",headers:{},body:new URLSearchParams({username:String(username||""),password:String(password||"")}),signal:ctl.signal});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`HTTP ${r.status}`);e.status=r.status;throw e}return data}finally{clearTimeout(timer)}};
 const centralProductsApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/products.php"};
 const centralDocumentsApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/documents.php"};
-const centralDocumentsRequest=async(action,body=null)=>{const url=centralDocumentsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list-quotations"||action==="list-invoices"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Documents API version mismatch: expected V1, got ${data.api_version}`);return data};
-const centralProductsRequest=async(action,body=null)=>{const url=centralProductsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health"||action==="catalog";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json();if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
+const centralDocumentsRequest=async(action,body=null)=>{const url=centralDocumentsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list-quotations"||action==="list-invoices"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetchWithTransientRetry(url,opts,isGet?2:1);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V1")throw new Error(`Documents API version mismatch: expected V1, got ${data.api_version}`);return data};
+const centralProductsRequest=async(action,body=null)=>{const url=centralProductsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="list"||action==="health"||action==="catalog";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetchWithTransientRetry(url,opts,isGet?2:1);const data=await r.json();if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 const centralProductOutletRequest=async(action,body=null)=>{const url=centralProductsApi()+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"")+(body?.product_id?"&product_id="+encodeURIComponent(body.product_id):"");const isGet=action==="master-list"||action==="outlet-summary";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data;};
 const centralDocumentCounterApi=()=>{const base=centralApiBase().replace(/\/app-state\.php$/i,"");return base+"/document-counter.php"};
 const centralNextDocumentCounter=async(type)=>{const url=centralDocumentCounterApi()+"?document_type="+encodeURIComponent(type)+"&outlet_id="+encodeURIComponent(activeOutletId());const r=await fetch(url,{method:"GET",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!=="V10")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return Number(data?.counter||0);};
@@ -457,14 +469,20 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  useEffect(()=>{
   if(!signedIn)return;
   let alive=true;
+  const pageKeys={
+   "POS / Sales":["paymentTypes","promos","orders"],"Dashboard":["sales","stockHistory"],
+   "Products":[],"Inventory":["stockHistory"],"Customers":["sales"],
+   "Purchases":["purchases","suppliers","paymentTypes"],"Quotation":["paymentTypes"],"Invoice":["paymentTypes"],
+   "Payments":["sales","paymentTypes"],"Payment Types":["paymentTypes"],"Refund / Void":["sales"],
+   "Discount / Promotion":["promos"],"Cash In / Out":["cashMovements"],"Credit payments":["sales","paymentTypes"],
+   "Reports":["sales","purchases","suppliers","paymentTypes"],"End of day":["sales","orders","cashMovements","paymentTypes"],
+   "X / Z Report":["sales","paymentTypes"],"Named Order / Takeaway":["orders"]
+  };
+  const targets={sales:setSales,purchases:setPurchases,orders:setOrders,cashMovements:setCashMovements,stockHistory:setStockHistory,paymentTypes:setPaymentTypes,promos:setPromos,suppliers:setSuppliers};
+  const keys=[...new Set(pageKeys[page]||[])];
   const syncTransactionalState=async()=>{
-   const targets={sales:setSales,purchases:setPurchases,orders:setOrders,cashMovements:setCashMovements,stockHistory:setStockHistory,paymentTypes:setPaymentTypes,promos:setPromos,suppliers:setSuppliers};
-   for(const [key,setter] of Object.entries(targets)){
-    if(!alive)break;
-    try{const value=await centralRelationalRead(key);if(Array.isArray(value)){cacheSet(key,value);setter(value)}}
-    catch(e){if(alive)setter(load(key,[]));console.warn("Relational database refresh failed",key,e?.message||e)}
-   }
-   try{const reports=await centralRelationalRead("zReports");if(alive&&Array.isArray(reports))cacheSet("zReports",reports)}catch(e){console.warn("Relational database refresh failed","zReports",e?.message||e)}
+   for(const key of keys){if(!alive)break;const setter=targets[key];if(!setter)continue;try{const value=await centralRelationalRead(key);if(Array.isArray(value)){cacheSet(key,value);setter(value)}}catch(e){console.warn("Relational database refresh failed",key,e?.message||e)}}
+   if(page==="X / Z Report"||page==="Reports")try{const reports=await centralRelationalRead("zReports");if(alive&&Array.isArray(reports))cacheSet("zReports",reports)}catch(e){console.warn("Relational database refresh failed","zReports",e?.message||e)}
   };
   syncTransactionalState();
   return()=>{alive=false};
@@ -476,7 +494,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
    try{
     const customerResult=await centralCustomersRequest("list",{outlet_id:activeOutletId()});
     if(alive){const rows=Array.isArray(customerResult?.customers)?customerResult.customers.map(centralCustomerToApp).filter(Boolean):[];cacheSet("customers",rows);setCustomers(rows)}
-   }catch(e){if(alive)setCustomers([]);console.warn("Customer database refresh failed",e?.message||e)}
+   }catch(e){console.warn("Customer database refresh failed",e?.message||e)}
    try{
     const catalog=await centralProductsRequest("catalog",{outlet_id:activeOutletId()});
     const remoteCats=Array.isArray(catalog?.categories)?catalog.categories.map(x=>String(x.category_name||"").trim()).filter(Boolean):[];
@@ -488,7 +506,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
     const productResult=await centralProductsRequest("list",{outlet_id:activeOutletId()});
     const rows=Array.isArray(productResult?.products)?productResult.products.map(centralProductToApp).filter(Boolean):[];
     if(alive){cacheSet("products",rows);setProducts(rows)}
-   }catch(e){if(alive)setProducts([]);console.warn("Product database refresh failed",e?.message||e)}
+   }catch(e){console.warn("Product database refresh failed",e?.message||e)}
    try{
     const stateResult=await centralRequest("all",{outlet_id:activeOutletId()});
     for(const [key,value] of Object.entries(stateResult?.data||{})){if(!CENTRAL_STATE_EXCLUDE.has(key))cacheSet(key,value)}
@@ -2216,15 +2234,16 @@ function PaymentTypes({paymentTypes,setPaymentTypes,onRefresh}){
 
 function DocumentsModule({mode,products,customers,company,settings,activeUser,setPage,paymentTypes=[]}){
  const isQuotation=mode==="Quotation";
- const [docs,setDocs]=useState([]);
+ const docCacheKey=isQuotation?"quotations":"invoices";
+ const [docs,setDocs]=useState(()=>load(docCacheKey,[]));
  const [selected,setSelected]=useState(null);
  const [editing,setEditing]=useState(null);
  const [search,setSearch]=useState("");
  const [productSearch,setProductSearch]=useState("");
  const empty=()=>({id:null,no:"Auto generated",documentType:mode,date:new Date().toISOString().slice(0,10),dueDate:new Date(Date.now()+(isQuotation?30:0)*86400000).toISOString().slice(0,10),customerId:customers.find(c=>c.enabled!==false&&c.isCustomer!==false)?.id||customers[0]?.id||"",items:[],discount:0,tax:0,note:"",status:isQuotation?"DRAFT":"ISSUED",paymentStatus:"UNPAID",paymentMethod:"",newPaymentAmount:"",newPaymentMethod:(paymentTypes.find(x=>x.enabled!==false)?.name||"Cash"),newPaymentReference:""});
  const [form,setForm]=useState(empty);
- const loadDocs=async()=>{try{const r=await centralDocumentsRequest(isQuotation?"list-quotations":"list-invoices",{outlet_id:activeOutletId()});const rows=Array.isArray(r?.documents)?r.documents:[];setDocs(rows);if(selected&&!rows.some(x=>String(x.id)===String(selected.id)))setSelected(null)}catch(e){await showActionMessage(`${mode} Refresh Failed`,professionalDatabaseError(e))}};
- useEffect(()=>{loadDocs()},[mode]);
+ const loadDocs=async({silent=false}={})=>{try{const r=await centralDocumentsRequest(isQuotation?"list-quotations":"list-invoices",{outlet_id:activeOutletId()});const rows=Array.isArray(r?.documents)?r.documents:[];cacheSet(docCacheKey,rows);setDocs(rows);if(selected&&!rows.some(x=>String(x.id)===String(selected.id)))setSelected(null);return true}catch(e){console.warn(`${mode} database refresh failed`,e?.message||e);if(!silent)await showActionMessage(`${mode} Refresh Failed`,professionalDatabaseError(e));return false}};
+ useEffect(()=>{loadDocs({silent:true})},[mode]);
  const openNew=()=>{setForm(empty());setEditing({new:true})};
  const openEdit=d=>{if(isQuotation&&String(d.status||"").toUpperCase()==="CONVERTED")return;setForm({...empty(),...d,items:(d.items||[]).map(x=>({...x}))});setEditing({id:d.id})};
  const customer=customers.find(c=>String(c.id)===String(form.customerId))||form.customer||null;
@@ -2256,7 +2275,7 @@ function DocumentsModule({mode,products,customers,company,settings,activeUser,se
      <label className="document-note">Notes<textarea value={form.note||""} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Notes printed on document"/></label>
     </div></div>
   </section>;
- return <section className="document-module"><div className="document-toolbar"><div><div className="eyebrow">SALES DOCUMENTS</div><h2>{mode}</h2><p>{isQuotation?"Create quotations and convert accepted quotations into invoices.":"Create and manage invoices. Quotation conversions appear here automatically."}</p></div><div className="document-toolbar-actions"><button onClick={loadDocs}>↻ Refresh</button><button onClick={openNew}>＋ New</button><button disabled={!selected||(isQuotation&&String(selected.status).toUpperCase()==="CONVERTED")} onClick={()=>selected&&openEdit(selected)}>✎ Edit</button><button disabled={!selected} onClick={()=>selected&&printDoc(selected)}>▣ Print</button>{isQuotation&&<button className="primary" disabled={!selected||String(selected.status).toUpperCase()==="CONVERTED"} onClick={()=>convert(selected)}>Convert to Invoice</button>}<button className="danger-text" disabled={!selected||(isQuotation&&String(selected.status).toUpperCase()==="CONVERTED")} onClick={()=>deleteDoc(selected)}>Delete</button></div></div>
+ return <section className="document-module"><div className="document-toolbar"><div><div className="eyebrow">SALES DOCUMENTS</div><h2>{mode}</h2><p>{isQuotation?"Create quotations and convert accepted quotations into invoices.":"Create and manage invoices. Quotation conversions appear here automatically."}</p></div><div className="document-toolbar-actions"><button onClick={()=>loadDocs({silent:false})}>↻ Refresh</button><button onClick={openNew}>＋ New</button><button disabled={!selected||(isQuotation&&String(selected.status).toUpperCase()==="CONVERTED")} onClick={()=>selected&&openEdit(selected)}>✎ Edit</button><button disabled={!selected} onClick={()=>selected&&printDoc(selected)}>▣ Print</button>{isQuotation&&<button className="primary" disabled={!selected||String(selected.status).toUpperCase()==="CONVERTED"} onClick={()=>convert(selected)}>Convert to Invoice</button>}<button className="danger-text" disabled={!selected||(isQuotation&&String(selected.status).toUpperCase()==="CONVERTED")} onClick={()=>deleteDoc(selected)}>Delete</button></div></div>
   <div className="document-filter"><input placeholder={`Search ${mode.toLowerCase()}...`} value={search} onChange={e=>setSearch(e.target.value)}/></div>
   <div className="document-list panel"><div className="table"><table><thead><tr><th>Number</th><th>Date</th><th>Customer</th><th>{isQuotation?"Valid until":"Due date"}</th><th>Status</th>{!isQuotation&&<th>Payment</th>}<th>Deposit / Paid</th><th>Balance</th><th>Total</th></tr></thead><tbody>{filtered.length?filtered.map(d=><tr key={d.id} className={selected?.id===d.id?"selected":""} onClick={()=>setSelected(d)} onDoubleClick={()=>openEdit(d)}><td><b>{d.no}</b></td><td>{formatInvoiceDate(d.date)}</td><td>{d.customer?.name||customers.find(c=>String(c.id)===String(d.customerId))?.name||"—"}</td><td>{formatInvoiceDate(d.dueDate)}</td><td>{d.status}</td>{!isQuotation&&<td>{d.paymentStatus||"UNPAID"}</td>}<td>{money(d.paidAmount||0)}</td><td><b>{money(d.balanceDue??d.total)}</b></td><td><b>{money(d.total)}</b></td></tr>):<tr><td colSpan={isQuotation?8:9} className="empty">No {mode.toLowerCase()} documents found.</td></tr>}</tbody></table></div></div>
  </section>;

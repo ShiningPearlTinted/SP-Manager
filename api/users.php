@@ -104,7 +104,7 @@ function normalizeUser(PDO $pdo,array $u,int $outletId):array{
 $permissionLabels=['viewSalesHistory'=>'View sales history','viewOpenSales'=>'View open sales','cashInOut'=>'Cash In / Out','creditPayments'=>'Credit payments','endOfDay'=>'End of day','userInfo'=>'User info','manageUsers'=>'Users & Permissions','manageProducts'=>'Products','manageInventory'=>'Inventory','manageCustomers'=>'Customers','managePurchases'=>'Purchases','managePayments'=>'Payments','manageManagement'=>'Management','manageSettings'=>'Settings','manageReports'=>'Reports','manageTax'=>'Tax','manageDiscount'=>'Discount / Promotion','manageLoyalty'=>'Loyalty','manageQuotation'=>'Quotation','manageInvoice'=>'Invoice'];
 try{
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
- $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+ $pdo=spApiDatabase();
  ensureUserOutletsTable($pdo);
  $outletId=outlet($pdo,$_GET['outlet_id']??$_POST['outlet_id']??'SP01');$action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
  if($action==='health')out(['ok'=>true,'service'=>'SP-Manager users API','outletId'=>$outletId]);

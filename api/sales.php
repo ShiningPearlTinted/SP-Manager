@@ -131,7 +131,7 @@ function refreshLoyalty(PDO $pdo,int $outletId,int $customerId):void{if($custome
 
 try{
   if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
-  $pdo=new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+  $pdo=spApiDatabase();
   $b=body();$sale=$b['sale']??null;if(!is_array($sale))throw new InvalidArgumentException('Sale data is required.');
   foreach(['sales','sale_items'] as $requiredTable)if(!tableExists($pdo,$requiredTable))throw new RuntimeException('Required database table is missing: '.$requiredTable.'. The sale cannot be saved safely.');
   if(!empty($sale['payments'])&&!tableExists($pdo,'sale_payments'))throw new RuntimeException('Required database table is missing: sale_payments. Payment details cannot be saved safely.');
