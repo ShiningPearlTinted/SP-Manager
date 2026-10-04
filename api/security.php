@@ -227,6 +227,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'settings.php') return $method === 'GET' ? '' : 'manageSettings';
     if ($file === 'database.php') return in_array($action, ['restore','backup'], true) ? 'administrator' : '';
     if ($file === 'sales.php') return 'managePayments';
+    if ($file === 'documents.php') return in_array($action, ['list-quotations','save-quotation','delete-quotation','convert'], true) ? 'manageQuotation' : 'manageInvoice';
     if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete'], true) ? 'manageCustomers' : '';
     if ($file === 'products.php') return in_array($action, ['save','assign','unassign','delete','save-category','delete-category','save-group','delete-group'], true) ? 'manageProducts' : '';
     if ($file === 'sales-delete.php') return 'managePayments';
