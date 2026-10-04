@@ -2220,6 +2220,7 @@ function DocumentsModule({mode,products,customers,company,settings,activeUser,se
  const [selected,setSelected]=useState(null);
  const [editing,setEditing]=useState(null);
  const [search,setSearch]=useState("");
+ const [productSearch,setProductSearch]=useState("");
  const empty=()=>({id:null,no:"Auto generated",documentType:mode,date:new Date().toISOString().slice(0,10),dueDate:new Date(Date.now()+(isQuotation?30:0)*86400000).toISOString().slice(0,10),customerId:customers.find(c=>c.enabled!==false&&c.isCustomer!==false)?.id||customers[0]?.id||"",items:[],discount:0,tax:0,note:"",status:isQuotation?"DRAFT":"ISSUED",paymentStatus:"UNPAID",paymentMethod:""});
  const [form,setForm]=useState(empty);
  const loadDocs=async()=>{try{const r=await centralDocumentsRequest(isQuotation?"list-quotations":"list-invoices",{outlet_id:activeOutletId()});const rows=Array.isArray(r?.documents)?r.documents:[];setDocs(rows);if(selected&&!rows.some(x=>String(x.id)===String(selected.id)))setSelected(null)}catch(e){await showActionMessage(`${mode} Refresh Failed`,professionalDatabaseError(e))}};
