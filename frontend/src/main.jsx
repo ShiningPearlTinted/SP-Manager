@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useState}from"react";
 import{createRoot}from"react-dom/client";
 import"./styles.css";
+import"./management-ui.css";
 
 const AUTH_VERSION="1.0.45";
 const stateRevisions=new Map();
@@ -884,7 +885,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
   }
  };
  if(!signedIn)return <Login users={users} company={company} onAuthenticate={authenticate} onLogin={u=>{const {_apiToken,...user}=u||{};if(!_apiToken)throw new Error("Database sign-in token is missing.");cacheSet("activeUser",user);sessionStorage.setItem("sp_api_token",_apiToken);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(user);setSignedIn(true);setPage("POS / Sales")}}/>;
- return <div className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
+ return <div data-ui={["Management","Outlet Management","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Cash In / Out","Credit payments","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"].includes(page)?"management":undefined} className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
   <aside className={mobileNavOpen?"mobile-nav is-open":"mobile-nav"}><div className="brand"><button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={()=>setMobileNavOpen(false)}>×</button><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
    {nav.filter(n=>{const map={"Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Quotation":"manageQuotation","Invoice":"manageInvoice","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Outlet Management":"manageManagement","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return n==="Management"?hasManagementAccess(activeUser):(!map[n]||isPermissionAllowed(activeUser,map[n]))}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("");setMobileNavOpen(false)}} key={n}>▸ {n}</button>)}
   </aside>
