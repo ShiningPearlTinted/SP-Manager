@@ -1,1 +1,1 @@
-1.0.46 — matched frontend/API audit candidate, 2026-10-05
+1.0.47 matched frontend/API agent audit 2026-10-06

@@ -5,5 +5,5 @@
     "dev": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend"
   },
-  "version": "1.0.46"
+  "version": "1.0.47"
 }

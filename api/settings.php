@@ -273,14 +273,17 @@ function company(PDO $pdo, int $oid): array {
     $q = $pdo->prepare('SELECT * FROM company_settings WHERE outlet_id=? LIMIT 1');
     $q->execute([$oid]);
     $r = $q->fetch();
-    if (!$r) return [];
+    $outletQuery=$pdo->prepare('SELECT address FROM outlets WHERE id=? LIMIT 1');
+    $outletQuery->execute([$oid]);
+    $outletAddress=trim((string)($outletQuery->fetchColumn()?:''));
+    if (!$r) return ['outletAddress'=>$outletAddress];
     $meta = json_decode((string)($r['metadata_json'] ?? ''), true);
     $meta = is_array($meta) ? $meta : [];unset($meta['password'],$meta['passwordConfigured']);
     $logo = trim((string)($meta['logo'] ?? ''));
     if ($logo === '') $logo = (string)($r['logo_url'] ?? '');
     return array_merge([
         'name'=>$r['company_name']??'Shining Pearl Tinted','registrationNo'=>$r['registration_no']??'','taxNumber'=>$r['tax_number']??'','phoneNumber'=>$r['phone_number']??'','email'=>$r['email']??'','website'=>$r['website']??'','streetName'=>$r['street_name']??'','buildingNumber'=>$r['building_number']??'','additionalStreetName'=>$r['additional_street_name']??'','plotIdentification'=>$r['plot_identification']??'','district'=>$r['district']??'','postalCode'=>$r['postal_code']??'','city'=>$r['city']??'','state'=>$r['state']??'','country'=>$r['country']??'Malaysia','logo'=>$logo,'currencyCode'=>$r['currency_code']??'MYR','currencySymbol'=>$r['currency_symbol']??'RM'
-    ], $meta, ['logo'=>$logo]);
+    ], $meta, ['logo'=>$logo,'outletAddress'=>$outletAddress]);
 }
 
 function saveCompany(PDO $pdo, int $oid, array $c): void {

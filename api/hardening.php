@@ -100,7 +100,7 @@ function spNormalizeSale(PDO $pdo,int $outlet,array $sale): array {
     if($rate<0||$rate>100)throw new RuntimeException('Configured tax rate is invalid.');
     $inclusive=!empty($settings['products']['taxInclusive']);
     $customerDiscount=0.0;$cid=(int)($sale['customerId']??$sale['customer_id']??0);
-    if($cid>0){$q=$pdo->prepare('SELECT discount_percent FROM customers WHERE id=? AND (outlet_id=? OR outlet_id IS NULL)');$q->execute([$cid,$outlet]);$customerDiscount=round($subtotal*min(100,max(0,(float)$q->fetchColumn()))/100,2);}
+    if($cid>0){$q=$pdo->prepare('SELECT discount_percent,tax_exempt FROM customers WHERE id=? AND (outlet_id=? OR outlet_id IS NULL)');$q->execute([$cid,$outlet]);$customer=$q->fetch();if($customer){$customerDiscount=round($subtotal*min(100,max(0,(float)$customer['discount_percent']))/100,2);if(!empty($customer['tax_exempt']))$rate=0.0;}}
     if($discount>$customerDiscount+0.005&&!spHasPermission('manageDiscount'))throw new RuntimeException('Manual discount permission is required.');
     $taxBase=($settings['products']['discountRule']??'After tax')==='Before tax'?$subtotal-$discount:$subtotal-$customerDiscount;
     $expectedTax=round($inclusive?($subtotal-$discount)*$rate/(100+$rate):max(0,$taxBase)*$rate/100,2);
