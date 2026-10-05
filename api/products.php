@@ -43,7 +43,7 @@ function resolveOutletId(PDO $pdo, mixed $value): int {
 function ensureCategory(PDO $pdo, int $outletId, mixed $categoryId, mixed $categoryName): ?int {
   $name=trim((string)($categoryName ?? ''));
   $id=(int)($categoryId ?? 0);
-  $hasOutlet=false;
+  $hasOutlet=hasColumnCached($pdo,'product_categories','outlet_id');
   if($id>0){
     $sql='SELECT id FROM product_categories WHERE id=?'; $args=[$id];
     if($hasOutlet){$sql.=' AND (outlet_id=? OR outlet_id IS NULL)';$args[]=$outletId;}
@@ -55,7 +55,7 @@ function ensureCategory(PDO $pdo, int $outletId, mixed $categoryId, mixed $categ
   if($resolved!==null)return $resolved;
   $cols=tableColumns($pdo,'product_categories');
   $data=[];
-  if(isset($cols['outlet_id']))$data['outlet_id']=null;
+  if(isset($cols['outlet_id']))$data['outlet_id']=$outletId;
   if(isset($cols['category_name']))$data['category_name']=$name;
   if(isset($cols['category_code']))$data['category_code']='';
   if(isset($cols['image_url']))$data['image_url']='';
@@ -70,18 +70,21 @@ function ensureCategory(PDO $pdo, int $outletId, mixed $categoryId, mixed $categ
 function resolveCategoryId(PDO $pdo, int $outletId, mixed $categoryId, mixed $categoryName): ?int {
   $id=(int)($categoryId ?? 0);
   if($id>0){
-    $q=$pdo->prepare('SELECT id FROM product_categories WHERE id=? LIMIT 1');
-    $q->execute([$id]); $found=$q->fetchColumn(); if($found!==false) return (int)$found;
+    $q=$pdo->prepare('SELECT id FROM product_categories WHERE id=?'.(hasColumnCached($pdo,'product_categories','outlet_id')?' AND (outlet_id=? OR outlet_id IS NULL)':'').' LIMIT 1');
+    $q->execute(hasColumnCached($pdo,'product_categories','outlet_id')?[$id,$outletId]:[$id]);
+    $found=$q->fetchColumn(); if($found!==false) return (int)$found;
   }
   $name=trim((string)($categoryName ?? ''));
   if($name==='') return null;
-  $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? ORDER BY id ASC LIMIT 1');
-  $q->execute([$name]); $found=$q->fetchColumn();
+  $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=?'.(hasColumnCached($pdo,'product_categories','outlet_id')?' AND (outlet_id=? OR outlet_id IS NULL)':'').' ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END, id ASC LIMIT 1');
+  $args=hasColumnCached($pdo,'product_categories','outlet_id')?[$name,$outletId,$outletId]:[$name];
+  if(!hasColumnCached($pdo,'product_categories','outlet_id')) $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? ORDER BY id ASC LIMIT 1');
+  $q->execute($args); $found=$q->fetchColumn();
   return $found===false?null:(int)$found;
 }
 function resolveGroupId(PDO $pdo, int $outletId, mixed $groupId, mixed $groupName, ?int $categoryId=null): ?int {
   $id=(int)($groupId ?? 0);
-  $hasOutlet=false;
+  $hasOutlet=hasColumnCached($pdo,'product_groups','outlet_id');
   if($id>0){
     $sql='SELECT id FROM product_groups WHERE id=?'; $args=[$id];
     if($hasOutlet){$sql.=' AND (outlet_id=? OR outlet_id IS NULL)';$args[]=$outletId;}
@@ -175,8 +178,27 @@ function syncProductRelations(PDO $pdo, int $outletId, int $productId, array $p)
     }
   }
 
-  // Base selling price and cost are stored on the global Product Master (products).
-  // Legacy product_prices rows are preserved for backward compatibility but are not written by online master-data saves.
+  // Retail price: keep the current Product Master selling/cost price in product_prices.
+  if (tableExists($pdo, 'product_prices')) {
+    $cols=tableColumns($pdo,'product_prices');
+    $price=(float)($p['price']??0); $cost=array_key_exists('cost',$p)?(float)$p['cost']:null;
+    $q=$pdo->prepare('SELECT id FROM product_prices WHERE outlet_id=? AND product_id=? AND price_type=? LIMIT 1');
+    $q->execute([$outletId,$productId,'RETAIL']); $priceId=(int)($q->fetchColumn()?:0);
+    $data=[];
+    if(isset($cols['outlet_id']))$data['outlet_id']=$outletId;
+    if(isset($cols['product_id']))$data['product_id']=$productId;
+    if(isset($cols['price_type']))$data['price_type']='RETAIL';
+    if(isset($cols['price']))$data['price']=$price;
+    if(isset($cols['cost_price']))$data['cost_price']=$cost;
+    if(isset($cols['active']))$data['active']=1;
+    if($priceId>0){
+      $sets=[];$vals=[];foreach($data as $c=>$v){$sets[]='`'.$c.'`=?';$vals[]=$v;}$vals[]=$priceId;
+      $pdo->prepare('UPDATE product_prices SET '.implode(',',$sets).' WHERE id=? LIMIT 1')->execute($vals);
+    } elseif($data) {
+      $q=$pdo->prepare('INSERT INTO product_prices (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');
+      $q->execute(array_values($data));
+    }
+  }
 
   // Product image: Product Master has one current image; mirror it as the primary image.
   if (tableExists($pdo, 'product_images')) {
@@ -212,7 +234,12 @@ function hydrateProductRelations(PDO $pdo, array &$rows): void {
     foreach($q->fetchAll() as $r)$map[(int)$r['product_id']][]=(string)$r['barcode'];
     foreach($rows as &$r){$b=$map[(int)$r['id']]??[];if($b){$r['barcodes']=$b;$r['barcode']=$b[0];}} unset($r);
   }
-  // Product price/cost come from the global products row; do not override them per outlet.
+  if(tableExists($pdo,'product_prices')){
+    $q=$pdo->prepare('SELECT product_id, price, cost_price FROM product_prices WHERE outlet_id=? AND product_id IN ('.$ph.') AND price_type=? AND active=1');
+    $q->execute(array_merge([$rows[0]['outlet_id']??0],$ids,['RETAIL'])); $map=[];
+    foreach($q->fetchAll() as $r)$map[(int)$r['product_id']]=$r;
+    foreach($rows as &$r){$v=$map[(int)$r['id']]??null;if($v){$r['price']=(float)$v['price'];if($v['cost_price']!==null)$r['cost']=(float)$v['cost_price'];}} unset($r);
+  }
   if(tableExists($pdo,'product_images')){
     $q=$pdo->prepare('SELECT product_id, image_url FROM product_images WHERE product_id IN ('.$ph.') ORDER BY is_primary DESC,id ASC');
     $q->execute($ids); $map=[];
@@ -231,7 +258,7 @@ function productMasterRows(PDO $pdo, int $outletId): array {
       po.active AS outlet_active, po.selling_price AS outlet_selling_price, po.cost_price AS outlet_cost_price,
       po.stock_qty AS outlet_stock_qty, po.min_stock AS outlet_min_stock, po.preferred_quantity AS outlet_preferred_quantity,
       po.allow_price_change AS outlet_allow_price_change, po.last_purchase_price AS outlet_last_purchase_price, po.rank AS outlet_rank
-    FROM products p LEFT JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=?
+    FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1
     ORDER BY p.id ASC";
   $q=$pdo->prepare($sql);$q->execute([$outletId]);return $q->fetchAll();
 }
@@ -250,8 +277,8 @@ function productOutletRow(PDO $pdo,int $productId,int $outletId,bool $create=tru
   if($r||!$create)return $r?:[];
   $cols=tableColumns($pdo,'product_outlets');
   $data=['product_id'=>$productId,'outlet_id'=>$outletId,'active'=>1,
-    'selling_price'=>null,
-    'cost_price'=>null,
+    'selling_price'=>array_key_exists('selling_price',$seed)?$seed['selling_price']:null,
+    'cost_price'=>array_key_exists('cost_price',$seed)?$seed['cost_price']:null,
     'stock_qty'=>array_key_exists('stock_qty',$seed)?$seed['stock_qty']:0,
     'min_stock'=>array_key_exists('min_stock',$seed)?$seed['min_stock']:0,
     'preferred_quantity'=>array_key_exists('preferred_quantity',$seed)?$seed['preferred_quantity']:0,
@@ -264,21 +291,21 @@ function productOutletRow(PDO $pdo,int $productId,int $outletId,bool $create=tru
 }
 function upsertProductOutlet(PDO $pdo,int $productId,int $outletId,array $p,array $master=[]): array {
   $existing=productOutletRow($pdo,$productId,$outletId,true,[
-    'selling_price'=>null,
-    'cost_price'=>null,
-    'stock_qty'=>0,
+    'selling_price'=>array_key_exists('price',$p)?(float)$p['price']:($master['selling_price']??0),
+    'cost_price'=>array_key_exists('cost',$p)?(float)$p['cost']:($master['cost_price']??0),
+    'stock_qty'=>array_key_exists('stock',$p)?(float)$p['stock']:0,
     'min_stock'=>array_key_exists('reorder',$p)?(float)$p['reorder']:0,
     'preferred_quantity'=>array_key_exists('preferredQuantity',$p)?(float)$p['preferredQuantity']:0,
-    'allow_price_change'=>null,
+    'allow_price_change'=>array_key_exists('priceChangeAllowed',$p)?(int)(bool)$p['priceChangeAllowed']:null,
     'last_purchase_price'=>array_key_exists('lastPurchasePrice',$p)?(float)$p['lastPurchasePrice']:null,
     'rank'=>array_key_exists('rank',$p)?(int)$p['rank']:0
   ]);
-  if(array_key_exists('stock',$p))spSetInventory($pdo,$outletId,$productId,(float)$p['stock']);
   $cols=tableColumns($pdo,'product_outlets');$data=[];
   foreach([
-    'min_stock'=>'reorder','preferred_quantity'=>'preferredQuantity',
-    'last_purchase_price'=>'lastPurchasePrice','rank'=>'rank'
+    'active'=>'active','selling_price'=>'price','cost_price'=>'cost','stock_qty'=>'stock','min_stock'=>'reorder','preferred_quantity'=>'preferredQuantity',
+    'allow_price_change'=>'priceChangeAllowed','last_purchase_price'=>'lastPurchasePrice','rank'=>'rank'
   ] as $col=>$key){if(isset($cols[$col])&&array_key_exists($key,$p))$data[$col]=is_bool($p[$key])?($p[$key]?1:0):$p[$key];}
+  if(isset($cols['active'])&&!array_key_exists('active',$data))$data['active']=1;
   if(!$data)return $existing;
   $sets=[];$vals=[];foreach($data as $c=>$v){$sets[]='`'.$c.'`=?';$vals[]=$v;}$vals[]=$productId;$vals[]=$outletId;
   $pdo->prepare('UPDATE product_outlets SET '.implode(',',$sets).',updated_at=NOW() WHERE product_id=? AND outlet_id=? LIMIT 1')->execute($vals);
@@ -292,11 +319,12 @@ function hydrateOutletFields(PDO $pdo,int $outletId,array &$rows): void {
     if((!array_key_exists('warranty_years',$r)||$r['warranty_years']===null)&&array_key_exists('warrantyYears',$app))$r['warranty_years']=$app['warrantyYears'];
     if(!array_key_exists('maintenance_count',$r)||$r['maintenance_count']===null)$r['maintenance_count']=$r['maintenance_times']??($app['maintenanceCount']??null);
     $r['outlet_id']=$outletId;
-    if(array_key_exists('selling_price',$r) && $r['selling_price']!==null)$r['price']=(float)$r['selling_price'];
-    if(array_key_exists('cost_price',$r) && $r['cost_price']!==null)$r['cost']=(float)$r['cost_price'];
-    if(array_key_exists('outlet_stock_qty',$r))$r['stock']=$r['outlet_stock_qty']!==null?(float)$r['outlet_stock_qty']:0.0;
-    if(array_key_exists('outlet_min_stock',$r))$r['reorder']=$r['outlet_min_stock']!==null?(float)$r['outlet_min_stock']:0.0;
+    if(array_key_exists('outlet_selling_price',$r) && $r['outlet_selling_price']!==null)$r['price']=(float)$r['outlet_selling_price'];
+    if(array_key_exists('outlet_cost_price',$r) && $r['outlet_cost_price']!==null)$r['cost']=(float)$r['outlet_cost_price'];
+    if(array_key_exists('outlet_stock_qty',$r) && $r['outlet_stock_qty']!==null)$r['stock']=(float)$r['outlet_stock_qty'];
+    if(array_key_exists('outlet_min_stock',$r) && $r['outlet_min_stock']!==null)$r['reorder']=(float)$r['outlet_min_stock'];
     if(array_key_exists('outlet_preferred_quantity',$r) && $r['outlet_preferred_quantity']!==null)$r['preferred_quantity']=(float)$r['outlet_preferred_quantity'];
+    if(array_key_exists('outlet_allow_price_change',$r) && $r['outlet_allow_price_change']!==null)$r['allow_price_change']=(int)$r['outlet_allow_price_change'];
     if(array_key_exists('outlet_last_purchase_price',$r) && $r['outlet_last_purchase_price']!==null)$r['last_purchase_price']=(float)$r['outlet_last_purchase_price'];
     if(array_key_exists('outlet_rank',$r) && $r['outlet_rank']!==null)$r['rank']=(int)$r['outlet_rank'];
   }unset($r);
@@ -314,7 +342,7 @@ function ensureOutletAssignment(PDO $pdo,int $productId,int $outletId,int $activ
 }
 
 try {
-  $pdo=spApiDatabase();
+  $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
   spEnsureProductMetadata($pdo);
   ensureProductOutletTable($pdo);
   $columns=tableColumns($pdo,'products');
@@ -327,10 +355,10 @@ try {
 
   if($action==='catalog' && $_SERVER['REQUEST_METHOD']==='GET'){
     $cats=[]; $groups=[];
-    $q=$pdo->query('SELECT c.*, c.category_name AS category_name FROM product_categories c WHERE c.active=1 ORDER BY c.sort_order ASC,c.id ASC');
-    $cats=$q->fetchAll();
-    $groupSql='SELECT g.*, c.category_name AS category_name, parent.group_name AS parent_name FROM product_groups g LEFT JOIN product_categories c ON c.id=g.category_id LEFT JOIN product_groups parent ON parent.id=g.parent_id WHERE g.active=1 ORDER BY g.sort_order ASC,g.id ASC';
-    $q=$pdo->query($groupSql); $groups=$q->fetchAll();
+    $q=$pdo->prepare('SELECT c.*, c.category_name AS category_name FROM product_categories c WHERE (c.outlet_id=? OR c.outlet_id IS NULL) ORDER BY c.sort_order ASC,c.id ASC');
+    $q->execute([$outletId]); $cats=$q->fetchAll();
+    $groupSql='SELECT g.*, c.category_name AS category_name, parent.group_name AS parent_name FROM product_groups g LEFT JOIN product_categories c ON c.id=g.category_id LEFT JOIN product_groups parent ON parent.id=g.parent_id WHERE (g.outlet_id=? OR g.outlet_id IS NULL) ORDER BY g.sort_order ASC,g.id ASC';
+    $q=$pdo->prepare($groupSql); $q->execute([$outletId]); $groups=$q->fetchAll();
     respond(['ok'=>true,'outletId'=>$outletId,'categories'=>$cats,'groups'=>$groups]);
   }
 
@@ -339,10 +367,10 @@ try {
     if(!is_array($c)) throw new InvalidArgumentException('category is required.');
     $name=trim((string)($c['category_name']??$c['name']??'')); if($name==='') throw new InvalidArgumentException('Category name is required.');
     $id=(int)($c['id']??0);
-    $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? ORDER BY id ASC LIMIT 1');
-    $q->execute([$name]); $existing=(int)($q->fetchColumn()?:0); if($existing>0)$id=$existing;
-    $data=['outlet_id'=>null,'category_name'=>$name,'category_code'=>trim((string)($c['category_code']??$c['code']??'')),'image_url'=>(string)($c['image_url']??$c['image']??''),'sort_order'=>(int)($c['sort_order']??$c['rank']??0),'active'=>($c['active']??true)?1:0];
-    if($id>0){$sets=[];$vals=[];foreach($data as $col=>$v){$sets[]='`'.$col.'`=?';$vals[]=$v;}$vals[]=$id;$q=$pdo->prepare('UPDATE product_categories SET '.implode(',',$sets).' WHERE id=? LIMIT 1');$q->execute($vals);}else{$q=$pdo->prepare('INSERT INTO product_categories (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');$q->execute(array_values($data));$id=(int)$pdo->lastInsertId();}
+    $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');
+    $q->execute([$name,$outletId,$outletId]); $existing=(int)($q->fetchColumn()?:0); if($existing>0)$id=$existing;
+    $data=['outlet_id'=>$outletId,'category_name'=>$name,'category_code'=>trim((string)($c['category_code']??$c['code']??'')),'image_url'=>(string)($c['image_url']??$c['image']??''),'sort_order'=>(int)($c['sort_order']??$c['rank']??0),'active'=>($c['active']??true)?1:0];
+    if($id>0){$sets=[];$vals=[];foreach($data as $col=>$v){$sets[]='`'.$col.'`=?';$vals[]=$v;}$vals[]=$id;$vals[]=$outletId;$q=$pdo->prepare('UPDATE product_categories SET '.implode(',',$sets).' WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute($vals);}else{$q=$pdo->prepare('INSERT INTO product_categories (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');$q->execute(array_values($data));$id=(int)$pdo->lastInsertId();}
     respond(['ok'=>true,'id'=>$id,'category_name'=>$name]);
   }
 
@@ -352,15 +380,15 @@ try {
     $name=trim((string)($g['group_name']??$g['name']??'')); if($name==='') throw new InvalidArgumentException('Product group name is required.');
     $categoryId=ensureCategory($pdo,$outletId,$g['category_id']??null,$g['category']??$g['category_name']??null);
     $parentName=trim((string)($g['parent']??$g['parent_name']??'')); $parentId=(int)($g['parent_id']??0);
-    if($parentId<=0 && $parentName!==''){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? ORDER BY id ASC LIMIT 1');$q->execute([$parentName]);$parentId=(int)($q->fetchColumn()?:0);}
+    if($parentId<=0 && $parentName!==''){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$parentName,$outletId,$outletId]);$parentId=(int)($q->fetchColumn()?:0);}
     $id=(int)($g['id']??0);
-    $q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? ORDER BY id ASC LIMIT 1');$q->execute([$name]);$existing=(int)($q->fetchColumn()?:0);if($existing>0)$id=$existing;
+    $q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$name,$outletId,$outletId]);$existing=(int)($q->fetchColumn()?:0);if($existing>0)$id=$existing;
     if($id<=0){
       $oldName=trim((string)($g['old_name']??''));
-      if($oldName!=='' && strcasecmp($oldName,$name)!==0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? ORDER BY id ASC LIMIT 1');$q->execute([$oldName]);$id=(int)($q->fetchColumn()?:0);}
+      if($oldName!=='' && strcasecmp($oldName,$name)!==0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$oldName,$outletId,$outletId]);$id=(int)($q->fetchColumn()?:0);}
     }
-    $data=['outlet_id'=>null,'category_id'=>$categoryId?:null,'parent_id'=>$parentId?:null,'group_name'=>$name,'group_code'=>trim((string)($g['group_code']??$g['code']??'')),'image_url'=>(string)($g['image_url']??$g['image']??''),'sort_order'=>(int)($g['sort_order']??$g['rank']??0),'active'=>($g['active']??true)?1:0];
-    if($id>0){$sets=[];$vals=[];foreach($data as $col=>$v){$sets[]='`'.$col.'`=?';$vals[]=$v;}$vals[]=$id;$q=$pdo->prepare('UPDATE product_groups SET '.implode(',',$sets).' WHERE id=? LIMIT 1');$q->execute($vals);}else{$q=$pdo->prepare('INSERT INTO product_groups (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');$q->execute(array_values($data));$id=(int)$pdo->lastInsertId();}
+    $data=['outlet_id'=>$outletId,'category_id'=>$categoryId?:null,'parent_id'=>$parentId?:null,'group_name'=>$name,'group_code'=>trim((string)($g['group_code']??$g['code']??'')),'image_url'=>(string)($g['image_url']??$g['image']??''),'sort_order'=>(int)($g['sort_order']??$g['rank']??0),'active'=>($g['active']??true)?1:0];
+    if($id>0){$sets=[];$vals=[];foreach($data as $col=>$v){$sets[]='`'.$col.'`=?';$vals[]=$v;}$vals[]=$id;$vals[]=$outletId;$q=$pdo->prepare('UPDATE product_groups SET '.implode(',',$sets).' WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute($vals);}else{$q=$pdo->prepare('INSERT INTO product_groups (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');$q->execute(array_values($data));$id=(int)$pdo->lastInsertId();}
     respond(['ok'=>true,'id'=>$id,'group_name'=>$name,'category_id'=>$categoryId,'parent_id'=>$parentId?:null]);
   }
 
@@ -370,10 +398,10 @@ try {
     $select='p.*, po.id AS outlet_assignment_id, po.active AS outlet_active, po.selling_price AS outlet_selling_price, po.cost_price AS outlet_cost_price, po.stock_qty AS outlet_stock_qty, po.min_stock AS outlet_min_stock, po.preferred_quantity AS outlet_preferred_quantity, po.allow_price_change AS outlet_allow_price_change, po.last_purchase_price AS outlet_last_purchase_price, po.rank AS outlet_rank';
     if($hasCategoryId) $select.=', c.category_name AS category_name';
     if($hasGroupId) $select.=', g.group_name AS group_name';
-    $sql='SELECT '.$select.' FROM `products` p JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1';
+    $sql='SELECT '.$select.' FROM `products` p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1';
     if($hasCategoryId) $sql.=' LEFT JOIN product_categories c ON c.id=p.category_id';
     if($hasGroupId) $sql.=' LEFT JOIN product_groups g ON g.id=p.group_id';
-    $sql.=' WHERE p.active=1 ORDER BY p.id ASC';
+    $sql.=' ORDER BY p.id ASC';
     $q=$pdo->prepare($sql);$q->execute([$outletId]);$rows=$q->fetchAll();
     hydrateOutletFields($pdo,$outletId,$rows); hydrateProductRelations($pdo,$rows);
     respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows,'product_source'=>'PRODUCT_MASTER+PRODUCT_OUTLETS']);
@@ -407,22 +435,21 @@ try {
   if($action==='delete-group'  && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody(); $id=(int)($b['id']??0); $name=trim((string)($b['name']??''));
     if($id<=0 && $name==='') throw new InvalidArgumentException('Product group id or name is required.');
-    if($id>0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE id=? LIMIT 1');$q->execute([$id]);$id=(int)($q->fetchColumn()?:0);}
-    if($id<=0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? ORDER BY id ASC LIMIT 1');$q->execute([$name]);$id=(int)($q->fetchColumn()?:0);}
+    if($id>0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute([$id,$outletId]);$id=(int)($q->fetchColumn()?:0);}
+    if($id<=0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? AND (outlet_id=? OR outlet_id IS NULL) ORDER BY CASE WHEN outlet_id=? THEN 0 ELSE 1 END,id ASC LIMIT 1');$q->execute([$name,$outletId,$outletId]);$id=(int)($q->fetchColumn()?:0);}
     if($id<=0) respond(['ok'=>true,'deleted'=>false,'id'=>0]);
-    $q=$pdo->prepare('SELECT COUNT(*) FROM product_groups WHERE parent_id=?');$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because it still has child groups.');
-    $colsNow=tableColumns($pdo,'products');if(isset($colsNow['group_id'])){$q=$pdo->prepare('SELECT COUNT(*) FROM products WHERE group_id=?');$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because products are still assigned to it.');}
-    $q=$pdo->prepare('DELETE FROM product_groups WHERE id=? LIMIT 1');$q->execute([$id]);respond(['ok'=>true,'deleted'=>$q->rowCount()>0,'id'=>$id]);
+    $q=$pdo->prepare('SELECT COUNT(*) FROM product_groups WHERE parent_id=? AND (outlet_id=? OR outlet_id IS NULL)');$q->execute([$id,$outletId]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because it still has child groups.');
+    $colsNow=tableColumns($pdo,'products');if(isset($colsNow['group_id'])){$q=$pdo->prepare('SELECT COUNT(*) FROM products WHERE group_id=?'.(isset($colsNow['outlet_id'])?' AND outlet_id=?':''));$q->execute(isset($colsNow['outlet_id'])?[$id,$outletId]:[$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because products are still assigned to it.');}
+    $q=$pdo->prepare('DELETE FROM product_groups WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');$q->execute([$id,$outletId]);respond(['ok'=>true,'deleted'=>$q->rowCount()>0,'id'=>$id]);
   }
 
   if($action==='delete' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody();$id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('Product id is required.');
-    $pdo->prepare('UPDATE products SET active=0,updated_at=NOW() WHERE id=? LIMIT 1')->execute([$id]);
-    respond(['ok'=>true,'id'=>$id,'deleted'=>true,'master_deactivated'=>true]);
+    $pdo->prepare('UPDATE product_outlets SET active=0,updated_at=NOW() WHERE product_id=? AND outlet_id=?')->execute([$id,$outletId]);
+    respond(['ok'=>true,'id'=>$id,'outlet_id'=>$outletId,'deleted'=>true,'master_preserved'=>true]);
   }
 
-  if($action==='stock-adjust'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=jsonBody();$product=is_array($b['product']??null)?$b['product']:[];$pid=(int)($product['dbId']??$product['id']??0);$rawQuantity=$product['stock']??null;if(!is_numeric($rawQuantity))throw new InvalidArgumentException('Numeric stock count required.');$quantity=round((float)$rawQuantity,3);$pdo->beginTransaction();spLockOutlet($pdo,$outletId);spSetInventory($pdo,$outletId,$pid,$quantity,array_key_exists('expected_stock',$b)?(float)$b['expected_stock']:null);$pdo->commit();respond(['ok'=>true,'id'=>$pid]);}
-  if($action==='save'  && $_SERVER['REQUEST_METHOD']==='POST'){$pdo->beginTransaction();spLockOutlet($pdo,$outletId);
+  if($action==='save'  && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody();$p=$b['product']??$b;
     if(!is_array($p)) throw new InvalidArgumentException('product is required.');
     $id=isset($p['id'])&&ctype_digit((string)$p['id'])?(int)$p['id']:0;
@@ -447,7 +474,7 @@ try {
         $parentId=(int)($p['parent_id']??0);
         $groupData=[];
         $groupCols=tableColumns($pdo,'product_groups');
-        if(isset($groupCols['outlet_id']))$groupData['outlet_id']=null;
+        if(isset($groupCols['outlet_id']))$groupData['outlet_id']=$outletId;
         if(isset($groupCols['category_id']))$groupData['category_id']=$groupCategoryId?:null;
         if(isset($groupCols['parent_id']))$groupData['parent_id']=$parentId?:null;
         if(isset($groupCols['group_name']))$groupData['group_name']=trim((string)$groupName);
@@ -482,7 +509,7 @@ try {
     $targetId=(int)($existsId ?: 0);
     $data=[];
     foreach($columns as $col=>$meta){
-      if(in_array($col,['id','created_at','updated_at','outlet_id','stock_qty','stock','quantity','current_stock','min_stock','reorder_point'],true)) continue;
+      if(in_array($col,['id','created_at','updated_at','outlet_id','stock_qty','stock','quantity','current_stock','selling_price','sale_price','price','cost_price','cost','purchase_price','min_stock','reorder_point','allow_price_change'],true)) continue;
       $v=valueFor($col,$p,$outletId);
       if($v!==null){
         if(is_bool($v)) $v=$v?1:0;
@@ -517,8 +544,8 @@ try {
     // for this outlet. This prevents Edit + Save from creating/retaining twins.
     // Product Master codes are global. Never delete another outlet's master row as a side effect of save.
     syncProductRelations($pdo,$outletId,$savedId,$p);
-    $assignment=upsertProductOutlet($pdo,$savedId,$outletId,$p);spAudit($pdo,'PRODUCT_SAVE','products',$savedId);$pdo->commit();
+    $assignment=upsertProductOutlet($pdo,$savedId,$outletId,$p);
     respond(['ok'=>true,'id'=>$savedId,'outletId'=>$outletId,'category_id'=>isset($p['category_id'])?(int)$p['category_id']:null,'group_id'=>isset($p['group_id'])?(int)$p['group_id']:null,'selling_price'=>isset($p['price'])?(float)$p['price']:null]);
   }
   respond(['ok'=>false,'error'=>'Unknown action.'],404);
-}catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();respond(['ok'=>false,'error'=>$e->getMessage()],500);}
+}catch(Throwable $e){respond(['ok'=>false,'error'=>$e->getMessage()],500);}

@@ -31,15 +31,6 @@ function cols(PDO $pdo, string $table): array {
   foreach ($q->fetchAll() as $r) $out[(string)$r['Field']] = $r;
   return $cache[$table] = $out;
 }
-function childRows(PDO $pdo, string $table, string $fk, int $id): array {
-  if (!tableExists($pdo, $table)) throw new RuntimeException('Required detail table is missing: '.$table);
-  $schema = cols($pdo, $table);
-  if (!isset($schema[$fk])) throw new RuntimeException('Required detail column is missing: '.$table.'.'.$fk);
-  $q = $pdo->prepare('SELECT * FROM `'.str_replace('`','``',$table).'` WHERE `'.str_replace('`','``',$fk).'`=? ORDER BY id ASC');
-  $q->execute([$id]);
-  return $q->fetchAll();
-}
-
 function pick(array $a, array $names, $default = null) {
   foreach ($names as $n) {
     if (array_key_exists($n, $a) && $a[$n] !== null && $a[$n] !== '') return $a[$n];
@@ -119,20 +110,24 @@ function resolveOutletId(PDO $pdo, string $outlet): int {
   if (!$id) throw new RuntimeException('Outlet not found: '.$outlet);
   return $id;
 }
-function masterOutletId(PDO $pdo): int {
-  $q=$pdo->query("SELECT id FROM outlets WHERE outlet_code='SP01' AND active=1 LIMIT 1");
-  $id=(int)($q->fetchColumn()?:0);
-  if($id>0)return $id;
-  $q=$pdo->query('SELECT id FROM outlets WHERE active=1 ORDER BY id ASC LIMIT 1');
-  $id=(int)($q->fetchColumn()?:0);
-  if(!$id)throw new RuntimeException('No active outlet exists for Central Master Data.');
-  return $id;
+function ensureSyncTable(PDO $pdo): void {
+  $pdo->exec("CREATE TABLE IF NOT EXISTS sp_relational_sync (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    outlet_id BIGINT UNSIGNED NOT NULL,
+    state_key VARCHAR(120) NOT NULL,
+    local_id VARCHAR(190) NOT NULL,
+    entity VARCHAR(80) NOT NULL,
+    db_id BIGINT UNSIGNED NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY(id),
+    UNIQUE KEY uq_rel_sync(outlet_id,state_key,local_id,entity),
+    KEY idx_rel_sync_db(outlet_id,entity,db_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
-function ensureSyncTable(PDO $pdo):void {spRequireTable($pdo,'sp_relational_sync');}
-function syncLookup(PDO $pdo,int $outletId,string $stateKey,string $localId,string $entity):int {
- $q=$pdo->prepare('SELECT db_id FROM sp_relational_sync WHERE outlet_id=? AND state_key=? AND local_id=? AND entity=?');$q->execute([$outletId,$stateKey,$localId,$entity]);$id=(int)$q->fetchColumn();if(!$id)return 0;
- $table=['sales'=>'sales','purchases'=>'purchases','orders'=>'open_orders','suppliers'=>'suppliers','promos'=>'promotions','paymentTypes'=>'payment_types','cashMovements'=>'cash_movements','stockHistory'=>'stock_movements','zReports'=>'end_of_day'][$stateKey]??'';
- if($table==='')return 0;$schema=cols($pdo,$table);$sql='SELECT id FROM `'.$table.'` WHERE id=?';$args=[$id];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}$q=$pdo->prepare($sql);$q->execute($args);return(int)($q->fetchColumn()?:0);
+function syncLookup(PDO $pdo, int $outletId, string $stateKey, string $localId, string $entity): int {
+  $q = $pdo->prepare('SELECT db_id FROM sp_relational_sync WHERE outlet_id=? AND state_key=? AND local_id=? AND entity=? LIMIT 1');
+  $q->execute([$outletId, $stateKey, $localId, $entity]);
+  return (int)($q->fetchColumn() ?: 0);
 }
 function saveSyncMap(PDO $pdo, int $outletId, string $stateKey, string $localId, string $entity, int $dbId): void {
   $q = $pdo->prepare('INSERT INTO sp_relational_sync(outlet_id,state_key,local_id,entity,db_id,updated_at) VALUES(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE db_id=VALUES(db_id),updated_at=NOW()');
@@ -241,7 +236,7 @@ function adjustProductStock(PDO $pdo,int $outletId,int $productId,float $delta,s
 }
 function purchaseItemsByProduct(PDO $pdo,int $purchaseId):array{$out=[];foreach(childRows($pdo,'purchase_items','purchase_id',$purchaseId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
 function saleItemsByProduct(PDO $pdo,int $saleId):array{$out=[];foreach(childRows($pdo,'sale_items','sale_id',$saleId) as $r){$pid=(int)pick($r,['product_id'],0);$qty=(float)pick($r,['quantity','qty'],0);$out[$pid]=($out[$pid]??0)+$qty;}return$out;}
-function ensureSaleItemMetadataColumns(PDO $pdo):void {spRequireColumns($pdo,'sale_items',['warranty_enabled','warranty_years','maintenance_enabled','maintenance_count','cost_snapshot']);}
+function ensureSaleItemMetadataColumns(PDO $pdo):void{if(!tableExists($pdo,'sale_items'))return;$schema=cols($pdo,'sale_items');foreach(['warranty_enabled'=>'TINYINT(1) NOT NULL DEFAULT 0','warranty_years'=>'INT NOT NULL DEFAULT 0','maintenance_enabled'=>'TINYINT(1) NOT NULL DEFAULT 0','maintenance_count'=>'INT NOT NULL DEFAULT 0'] as $field=>$definition)if(!isset($schema[$field]))$pdo->exec('ALTER TABLE sale_items ADD COLUMN `'.$field.'` '.$definition);}
 function scopedFindId(PDO $pdo, string $table, int $candidateId, int $outletId): int {
   if ($candidateId <= 0 || !tableExists($pdo, $table)) return 0;
   $schema = cols($pdo, $table);
@@ -371,12 +366,15 @@ function generatePaymentCode(PDO $pdo, int $outletId, string $name): string {
   }
 }
 function nextDocumentCounter(PDO $pdo, int $outletId, string $type): int {
-  if (!tableExists($pdo, 'sp_document_counters')) spRequireTable($pdo,'sp_document_counters');
+  if (!tableExists($pdo, 'sp_document_counters')) $pdo->exec("CREATE TABLE sp_document_counters (outlet_id BIGINT UNSIGNED NOT NULL, doc_type VARCHAR(40) NOT NULL, current_number BIGINT UNSIGNED NOT NULL DEFAULT 0, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY(outlet_id,doc_type)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
   $q=$pdo->prepare('SELECT current_number FROM sp_document_counters WHERE outlet_id=? AND doc_type=? FOR UPDATE');$q->execute([$outletId,$type]);$row=$q->fetch();
   if($row){$n=(int)$row['current_number']+1;$u=$pdo->prepare('UPDATE sp_document_counters SET current_number=?,updated_at=NOW() WHERE outlet_id=? AND doc_type=?');$u->execute([$n,$outletId,$type]);return$n;}
   $i=$pdo->prepare('INSERT INTO sp_document_counters(outlet_id,doc_type,current_number,updated_at) VALUES(?,?,1,NOW())');$i->execute([$outletId,$type]);return 1;
 }
-function generateServerDocumentNumber(PDO $pdo,int $outletId,string $type,string $prefix,?int $exceptId=null):string {return spNextDocumentNumber($pdo,$outletId,$type,$prefix);}
+function generateServerDocumentNumber(PDO $pdo,int $outletId,string $type,string $prefix,?int $exceptId=null):string {
+  for($i=0;$i<100;$i++){ $n=nextDocumentCounter($pdo,$outletId,$type); $candidate=$prefix.str_pad((string)$n,8,'0',STR_PAD_LEFT); $table=$type==='Invoice'?'sales':($type==='Order'?'open_orders':null); if(!$table||!tableExists($pdo,$table))return$candidate; $schema=cols($pdo,$table); $col=$type==='Invoice'?'sale_no':'order_no'; if(!isset($schema[$col]))return$candidate; $sql='SELECT id FROM `'.$table.'` WHERE `'.$col.'`=?';$args=[$candidate];if(isset($schema['outlet_id'])){$sql.=' AND outlet_id=?';$args[]=$outletId;}if($exceptId!==null){$sql.=' AND id<>?';$args[]=$exceptId;}$sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);if(!$q->fetchColumn())return$candidate; }
+  throw new RuntimeException('Unable to generate a unique document number.');
+}
 function purchaseNumberExists(PDO $pdo, int $outletId, string $purchaseNo, ?int $exceptId = null): bool {
   $purchaseNo = trim($purchaseNo);
   if ($purchaseNo === '' || !tableExists($pdo, 'purchases')) return false;
@@ -411,112 +409,37 @@ function findPaymentTypeDbId(PDO $pdo, int $outletId, array $pay): int {
   if (!tableExists($pdo, 'payment_types')) return 0;
   $schema = cols($pdo, 'payment_types');
   $candidate = (int)pick($pay, ['paymentTypeDbId','payment_type_db_id','paymentTypeId','payment_type_id'], 0);
-  if ($candidate > 0) {$q=$pdo->prepare('SELECT id FROM payment_types WHERE id=? LIMIT 1');$q->execute([$candidate]);$id=(int)($q->fetchColumn()?:0);if($id>0)return$id;}
+  if ($candidate > 0) {
+    $direct = scopedFindId($pdo, 'payment_types', $candidate, $outletId);
+    if ($direct > 0) return $direct;
+  }
   $code = trim((string)pick($pay, ['paymentCode','payment_code','code'], ''));
   $name = trim((string)pick($pay, ['payment','name','paymentTypeName','payment_name'], ''));
   $codeCol = isset($schema['payment_code']) ? 'payment_code' : (isset($schema['code']) ? 'code' : null);
   $nameCol = isset($schema['payment_name']) ? 'payment_name' : (isset($schema['name']) ? 'name' : null);
-  if ($code !== '' && $codeCol) {$q=$pdo->prepare('SELECT id FROM payment_types WHERE `'.$codeCol.'`=? ORDER BY id ASC LIMIT 1');$q->execute([$code]);$id=(int)($q->fetchColumn()?:0);if($id>0)return$id;}
-  if ($name !== '' && $nameCol) {$q=$pdo->prepare('SELECT id FROM payment_types WHERE `'.$nameCol.'`=? ORDER BY id ASC LIMIT 1');$q->execute([$name]);$id=(int)($q->fetchColumn()?:0);if($id>0)return$id;}
+  if ($code !== '' && $codeCol) {
+    $sql='SELECT id FROM payment_types WHERE `'.$codeCol.'`=?'; $args=[$code];
+    if (isset($schema['outlet_id'])) { $sql.=' AND outlet_id=?'; $args[]=$outletId; }
+    $sql.=' LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args);
+    $id=(int)($q->fetchColumn() ?: 0); if ($id > 0) return $id;
+  }
+  if ($name !== '' && $nameCol) {
+    $sql='SELECT id FROM payment_types WHERE `'.$nameCol.'`=?'; $args=[$name];
+    if (isset($schema['outlet_id'])) { $sql.=' AND outlet_id=?'; $args[]=$outletId; }
+    $sql.=' ORDER BY id ASC LIMIT 1'; $q=$pdo->prepare($sql); $q->execute($args);
+    $id=(int)($q->fetchColumn() ?: 0); if ($id > 0) return $id;
+  }
   return 0;
 }
-
 function findProductDbId(PDO $pdo, int $outletId, array $item): int {
-  if(!tableExists($pdo,'products')) return 0;
-  $schema=cols($pdo,'products');
-  $activeSql=isset($schema['active'])?' AND COALESCE(active,1)=1':'';
+  if(!tableExists($pdo,'products')) return 0; ensureProductOutletTableRS($pdo);
   $candidate=(int)pick($item,['productDbId','product_id','productId'],0);
-  if($candidate>0){$q=$pdo->prepare('SELECT id FROM products WHERE id=?'.$activeSql.' LIMIT 1');$q->execute([$candidate]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
-  $code=trim((string)pick($item,['productCode','code','sku'],''));
-  if($code!==''){foreach(['product_code','sku','code'] as $field){if(!isset($schema[$field]))continue;$q=$pdo->prepare('SELECT id FROM products WHERE `'.$field.'`=?'.$activeSql.' ORDER BY id ASC LIMIT 1');$q->execute([$code]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}}
-  $barcode=trim((string)pick($item,['barcode'],''));
-  if($barcode!==''){
-    if(isset($schema['barcode'])){$q=$pdo->prepare('SELECT id FROM products WHERE barcode=?'.$activeSql.' ORDER BY id ASC LIMIT 1');$q->execute([$barcode]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
-    if(tableExists($pdo,'product_barcodes')){$q=$pdo->prepare('SELECT p.id FROM product_barcodes b INNER JOIN products p ON p.id=b.product_id WHERE b.barcode=?'.(isset($schema['active'])?' AND COALESCE(p.active,1)=1':'').' ORDER BY b.is_primary DESC,b.id ASC LIMIT 1');$q->execute([$barcode]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
-  }
-  $name=trim((string)pick($item,['productName','name'],''));
-  if($name!==''){foreach(['product_name','name'] as $field){if(!isset($schema[$field]))continue;$q=$pdo->prepare('SELECT id FROM products WHERE `'.$field.'`=?'.$activeSql.' ORDER BY id ASC LIMIT 1');$q->execute([$name]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}}
+  if($candidate>0){$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.id=? LIMIT 1');$q->execute([$outletId,$candidate]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
+  $schema=cols($pdo,'products'); $code=trim((string)pick($item,['productCode','code','sku'],''));
+  if($code!==''){foreach(['product_code','sku','code'] as $field){if(!isset($schema[$field]))continue;$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.`'.$field.'`=? LIMIT 1');$q->execute([$outletId,$code]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}}
+  $barcode=trim((string)pick($item,['barcode'],'')); if($barcode!=='' && isset($schema['barcode'])){$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.barcode=? LIMIT 1');$q->execute([$outletId,$barcode]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
+  $name=trim((string)pick($item,['productName','name'],'')); if($name!=='' && isset($schema['name'])){$q=$pdo->prepare('SELECT p.id FROM products p INNER JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1 WHERE p.name=? ORDER BY p.id ASC LIMIT 1');$q->execute([$outletId,$name]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
   return 0;
-}
-
-
-function paymentTypeAppMap(array $r): array {
-  return [
-    'id'=>(int)$r['id'],
-    'dbId'=>(int)$r['id'],
-    'name'=>(string)($r['payment_name']??''),
-    'code'=>(string)($r['payment_code']??''),
-    'enabled'=>(bool)($r['enabled']??1),
-    'active'=>(bool)($r['enabled']??1),
-    'quickPayment'=>(bool)($r['quick_payment']??0),
-    'customerRequired'=>(bool)($r['customer_required']??0),
-    'changeAllowed'=>(bool)($r['change_allowed']??1),
-    'markPaid'=>(bool)($r['mark_paid']??1),
-    'printReceipt'=>(bool)($r['print_receipt']??1),
-    'openCashDrawer'=>(bool)($r['open_cash_drawer']??0),
-    'shortcutKey'=>(string)($r['shortcut_key']??''),
-    'position'=>(int)($r['sort_order']??0),
-  ];
-}
-function paymentTypeList(PDO $pdo,int $outletId): array {
-  $q=$pdo->prepare('SELECT * FROM payment_types WHERE outlet_id=? ORDER BY sort_order ASC,id ASC');
-  $q->execute([$outletId]);
-  return array_map('paymentTypeAppMap',$q->fetchAll());
-}
-function paymentTypeCode(PDO $pdo,int $outletId,string $name,int $exceptId=0): string {
-  $base=strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/','_',$name)??'','_'));
-  if($base==='')$base='PAYMENT';
-  $base=substr($base,0,40);$candidate=$base;$n=2;
-  while(true){
-    $sql='SELECT id FROM payment_types WHERE outlet_id=? AND payment_code=?';$args=[$outletId,$candidate];
-    if($exceptId>0){$sql.=' AND id<>?';$args[]=$exceptId;}
-    $sql.=' LIMIT 1';$q=$pdo->prepare($sql);$q->execute($args);
-    if(!$q->fetchColumn())return $candidate;
-    $candidate=substr($base,0,36).'_'.$n++;
-  }
-}
-function paymentTypeOperation(PDO $pdo,int $masterOutletId,array $b): void {
-  $op=strtolower(trim((string)($b['operation']??'')));
-  if($op==='list'){
-    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-list','data'=>paymentTypeList($pdo,$masterOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
-  }
-  if($op==='save'){
-    $pt=is_array($b['paymentType']??null)?$b['paymentType']:[];
-    $name=trim((string)($pt['name']??$pt['paymentName']??''));
-    if($name==='')throw new InvalidArgumentException('Payment type name is required.');
-    $id=(int)($pt['id']??0);
-    if($id>0){$q=$pdo->prepare('SELECT id FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');$q->execute([$id,$masterOutletId]);if(!$q->fetchColumn())$id=0;}
-    $code=strtoupper(trim((string)($pt['code']??$pt['paymentCode']??'')));
-    if($code==='')$code=paymentTypeCode($pdo,$masterOutletId,$name,$id);
-    $q=$pdo->prepare('SELECT id FROM payment_types WHERE outlet_id=? AND payment_code=?'.($id>0?' AND id<>?':'').' LIMIT 1');
-    $args=[$masterOutletId,$code];if($id>0)$args[]=$id;$q->execute($args);if($q->fetchColumn())throw new InvalidArgumentException('Payment type code already exists.');
-    $vals=[
-      $code,$name,!empty($pt['enabled'])?1:0,!empty($pt['quickPayment'])?1:0,!empty($pt['customerRequired'])?1:0,!empty($pt['changeAllowed'])?1:0,
-      array_key_exists('markPaid',$pt)?(!empty($pt['markPaid'])?1:0):1,array_key_exists('printReceipt',$pt)?(!empty($pt['printReceipt'])?1:0):1,
-      !empty($pt['openCashDrawer'])?1:0,trim((string)($pt['shortcutKey']??''))?:null,max(1,(int)($pt['position']??1))
-    ];
-    $pdo->beginTransaction();
-    if($id>0){$q=$pdo->prepare('UPDATE payment_types SET payment_code=?,payment_name=?,enabled=?,quick_payment=?,customer_required=?,change_allowed=?,mark_paid=?,print_receipt=?,open_cash_drawer=?,shortcut_key=?,sort_order=? WHERE id=? AND outlet_id=?');$q->execute([...$vals,$id,$masterOutletId]);}
-    else{$q=$pdo->prepare('INSERT INTO payment_types(outlet_id,payment_code,payment_name,enabled,quick_payment,customer_required,change_allowed,mark_paid,print_receipt,open_cash_drawer,shortcut_key,sort_order) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');$q->execute([$masterOutletId,...$vals]);$id=(int)$pdo->lastInsertId();}
-    if(tableExists($pdo,'sp_relational_sync')){
-      $q=$pdo->prepare("DELETE FROM sp_relational_sync WHERE state_key='paymentTypes' AND entity='paymentTypes' AND db_id=? AND outlet_id=?");$q->execute([$id,$masterOutletId]);
-      $q=$pdo->prepare("INSERT INTO sp_relational_sync(outlet_id,state_key,local_id,entity,db_id,updated_at) VALUES(?, 'paymentTypes', ?, 'paymentTypes', ?, NOW()) ON DUPLICATE KEY UPDATE db_id=VALUES(db_id),updated_at=NOW()");$q->execute([$masterOutletId,(string)$id,$id]);
-    }
-    spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');$pdo->commit();
-    $q=$pdo->prepare('SELECT * FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');$q->execute([$id,$masterOutletId]);$row=$q->fetch();
-    if(!$row)throw new RuntimeException('Payment type was saved but could not be read back from database.');
-    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-save','paymentType'=>paymentTypeAppMap($row),'data'=>paymentTypeList($pdo,$masterOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
-  }
-  if($op==='delete'){
-    $id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('Payment type id is required.');
-    $q=$pdo->prepare('SELECT id FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');$q->execute([$id,$masterOutletId]);if(!$q->fetchColumn())throw new RuntimeException('Payment type not found.');
-    $inUse=false;foreach([['sale_payments','payment_type_id'],['document_payments','payment_type_id']] as [$table,$field]){if(!tableExists($pdo,$table))continue;$x=$pdo->prepare("SELECT COUNT(*) FROM `$table` WHERE `$field`=?");$x->execute([$id]);if((int)$x->fetchColumn()>0){$inUse=true;break;}}
-    if($inUse){$q=$pdo->prepare('UPDATE payment_types SET enabled=0 WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);}
-    else{$q=$pdo->prepare('DELETE FROM payment_types WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);}
-    if(tableExists($pdo,'sp_relational_sync')){$q=$pdo->prepare("DELETE FROM sp_relational_sync WHERE state_key='paymentTypes' AND entity='paymentTypes' AND db_id=? AND outlet_id=?");$q->execute([$id,$masterOutletId]);}
-    spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-delete','disabled_instead_of_deleted'=>$inUse,'data'=>paymentTypeList($pdo,$masterOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
-  }
-  throw new InvalidArgumentException('Unsupported Payment Types operation.');
 }
 
 function reconcileDeletes(PDO $pdo,int $outletId,string $stateKey,string $table,string $parentKey,array $keepLocalIds,bool $allowDelete):void{
@@ -538,20 +461,14 @@ function reconcileDeletes(PDO $pdo,int $outletId,string $stateKey,string $table,
 }
 
 try {
-  $pdo=spApiDatabase();
+  $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
   ensureSyncTable($pdo);
   $b = body();
   $stateKey = trim((string)($b['state_key'] ?? ''));
   if ($stateKey === '') throw new InvalidArgumentException('state_key is required.');
-  if($stateKey==='stockHistory')throw new RuntimeException('Stock ledger is server-managed. Use inventory counts.');
-  if($stateKey==='sales')throw new RuntimeException('Use sales.php for validated individual sale changes. Bulk sale replacement is retired.');
   $state = $b['state'] ?? [];
   if (!is_array($state)) throw new InvalidArgumentException('state must be an array/object.');
-  $requestedOutletId = resolveOutletId($pdo, (string)($b['outlet_id'] ?? ($_SERVER['SP_AUTH_OUTLET_ID'] ?? '')));
-  $outletId = in_array($stateKey,['paymentTypes','promos'],true) ? masterOutletId($pdo) : $requestedOutletId;
-  if ($stateKey === 'paymentTypes' && trim((string)($b['operation'] ?? '')) !== '') {
-    paymentTypeOperation($pdo,$outletId,$b);
-  }
+  $outletId = resolveOutletId($pdo, (string)($b['outlet_id'] ?? ($_SERVER['SP_AUTH_OUTLET_ID'] ?? '')));
 
   $maps = [
     'sales' => [
@@ -643,7 +560,7 @@ try {
   if (in_array($stateKey, ['sales','purchases','stockHistory'], true)) spEnsureProductOutletTable($pdo);
   if ($stateKey === 'sales') ensureSaleItemMetadataColumns($pdo);
   if (in_array($stateKey, ['sales','orders'], true) && !tableExists($pdo, 'sp_document_counters')) {
-    spRequireTable($pdo,'sp_document_counters');
+    $pdo->exec("CREATE TABLE sp_document_counters (outlet_id BIGINT UNSIGNED NOT NULL, doc_type VARCHAR(40) NOT NULL, current_number BIGINT UNSIGNED NOT NULL DEFAULT 0, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY(outlet_id,doc_type)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
   }
   $items = array_is_list($state) ? $state : [$state];
   $requiredChildren = match ($stateKey) {
@@ -662,7 +579,7 @@ try {
   if (in_array($stateKey, ['sales','purchases','orders','cashMovements','stockHistory','zReports'], true) && !isset($schema['outlet_id'])) {
     throw new RuntimeException('Required outlet_id column is missing from '.$spec['table'].'. Refusing to write outlet data into an unscoped table.');
   }
-  $pdo->beginTransaction();spLockOutlet($pdo,$outletId);spCheckStateRevision($pdo,$outletId,$stateKey,$b['revision']??null);
+  $pdo->beginTransaction();
   $count = 0;
   $childCount = 0;
   $keep = [];
@@ -680,15 +597,14 @@ try {
       else $item['customer_id'] = null;
       $candidate=trim((string)pick($item,['no','saleNo','invoiceNo','invoice_number'],''));
       $saleDbId=syncLookup($pdo,$outletId,'sales',$localId,'sales');
-      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true)){$candidate=$saleDbId>0?(string)pick((array)($pdo->query('SELECT sale_no FROM sales WHERE id='.(int)$saleDbId.' LIMIT 1')->fetch()?:[]),['sale_no'],''):'';if($candidate==='')$candidate=generateServerDocumentNumber($pdo,$outletId,'Invoice','INV-',$saleDbId>0?$saleDbId:null);}
+      if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true)){$candidate=$saleDbId>0?(string)val((array)($pdo->query('SELECT sale_no FROM sales WHERE id='.(int)$saleDbId.' LIMIT 1')->fetch()?:[]),['sale_no'],''):'';if($candidate==='')$candidate=generateServerDocumentNumber($pdo,$outletId,'Invoice','INV-',$saleDbId>0?$saleDbId:null);}
       $item['no']=$candidate;$item['saleNo']=$candidate;$item['invoiceNo']=$candidate;
-      foreach($item['items'] as &$it){$it['productDbId']=findProductDbId($pdo,$outletId,$it);}unset($it);foreach($item['payments'] as &$pay){$pay['paymentTypeDbId']=findPaymentTypeDbId($pdo,$outletId,$pay);}unset($pay);$item=spNormalizeSale($pdo,$outletId,$item);spAssertOpenDay($pdo,$outletId,$item['date']??null);
       $saleNumbers[]=['local_id'=>$localId,'sale_no'=>$candidate,'db_id'=>$saleDbId];
     }
     if ($stateKey === 'orders') {
       $candidate=trim((string)pick($item,['no','number','orderNumber','order_number'],''));
       if($candidate===''||in_array(strtolower($candidate),['auto generated','auto-generated','automatic','auto'],true))$generatedOrderNo=generateServerDocumentNumber($pdo,$outletId,'Order','ORD-');
-      $generatedOrderNo=$generatedOrderNo??$candidate;$item['no']=$item['number']=$item['orderNumber']=$item['order_no']=$generatedOrderNo;unset($generatedOrderNo);
+      $item['no']=$item['number']=$item['orderNumber']=$item['order_no']=$generatedOrderNo;
     }
     if ($stateKey === 'suppliers') {
       $supplierName = trim((string)pick($item, ['name','supplierName','supplier_name'], ''));
@@ -808,7 +724,7 @@ try {
       // operations adjust inventory by the exact difference.
       $oldQty = saleItemsByProduct($pdo,$dbId);
       $oldActive = true;
-      if ($previousRow) {spAssertOpenDay($pdo,$outletId,$previousRow['sale_date']);spSaleTransition($pdo,$outletId,$dbId,$previousRow,$item);
+      if ($previousRow) {
         $saleSchema = cols($pdo,'sales');
         $oldStatus=strtolower((string)($previousRow['status']??''));
         $oldActive=!((bool)($previousRow['voided']??false)||(bool)($previousRow['refunded']??false)||in_array($oldStatus,['void','voided','refund','refunded','cancelled','canceled'],true));
@@ -841,7 +757,7 @@ try {
       $cs = cols($pdo, 'sale_items');
       foreach (($item['items'] ?? []) as $it) {
         if (!is_array($it)) continue;
-        $itDbId=findProductDbId($pdo,$outletId,$it); if($itDbId<=0) throw new RuntimeException('Sale item product was not found in database: '.(string)pick($it,['name','productName','code','productCode','productId'],'')); insertChild($pdo, 'sale_items', $cs, ['sale_id'=>['sale_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'qty'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total'],'cost_snapshot'=>['costSnapshot'],'warranty_enabled'=>['warrantyEnabled','warranty_enabled'],'warranty_years'=>['warrantyYears','warranty_years'],'maintenance_enabled'=>['maintenanceEnabled','maintenance_enabled'],'maintenance_count'=>['maintenanceCount','maintenance_count']], ['sale_id'=>$dbId,'productDbId'=>$itDbId]+$it, $outletId);
+        $itDbId=findProductDbId($pdo,$outletId,$it); if($itDbId<=0) throw new RuntimeException('Sale item product was not found in database: '.(string)pick($it,['name','productName','code','productCode','productId'],'')); insertChild($pdo, 'sale_items', $cs, ['sale_id'=>['sale_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['name','productName'],'barcode'=>['barcode'],'quantity'=>['qty','quantity'],'qty'=>['qty','quantity'],'unit_price'=>['price','unitPrice'],'price'=>['price','unitPrice'],'discount'=>['discount'],'tax'=>['tax'],'line_total'=>['lineTotal','total'],'warranty_enabled'=>['warrantyEnabled','warranty_enabled'],'warranty_years'=>['warrantyYears','warranty_years'],'maintenance_enabled'=>['maintenanceEnabled','maintenance_enabled'],'maintenance_count'=>['maintenanceCount','maintenance_count']], ['sale_id'=>$dbId,'productDbId'=>$itDbId]+$it, $outletId);
         $childCount++;
       }
     }
@@ -862,7 +778,7 @@ try {
       $cs = cols($pdo, 'purchase_items');
       foreach (($item['items'] ?? []) as $it) {
         if (!is_array($it)) continue;
-        $qty=spQuantity(pick($it,['qty','quantity'],0)); $cost=spMoney(pick($it,['cost','price','costPrice','cost_price','unit_cost'],0),'Purchase cost'); $productDbId=findProductDbId($pdo,$outletId,$it); if($productDbId<=0) throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));
+        $qty=(float)pick($it,['qty','quantity'],0); $cost=(float)pick($it,['cost','price','costPrice'],0); $productDbId=findProductDbId($pdo,$outletId,$it); if($productDbId<=0) throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));
         $child=['purchase_id'=>$dbId,'product_id'=>$productDbId,'product_name'=>pick($it,['productName','name'],''),'quantity'=>$qty,'qty'=>$qty,'cost_price'=>$cost,'cost'=>$cost,'unit_price'=>$cost,'unit_cost'=>$cost,'tax_rate'=>pick($it,['taxRate','tax_rate'],0),'discount'=>pick($it,['discount'],0),'total'=>$qty*$cost,'line_total'=>$qty*$cost,'data_json'=>json_encode($it,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)];
         insertChild($pdo, 'purchase_items', $cs, ['purchase_id'=>['purchase_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['product_name','productName','name'],'quantity'=>['quantity','qty'],'qty'=>['qty','quantity'],'unit_cost'=>['unit_cost','cost_price','cost','price','unit_price'],'cost_price'=>['cost_price','cost','price','unit_price','unit_cost'],'cost'=>['cost','cost_price','price','unit_price','unit_cost'],'unit_price'=>['unit_price','cost','cost_price','price','unit_cost'],'tax_rate'=>['tax_rate','taxRate','tax'],'tax'=>['tax','taxRate','tax_amount'],'tax_amount'=>['tax_amount','tax','taxRate'],'discount'=>['discount','discount_amount'],'discount_amount'=>['discount_amount','discount'],'total'=>['total','line_total'],'line_total'=>['line_total','total'],'subtotal'=>['subtotal','line_subtotal'],'data_json'=>['data_json']], $child, $outletId);
         $childCount++;
@@ -888,8 +804,8 @@ try {
   if ($stateKey === 'sales' && $loyaltyCustomerIds) {
     foreach (array_keys($loyaltyCustomerIds) as $cid) refreshCustomerLoyalty($pdo,$outletId,(int)$cid);
   }
-  $revision=spAdvanceStateRevision($pdo,$outletId,$stateKey);spAudit($pdo,'LIST_SYNC',$spec['table'],null,null,['count'=>$count,'revision'=>$revision]);$pdo->commit();
-  $response = ['ok'=>true,'api_version'=>'V10','state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$requestedOutletId,'master_scope_outlet_id'=>$outletId,'revision'=>$revision];
+  $pdo->commit();
+  $response = ['ok'=>true,'api_version'=>'V10','state_key'=>$stateKey,'count'=>$count,'child_count'=>$childCount,'outlet_id'=>$outletId];
   if ($stateKey === 'purchases') $response['purchase_numbers'] = $purchaseNumbers;
   if ($stateKey === 'sales') $response['sale_numbers'] = $saleNumbers;
   echo json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

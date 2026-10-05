@@ -6,8 +6,6 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('X-SP-Manager-DB-Version: V10');
 echo json_encode([
   'ok' => true,
-  'release'=>'1.0.45',
-  'required_php'=>'>=8.1',
   'api_version' => 'V10',
   'service' => 'SP-Manager Database API',
   'relational_sync' => 'V10',

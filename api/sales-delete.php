@@ -18,7 +18,7 @@ function body(): array {
     return is_array($v) ? $v : [];
 }
 function tableExists(PDO $pdo, string $table): bool {
-    $q = $pdo->prepare("SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=? AND table_type='BASE TABLE' LIMIT 1");
+    $q = $pdo->prepare('SHOW TABLES LIKE ?');
     $q->execute([$table]);
     return (bool)$q->fetchColumn();
 }
@@ -143,7 +143,10 @@ function refreshLoyalty(PDO $pdo, int $outletId, int $customerId): void {
 
 try {
     if ($name === '' || $user === '') throw new RuntimeException('Database configuration is incomplete.');
-    $pdo=spApiDatabase();
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4", $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+    ]);
 
     $b = body();
     $outletId = resolveOutlet($pdo, trim((string)($b['outlet_id'] ?? ($_SERVER['SP_AUTH_OUTLET_ID'] ?? ''))));
@@ -154,7 +157,6 @@ try {
     $saleId = (int)($b['sale_id'] ?? $b['dbId'] ?? 0);
     $saleNo = trim((string)($b['sale_no'] ?? $b['saleNo'] ?? ''));
 
-    $pdo->beginTransaction();spLockOutlet($pdo,$outletId);
     if ($saleId > 0) {
         $q = $pdo->prepare('SELECT * FROM sales WHERE id=? AND outlet_id=? LIMIT 1');
         $q->execute([$saleId,$outletId]);
@@ -202,7 +204,7 @@ try {
     $customerId = (int)($sale['customer_id'] ?? 0);
     spEnsureStockMovementMetadata($pdo);
     spEnsureProductOutletTable($pdo);
-    spAssertOpenDay($pdo,$outletId,$sale['sale_date']);
+    $pdo->beginTransaction();
 
     foreach ($items as $item) {
         restoreStockForDeletedSale($pdo,$outletId,$saleId,$saleNo,(int)$item['product_id'],(float)$item['quantity']);
@@ -220,7 +222,6 @@ try {
 
     if ($customerId > 0) refreshLoyalty($pdo,$outletId,$customerId);
 
-    spAudit($pdo,'SALE_DELETE','sales',$saleId,$sale,null);spAdvanceStateRevision($pdo,$outletId,'sales');
     $pdo->commit();
     echo json_encode([
         'ok'=>true,

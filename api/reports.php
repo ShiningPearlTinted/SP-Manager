@@ -30,7 +30,7 @@ function scalar(PDO $pdo, string $sql, array $args=[]): float { $q=$pdo->prepare
 function intScalar(PDO $pdo, string $sql, array $args=[]): int { return (int)scalar($pdo,$sql,$args); }
 
 try {
-    $pdo=spApiDatabase();
+    $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     $action = strtolower(trim((string)($_GET['action'] ?? 'summary')));
     $oid = outletId($pdo, $_GET['outlet_id'] ?? 'SP01');
     if ($action !== 'summary') throw new InvalidArgumentException('Unknown reports action.');
@@ -42,11 +42,11 @@ try {
     $grossMargin = 0;
     if (tableExists($pdo,'sale_items') && tableExists($pdo,'sales') && tableExists($pdo,'product_outlets')) {
         $grossMargin = scalar($pdo,
-            "SELECT COALESCE(SUM(((si.unit_price * si.quantity) - COALESCE(si.discount,0)) - (si.cost_snapshot * si.quantity)),0)
+            "SELECT COALESCE(SUM(((si.unit_price * si.quantity) - COALESCE(si.discount,0)) - (COALESCE(po.cost_price,0) * si.quantity)),0)
              FROM sale_items si
              INNER JOIN sales s ON s.id=si.sale_id
              LEFT JOIN product_outlets po ON po.product_id=si.product_id AND po.outlet_id=s.outlet_id AND po.active=1
-             WHERE s.outlet_id=? AND si.cost_snapshot IS NOT NULL AND UPPER(COALESCE(s.status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUND','REFUNDED')",
+             WHERE s.outlet_id=? AND UPPER(COALESCE(s.status,'COMPLETED')) NOT IN ('VOID','VOIDED','REFUND','REFUNDED')",
             [$oid]
         );
     }
@@ -59,7 +59,7 @@ try {
         else $users=intScalar($pdo,'SELECT COUNT(*) FROM users WHERE enabled=1 AND (outlet_id=? OR outlet_id IS NULL)',[$oid]);
     }
     $suppliers = tableExists($pdo,'suppliers') ? intScalar($pdo,'SELECT COUNT(*) FROM suppliers WHERE outlet_id=?',[$oid]) : 0;
-    $paymentTypes = tableExists($pdo,'payment_types') ? intScalar($pdo,'SELECT COUNT(*) FROM payment_types WHERE COALESCE(enabled,1)=1',[]) : 0;
+    $paymentTypes = tableExists($pdo,'payment_types') ? intScalar($pdo,'SELECT COUNT(*) FROM payment_types WHERE outlet_id=?',[$oid]) : 0;
     $stockValue = tableExists($pdo,'product_outlets') ? scalar($pdo,'SELECT COALESCE(SUM(stock_qty*COALESCE(cost_price,0)),0) FROM product_outlets WHERE outlet_id=? AND active=1',[$oid]) : 0;
     echo json_encode([
         'ok'=>true,
@@ -71,7 +71,6 @@ try {
             'transactions'=>$transactions,
             'unpaid'=>$unpaid,
             'gross_margin'=>$grossMargin,
-            'margin_incomplete'=>intScalar($pdo,'SELECT COUNT(*) FROM sale_items si JOIN sales s ON s.id=si.sale_id WHERE s.outlet_id=? AND si.cost_snapshot IS NULL',[$oid])>0,
             'products'=>$products,
             'customers'=>$customers,
             'purchases'=>$purchases,

@@ -1,10 +1,10 @@
-﻿$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'SilentlyContinue'
 $AgentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AgentScript = Join-Path $AgentDir 'agent.ps1'
 $PowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $Port = 18765
 $StatusUrl = "http://127.0.0.1:$Port/status"
-$LogDir = Join-Path $env:LOCALAPPDATA 'SP-Manager'
+$LogDir = Join-Path $env:ProgramData 'SP-Manager'
 $LogFile = Join-Path $LogDir 'agent-watchdog.log'
 
 if(-not (Test-Path $LogDir)){ New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
@@ -15,15 +15,14 @@ function Log($Message){
 
 function Test-Agent {
   try {
-    $tokenPath=Join-Path $env:LOCALAPPDATA 'SP-Manager\agent-pairing-token.txt';$token=Get-Content -LiteralPath $tokenPath -Raw -ErrorAction Stop
-    $r = Invoke-RestMethod -Uri $StatusUrl -Method Get -TimeoutSec 3 -Headers @{Authorization=('Bearer '+$token.Trim())}
-    return ($r.connected -eq $true -and $r.agentDetected -eq $true -and [version]$r.version -ge [version]'1.2.0')
+    $r = Invoke-RestMethod -Uri $StatusUrl -Method Get -TimeoutSec 3
+    return ($r.connected -eq $true -and $r.agentDetected -eq $true)
   } catch { return $false }
 }
 
 function Stop-StaleAgent {
   try {
-    $procs = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and ($_.CommandLine -match [regex]::Escape($AgentScript)) }
+    $procs = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and (($_.CommandLine -match 'agent\\agent\.ps1') -or ($_.CommandLine -match '[\\/]agent\.ps1')) }
     foreach($proc in $procs){
       try { Stop-Process -Id ([int]$proc.ProcessId) -Force -ErrorAction SilentlyContinue; Log "Stopped stale Local Agent PID $($proc.ProcessId)." } catch {}
     }

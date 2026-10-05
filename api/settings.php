@@ -47,7 +47,132 @@ function outlet(PDO $pdo, mixed $v): int {
     return $id;
 }
 
-function ensureSettingsTables(PDO $pdo):void {foreach(['app_settings','outlet_settings','company_settings','email_settings','printers'] as $t)spRequireTable($pdo,$t);}
+function ensureSettingsTables(PDO $pdo): void {
+    // Additive only. This lets the API work even if the dedicated settings tables
+    // were not created during an earlier database migration.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        setting_group VARCHAR(100) NOT NULL,
+        setting_key VARCHAR(150) NOT NULL,
+        setting_value LONGTEXT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_app_setting(setting_group,setting_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS outlet_settings (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        outlet_id BIGINT UNSIGNED NOT NULL,
+        setting_group VARCHAR(100) NOT NULL,
+        setting_key VARCHAR(150) NOT NULL,
+        setting_value LONGTEXT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_outlet_setting(outlet_id,setting_group,setting_key),
+        CONSTRAINT fk_outlet_setting_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS company_settings (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        outlet_id BIGINT UNSIGNED NOT NULL,
+        company_name VARCHAR(180) NOT NULL DEFAULT '',
+        registration_no VARCHAR(100) NULL,
+        tax_number VARCHAR(100) NULL,
+        phone_number VARCHAR(80) NULL,
+        email VARCHAR(180) NULL,
+        website VARCHAR(255) NULL,
+        street_name VARCHAR(255) NULL,
+        building_number VARCHAR(100) NULL,
+        additional_street_name VARCHAR(255) NULL,
+        plot_identification VARCHAR(100) NULL,
+        district VARCHAR(150) NULL,
+        postal_code VARCHAR(40) NULL,
+        city VARCHAR(150) NULL,
+        state VARCHAR(150) NULL,
+        country VARCHAR(100) NOT NULL DEFAULT 'Malaysia',
+        logo_url LONGTEXT NULL,
+        currency_code VARCHAR(12) NOT NULL DEFAULT 'MYR',
+        currency_symbol VARCHAR(12) NOT NULL DEFAULT 'RM',
+        metadata_json LONGTEXT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_company_settings_outlet(outlet_id),
+        CONSTRAINT fk_company_settings_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS email_settings (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        outlet_id BIGINT UNSIGNED NULL,
+        smtp_host VARCHAR(255) NULL,
+        smtp_port INT NULL,
+        encryption VARCHAR(30) NULL,
+        username VARCHAR(255) NULL,
+        password_encrypted TEXT NULL,
+        from_name VARCHAR(150) NULL,
+        from_email VARCHAR(255) NULL,
+        enabled TINYINT(1) NOT NULL DEFAULT 0,
+        settings_json LONGTEXT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_email_outlet(outlet_id),
+        CONSTRAINT fk_email_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS printers (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        outlet_id BIGINT UNSIGNED NULL,
+        printer_name VARCHAR(150) NOT NULL,
+        printer_type VARCHAR(50) NULL,
+        connection_type VARCHAR(50) NULL,
+        address VARCHAR(255) NULL,
+        paper_size VARCHAR(30) NULL,
+        characters_per_line INT NULL,
+        copies INT NOT NULL DEFAULT 1,
+        feed_lines INT NOT NULL DEFAULT 0,
+        cut_paper TINYINT(1) NOT NULL DEFAULT 1,
+        alignment VARCHAR(30) NULL,
+        code_page VARCHAR(50) NULL,
+        character_set VARCHAR(50) NULL,
+        rtl TINYINT(1) NOT NULL DEFAULT 0,
+        rich_formatting TINYINT(1) NOT NULL DEFAULT 0,
+        print_bitmap TINYINT(1) NOT NULL DEFAULT 0,
+        print_barcode TINYINT(1) NOT NULL DEFAULT 0,
+        logo_full_width TINYINT(1) NOT NULL DEFAULT 0,
+        margin_left DECIMAL(8,2) NULL,
+        margin_right DECIMAL(8,2) NULL,
+        font_family VARCHAR(100) NULL,
+        font_size DECIMAL(8,2) NULL,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        settings_json LONGTEXT NULL,
+        CONSTRAINT fk_printer_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS hardware_devices (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        outlet_id BIGINT UNSIGNED NULL,
+        device_type VARCHAR(50) NOT NULL,
+        device_name VARCHAR(150) NOT NULL,
+        connection_type VARCHAR(50) NULL,
+        address VARCHAR(255) NULL,
+        port VARCHAR(50) NULL,
+        enabled TINYINT(1) NOT NULL DEFAULT 1,
+        settings_json LONGTEXT NULL,
+        last_seen_at DATETIME NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_hardware_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS backup_records (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        outlet_id BIGINT UNSIGNED NULL,
+        backup_type VARCHAR(50) NOT NULL,
+        file_name VARCHAR(255) NULL,
+        storage_location TEXT NULL,
+        created_by BIGINT UNSIGNED NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'COMPLETED',
+        metadata_json LONGTEXT NULL,
+        CONSTRAINT fk_backup_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
 
 function jsonEncodeValue(mixed $value): string {
     return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -81,11 +206,26 @@ function getAppSetting(PDO $pdo, string $group, string $key, mixed $fallback = n
     return json_last_error() === JSON_ERROR_NONE ? $d : $v;
 }
 
+function cryptoKey(string $dbName): string {
+    return hash('sha256', 'SP-Manager settings encryption|' . $dbName, true);
+}
 
+function encryptSecret(string $plain, string $dbName): string {
+    if ($plain === '') return '';
+    $iv = random_bytes(16);
+    $cipher = openssl_encrypt($plain, 'AES-256-CBC', cryptoKey($dbName), OPENSSL_RAW_DATA, $iv);
+    return base64_encode($iv . ($cipher === false ? '' : $cipher));
+}
 
-
-
-
+function decryptSecret(string $stored, string $dbName): string {
+    if ($stored === '') return '';
+    $raw = base64_decode($stored, true);
+    if ($raw === false || strlen($raw) < 17) return '';
+    $iv = substr($raw, 0, 16);
+    $payload = substr($raw, 16);
+    $plain = openssl_decrypt($payload, 'AES-256-CBC', cryptoKey($dbName), OPENSSL_RAW_DATA, $iv);
+    return $plain === false ? '' : $plain;
+}
 
 function readEmail(PDO $pdo, int $oid, string $dbName): array {
     $q = $pdo->prepare('SELECT * FROM email_settings WHERE outlet_id=? LIMIT 1');
@@ -93,7 +233,7 @@ function readEmail(PDO $pdo, int $oid, string $dbName): array {
     $r = $q->fetch();
     if (!$r) return [];
     $meta = json_decode((string)($r['settings_json'] ?? ''), true);
-    $meta = is_array($meta) ? $meta : [];unset($meta['password'],$meta['passwordConfigured']);
+    $meta = is_array($meta) ? $meta : [];
     return array_merge([
         'host' => (string)($r['smtp_host'] ?? ''),
         'port' => (int)($r['smtp_port'] ?? 465),
@@ -101,8 +241,7 @@ function readEmail(PDO $pdo, int $oid, string $dbName): array {
         'displayName' => (string)($r['from_name'] ?? ''),
         'emailAddress' => (string)($r['from_email'] ?? ''),
         'username' => (string)($r['username'] ?? ''),
-        'password' => '',
-        'passwordConfigured'=>str_starts_with((string)($r['password_encrypted']??''),'gcm1:'),
+        'password' => decryptSecret((string)($r['password_encrypted'] ?? ''), $dbName),
         'enabled' => (int)($r['enabled'] ?? 0) === 1,
     ], $meta);
 }
@@ -275,7 +414,7 @@ function company(PDO $pdo, int $oid): array {
     $r = $q->fetch();
     if (!$r) return [];
     $meta = json_decode((string)($r['metadata_json'] ?? ''), true);
-    $meta = is_array($meta) ? $meta : [];unset($meta['password'],$meta['passwordConfigured']);
+    $meta = is_array($meta) ? $meta : [];
     $logo = trim((string)($meta['logo'] ?? ''));
     if ($logo === '') $logo = (string)($r['logo_url'] ?? '');
     return array_merge([
@@ -295,7 +434,7 @@ function saveCompany(PDO $pdo, int $oid, array $c): void {
 }
 
 try {
-    $pdo=spApiDatabase();
+    $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     ensureSettingsTables($pdo);
     $oid=outlet($pdo,$_GET['outlet_id']??$_POST['outlet_id']??'SP01');
     $action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
@@ -323,7 +462,6 @@ try {
         if($email) $settings['email']=array_merge(is_array($settings['email']??null)?$settings['email']:[],$email);
         if($hardwareRows) $settings['hardware']=array_merge(is_array($settings['hardware']??null)?$settings['hardware']:[],$hardwareRows['LOCAL_AGENT']??[],$hardwareRows['CASH_DRAWER']??[],$hardwareRows['CUSTOMER_DISPLAY']??[]);
         if(is_array($backup)) $settings['database']=array_merge(is_array($settings['database']??null)?$settings['database']:[],$backup);
-        if(isset($settings['email'])&&is_array($settings['email']))$settings['email']['password']='';if(isset($settings['hardware']))unset($settings['hardware']['agentToken']);
         $printers=readPrinters($pdo,$oid);
         if($printers){
             foreach($printers as $printerRow){

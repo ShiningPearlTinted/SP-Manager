@@ -32,8 +32,23 @@ function columnExists(PDO $pdo,string $table,string $column):bool{
  $q->execute([$table,$column]);
  return (int)$q->fetchColumn()>0;
 }
-function ensureUserOutletsTable(PDO $pdo):void {spRequireColumns($pdo,'user_outlets',['is_default','active']);}
-function syncRolePermissions(PDO $pdo,int $roleId,array $permissions):void { /* User overrides are stored in users.permissions_json; do not rewrite a shared role. */ }
+function ensureUserOutletsTable(PDO $pdo):void{
+ if(!tableExists($pdo,'user_outlets')){
+  $pdo->exec("CREATE TABLE user_outlets (user_id BIGINT UNSIGNED NOT NULL,outlet_id BIGINT UNSIGNED NOT NULL,is_default TINYINT(1) NOT NULL DEFAULT 0,active TINYINT(1) NOT NULL DEFAULT 1,PRIMARY KEY(user_id,outlet_id),CONSTRAINT fk_user_outlets_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,CONSTRAINT fk_user_outlets_outlet FOREIGN KEY(outlet_id) REFERENCES outlets(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  return;
+ }
+ if(!columnExists($pdo,'user_outlets','is_default'))$pdo->exec("ALTER TABLE user_outlets ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0 AFTER outlet_id");
+ if(!columnExists($pdo,'user_outlets','active'))$pdo->exec("ALTER TABLE user_outlets ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1 AFTER is_default");
+}
+function syncRolePermissions(PDO $pdo,int $roleId,array $permissions):void{
+ if(!tableExists($pdo,'role_permissions')||!tableExists($pdo,'permissions'))return;
+ $pdo->prepare('DELETE FROM role_permissions WHERE role_id=?')->execute([$roleId]);
+ foreach($permissions as $k=>$allowed){
+  if(!$allowed)continue;
+  $pid=permission($pdo,(string)$k,$permissionLabels[$k]??(string)$k);
+  $pdo->prepare('INSERT INTO role_permissions(role_id,permission_id,allowed) VALUES(?,?,1) ON DUPLICATE KEY UPDATE allowed=1')->execute([$roleId,$pid]);
+ }
+}
 function normalizeAssignedOutlets(PDO $pdo,array $u,int $fallbackOutletId):array{
  $raw=$u['outlet_ids']??$u['outlets']??[];
  if(!is_array($raw))$raw=[];
@@ -73,26 +88,23 @@ function normalizeUser(PDO $pdo,array $u,int $outletId):array{
  $permissions=is_array($u['permissions']??null)?$u['permissions']:[];global $permissionLabels;
  if($roleName==='Administrator')$permissions=array_fill_keys(array_keys($permissionLabels),true);
  [$assignedOutletIds,$defaultOutletId]=normalizeAssignedOutlets($pdo,$u,$outletId);
- $roleId=role($pdo,$roleName);$rq=$pdo->prepare('SELECT role_name FROM roles WHERE id=?');$rq->execute([$roleId]);$roleName=(string)$rq->fetchColumn();$hash='';$plain=(string)($u['password']??'');if($plain!==''&&strlen($plain)<12)throw new InvalidArgumentException('Use a password of at least 12 characters.');if($plain!=='')$hash=password_hash($plain,PASSWORD_DEFAULT);
+ $roleId=role($pdo,$roleName);$hash='';$plain=(string)($u['password']??'');if($plain!=='')$hash=password_hash($plain,PASSWORD_DEFAULT);
  $id=(int)($u['dbId']??0);if(!$id)$id=(int)($u['id']??0);
  if($id){$q=$pdo->prepare('SELECT id FROM users WHERE id=? LIMIT 1');$q->execute([$id]);if(!(int)($q->fetchColumn()?:0))$id=0;}
  if(!$id){$q=$pdo->prepare('SELECT id FROM users WHERE LOWER(username)=? LIMIT 1');$q->execute([$username]);$id=(int)($q->fetchColumn()?:0);}
- spValidateUserChange($pdo,$id,[...$u,'role'=>$roleName,'permissions'=>$permissions,'outlet_ids'=>$assignedOutletIds],$outletId);
  $q=$pdo->prepare('SELECT id FROM users WHERE LOWER(username)=? AND id<>? LIMIT 1');$q->execute([$username,$id]);if((int)($q->fetchColumn()?:0)>0)throw new InvalidArgumentException('Username already exists. Please use a different username.');
  $cols=['outlet_id','name','username','role_id','enabled','permissions_json'];$vals=[$defaultOutletId,$name,$username,$roleId,!empty($u['enabled'])?1:0,json_encode($permissions,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)];
  if($hash!==''){$cols[]='password_hash';$vals[]=$hash;}
  if($id){$sets=[];foreach($cols as $c)$sets[]="`$c`=?";$vals[]=$id;$pdo->prepare('UPDATE users SET '.implode(',',$sets).' WHERE id=?')->execute($vals);}
  else{$pdo->prepare('INSERT INTO users (`'.implode('`,`',$cols).'`) VALUES('.implode(',',array_fill(0,count($cols),'?')).')')->execute($vals);$id=(int)$pdo->lastInsertId();}
- if($id>0)$pdo->prepare('UPDATE users SET session_version=session_version+1 WHERE id=?')->execute([$id]);
- spAudit($pdo,'USER_SAVE','users',$id,null,['username'=>$username,'role'=>$roleName,'enabled'=>!empty($u['enabled'])]);
  syncRolePermissions($pdo,$roleId,$permissions);
  saveAssignedOutlets($pdo,$id,$assignedOutletIds,$defaultOutletId);
  return['id'=>$id,'dbId'=>$id,'name'=>$name,'username'=>$username,'role'=>$roleName,'enabled'=>!empty($u['enabled']),'permissions'=>$permissions,'outlets'=>assignedOutletRows($pdo,$id),'outlet_ids'=>$assignedOutletIds,'default_outlet_id'=>$defaultOutletId];
 }
-$permissionLabels=['viewSalesHistory'=>'View sales history','viewOpenSales'=>'View open sales','cashInOut'=>'Cash In / Out','creditPayments'=>'Credit payments','endOfDay'=>'End of day','userInfo'=>'User info','manageUsers'=>'Users & Permissions','manageProducts'=>'Products','manageInventory'=>'Inventory','manageCustomers'=>'Customers','managePurchases'=>'Purchases','managePayments'=>'Payments','manageManagement'=>'Management','manageSettings'=>'Settings','manageReports'=>'Reports','manageTax'=>'Tax','manageDiscount'=>'Discount / Promotion','manageLoyalty'=>'Loyalty','manageQuotation'=>'Quotation','manageInvoice'=>'Invoice'];
+$permissionLabels=['viewSalesHistory'=>'View sales history','viewOpenSales'=>'View open sales','cashInOut'=>'Cash In / Out','creditPayments'=>'Credit payments','endOfDay'=>'End of day','userInfo'=>'User info','manageUsers'=>'Users & Permissions','manageProducts'=>'Products','manageInventory'=>'Inventory','manageCustomers'=>'Customers','managePurchases'=>'Purchases','managePayments'=>'Payments','manageManagement'=>'Management','manageSettings'=>'Settings','manageReports'=>'Reports','manageTax'=>'Tax','manageDiscount'=>'Discount / Promotion','manageLoyalty'=>'Loyalty'];
 try{
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
- $pdo=spApiDatabase();
+ $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
  ensureUserOutletsTable($pdo);
  $outletId=outlet($pdo,$_GET['outlet_id']??$_POST['outlet_id']??'SP01');$action=strtolower(trim((string)($_GET['action']??$_POST['action']??'')));
  if($action==='health')out(['ok'=>true,'service'=>'SP-Manager users API','outletId'=>$outletId]);
@@ -102,10 +114,9 @@ try{
  if($action==='list'&&$_SERVER['REQUEST_METHOD']==='GET'){
   $q=$pdo->prepare('SELECT DISTINCT u.id,u.name,u.username,u.enabled,u.permissions_json,r.role_name FROM users u LEFT JOIN roles r ON r.id=u.role_id LEFT JOIN user_outlets uo ON uo.user_id=u.id AND uo.active=1 WHERE (u.outlet_id=? OR u.outlet_id IS NULL OR uo.outlet_id=?) ORDER BY u.id ASC');$q->execute([$outletId,$outletId]);$rows=[];foreach($q->fetchAll() as $r){$per=json_decode((string)($r['permissions_json']??''),true);$id=(int)$r['id'];$assigned=assignedOutletRows($pdo,$id);$ids=array_map(fn($x)=>(int)$x['id'],$assigned);$def=$ids[0]??$outletId;foreach($assigned as $ao){if(!empty($ao['is_default'])){$def=(int)$ao['id'];break;}}$rows[]=['id'=>$id,'dbId'=>$id,'name'=>$r['name'],'username'=>$r['username'],'role'=>$r['role_name']?:'Cashier','enabled'=>(int)$r['enabled']===1,'permissions'=>is_array($per)?$per:[],'outlets'=>$assigned,'outlet_ids'=>$ids,'default_outlet_id'=>$def];}out(['ok'=>true,'count'=>count($rows),'users'=>$rows]);
  }
- if($action==='save'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$u=is_array($b['user']??null)?$b['user']:[];$pdo->beginTransaction();spLockOutlet($pdo,$outletId);$saved=normalizeUser($pdo,$u,$outletId);$pdo->commit();out(['ok'=>true,'user'=>$saved]);}
- if($action==='save-batch'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$arr=$b['users']??[];if(!is_array($arr))throw new InvalidArgumentException('users must be an array.');$pdo->beginTransaction();spLockOutlet($pdo,$outletId);$saved=[];foreach($arr as $u)if(is_array($u))$saved[]=normalizeUser($pdo,$u,$outletId);$pdo->commit();out(['ok'=>true,'count'=>count($saved),'users'=>$saved]);}
- if($action==='logout'&&$_SERVER['REQUEST_METHOD']==='POST'){$pdo->prepare('UPDATE users SET session_version=session_version+1 WHERE id=?')->execute([(int)$_SERVER['SP_AUTH_USER_ID']]);out(['ok'=>true]);}
- if($action==='delete'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('User id required.');$pdo->beginTransaction();spLockOutlet($pdo,$outletId);spValidateUserChange($pdo,$id,['role'=>'Cashier','enabled'=>false],$outletId);$pdo->prepare('UPDATE users SET enabled=0,session_version=session_version+1 WHERE id=?')->execute([$id]);spAudit($pdo,'USER_DISABLE','users',$id);$pdo->commit();out(['ok'=>true,'deleted'=>1]);}
- if($action==='auth'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$username=strtolower(trim((string)($b['username']??'')));$password=(string)($b['password']??'');spThrottleLogin($pdo,$username);$q=$pdo->prepare('SELECT DISTINCT u.*,r.role_name FROM users u LEFT JOIN roles r ON r.id=u.role_id WHERE LOWER(u.username)=? LIMIT 1');$q->execute([$username]);$r=$q->fetch();if(!$r||!(int)$r['enabled']||!password_verify($password,(string)$r['password_hash']))out(['ok'=>false,'error'=>'Invalid username or password.'],401);$pdo->prepare('DELETE FROM sp_login_attempts WHERE bucket_key=?')->execute([hash('sha256',strtolower($username).'|'.($_SERVER['REMOTE_ADDR']??'unknown'))]);$per=json_decode((string)($r['permissions_json']??''),true);if(($r['role_name']??'')==='Administrator')$per=array_fill_keys(array_keys($permissionLabels),true);$pdo->prepare('UPDATE users SET last_login_at=NOW() WHERE id=?')->execute([(int)$r['id']]);$assigned=assignedOutletRows($pdo,(int)$r['id']);$ids=array_map(fn($x)=>(int)$x['id'],$assigned);$def=$r['outlet_id']?(int)$r['outlet_id']:($ids[0]??$outletId);foreach($assigned as $ao){if(!empty($ao['is_default'])){$def=(int)$ao['id'];break;}}out(['ok'=>true,'api_token'=>spIssueApiToken((int)$r['id']),'expires_in'=>7200,'user'=>['id'=>(int)$r['id'],'dbId'=>(int)$r['id'],'name'=>$r['name'],'username'=>$r['username'],'role'=>$r['role_name']?:'Cashier','enabled'=>true,'permissions'=>is_array($per)?$per:[],'outlets'=>$assigned,'outlet_ids'=>$ids,'default_outlet_id'=>$def]]);}
+ if($action==='save'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$u=is_array($b['user']??null)?$b['user']:[];$pdo->beginTransaction();$saved=normalizeUser($pdo,$u,$outletId);$pdo->commit();out(['ok'=>true,'user'=>$saved]);}
+ if($action==='save-batch'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$arr=$b['users']??[];if(!is_array($arr))throw new InvalidArgumentException('users must be an array.');$pdo->beginTransaction();$saved=[];foreach($arr as $u)if(is_array($u))$saved[]=normalizeUser($pdo,$u,$outletId);$pdo->commit();out(['ok'=>true,'count'=>count($saved),'users'=>$saved]);}
+ if($action==='delete'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('User id is required.');$q=$pdo->prepare('SELECT role_id FROM users u WHERE u.id=? AND (u.outlet_id=? OR u.outlet_id IS NULL OR EXISTS(SELECT 1 FROM user_outlets uo WHERE uo.user_id=u.id AND uo.outlet_id=? AND uo.active=1)) LIMIT 1');$q->execute([$id,$outletId,$outletId]);$roleId=(int)($q->fetchColumn()?:0);if(!$roleId)throw new InvalidArgumentException('User not found.');$q=$pdo->prepare('SELECT COUNT(*) FROM users u JOIN roles r ON r.id=u.role_id WHERE (u.outlet_id=? OR u.outlet_id IS NULL OR EXISTS(SELECT 1 FROM user_outlets uo WHERE uo.user_id=u.id AND uo.outlet_id=? AND uo.active=1)) AND u.enabled=1 AND r.role_name="Administrator" AND u.id<>?');$q->execute([$outletId,$outletId,$id]);if((int)$q->fetchColumn()===0){$q=$pdo->prepare('SELECT r.role_name,u.enabled FROM users u LEFT JOIN roles r ON r.id=u.role_id WHERE u.id=?');$q->execute([$id]);$x=$q->fetch();if(($x['role_name']??'')==='Administrator'&&(int)$x['enabled']===1)throw new InvalidArgumentException('At least one enabled Administrator must remain.');}$q=$pdo->prepare('DELETE FROM users WHERE id=?');$q->execute([$id]);out(['ok'=>true,'deleted'=>$q->rowCount()]);}
+ if($action==='auth'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$username=strtolower(trim((string)($b['username']??'')));$password=(string)($b['password']??'');$q=$pdo->prepare('SELECT DISTINCT u.*,r.role_name FROM users u LEFT JOIN roles r ON r.id=u.role_id WHERE LOWER(u.username)=? LIMIT 1');$q->execute([$username]);$r=$q->fetch();if(!$r||!(int)$r['enabled']||!password_verify($password,(string)$r['password_hash']))out(['ok'=>false,'error'=>'Invalid username or password.'],401);$per=json_decode((string)($r['permissions_json']??''),true);if(($r['role_name']??'')==='Administrator')$per=array_fill_keys(array_keys($permissionLabels),true);$pdo->prepare('UPDATE users SET last_login_at=NOW() WHERE id=?')->execute([(int)$r['id']]);$assigned=assignedOutletRows($pdo,(int)$r['id']);$ids=array_map(fn($x)=>(int)$x['id'],$assigned);$def=$r['outlet_id']?(int)$r['outlet_id']:($ids[0]??$outletId);foreach($assigned as $ao){if(!empty($ao['is_default'])){$def=(int)$ao['id'];break;}}out(['ok'=>true,'api_token'=>spIssueApiToken((int)$r['id']),'expires_in'=>7200,'user'=>['id'=>(int)$r['id'],'dbId'=>(int)$r['id'],'name'=>$r['name'],'username'=>$r['username'],'role'=>$r['role_name']?:'Cashier','enabled'=>true,'permissions'=>is_array($per)?$per:[],'outlets'=>$assigned,'outlet_ids'=>$ids,'default_outlet_id'=>$def]]);}
  throw new InvalidArgumentException('Unknown action.');
 }catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();out(['ok'=>false,'error'=>$e->getMessage()],500);}

@@ -16,7 +16,10 @@ $name = (string)($db['name'] ?? $config['db_name'] ?? '');
 $user = (string)($db['user'] ?? $config['db_user'] ?? '');
 $pass = (string)($db['pass'] ?? $config['db_pass'] ?? '');
 
-function body():array {return spReadRequestBody();}
+function body(): array {
+    $v = json_decode(file_get_contents('php://input') ?: '', true);
+    return is_array($v) ? $v : [];
+}
 function out(array $v, int $s=200): never {
     http_response_code($s);
     echo json_encode($v, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -60,12 +63,10 @@ function snapshotTable(PDO $pdo, string $table): array {
     return ['columns'=>array_values(array_keys($cols)),'rows'=>$rows,'row_count'=>count($rows)];
 }
 function makeSnapshot(PDO $pdo): array {
-    $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');$pdo->beginTransaction();
     $tables=[];
     foreach(allBaseTables($pdo) as $table){
         $tables[$table]=snapshotTable($pdo,$table);
     }
-    $pdo->commit();
     return [
         'format'=>'SP-MANAGER-SQL-BACKUP-V1',
         'created_at'=>gmdate('c'),
@@ -94,7 +95,7 @@ function validateSnapshot(array $snapshot): void {
 }
 
 try{
-    $pdo=spApiDatabase();
+    $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     $input=body();
     $action=strtolower(trim((string)($_GET['action']??$input['action']??$_POST['action']??'')));
     $oid=outletId($pdo,$_GET['outlet_id']??$input['outlet_id']??$_POST['outlet_id']??($_SERVER['SP_AUTH_OUTLET_ID']??''));
@@ -105,18 +106,17 @@ try{
         $store=!empty($input['store']);
         $storage='browser-download';
         if($store){
-            $dir=(string)(spApiConfig()['backup_dir']??'');if($dir===''||!is_dir($dir))throw new RuntimeException('Create private backup_dir outside the webroot.');$real=realpath($dir);$web=realpath((string)(($_SERVER['DOCUMENT_ROOT']??'')?:__DIR__));if($web&&str_starts_with(strtolower($real),strtolower($web)))throw new RuntimeException('Backup directory must be outside webroot.');
+            $dir=__DIR__.'/backups';
             if(!is_dir($dir) && !@mkdir($dir,0700,true)) throw new RuntimeException('Database backup storage is not available.');
             if(!is_writable($dir)) throw new RuntimeException('Database backup storage is not writable.');
-            $filePath=$dir.'/'.$fileName.'.enc';
+            $filePath=$dir.'/'.$fileName.'.gz';
             $encoded=json_encode($snapshot,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
             $compressed=gzencode($encoded,6);
             if($compressed===false) throw new RuntimeException('Database backup could not be compressed.');
-            $key=(string)(spApiConfig()['encryption_key']??'');if(strlen($key)<64)throw new RuntimeException('Backup encryption key missing.');$iv=random_bytes(12);$tag='';$encrypted=openssl_encrypt($compressed,'aes-256-gcm',hash_hkdf('sha256',$key,32,'SP-Manager:backup'),OPENSSL_RAW_DATA,$iv,$tag,'SPB2');if($encrypted===false)throw new RuntimeException('Backup encryption failed.');
-            if(file_put_contents($filePath,'SPB2'.$iv.$tag.$encrypted,LOCK_EX)===false) throw new RuntimeException('Database backup file could not be written.');
-            $storage='private-server-backup';
+            if(file_put_contents($filePath,$compressed,LOCK_EX)===false) throw new RuntimeException('Database backup file could not be written.');
+            $storage='server:api/backups/'.$fileName.'.gz';
             $days=max(1,(int)($input['prune_days']??30));
-            foreach(glob($dir.'/SP-Manager-SQL-Backup-*.json.enc')?:[] as $old){if(@filemtime($old)<time()-$days*86400)@unlink($old);}
+            foreach(glob($dir.'/SP-Manager-SQL-Backup-*.json.gz')?:[] as $old){if(@filemtime($old)<time()-$days*86400)@unlink($old);}
             if(tableExists($pdo,'backup_records')){ $cutoff=gmdate('Y-m-d H:i:s',time()-$days*86400); $dq=$pdo->prepare("DELETE FROM backup_records WHERE outlet_id=? AND backup_type='SQL_SERVER' AND created_at<?"); $dq->execute([$oid,$cutoff]); }
         }
         if(tableExists($pdo,'backup_records')){
@@ -127,14 +127,35 @@ try{
         out(['ok'=>true,'api_version'=>'V10','database_backup_version'=>'V1','outlet_id'=>$oid,'file_name'=>$fileName,'stored'=>$store,'storage_location'=>$storage,'snapshot'=>$store?null:$snapshot]);
     }
 
-    if($action==='restore'){out(['ok'=>false,'error'=>'Browser restore is disabled. Restore and validate a separate staging database before switching.'],403);}
+    if($action==='restore' && $_SERVER['REQUEST_METHOD']==='POST'){
+        $snapshot=body()['snapshot']??body(); validateSnapshot($snapshot);
+        $pdo->beginTransaction();
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
+        $restored=0; $tables=0;
+        foreach($snapshot['tables'] as $table=>$payload){
+            $table=(string)$table;
+            if(!tableExists($pdo,$table)) continue;
+            $meta=columns($pdo,$table); if(!$meta) continue;
+            // Do not blindly restore MySQL internal/system tables or migration metadata.
+            if(str_starts_with($table,'information_schema')) continue;
+            $pdo->exec('DELETE FROM '.quoteIdent($table));
+            $restored += insertRows($pdo,$table,is_array($payload['columns']??null)?$payload['columns']:array_keys($meta),is_array($payload['rows']??null)?$payload['rows']:[]);
+            $tables++;
+        }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
+        $pdo->commit();
+        if(tableExists($pdo,'backup_records')){
+            $q=$pdo->prepare('INSERT INTO backup_records(outlet_id,backup_type,file_name,storage_location,created_at,status,metadata_json) VALUES(?,?,?,?,NOW(),?,?)');
+            $q->execute([$oid,'SQL_RESTORE',null,'browser-upload','COMPLETED',json_encode(['source_format'=>$snapshot['format']??null,'restored_tables'=>$tables,'restored_rows'=>$restored,'restored_at'=>gmdate('c')],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)]);
+        }
+        out(['ok'=>true,'api_version'=>'V10','database_backup_version'=>'V1','outlet_id'=>$oid,'restored_tables'=>$tables,'restored_rows'=>$restored]);
+    }
 
     if($action==='health'){
         out(['ok'=>true,'api_version'=>'V10','database_backup_version'=>'V1','database'=>$name,'outlet_id'=>$oid,'sql_first'=>true]);
     }
     throw new InvalidArgumentException('Unknown action.');
 }catch(Throwable $e){
-    if(PHP_SAPI==='cli')fwrite(STDERR,'Backup rejected: '.$e->getMessage().PHP_EOL);
     if(isset($pdo)&&$pdo->inTransaction()){try{$pdo->exec('SET FOREIGN_KEY_CHECKS=1');}catch(Throwable $ignore){}$pdo->rollBack();}
     out(['ok'=>false,'api_version'=>'V10','database_backup_version'=>'V1','error'=>'The database backup operation could not be completed.'],500);
 }
