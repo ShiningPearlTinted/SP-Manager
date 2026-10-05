@@ -4,7 +4,7 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) {
  --mg-ink:#172b43; --mg-muted:#64748b; --mg-bg:#f6f8fb; --mg-surface:#fff;
  --mg-border:#dce3eb; --mg-accent:#087ea4; --mg-danger:#b42318;
- --mg-radius:9px; font-family:Arial,Helvetica,sans-serif; color:var(--mg-ink);
+ --mg-radius:9px; --mg-card-radius:12px; font-family:"Segoe UI",system-ui,-apple-system,sans-serif; color:var(--mg-ink);
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-night {--mg-ink:#e2e8f0;--mg-muted:#a4b3c6;--mg-bg:#111827;--mg-surface:#1e293b;--mg-border:#37475e;--mg-accent:#38bdf8;--mg-danger:#fda4af;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-high-contrast {--mg-ink:#fff;--mg-muted:#eee;--mg-bg:#000;--mg-surface:#000;--mg-border:#fff;--mg-accent:#6ee7ff;--mg-danger:#ffb4b4;}
@@ -30,7 +30,7 @@
  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 20px;max-width:none;
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.panel,.product-master-shell,.customer-list-panel,.customer-summary,.inventory-shell,.outlet-table-card,.promotion-list-panel,.purchase-list-card,.document-form-card,.company-shell,.settings-shell) {
- background:var(--mg-surface);border:1px solid var(--mg-border);border-radius:var(--mg-radius);box-shadow:none;min-width:0;
+ background:var(--mg-surface);border:1px solid var(--mg-border);border-radius:var(--mg-card-radius);box-shadow:0 2px 8px rgba(15,23,42,.025);min-width:0;
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.panel,.customer-form-section,.editor-section,.company-form-block) {box-shadow:none;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-form-section,.editor-section,.company-form-block) {margin-bottom:24px;background:var(--mg-surface);border:0;border-bottom:1px solid var(--mg-border);border-radius:0;padding:0 0 24px;}
@@ -43,14 +43,14 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.wide,.full,.document-note,.purchase-notes) {grid-column:1 / -1;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(label,.localize-label-control) {font-size:13px;line-height:1.4;font-weight:600;color:var(--mg-ink);min-width:0;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not(.price-tags-modal *) {
- box-sizing:border-box;min-width:0;max-width:100%;height:42px;padding:0 12px;border:1px solid var(--mg-border);border-radius:var(--mg-radius);background:var(--mg-surface);color:var(--mg-ink);font:400 14px/1.4 Arial,Helvetica,sans-serif;box-shadow:none;
+ box-sizing:border-box;min-width:0;max-width:100%;height:42px;padding:0 12px;border:1px solid var(--mg-border);border-radius:var(--mg-radius);background:var(--mg-surface);color:var(--mg-ink);font:400 14px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;box-shadow:none;
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(label > input,label > select,label > textarea):not([type=checkbox]):not([type=radio]) {margin-top:7px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) textarea:not(.price-tags-modal *) {height:auto;min-height:92px;padding:10px 12px;resize:vertical;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(input,select,textarea):focus-visible:not(.price-tags-modal *) {outline:2px solid var(--mg-accent);outline-offset:2px;border-color:var(--mg-accent);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(input[type=checkbox],input[type=radio]) {width:17px;height:17px;flex-shrink:0;accent-color:var(--mg-accent);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(button,.image-upload-btn):not(.price-tags-modal *) {
- box-sizing:border-box;min-height:42px;padding:9px 16px;border-radius:var(--mg-radius);font:600 14px/1.3 Arial,Helvetica,sans-serif;box-shadow:none;cursor:pointer;max-width:100%;white-space:normal;
+ box-sizing:border-box;min-height:42px;padding:9px 16px;border-radius:var(--mg-radius);font:600 14px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;box-shadow:none;cursor:pointer;max-width:100%;white-space:normal;
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) button:disabled {cursor:not-allowed;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) button:focus-visible {outline:2px solid var(--mg-accent);outline-offset:3px;}
@@ -81,7 +81,7 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-tabs,.company-tabs,.product-editor-tabs,.purchase-tabs,.print-settings-tabs) button {white-space:nowrap;flex-shrink:0;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-tabs,.company-tabs,.product-editor-tabs,.purchase-tabs,.print-settings-tabs) button.active {color:var(--mg-accent);border-color:var(--mg-accent);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.management-grid,.permission-grid,.settings-check-grid) {gap:16px;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card {border-radius:var(--mg-radius);background:var(--mg-surface);border-color:var(--mg-border);box-shadow:none;padding:18px;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card {border-radius:var(--mg-card-radius);background:var(--mg-surface);border-color:var(--mg-border);box-shadow:none;padding:18px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card b {font-size:14px;font-weight:600;color:var(--mg-ink);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card small {display:none;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card:hover:not(:disabled) {transform:none;box-shadow:none;border-color:var(--mg-accent);}
@@ -112,16 +112,16 @@
  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.head-actions) {width:100%;}
 }
 
-/* Shared imperative dialogs live under body; gate them by the management root. */
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop {z-index:1200;padding:24px;background:rgba(15,23,42,.48);}
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop .sp-action-dialog {width:min(460px,100%);max-height:calc(100dvh - 48px);overflow:auto;border-radius:12px;box-shadow:0 20px 60px rgba(15,23,42,.18);}
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop .sp-action-dialog-kicker {display:none;}
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop .sp-action-dialog-head {padding:20px 24px;}
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop h3 {font:700 24px/1.25 Arial,Helvetica,sans-serif;text-transform:uppercase;}
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop .sp-action-dialog-body {padding:20px 24px;font:400 14px/1.5 Arial,Helvetica,sans-serif;}
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop .sp-action-dialog-actions {display:flex;justify-content:flex-end;gap:10px;padding:18px 24px;}
-body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop button {min-height:42px;padding:9px 16px;border-radius:9px;font:600 14px/1.3 Arial,Helvetica,sans-serif;}
-@media(max-width:700px){body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action-dialog-backdrop {padding:12px;}}
+/* Shared imperative dialogs use an origin marker; POS dialogs remain unmarked. */
+.sp-action-dialog-backdrop[data-ui="management"] {z-index:1200;padding:24px;background:rgba(15,23,42,.48);}
+.sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog {width:min(460px,100%);max-height:calc(100dvh - 48px);overflow:auto;border-radius:12px;box-shadow:0 20px 60px rgba(15,23,42,.18);}
+.sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-kicker {display:none;}
+.sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-head {padding:20px 24px;}
+.sp-action-dialog-backdrop[data-ui="management"] h3 {font:700 24px/1.25 "Segoe UI",system-ui,-apple-system,sans-serif;text-transform:uppercase;}
+.sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-body {padding:20px 24px;font:400 14px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif;}
+.sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-actions {display:flex;justify-content:flex-end;gap:10px;padding:18px 24px;}
+.sp-action-dialog-backdrop[data-ui="management"] button {min-height:42px;padding:9px 16px;border-radius:9px;font:600 14px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;}
+@media(max-width:700px){.sp-action-dialog-backdrop[data-ui="management"] {padding:12px;}}
 
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-master-toolbar {border:0;background:transparent;box-shadow:none;padding:0;margin:0 0 20px;display:block;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-master-toolbar > div:first-child {display:none;}
@@ -181,4 +181,17 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) > .sp-action
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-nav {padding:12px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-nav button {border:0;border-radius:8px;text-align:start;margin:0 0 4px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-nav button.active {background:var(--mg-bg);color:var(--mg-accent);}
+
+.app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-dark {--mg-ink:#e2e8f0;--mg-muted:#a4b3c6;--mg-bg:#111827;--mg-surface:#1e293b;--mg-border:#37475e;--mg-accent:#38bdf8;--mg-danger:#fda4af;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-dimmed {--mg-ink:#e5e7eb;--mg-muted:#b1bbc8;--mg-bg:#202733;--mg-surface:#2b3443;--mg-border:#465367;--mg-accent:#7dd3fc;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card.is-disabled {opacity:.5!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card b {font-size:16px;}
+.sp-action-dialog-backdrop[data-ui="management"] {font-family:"Segoe UI",system-ui,-apple-system,sans-serif;}
+/* Price-tag settings/toolbar only; native label/barcode preview is preserved. */
+.app[data-ui="management"] .price-tags-settings {font-family:"Segoe UI",system-ui,-apple-system,sans-serif;}
+.app[data-ui="management"] .price-tags-settings :is(input,select):not([type=checkbox]):not([type=range]) {height:42px;font:400 14px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;border-radius:9px;}
+.app[data-ui="management"] .price-tags-settings label {font-size:13px;}
+.app[data-ui="management"] .price-tags-settings button {min-height:42px;border-radius:9px;font:600 14px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;}
+.app[data-ui="management"] .price-tags-titlebar {font-family:"Segoe UI",system-ui,-apple-system,sans-serif;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.form-actions,.customer-modal-foot,.promotion-modal-foot,.payment-type-modal-foot) button[type="submit"] {background:var(--mg-accent);color:#fff;border:1px solid var(--mg-accent);}
 }

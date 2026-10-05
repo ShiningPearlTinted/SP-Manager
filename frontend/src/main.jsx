@@ -201,7 +201,7 @@ const professionalDatabaseError=(error,fallback="The database could not complete
 };
 
 const showActionDialog=({title,message,confirm=false,confirmText="Yes",cancelText="No"})=>new Promise(resolve=>{
- const overlay=document.createElement("div");overlay.className="sp-action-dialog-backdrop";overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
+ const overlay=document.createElement("div");overlay.className="sp-action-dialog-backdrop";if(document.querySelector('.app[data-ui="management"]'))overlay.setAttribute("data-ui","management");overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
  const box=document.createElement("div");box.className="sp-action-dialog";
  const head=document.createElement("div");head.className="sp-action-dialog-head";
  const kicker=document.createElement("div");kicker.className="sp-action-dialog-kicker";kicker.textContent="SP-MANAGER";
