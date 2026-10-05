@@ -11,11 +11,12 @@ $name=(string)($db['name']??$config['db_name']??''); $user=(string)($db['user']?
 function body():array{$x=json_decode(file_get_contents('php://input')?:'',true);return is_array($x)?$x:[];}
 function outletId(PDO $pdo,string $outlet):int{$outlet=trim($outlet?:'SP01');if(ctype_digit($outlet)){$q=$pdo->prepare('SELECT id FROM outlets WHERE id=? AND active=1 LIMIT 1');$q->execute([(int)$outlet]);}else{$q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1');$q->execute([$outlet]);}$id=(int)($q->fetchColumn()?:0);if(!$id)throw new RuntimeException('Outlet not found: '.$outlet);return$id;}
 try{
- $pdo=new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
- $pdo->exec("CREATE TABLE IF NOT EXISTS sp_document_counters (outlet_id BIGINT UNSIGNED NOT NULL, doc_type VARCHAR(40) NOT NULL, current_number BIGINT UNSIGNED NOT NULL DEFAULT 0, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY(outlet_id,doc_type)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+ $pdo=spApiDatabase();
+ spRequireTable($pdo,'sp_document_counters');
  $b=body(); $type=trim((string)($b['document_type']??$_GET['document_type']??'')); if($type==='')throw new InvalidArgumentException('document_type is required.');
  $oid=outletId($pdo,(string)($b['outlet_id']??$_GET['outlet_id']??'SP01'));
- $increment=max(1,(int)($b['increment']??$_GET['increment']??1)); $pdo->beginTransaction();
+ if($_SERVER['REQUEST_METHOD']!=='POST')spApiRespond(['ok'=>false,'error'=>'POST required.'],405);
+ $increment=max(1,(int)($b['increment']??$_GET['increment']??1)); $pdo->beginTransaction();spLockOutlet($pdo,$oid);
  $q=$pdo->prepare('SELECT current_number FROM sp_document_counters WHERE outlet_id=? AND doc_type=? FOR UPDATE');$q->execute([$oid,$type]);$row=$q->fetch();
  if($row){$current=(int)$row['current_number']+$increment;$u=$pdo->prepare('UPDATE sp_document_counters SET current_number=?,updated_at=NOW() WHERE outlet_id=? AND doc_type=?');$u->execute([$current,$oid,$type]);}
  else{$current=$increment;$i=$pdo->prepare('INSERT INTO sp_document_counters(outlet_id,doc_type,current_number,updated_at) VALUES(?,?,?,NOW())');$i->execute([$oid,$type,$current]);}

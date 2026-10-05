@@ -1,12 +1,13 @@
 <?php
-// Copy to config.php and replace every CHANGE_ME value before deployment.
+declare(strict_types=1);
+// Set environment variables, or place a private PHP config outside the webroot.
+$private=getenv('SP_MANAGER_PRIVATE_CONFIG');
+if($private){$value=require $private;if(!is_array($value))throw new RuntimeException('Invalid private config.');return $value;}
 return [
-  "db_host" => "localhost",
-  "db_port" => "3306",
-  "db_name" => "CHANGE_ME",
-  "db_user" => "CHANGE_ME",
-  "db_pass" => "CHANGE_ME",
-  "auth_secret" => "CHANGE_ME_TO_A_RANDOM_SECRET_OF_AT_LEAST_64_CHARACTERS",
-  // Use the origin only, without a path. Example: https://your-account.github.io
-  "allowed_origins" => ["https://CHANGE_ME"],
+ 'db'=>['host'=>getenv('SP_MANAGER_DB_HOST')?:'127.0.0.1','port'=>(int)(getenv('SP_MANAGER_DB_PORT')?:3306),'name'=>getenv('SP_MANAGER_DB_NAME')?:'CHANGE_ME_DATABASE','user'=>getenv('SP_MANAGER_DB_USER')?:'CHANGE_ME_USER','pass'=>getenv('SP_MANAGER_DB_PASSWORD')?:''],
+ 'auth_secret'=>getenv('SP_MANAGER_AUTH_SECRET')?:'',
+ 'encryption_key'=>getenv('SP_MANAGER_ENCRYPTION_KEY')?:'',
+ 'backup_dir'=>getenv('SP_MANAGER_BACKUP_DIR')?:'',
+ 'business_timezone'=>'Asia/Kuala_Lumpur',
+ 'allowed_origins'=>['https://app.shiningpearltinted.com','https://shiningpearltinted.com','https://www.shiningpearltinted.com','https://shiningpearltinted.github.io'],
 ];

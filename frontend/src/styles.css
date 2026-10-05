@@ -5493,7 +5493,130 @@ body:has(.customer-display-screen) #root{
   .cd-modern-v4 .customer-display-totals > div b,
   .cd-modern-v4 .customer-display-payment > div b{min-width:100px !important}
 }
-\n\n/* ============================================================\n   CUSTOMER DISPLAY — V7 TRANSACTION WIDE / DETAIL VISIBLE\n   UI ONLY — CUSTOMER DISPLAY ROUTE ONLY\n   ------------------------------------------------------------\n   Make the transaction panel deliberately wider so quantity,\n   amount and totals are always visible on TV/desktop screens.\n   No POS / API / MySQL / transaction logic changes.\n   ============================================================ */\n.cd-modern-v4 .customer-display-main{\n  grid-template-columns:minmax(0,38%) minmax(0,62%) !important;\n}\n\n.cd-modern-v4 .customer-display-media{\n  padding:10px !important;\n}\n\n.cd-modern-v4 .customer-display-media img{\n  max-width:94% !important;\n  max-height:94% !important;\n}\n\n.cd-modern-v4 .customer-display-order{\n  box-sizing:border-box !important;\n  padding:18px 24px 12px !important;\n  overflow:hidden !important;\n}\n\n.cd-modern-v4 .customer-display-order-head{\n  flex:0 0 auto !important;\n  width:100% !important;\n}\n\n.cd-modern-v4 .customer-display-order-head h1{\n  font-size:clamp(30px,2.2vw,44px) !important;\n}\n\n.cd-modern-v4 .customer-display-items{\n  width:100% !important;\n  min-width:0 !important;\n  overflow-x:hidden !important;\n  overflow-y:auto !important;\n}\n\n/* Explicit visible columns: PRODUCT | QTY | AMOUNT */\n.cd-modern-v4 .customer-display-item{\n  display:grid !important;\n  grid-template-columns:minmax(0,1fr) 64px 190px !important;\n  column-gap:16px !important;\n  align-items:center !important;\n  width:100% !important;\n  min-width:0 !important;\n  padding:13px 0 !important;\n  box-sizing:border-box !important;\n}\n\n.cd-modern-v4 .customer-display-item > div:first-child{\n  min-width:0 !important;\n  width:100% !important;\n  overflow:hidden !important;\n}\n\n.cd-modern-v4 .customer-display-item > strong:nth-of-type(1),\n.cd-modern-v4 .customer-display-item > strong:nth-of-type(2){\n  display:block !important;\n  visibility:visible !important;\n  opacity:1 !important;\n  position:static !important;\n  float:none !important;\n  margin:0 !important;\n  min-width:0 !important;\n  width:auto !important;\n  max-width:none !important;\n  overflow:visible !important;\n  white-space:nowrap !important;\n}\n\n.cd-modern-v4 .customer-display-item > strong:nth-of-type(1){\n  text-align:center !important;\n  font-size:clamp(16px,1.1vw,21px) !important;\n  color:#f4f7fa !important;\n}\n\n.cd-modern-v4 .customer-display-item > strong:nth-of-type(2){\n  text-align:right !important;\n  font-size:clamp(17px,1.15vw,23px) !important;\n  font-weight:850 !important;\n  color:#f5c451 !important;\n}\n\n.cd-modern-v4 .customer-display-totals{\n  flex:0 0 auto !important;\n  width:100% !important;\n  min-width:0 !important;\n}\n\n.cd-modern-v4 .customer-display-totals > div,\n.cd-modern-v4 .customer-display-payment > div{\n  display:grid !important;\n  grid-template-columns:minmax(0,1fr) minmax(160px,220px) !important;\n  align-items:center !important;\n  column-gap:18px !important;\n  width:100% !important;\n}\n\n.cd-modern-v4 .customer-display-totals > div b,\n.cd-modern-v4 .customer-display-payment > div b{\n  display:block !important;\n  visibility:visible !important;\n  opacity:1 !important;\n  min-width:160px !important;\n  width:100% !important;\n  text-align:right !important;\n  white-space:nowrap !important;\n  overflow:visible !important;\n}\n\n.cd-modern-v4 .customer-display-totals .grand b{\n  min-width:180px !important;\n  font-size:clamp(25px,1.9vw,36px) !important;\n  color:#f5c451 !important;\n}\n\n/* Desktop/TV only. Keep the existing mobile layout unchanged. */\n@media(min-width:801px){\n  .cd-modern-v4 .customer-display-main{\n    grid-template-columns:minmax(0,38%) minmax(0,62%) !important;\n  }\n}\n
+
+
+/* ============================================================\n   CUSTOMER DISPLAY — V7 TRANSACTION WIDE / DETAIL VISIBLE\n   UI ONLY — CUSTOMER DISPLAY ROUTE ONLY\n   ------------------------------------------------------------\n   Make the transaction panel deliberately wider so quantity,\n   amount and totals are always visible on TV/desktop screens.\n   No POS / API / MySQL / transaction logic changes.\n   ============================================================ */
+.cd-modern-v4 .customer-display-main{
+  grid-template-columns:minmax(0,38%) minmax(0,62%) !important;
+}
+
+.cd-modern-v4 .customer-display-media{
+  padding:10px !important;
+}
+
+.cd-modern-v4 .customer-display-media img{
+  max-width:94% !important;
+  max-height:94% !important;
+}
+
+.cd-modern-v4 .customer-display-order{
+  box-sizing:border-box !important;
+  padding:18px 24px 12px !important;
+  overflow:hidden !important;
+}
+
+.cd-modern-v4 .customer-display-order-head{
+  flex:0 0 auto !important;
+  width:100% !important;
+}
+
+.cd-modern-v4 .customer-display-order-head h1{
+  font-size:clamp(30px,2.2vw,44px) !important;
+}
+
+.cd-modern-v4 .customer-display-items{
+  width:100% !important;
+  min-width:0 !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
+
+/* Explicit visible columns: PRODUCT | QTY | AMOUNT */
+.cd-modern-v4 .customer-display-item{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) 64px 190px !important;
+  column-gap:16px !important;
+  align-items:center !important;
+  width:100% !important;
+  min-width:0 !important;
+  padding:13px 0 !important;
+  box-sizing:border-box !important;
+}
+
+.cd-modern-v4 .customer-display-item > div:first-child{
+  min-width:0 !important;
+  width:100% !important;
+  overflow:hidden !important;
+}
+
+.cd-modern-v4 .customer-display-item > strong:nth-of-type(1),
+.cd-modern-v4 .customer-display-item > strong:nth-of-type(2){
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  position:static !important;
+  float:none !important;
+  margin:0 !important;
+  min-width:0 !important;
+  width:auto !important;
+  max-width:none !important;
+  overflow:visible !important;
+  white-space:nowrap !important;
+}
+
+.cd-modern-v4 .customer-display-item > strong:nth-of-type(1){
+  text-align:center !important;
+  font-size:clamp(16px,1.1vw,21px) !important;
+  color:#f4f7fa !important;
+}
+
+.cd-modern-v4 .customer-display-item > strong:nth-of-type(2){
+  text-align:right !important;
+  font-size:clamp(17px,1.15vw,23px) !important;
+  font-weight:850 !important;
+  color:#f5c451 !important;
+}
+
+.cd-modern-v4 .customer-display-totals{
+  flex:0 0 auto !important;
+  width:100% !important;
+  min-width:0 !important;
+}
+
+.cd-modern-v4 .customer-display-totals > div,
+.cd-modern-v4 .customer-display-payment > div{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(160px,220px) !important;
+  align-items:center !important;
+  column-gap:18px !important;
+  width:100% !important;
+}
+
+.cd-modern-v4 .customer-display-totals > div b,
+.cd-modern-v4 .customer-display-payment > div b{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  min-width:160px !important;
+  width:100% !important;
+  text-align:right !important;
+  white-space:nowrap !important;
+  overflow:visible !important;
+}
+
+.cd-modern-v4 .customer-display-totals .grand b{
+  min-width:180px !important;
+  font-size:clamp(25px,1.9vw,36px) !important;
+  color:#f5c451 !important;
+}
+
+/* Desktop/TV only. Keep the existing mobile layout unchanged. */
+@media(min-width:801px){
+  .cd-modern-v4 .customer-display-main{
+    grid-template-columns:minmax(0,38%) minmax(0,62%) !important;
+  }
+}
+
 
 /* ============================================================
    CUSTOMER DISPLAY — V8 FINAL TRANSACTION VISIBILITY
@@ -6975,3 +7098,54 @@ body:has(.customer-display-screen) #root{
 .outlet-actions{flex-wrap:wrap}
 @media(max-width:850px){.outlet-product-toolbar{grid-template-columns:1fr}.outlet-product-row{grid-template-columns:24px 1fr}.outlet-product-row strong{grid-column:2}}
 
+
+
+/* Quotation / Invoice documents */
+.document-module{padding:18px;display:flex;flex-direction:column;gap:14px}
+.document-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;background:#fff;border:1px solid #dfe5ea;border-radius:14px;padding:16px}
+.document-toolbar h2{margin:2px 0 4px}.document-toolbar p{margin:0;color:#64748b}
+.document-toolbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.document-toolbar-actions button,.document-module button{min-height:36px}
+.document-toolbar-actions .primary,.document-module button.primary{background:#0f2d47;color:#fff;border-color:#0f2d47}
+.document-filter{background:#fff;border:1px solid #dfe5ea;border-radius:12px;padding:10px}
+.document-filter input{width:100%}
+.document-list{padding:0;overflow:hidden}.document-list tr.selected{background:#e8f4fb}
+.document-form-card{background:#fff;border:1px solid #dfe5ea;border-radius:14px;padding:14px}
+.document-form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.document-form-grid label,.document-note{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#334155}
+.document-form-grid input,.document-form-grid select,.document-note textarea,.document-products input,.document-items input{min-height:38px;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;background:#fff}
+.document-editor-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px}
+.document-products,.document-items{padding:14px}.document-products h3,.document-items h3{margin-top:0}
+.document-products{display:flex;flex-direction:column;gap:8px;max-height:650px;overflow:auto}
+.document-products>button{display:flex;justify-content:space-between;align-items:center;text-align:left;background:#fff;border:1px solid #dfe5ea;border-radius:9px;padding:9px}
+.document-products>button span{display:flex;flex-direction:column}.document-products>button small{color:#64748b;margin-top:2px}
+.document-items .table{overflow:auto}.document-items td input{width:100%;min-width:80px}
+.document-items td small{display:block;color:#64748b;margin-top:3px}
+.document-summary{margin-left:auto;margin-top:14px;width:min(420px,100%);display:grid;gap:8px}
+.document-summary>div,.document-summary>label{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.document-summary label input{max-width:160px}.document-summary .grand{border-top:1px solid #cbd5e1;padding-top:10px;font-size:16px}
+.document-note{margin-top:14px}.document-note textarea{min-height:90px;resize:vertical}
+@media(max-width:900px){.document-toolbar{flex-direction:column}.document-toolbar-actions{justify-content:flex-start}.document-form-grid{grid-template-columns:1fr 1fr}.document-editor-layout{grid-template-columns:1fr}.document-products{max-height:260px}}
+@media(max-width:600px){.document-form-grid{grid-template-columns:1fr}.document-module{padding:10px}}
+
+/* Quotation / Invoice modern SP-Manager UI hotfix V1.0.43 */
+.document-module{padding:22px 24px 32px;background:#f4f7fa;min-height:calc(100vh - 85px);gap:14px}
+.document-toolbar{align-items:center;background:#fff;border:1px solid #dce5ec;border-radius:12px;padding:18px 20px;box-shadow:0 1px 2px rgba(15,45,71,.03)}
+.document-toolbar>div:first-child{min-width:0}.document-toolbar .eyebrow{font-size:10px;letter-spacing:1.25px;color:#7b8fa3;font-weight:800}.document-toolbar h2{font-size:23px;color:#12283d;margin:3px 0 4px}.document-toolbar p{font-size:12px;color:#708397;line-height:1.45}
+.document-toolbar-actions{gap:7px}.document-toolbar-actions button,.document-module button{border:1px solid #cfdae4;background:#fff;color:#27435d;border-radius:8px;padding:0 12px;font-size:11px;font-weight:700;box-shadow:none;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease}
+.document-toolbar-actions button:hover:not(:disabled),.document-module button:hover:not(:disabled){background:#f0f7fb;border-color:#9fc5dd;color:#0b6f9d}.document-toolbar-actions button:disabled,.document-module button:disabled{opacity:.42;cursor:not-allowed;background:#f7f9fb;color:#8998a5}
+.document-toolbar-actions .primary,.document-module button.primary{background:#102f49;color:#fff;border-color:#102f49}.document-toolbar-actions .primary:hover:not(:disabled),.document-module button.primary:hover:not(:disabled){background:#0b6f9d;border-color:#0b6f9d;color:#fff}.document-toolbar-actions .danger-text,.document-module button.danger-text{color:#c53c3c;border-color:#efd0d0;background:#fff}.document-toolbar-actions .danger-text:hover:not(:disabled),.document-module button.danger-text:hover:not(:disabled){background:#fff3f3;border-color:#e7b7b7;color:#a72424}
+.document-filter{background:#fff;border:1px solid #dce5ec;border-radius:11px;padding:11px 13px}.document-filter input{width:100%;height:39px;border:1px solid #d1dce5;border-radius:8px;padding:0 12px;outline:none;color:#263d52;background:#fbfdff}.document-filter input:focus{border-color:#66acd3;box-shadow:0 0 0 3px rgba(34,139,197,.11);background:#fff}
+.document-list{border:1px solid #dce5ec;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(15,45,71,.03)}.document-list table{min-width:850px}.document-list thead{background:#f6f9fb}.document-list th{height:42px;color:#62788d;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.25px}.document-list td{height:47px;color:#31495e}.document-list tbody tr{cursor:pointer}.document-list tbody tr:hover{background:#f7fbfd}.document-list tr.selected{background:#e8f5fb}.document-list td b{color:#15354f}.document-list .empty{height:110px;color:#8899a8}
+.document-form-card{background:#fff;border:1px solid #dce5ec;border-radius:12px;padding:17px 18px;box-shadow:0 1px 2px rgba(15,45,71,.03)}.document-form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.document-form-grid label,.document-note,.document-summary label{display:flex;flex-direction:column;gap:6px;color:#566c80;font-size:11px;font-weight:800}.document-form-grid input,.document-form-grid select,.document-note textarea,.document-products input,.document-items input,.document-summary input{width:100%;border:1px solid #ccd8e2;border-radius:8px;background:#fff;color:#263d52;outline:none}.document-form-grid input,.document-form-grid select,.document-products input,.document-items input,.document-summary input{height:39px}.document-form-grid input:focus,.document-form-grid select:focus,.document-note textarea:focus,.document-products input:focus,.document-items input:focus,.document-summary input:focus{border-color:#66acd3;box-shadow:0 0 0 3px rgba(34,139,197,.11)}.document-form-grid input[readonly]{background:#f6f8fa;color:#748596}
+.document-editor-layout{grid-template-columns:310px minmax(0,1fr);gap:14px;align-items:stretch}.document-products,.document-items{border:1px solid #dce5ec;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(15,45,71,.03)}.document-products{padding:16px;max-height:690px}.document-products h3,.document-items h3{font-size:16px;color:#18354e;margin:0 0 12px}.document-products>input{margin-bottom:5px}.document-products>button{min-height:58px;border:1px solid #e0e8ee;border-radius:9px;padding:9px 10px;background:#fff}.document-products>button:hover{background:#eef8fc;border-color:#a9d1e6;transform:translateY(-1px)}.document-products>button b{font-size:11px;color:#173a54}.document-products>button small{font-size:10px;color:#8292a1}.document-products>button strong{font-size:11px;color:#0c5e89}
+.document-items{padding:16px;min-width:0}.document-items .table{border:1px solid #e2e9ee;border-radius:9px;overflow:auto}.document-items table{min-width:760px}.document-items thead{background:#f5f8fa}.document-items th{height:40px;color:#657b8e;font-size:10px;font-weight:800;text-transform:uppercase}.document-items td{vertical-align:middle;color:#31495e}.document-items td:first-child b,.document-items td:first-child small{display:block}.document-items td:first-child small{margin-top:3px;color:#8092a1;white-space:normal}.document-items td input{min-width:90px}.document-items .danger-text{min-height:31px;padding:0 9px}
+.document-summary{margin-top:14px;margin-left:auto;width:min(470px,100%);display:grid;grid-template-columns:minmax(180px,1.2fr) 1fr;gap:8px 18px;align-items:center;border-top:1px solid #e4ebf0;padding-top:14px}.document-summary label{grid-row:1/5;align-self:start}.document-summary>div{display:flex;justify-content:space-between;gap:20px;color:#5b6f81;font-size:11px}.document-summary>div b{color:#17364e}.document-summary .grand{border-top:1px solid #dce5ec;padding-top:10px;margin-top:2px;font-size:16px;color:#18354e}.document-summary .grand b{font-size:19px;color:#0e2f49}.document-note{margin-top:14px}.document-note textarea{min-height:92px;resize:vertical;padding:10px 12px;font:inherit;font-weight:400}.document-toolbar .linkish{background:transparent!important;border:0!important;box-shadow:none!important;color:#0b77a8!important;padding-left:0!important;padding-right:5px!important}
+@media(max-width:1200px){.document-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.document-editor-layout{grid-template-columns:280px minmax(0,1fr)}}
+@media(max-width:900px){.document-module{padding:15px}.document-toolbar{align-items:flex-start}.document-toolbar-actions{width:100%;justify-content:flex-start}.document-editor-layout{grid-template-columns:1fr}.document-products{max-height:280px}.document-summary{width:100%}}
+@media(max-width:600px){.document-form-grid{grid-template-columns:1fr}.document-toolbar-actions button{flex:1 1 auto}.document-summary{grid-template-columns:1fr}.document-summary label{grid-row:auto}.document-module{padding:10px}}
+
+/* Quotation / Invoice payment + deposit — SP-Manager 1.0.44 */
+.document-payment-card{margin-top:18px;border:1px solid #dce5ee;border-radius:14px;background:#f8fbfe;padding:16px 18px;box-shadow:0 1px 2px rgba(15,39,63,.04)}
+.document-payment-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.document-payment-card-head h4{margin:2px 0 0;font-size:16px;color:#102a43}.document-balance-preview{text-align:right;display:flex;flex-direction:column;gap:2px}.document-balance-preview span{font-size:11px;color:#728197}.document-balance-preview b{font-size:18px;color:#0b2d49}.document-payment-grid{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px}.document-payment-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#44576b}.document-payment-grid input,.document-payment-grid select{height:40px;border:1px solid #ccd8e4;border-radius:8px;background:#fff;padding:0 10px;color:#102a43;outline:none}.document-payment-grid input:focus,.document-payment-grid select:focus{border-color:#1677b8;box-shadow:0 0 0 3px rgba(22,119,184,.1)}.document-existing-payment{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 12px;background:#eef8f2;border:1px solid #cfe8d7;border-radius:9px;color:#21613a}.document-payment-card>small{display:block;margin-top:11px;color:#6d7d8e;line-height:1.4}.document-list table th,.document-list table td{white-space:nowrap}
+@media(max-width:900px){.document-payment-grid{grid-template-columns:1fr}.document-payment-card-head{flex-direction:column}.document-balance-preview{text-align:left}}

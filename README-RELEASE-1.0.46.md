@@ -1,0 +1,15 @@
+# Pemasangan pasangan frontend/API 1.0.46
+
+Ini ialah keluaran seragam untuk menangani percanggahan fail yang dibekalkan pada 5 Oktober 2026. Ia menggunakan pembaikan sesi terdahulu, mengekalkan lampiran invoice/alamat outlet, dan menambah pembaikan amaran customer serta padanan ID sync. Fail input asal tidak diubah. Hosting produksi belum disentuh.
+
+1. Backup database dan fail hosting semasa. Uji dalam staging terlebih dahulu; hentikan sementara penggunaan POS semasa pertukaran versi.
+2. Extract ZIP API 1.0.46. Upload fail PHP, `assets`, `vendor` dan `.htaccess` ke lokasi API yang digunakan aplikasi. Jangan upload SQL atau laporan ke webroot. Kekalkan fail `sp-manager-private.php` anda di luar `public_html`, serta kata laluan DB, auth_secret dan encryption_key yang betul. Jangan menggantikan kunci penyulitan yang telah digunakan untuk SMTP/backup.
+3. Publish kandungan `SP-Manager-main/frontend/dist` daripada ZIP aplikasi 1.0.46. Binaan menggunakan `/SP-Manager/`, seperti `vite.config.js` asal. Jika URL frontend ialah root domain atau `/app/`, laraskan base dan bina semula; lokasi folder File Manager tidak semestinya sama dengan URL subdomain. Frontend memerlukan API release 1.0.46 sebelum transaksi boleh disimpan. Jangan gunakan frontend asal 1.0.44 bersama API ini.
+4. Database yang diberikan sudah mempunyai 75 jadual dan struktur naik taraf. `UPGRADE-1.0.45.sql` dalam ZIP ialah migrasi struktur sedia ada yang turut serasi dengan kod 1.0.46; tidak ada migrasi struktur baharu untuk perubahan ini. Gunakan hanya jika database hosting anda lebih lama. `SCHEMA-EMPTY-1.0.45.sql` hanya untuk DB staging kosong.
+5. Semak `DATA-REPAIR-2026-10-05.sql` terhadap database semasa sebelum menjalankannya. Ia mengandungi 9 UPDATE bersyarat bagi nilai yang terbukti dalam snapshot: satu jumlah baris jualan dan lapan kos belian efektif daripada jumlah/kuantiti. Tiada angka stok fizikal atau kos jualan sejarah direka. Jangan import dump snapshot penuh ke database aktif.
+6. Tekan Ctrl+F5, login semula, uji jualan tunai/QR/kredit, refund, bayaran invoice/deposit, open order, belian, inventory count, email dan customer display. Gunakan transaksi ujian di staging dahulu.
+7. Jika menggunakan hardware, pasang Agent 1.2.0 daripada `SP-Manager-main/agent/install-windows.bat`. Isi token pairing setempat dalam Settings Hardware. Frontend baharu menghantar email melalui API pelayan; kata laluan SMTP tidak lagi dihantar kepada Agent.
+
+Keperluan: PHP >=8.1 dengan PDO MySQL/OpenSSL/mbstring; SQL diuji pada MariaDB 11.8.9. Sintaks migrasi MariaDB belum disahkan pada MySQL 8. SMTP sebenar memerlukan kunci penyulitan sedia ada dan kredensial pelayan yang sah; ujian SMTP sebenar belum dijalankan. Aktifkan scheduler backup pada hosting dengan konfigurasi persendirian yang sama. Untuk Nginx, gunakan sekatan setara `.htaccess`.
+
+Modul utama menggunakan SQL sebagai sumber data, tetapi cache pelayar dan fungsi fizikal Agent tetap wujud. Cadangan ini bukan dakwaan semua operasi UI/perkakasan/produksi telah diuji. Lihat laporan audit dan matriks sambungan untuk batasan per modul.
