@@ -1,7 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useState}from"react";
 import{createRoot}from"react-dom/client";
 import"./styles.css";
-import"./management-ui.css";
 
 const AUTH_VERSION="1.0.45";
 const stateRevisions=new Map();
@@ -201,7 +200,7 @@ const professionalDatabaseError=(error,fallback="The database could not complete
 };
 
 const showActionDialog=({title,message,confirm=false,confirmText="Yes",cancelText="No"})=>new Promise(resolve=>{
- const overlay=document.createElement("div");overlay.className="sp-action-dialog-backdrop";if(document.querySelector('.app[data-ui="management"]'))overlay.setAttribute("data-ui","management");overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
+ const overlay=document.createElement("div");overlay.className="sp-action-dialog-backdrop";overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
  const box=document.createElement("div");box.className="sp-action-dialog";
  const head=document.createElement("div");head.className="sp-action-dialog-head";
  const kicker=document.createElement("div");kicker.className="sp-action-dialog-kicker";kicker.textContent="SP-MANAGER";
@@ -885,8 +884,12 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
   }
  };
  if(!signedIn)return <Login users={users} company={company} onAuthenticate={authenticate} onLogin={u=>{const {_apiToken,...user}=u||{};if(!_apiToken)throw new Error("Database sign-in token is missing.");cacheSet("activeUser",user);sessionStorage.setItem("sp_api_token",_apiToken);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(user);setSignedIn(true);setPage("POS / Sales")}}/>;
- return <div data-ui={["Management","Outlet Management","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Cash In / Out","Credit payments","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"].includes(page)?"management":undefined} className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
-  <aside className={mobileNavOpen?"mobile-nav is-open":"mobile-nav"}><div className="brand"><button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={()=>setMobileNavOpen(false)}>×</button><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></div><label>MODULES</label>
+ const managementPages=new Set(["Management","Outlet Management","Users & Permissions","My company","Settings","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Reports","X / Z Report","Named Order / Takeaway","Cash In / Out","Credit payments","End of day"]);
+ const managementMode=managementPages.has(page);
+ const companyName=String(company?.name||"").trim();
+ const companyLogo=String(company?.logo||"").trim();
+ return <div className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")+(managementMode?" app-management-mode":"")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
+  <aside className={(mobileNavOpen?"mobile-nav is-open":"mobile-nav")+(managementMode?" management-sidebar":"")}><div className="brand"><button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={()=>setMobileNavOpen(false)}>×</button><div className="brand-logo">{companyLogo?<img src={companyLogo} alt={companyName?`${companyName} logo`:"Company logo"}/>:<span>{companyName||"SP-Manager"}</span>}</div>{companyLogo&&companyName&&<span className="brand-company-name"><strong>{companyName}</strong></span>}</div><label>MODULES</label>
    {nav.filter(n=>{const map={"Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Quotation":"manageQuotation","Invoice":"manageInvoice","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Outlet Management":"manageManagement","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return n==="Management"?hasManagementAccess(activeUser):(!map[n]||isPermissionAllowed(activeUser,map[n]))}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("");setMobileNavOpen(false)}} key={n}>▸ {n}</button>)}
   </aside>
   <main><header><button type="button" className="mobile-nav-open" aria-label="Open menu" onClick={()=>setMobileNavOpen(true)}>☰</button><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className={"header-status-pill header-status-business "+(businessDay.open?"is-open":"is-closed")}><i/> {businessDay.open?"Business Day Open":"Closed"}</span><span className={"header-status-pill header-status-online "+(dbOnline?"is-open":"is-closed")}><i/> {dbOnline?"Database Connected":"Database Offline"}</span><span className="header-status-pill"><i/> Outlet: {String(activeUser?.outlets?.find(o=>Number(o.id)===Number(activeUser?.default_outlet_id))?.outlet_code||activeUser?.outlet_code||"SP01")}</span></div></header>
