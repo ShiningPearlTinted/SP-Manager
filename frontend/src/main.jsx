@@ -338,6 +338,7 @@ function playPosBeep(kind="ok"){try{const C=window.AudioContext||window.webkitAu
 const CUSTOMER_DISPLAY_DEFAULTS={apiBase:"",terminalId:"POS-PC-01",terminalName:"POS PC 01",terminalType:"PC POS",outletId:"",displayId:"CD-001",displayName:"Customer Display 001",enabled:true};
 const customerDisplayApiBase=()=>{const t=load("customerDisplayTerminal",CUSTOMER_DISPLAY_DEFAULTS);const configured=String(t?.apiBase||"").trim().replace(/\/$/,"");return configured||CENTRAL_API_DEFAULT.replace(/\/app-state\.php$/i,"")};
 const customerDisplayRequest=async(path,options={})=>{const base=customerDisplayApiBase();if(!base)throw new Error("Customer Display API URL is not configured. Set it in Settings > Customer display.");const cleanPath=String(path||"").replace(/^\/api(?=\/)/,"");const endpoint=base+cleanPath;const r=await fetch(endpoint,{cache:"no-store",...options,headers:apiHeaders({"Content-Type":"application/json",...(options.headers||{})})});let data=null;try{data=await r.json()}catch{}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data||{ok:true}};
+let customerDisplayWriteQueue=Promise.resolve();
 
 function CustomerDisplay(){
  const params=new URLSearchParams(window.location.search);const displayCode=String(params.get("display")||"").trim();const terminalCode=String(params.get("terminal")||"").trim();
@@ -349,7 +350,7 @@ function CustomerDisplay(){
  const poll=async()=>{try{const q=displayCode?`/customer-display.php?action=state&display=${encodeURIComponent(displayCode)}&key=${encodeURIComponent(displayKey)}`:`/customer-display.php?action=state&terminal=${encodeURIComponent(terminalCode)}`;const r=await customerDisplayRequest(q);setState(r.data||{});setConnected(true);setError("");}catch(e){setConnected(false);setError(String(e?.message||"Connection lost"));}};
  useEffect(()=>{poll();const id=setInterval(poll,1000);return()=>clearInterval(id)},[displayCode,terminalCode]);
  const fmt=n=>`${state.currency||"RM"} ${Number(n||0).toFixed(2)}`;
-  const idle=(state.state==="IDLE"||!state.items?.length)&&state.state!=="COMPLETED";
+  const idle=state.state==="IDLE"||!state.state;
   const mediaImage=state.state==="PAYMENT"&&state.paymentImageData?state.paymentImageData:state.imageData;
   return <div className="customer-display-screen cd-customer-display-v9">
    <div className="customer-display-brand"><div className="customer-display-brand-name">{state.companyName||"Shining Pearl Tinted"}</div></div>
@@ -418,7 +419,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[posOrderMeta,setPosOrderMeta]=useState({name:"",comment:"",serviceType:"Dine In",table:""});
  const[customerDisplayTerminal,setCustomerDisplayTerminal]=useState(()=>load("customerDisplayTerminal",CUSTOMER_DISPLAY_DEFAULTS));
  const[priceTagSettings,setPriceTagSettings]=useState(()=>load("priceTagSettings",{}));
- const publishCustomerDisplay=useCallback(async(state)=>{const t=customerDisplayTerminal||CUSTOMER_DISPLAY_DEFAULTS;if(!t?.enabled||!t?.displayId)return;let lastError=null;for(let attempt=0;attempt<3;attempt++){try{await customerDisplayRequest("/customer-display.php?action=state",{method:"POST",body:JSON.stringify({display_code:t.displayId,terminal_id:t.terminalId,terminal_name:t.terminalName,terminal_type:t.terminalType,outlet_id:t.outletId,state})});return}catch(e){lastError=e;if(attempt<2)await new Promise(r=>setTimeout(r,350));}}console.warn("Customer Display update failed",lastError?.message||lastError)},[customerDisplayTerminal]);
+ const publishCustomerDisplay=useCallback((state)=>{const t=customerDisplayTerminal||CUSTOMER_DISPLAY_DEFAULTS;if(!t?.enabled||!t?.displayId)return Promise.resolve();const snapshot={...state,items:Array.isArray(state?.items)?state.items:[]};const write=async()=>{let lastError=null;for(let attempt=0;attempt<3;attempt++){try{await customerDisplayRequest("/customer-display.php?action=state",{method:"POST",body:JSON.stringify({display_code:t.displayId,terminal_id:t.terminalId,terminal_name:t.terminalName,terminal_type:t.terminalType,outlet_id:t.outletId,state:snapshot})});return}catch(e){lastError=e;if(attempt<2)await new Promise(r=>setTimeout(r,350));}}console.warn("Customer Display update failed",lastError?.message||lastError)};customerDisplayWriteQueue=customerDisplayWriteQueue.catch(()=>{}).then(write);return customerDisplayWriteQueue},[customerDisplayTerminal]);
 
 
  useEffect(()=>{if(!notice)return;const ms=Math.max(1,Number(settings.general.messageDuration||5))*1000;const t=setTimeout(()=>setNotice(""),ms);return()=>clearTimeout(t)},[notice,settings.general.messageDuration]);
