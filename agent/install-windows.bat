@@ -8,7 +8,7 @@ set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 
 echo ==================================================
-echo SP-Manager Local Agent Installer v1.2.1
+echo SP-Manager Local Agent Installer v1.2.2
 echo ==================================================
 echo.
 if not exist "%PS_EXE%" (
@@ -76,10 +76,10 @@ timeout /t 1 /nobreak >nul
 goto WAIT
 
 :READY
-echo [OK] SP-Manager Local Agent 1.2.1 is READY.
+echo [OK] SP-Manager Local Agent 1.2.2 is READY.
 
 :DONE
-"%PS_EXE%" -NoProfile -Command "'SP-Manager Local Agent 1.2.1' | Set-Content -LiteralPath '%LOG_DIR%\agent-installed.flag' -Encoding UTF8"
+"%PS_EXE%" -NoProfile -Command "'SP-Manager Local Agent 1.2.2' | Set-Content -LiteralPath '%LOG_DIR%\agent-installed.flag' -Encoding UTF8"
 echo.
 echo ==================================================
 echo Auto-start + Auto-restart is ENABLED.

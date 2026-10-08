@@ -19,7 +19,7 @@ $script:DisplayState=@{line1='WELCOME!';line2='';chars=20;updatedAt=$StartedAt}
 function Send-Bytes($stream,[int]$status,[string]$contentType,[byte[]]$bytes,[string]$disposition=''){
   $reason=if($status -eq 200){'OK'}elseif($status -eq 204){'No Content'}else{'Error'}
   $extra=if($disposition){"Content-Disposition: $disposition`r`n"}else{''}
-  $hdr="HTTP/1.1 $status $reason`r`nContent-Type: $contentType`r`nContent-Length: $($bytes.Length)`r`nCache-Control: no-store`r`nAccess-Control-Allow-Origin: $script:ResponseOrigin`r`nAccess-Control-Allow-Headers: Content-Type, Authorization`r`nAccess-Control-Allow-Methods: GET,POST,OPTIONS`r`nConnection: close`r`n$extra`r`n"
+  $hdr="HTTP/1.1 $status $reason`r`nContent-Type: $contentType`r`nContent-Length: $($bytes.Length)`r`nCache-Control: no-store`r`nAccess-Control-Allow-Origin: $script:ResponseOrigin`r`nAccess-Control-Allow-Headers: Content-Type, Authorization`r`nAccess-Control-Allow-Methods: GET,POST,OPTIONS`r`nAccess-Control-Allow-Private-Network: true`r`nConnection: close`r`n$extra`r`n"
   $hb=[Text.Encoding]::ASCII.GetBytes($hdr);$stream.Write($hb,0,$hb.Length);if($bytes.Length -gt 0){$stream.Write($bytes,0,$bytes.Length)};$stream.Flush()
 }
 function Send-Json($stream,[int]$status,$obj){$body=($obj|ConvertTo-Json -Compress -Depth 12);Send-Bytes $stream $status 'application/json; charset=utf-8' ([Text.Encoding]::UTF8.GetBytes($body))}
@@ -93,13 +93,13 @@ function Handle($req){
   $s=$req.stream
   try{
     $script:ResponseOrigin='';$hostHeader=[string]$req.headers['host'];if($hostHeader -ne "127.0.0.1:$Port" -and $hostHeader -ne "localhost:$Port"){Send-Json $s 403 @{ok=$false;error='Invalid Host'};return}
-    $origin=[string]$req.headers['origin'];if($origin -and $origin -ne "http://127.0.0.1:$Port" -and $AllowedOrigins -notcontains $origin){Send-Json $s 403 @{ok=$false;error='Origin denied'};return};if($origin){$script:ResponseOrigin=$origin}
+    $origin=[string]$req.headers['origin'];$localOrigin=$origin -match '^https?://(localhost|127\.0\.0\.1)(:\d+)?$';if($origin -and $origin -ne "http://127.0.0.1:$Port" -and -not $localOrigin -and $AllowedOrigins -notcontains $origin){Send-Json $s 403 @{ok=$false;error='Origin denied'};return};if($origin){$script:ResponseOrigin=$origin}
     $uri=[Uri]("http://127.0.0.1:$Port"+$req.path);$displayRead=$uri.AbsolutePath -in @('/customer-display','/display-state')
     $displayAuthorized=$displayRead -and $uri.Query -eq ('?key='+$DisplayToken)
     if($req.method -ne 'OPTIONS' -and -not $displayAuthorized){$received=[string]$req.headers['authorization'];$expected='Bearer '+$AgentToken;$different=$received.Length -bxor $expected.Length;for($i=0;$i -lt $expected.Length;$i++){$char=if($i -lt $received.Length){[int][char]$received[$i]}else{0};$different=$different -bor ($char -bxor [int][char]$expected[$i])};if($different -ne 0){Send-Json $s 401 @{ok=$false;error='Pair this computer using the local agent token'};return}}
     $req.path=$uri.AbsolutePath
-    if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.1';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
+    if($req.method -eq 'OPTIONS'){Send-Bytes $s 204 'text/plain; charset=utf-8' ([byte[]]@());return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.2';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
     if($req.method -eq 'POST' -and $req.path -eq '/install-autostart'){Install-AutoStart|Out-Null;Send-Json $s 200 @{ok=$true;autoStartInstalled=$true;message='Auto-start + auto-restart is installed.'};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     if($req.path -eq '/email'){Send-Json $s 410 @{ok=$false;error='Use authenticated server email endpoint'};return}
