@@ -27,25 +27,45 @@ export function parseBatterySheet(XLSX,workbook,currentRows=[],outletId=null){
  const indexes=BATTERY_HEADERS.map(h=>headers.findIndex(x=>x.toLowerCase()===h.toLowerCase()));
  if(indexes.some(x=>x<0))throw Error('Required Excel columns: '+BATTERY_HEADERS.join(', '));
  const revisionColumn=headers.findIndex(x=>x==='_Revision'),outletColumn=headers.findIndex(x=>x==='_Outlet_ID');
- const existing=new Map(currentRows.map(r=>[batteryKey(r),r])),seen=new Set(),rows=[];
+ const existing=new Map(currentRows.map(r=>[batteryKey(r),r])),groups=new Map();
  matrix.forEach((values,n)=>{
   if(!values.some(v=>String(v??'').trim()!==''))return;
   try{
    indexes.forEach(i=>{const address=XLSX.utils.encode_cell({r:n+1,c:i});if(sheet[address]?.f)throw Error('Formula cells are not supported. Paste values first.');});
    const raw=Object.fromEntries(BATTERY_HEADERS.map((h,i)=>[h.toLowerCase(),values[indexes[i]]]));
    const row=validateBattery(raw),key=batteryKey(row);
-   if(seen.has(key))throw Error('Duplicate Car_Brand / Model.');seen.add(key);
    const old=existing.get(key);
    const origin=outletColumn>=0?String(values[outletColumn]??'').trim():'';
    if(origin&&String(outletId)!==origin)throw Error('This export belongs to another outlet.');
    const rev=revisionColumn>=0?values[revisionColumn]:'';
    const revision=rev!==''&&rev!==undefined?Number(rev):Number(old?.revision||0);
    if(!Number.isInteger(revision)||revision<0||revision>4294967294)throw Error('Invalid revision metadata.');
-   rows.push({...row,id:old?.id||0,revision});
+   const candidate={...row,id:old?.id||0,revision};
+   const fingerprint=JSON.stringify([...Array.from({length:5},(_,i)=>[candidate[`size_option${i+1}`],candidate[`price_option${i+1}`]]).flat(),revision]);
+   let group=groups.get(key);
+   if(!group){group={key,car_brand:row.car_brand,model:row.model,variants:[]};groups.set(key,group);}
+   const duplicate=group.variants.find(v=>v.fingerprint===fingerprint);
+   if(duplicate)duplicate.excelRows.push(n+2);
+   else group.variants.push({row:candidate,fingerprint,excelRows:[n+2]});
   }catch(e){throw Error(`Excel row ${n+2}: ${e.message}`);}
  });
- if(!rows.length)throw Error('The worksheet has no battery records.');
- return {rows,added:rows.filter(r=>!r.id).length,updated:rows.filter(r=>r.id).length};
+ if(!groups.size)throw Error('The worksheet has no battery records.');
+ const list=[...groups.values()];
+ return {groups:list,...resolveBatteryImport(list,{})};
+}
+// Different values for the same car are never discarded without a selection.
+export function resolveBatteryImport(groups,choices={}){
+ const rows=[],conflicts=[],unresolved=[];let duplicates=0,omittedVariants=0;
+ for(const group of groups){
+  duplicates+=group.variants.reduce((sum,v)=>sum+v.excelRows.length-1,0);
+  if(group.variants.length>1){
+   conflicts.push(group);
+   const choice=choices[group.key];
+   if(!Number.isInteger(choice)||choice<0||choice>=group.variants.length){unresolved.push(group);continue;}
+   omittedVariants+=group.variants.length-1;rows.push(group.variants[choice].row);
+  }else rows.push(group.variants[0].row);
+ }
+ return {rows,conflicts,unresolved,duplicates,omittedVariants,added:rows.filter(r=>!r.id).length,updated:rows.filter(r=>r.id).length};
 }
 export function batteryWorkbook(XLSX,rows,outletId=null){
  const headings=rows.length?[...BATTERY_HEADERS,'_Revision','_Outlet_ID']:BATTERY_HEADERS;
