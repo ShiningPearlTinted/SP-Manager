@@ -1,0 +1,51 @@
+@media screen {
+.app[data-ui="management"] .management-card:nth-child(18){--mg-card-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'%3E%3Ccircle cx='10' cy='10' r='6'/%3E%3Cpath d='m15 15 6 6M7 10h6M10 7v6'/%3E%3C/svg%3E")}
+.app[data-ui="management"] .pc-page{color:var(--mg-ink);font-family:"Segoe UI",system-ui,sans-serif;max-width:1500px;margin:auto;padding:24px}
+.app[data-ui="management"] .pc-page button{height:42px!important;min-height:42px!important;padding:0 16px!important;border:1px solid var(--mg-border)!important;border-radius:9px!important;background:var(--mg-surface)!important;color:var(--mg-ink)!important;font:600 14px "Segoe UI",system-ui,sans-serif!important;box-shadow:none!important;cursor:pointer}
+.app[data-ui="management"] .pc-page button.primary{background:var(--mg-accent)!important;color:#fff!important;border-color:var(--mg-accent)!important}
+.app[data-ui="management"] .pc-page button:disabled{opacity:.45!important;cursor:not-allowed}
+.app[data-ui="management"] .pc-page button:focus-visible{outline:2px solid var(--mg-accent);outline-offset:3px}
+.app[data-ui="management"] .pc-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.app[data-ui="management"] .pc-heading h2{display:none}
+.app[data-ui="management"] .pc-heading p{margin:0;color:var(--mg-muted)}
+.app[data-ui="management"] .pc-tabs{display:flex;gap:8px;border-bottom:1px solid var(--mg-border);margin-bottom:20px;padding-bottom:12px}
+.app[data-ui="management"] .pc-tabs button[aria-selected="true"]{color:var(--mg-accent)!important;border-color:var(--mg-accent)!important;background:var(--mg-surface)!important}
+.app[data-ui="management"] .pc-controls{display:flex;gap:16px;align-items:end;margin:0 0 16px}
+.app[data-ui="management"] .pc-controls label,.app[data-ui="management"] .pc-form-grid label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:600}
+.app[data-ui="management"] .pc-search{flex:1}
+.app[data-ui="management"] .pc-controls select{min-width:210px}
+.app[data-ui="management"] .pc-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px}
+.app[data-ui="management"] .pc-actions span{font-size:12px;color:var(--mg-muted)}
+.app[data-ui="management"] .pc-card{background:var(--mg-surface);border:1px solid var(--mg-border);border-radius:12px;overflow:hidden}
+.app[data-ui="management"] .pc-caption{padding:18px;display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--mg-border)}
+.app[data-ui="management"] .pc-caption span{color:var(--mg-muted);font-size:12px}
+.app[data-ui="management"] .pc-table-wrap{overflow:auto;max-width:100%}
+.app[data-ui="management"] .pc-page table{width:100%;border-collapse:collapse;min-width:800px}
+.app[data-ui="management"] .pc-page th,.app[data-ui="management"] .pc-page td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--mg-border);white-space:normal}
+.app[data-ui="management"] .pc-page th{font-size:12px;color:var(--mg-muted)}
+.app[data-ui="management"] .pc-page td{font-size:13px;min-width:100px}
+.app[data-ui="management"] .pc-page small{display:block;font-size:12px;margin-top:5px}
+.app[data-ui="management"] .pc-page .pc-price{font-weight:700;white-space:nowrap;color:var(--mg-accent)}
+.app[data-ui="management"] .pc-page tr.pc-selected{background:var(--mg-bg);outline:2px solid var(--mg-accent);outline-offset:-2px}
+.app[data-ui="management"] .pc-empty{padding:24px;color:var(--mg-muted)}
+.app[data-ui="management"] .pc-error{padding:12px 16px;border:1px solid #df9393;background:#fff1f1;color:#a52323;border-radius:8px;margin:12px 0;overflow-wrap:anywhere}
+.app[data-ui="management"] .pc-notice{padding:12px 16px;background:#edf9f1;color:#19623b;border:1px solid #b5dbc4;border-radius:8px;margin:12px 0}
+.app[data-ui="management"] .pc-backdrop{position:fixed;inset:0;background:#15243a80;z-index:12000;display:flex;align-items:center;justify-content:center;padding:18px}
+.app[data-ui="management"] .pc-dialog{background:var(--mg-surface);color:var(--mg-ink);border:1px solid var(--mg-border);border-radius:14px;padding:24px;width:740px;max-width:100%;max-height:90vh;overflow:auto;box-shadow:0 18px 70px #0003}
+.app[data-ui="management"] .pc-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.app[data-ui="management"] .pc-dialog header h2{font-size:24px;margin:0}
+.app[data-ui="management"] .pc-dialog p{font-size:13px;line-height:1.6;color:var(--mg-muted)}
+.app[data-ui="management"] .pc-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px}
+.app[data-ui="management"] .pc-options{padding-top:16px;border-top:1px solid var(--mg-border)}
+.app[data-ui="management"] .pc-dialog footer{display:flex;justify-content:flex-end;gap:10px;padding-top:20px;border-top:1px solid var(--mg-border);margin-top:20px}
+.app[data-ui="management"] .pc-dialog table{min-width:500px}
+.app[data-ui="management"] .pc-page button.pc-danger{background:#b42323!important;color:#fff!important;border-color:#b42323!important}
+@media(max-width:700px){
+.app[data-ui="management"] .pc-controls{flex-direction:column;align-items:stretch}
+.app[data-ui="management"] .pc-caption{flex-direction:column}
+.app[data-ui="management"] .pc-form-grid{grid-template-columns:1fr;gap:12px}
+.app[data-ui="management"] .pc-dialog{padding:18px}
+.app[data-ui="management"] .pc-heading{align-items:flex-start}
+.app[data-ui="management"] .pc-page{padding:16px}
+}
+}
