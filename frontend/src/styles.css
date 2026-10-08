@@ -7189,3 +7189,99 @@ body:has(.customer-display-screen) #root{
 .payment-type-modal-foot{flex:none;padding:14px 24px}
 .payment-type-modal-foot button{min-width:82px;min-height:40px;font-size:12px}
 @media(max-width:640px){.payment-type-modal-backdrop{padding:8px!important}.payment-type-modal{width:calc(100vw - 16px);max-height:94vh;border-radius:14px}.payment-type-modal-head{padding:16px 18px}.payment-type-modal-head h3{font-size:20px}.payment-type-form{padding:18px}.payment-type-fields,.payment-switch-grid{grid-template-columns:1fr}.payment-display-image{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;padding:14px;gap:12px}.payment-display-image>div:first-child{grid-column:1;grid-row:1}.payment-display-image-preview{grid-column:1;grid-row:2;height:190px}.payment-display-image-actions{grid-column:1;grid-row:3}.payment-type-modal-foot{padding:12px 18px}}
+
+/* Customer Display payment screen only: keep the image and receipt inside the visible viewport. */
+.cd-customer-display-v9:has(.customer-display-payment){
+  grid-template-rows:clamp(82px,12vh,124px) minmax(0,1fr) 18px !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-brand{
+  min-height:0 !important;
+  height:100% !important;
+  padding-top:8px !important;
+  padding-bottom:8px !important;
+  display:flex !important;
+  align-items:center !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-main{
+  grid-template-columns:minmax(0,40%) minmax(0,60%) !important;
+  min-height:0 !important;
+  height:100% !important;
+  overflow:hidden !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-media{
+  min-height:0 !important;
+  height:100% !important;
+  padding:10px !important;
+  background:transparent !important;
+  overflow:hidden !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-media .payment-display-media{
+  display:block !important;
+  width:auto !important;
+  height:auto !important;
+  max-width:100% !important;
+  max-height:100% !important;
+  object-fit:contain !important;
+  object-position:center !important;
+  margin:auto !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  background:transparent !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-order{
+  min-height:0 !important;
+  height:100% !important;
+  padding:clamp(12px,1.5vh,18px) clamp(14px,1.7vw,26px) 10px !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-order-head{padding-bottom:10px !important}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-order-head h1{
+  margin-top:6px !important;
+  font-size:clamp(25px,2.1vw,38px) !important;
+  line-height:1.08 !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .cd-v9-table-head{padding:7px 0 6px !important}
+.cd-customer-display-v9:has(.customer-display-payment) .cd-v9-row{padding:10px 12px !important}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-totals{
+  flex:0 0 auto !important;
+  width:100% !important;
+  max-width:100% !important;
+  padding-top:7px !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-totals>div,
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-payment>div{
+  grid-template-columns:minmax(0,1fr) minmax(110px,170px) !important;
+  column-gap:12px !important;
+  padding:4px 10px !important;
+  font-size:clamp(12px,.9vw,16px) !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-totals .grand{
+  margin-top:4px !important;
+  padding-top:7px !important;
+  font-size:clamp(20px,1.55vw,29px) !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-totals .grand b{
+  font-size:clamp(24px,1.8vw,34px) !important;
+}
+.cd-customer-display-v9:has(.customer-display-payment) .customer-display-payment{
+  flex:0 0 auto !important;
+  margin-top:7px !important;
+  padding:7px 12px !important;
+}
+@media(max-height:760px){
+  .cd-customer-display-v9:has(.customer-display-payment){grid-template-rows:76px minmax(0,1fr) 16px !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-brand{padding-top:4px !important;padding-bottom:4px !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-order{padding-top:8px !important;padding-bottom:6px !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-order-head{padding-bottom:6px !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .cd-v9-row{padding-top:7px !important;padding-bottom:7px !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-totals .grand{padding-top:4px !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-payment{margin-top:4px !important;padding-top:4px !important;padding-bottom:4px !important}
+}
+@media(max-width:900px){
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-main{grid-template-columns:minmax(0,36%) minmax(0,64%) !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .cd-v9-table-head,
+  .cd-customer-display-v9:has(.customer-display-payment) .cd-v9-row{grid-template-columns:minmax(0,1fr) 48px 112px !important;column-gap:6px !important}
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-totals>div,
+  .cd-customer-display-v9:has(.customer-display-payment) .customer-display-payment>div{grid-template-columns:minmax(0,1fr) 112px !important;padding-left:4px !important;padding-right:4px !important}
+}
