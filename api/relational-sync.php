@@ -456,41 +456,12 @@ function paymentTypeAppMap(array $r): array {
     'openCashDrawer'=>(bool)($r['open_cash_drawer']??0),
     'shortcutKey'=>(string)($r['shortcut_key']??''),
     'position'=>(int)($r['sort_order']??0),
-    'hasCustomerDisplayImage'=>trim((string)($r['customer_display_image']??''))!=='',
   ];
 }
 function paymentTypeList(PDO $pdo,int $outletId): array {
   $q=$pdo->prepare('SELECT * FROM payment_types WHERE outlet_id=? ORDER BY sort_order ASC,id ASC');
   $q->execute([$outletId]);
   return array_map('paymentTypeAppMap',$q->fetchAll());
-}
-function paymentTypeImageOperation(PDO $pdo,int $masterOutletId,array $b):void {
-  $id=(int)($b['id']??0);
-  if($id<=0)throw new InvalidArgumentException('Payment type id is required.');
-  $q=$pdo->prepare('SELECT id FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');
-  $q->execute([$id,$masterOutletId]);
-  if(!$q->fetchColumn())throw new RuntimeException('Payment type not found.');
-  if(!empty($b['read'])){
-    $q=$pdo->prepare('SELECT customer_display_image FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');
-    $q->execute([$id,$masterOutletId]);
-    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-image-read','id'=>$id,'imageData'=>(string)($q->fetchColumn()?:'')],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
-  }
-  if(!empty($b['remove']))$image=null;
-  else {
-    $image=(string)($b['image_data']??'');
-    if(!preg_match('#^data:image/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$#i',$image,$m))throw new InvalidArgumentException('Upload a valid PNG, JPG or WebP image.');
-    $raw=base64_decode($m[2],true);
-    if($raw===false||strlen($raw)===0)throw new InvalidArgumentException('The image data is invalid.');
-    if(strlen($raw)>6*1024*1024)throw new InvalidArgumentException('Image is too large. Maximum 6 MB.');
-    $info=@getimagesizefromstring($raw);
-    $mime=is_array($info)?strtolower((string)($info['mime']??'')):'';
-    if(!in_array($mime,['image/png','image/jpeg','image/webp'],true))throw new InvalidArgumentException('Only PNG, JPG or WebP images are supported.');
-    $image='data:'.$mime.';base64,'.base64_encode($raw);
-  }
-  $q=$pdo->prepare('UPDATE payment_types SET customer_display_image=? WHERE id=? AND outlet_id=?');
-  $q->execute([$image,$id,$masterOutletId]);
-  spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');
-  echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>$image===null?'payment-types-image-remove':'payment-types-image-save','id'=>$id,'imageData'=>$image??''],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
 }
 function paymentTypeCode(PDO $pdo,int $outletId,string $name,int $exceptId=0): string {
   $base=strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/','_',$name)??'','_'));
@@ -509,7 +480,6 @@ function paymentTypeOperation(PDO $pdo,int $masterOutletId,array $b): void {
   if($op==='list'){
     echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-list','data'=>paymentTypeList($pdo,$masterOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
   }
-  if($op==='image')paymentTypeImageOperation($pdo,$masterOutletId,$b);
   if($op==='save'){
     $pt=is_array($b['paymentType']??null)?$b['paymentType']:[];
     $name=trim((string)($pt['name']??$pt['paymentName']??''));
