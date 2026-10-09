@@ -64,6 +64,10 @@ try {
     'customer_displays'=>['display id'=>['display_id'],'outlet_id'=>['outlet_id'],'terminal_id'=>['terminal_id'],'state'=>['state'],'state_json'=>['state_json'],'enabled'=>['enabled']],
     'terminals'=>['id'=>['id'],'outlet_id'=>['outlet_id'],'terminal_id'=>['terminal_id'],'terminal_name'=>['terminal_name'],'terminal_type'=>['terminal_type'],'customer_display_id'=>['customer_display_id']],
     'sp_document_counters'=>['outlet_id'=>['outlet_id'],'document type'=>['doc_type','document_type'],'counter'=>['current_number','counter_value']],
+    'car_batteries'=>['id'=>['id'],'outlet_id'=>['outlet_id'],'car_brand'=>['car_brand'],'model'=>['model'],'revision'=>['revision']],
+    'payment_type_display_images'=>['outlet_id'=>['outlet_id'],'payment_type_id'=>['payment_type_id'],'customer_display_image'=>['customer_display_image']],
+    'sp_state_versions'=>['outlet_id'=>['outlet_id'],'state_key'=>['state_key'],'revision'=>['revision']],
+    'sp_request_receipts'=>['request_key'=>['request_key'],'payload_hash'=>['payload_hash'],'response_json'=>['response_json']],
     'sp_relational_sync'=>['outlet_id'=>['outlet_id'],'state_key'=>['state_key'],'local_id'=>['local_id'],'db_id'=>['db_id']],
   ];
   $tables=[]; $allOk=true;

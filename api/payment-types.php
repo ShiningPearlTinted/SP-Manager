@@ -60,12 +60,20 @@ function ptMap(array $r): array {
         'openCashDrawer' => (bool)($r['open_cash_drawer'] ?? 0),
         'shortcutKey' => (string)($r['shortcut_key'] ?? ''),
         'position' => (int)($r['sort_order'] ?? 0),
+        'hasCustomerDisplayImage' => (bool)($r['has_customer_display_image'] ?? false),
     ];
 }
-function ptList(PDO $pdo, int $masterOutletId): array {
+function ptList(PDO $pdo, int $masterOutletId, int $imageOutletId): array {
+    if (!ptTableExists($pdo, 'payment_type_display_images')) throw new RuntimeException('Payment Type outlet image migration is required. Apply PAYMENT-TYPE-OUTLET-IMAGE-MIGRATION.sql.');
     $q = $pdo->prepare('SELECT * FROM payment_types WHERE outlet_id=? ORDER BY sort_order ASC,id ASC');
     $q->execute([$masterOutletId]);
-    return array_map('ptMap', $q->fetchAll());
+    $rows = $q->fetchAll();
+    $iq = $pdo->prepare("SELECT payment_type_id FROM payment_type_display_images WHERE outlet_id=? AND customer_display_image IS NOT NULL AND customer_display_image<>''");
+    $iq->execute([$imageOutletId]);
+    $imageIds = array_fill_keys(array_map('intval', $iq->fetchAll(PDO::FETCH_COLUMN)), true);
+    foreach ($rows as &$row) $row['has_customer_display_image'] = isset($imageIds[(int)$row['id']]);
+    unset($row);
+    return array_map('ptMap', $rows);
 }
 function ptGenerateCode(PDO $pdo, int $masterOutletId, string $name, ?int $exceptId = null): string {
     $base = strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/', '_', $name) ?? '', '_'));
@@ -92,7 +100,7 @@ try {
     $action = strtolower(trim((string)($_REQUEST['action'] ?? 'list')));
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'list') {
-        $rows = ptList($pdo, $masterOutletId);
+        $rows = ptList($pdo, $masterOutletId, $requestedOutletId);
         ptOut(['ok'=>true,'api_version'=>'V1','outlet_id'=>$requestedOutletId,'master_scope_outlet_id'=>$masterOutletId,'count'=>count($rows),'data'=>$rows]);
     }
 
@@ -146,7 +154,7 @@ try {
         spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');$pdo->commit();
         $q=$pdo->prepare('SELECT * FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');$q->execute([$id,$masterOutletId]);$row=$q->fetch();
         if(!$row)throw new RuntimeException('Payment type was saved but could not be read back from database.');
-        ptOut(['ok'=>true,'api_version'=>'V1','paymentType'=>ptMap($row),'data'=>ptList($pdo,$masterOutletId)]);
+        ptOut(['ok'=>true,'api_version'=>'V1','paymentType'=>ptMap($row),'data'=>ptList($pdo,$masterOutletId,$requestedOutletId)]);
     }
 
     if ($action === 'delete') {
@@ -165,7 +173,7 @@ try {
             $q=$pdo->prepare('DELETE FROM payment_types WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);
         }
         if(ptTableExists($pdo,'sp_relational_sync')){$q=$pdo->prepare("DELETE FROM sp_relational_sync WHERE state_key='paymentTypes' AND entity='paymentTypes' AND db_id=? AND outlet_id=?");$q->execute([$id,$masterOutletId]);}
-        spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');ptOut(['ok'=>true,'api_version'=>'V1','disabled_instead_of_deleted'=>$inUse,'data'=>ptList($pdo,$masterOutletId)]);
+        spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');ptOut(['ok'=>true,'api_version'=>'V1','disabled_instead_of_deleted'=>$inUse,'data'=>ptList($pdo,$masterOutletId,$requestedOutletId)]);
     }
 
     ptOut(['ok'=>false,'error'=>'Unsupported action.'],400);

@@ -79,7 +79,7 @@ try {
     $seen=[];
     foreach ($rows as $i=>$r) {
         if (!is_array($r)) throw new InvalidArgumentException('Invalid row '.($i+2));
-        $data=batteryNormalize($r);$key=mb_strtolower($data['car_brand']).'\x1f'.mb_strtolower($data['model']);
+        $data=batteryNormalize($r);$key=json_encode([mb_strtolower($data['car_brand']),mb_strtolower($data['model'])],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
         if (isset($seen[$key])) throw new InvalidArgumentException('Duplicate car brand/model in import: '.($data['car_brand'].' / '.$data['model']));$seen[$key]=true;
     }
     foreach ($rows as $r) batterySave($pdo,$outlet,$r,true);

@@ -6,7 +6,8 @@ export default defineConfig({
   base:"/SP-Manager/",
   build:{
     rollupOptions:{input:{main:"./index.html",customerDisplay:"./customer-display/index.html"}},
-    minify:false,
-    sourcemap:true
+    emptyOutDir:true,
+    minify:true,
+    sourcemap:false
   }
 });

@@ -134,7 +134,7 @@ function spResolveOutlet(PDO $pdo, string $value): int {
 
 function spPermissionForRequest(string $file, string $action, string $stateKey, string $method): string {
     if ($file === 'customer-display.php' && in_array($action, ['terminals','terminal','image'], true)) return 'manageSettings';
-    if ($file === 'car-batteries.php') return $method==='GET' && $action==='list' ? '' : 'manageProducts';
+    if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? '' : 'manageProducts';
     if ($file === 'users.php') return $action==='logout'?'':'manageUsers';
     if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
     if ($file === 'payment-types.php') return 'managePayments';

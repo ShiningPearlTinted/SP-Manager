@@ -1,0 +1,156 @@
+{
+  "removed_files": [
+    {
+      "file": "api/PAYMENT-TYPE-CUSTOMER-DISPLAY-MIGRATION.sql",
+      "reason": "Fail lama diganti atau tidak digunakan; lihat laporan."
+    },
+    {
+      "file": "api/SCHEMA-EMPTY-1.0.45.sql",
+      "reason": "Fail lama diganti atau tidak digunakan; lihat laporan."
+    },
+    {
+      "file": "frontend/dist/assets/app.css.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/app.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/customerDisplay-AejKCViF.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/customerDisplay-BULuXa_p.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/customerDisplay-BWOlIZEa.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/customerDisplay-BrkFxxeI.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/customerDisplay-DCmlhcsT.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/customerDisplay-DROLL2Oo.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/customerDisplay-odfIs1J0.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-AejKCViF.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-BULuXa_p.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-BWOlIZEa.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-BktOiuxq.js",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-BktOiuxq.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-BrkFxxeI.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-C469KOrR.js",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-C469KOrR.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-CEnVeKrx.js",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-CEnVeKrx.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-CnQgWq2l.css",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-CvQpAZ3b.css",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-Cw72sVID.js",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-Cw72sVID.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-D0qelBPs.js",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-D0qelBPs.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-DCmlhcsT.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-DROLL2Oo.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-D_2ftJk7.js",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-D_2ftJk7.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-E40YkdEs.js",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-E40YkdEs.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-odfIs1J0.js.map",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/dist/assets/main-payment-type-modal.css",
+      "reason": "Aset build lama diganti dengan build bersih."
+    },
+    {
+      "file": "frontend/pnpm-workspace.yaml",
+      "reason": "Fail lama diganti atau tidak digunakan; lihat laporan."
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "reason": "Fail lama diganti atau tidak digunakan; lihat laporan."
+    }
+  ],
+  "excluded_from_release": [
+    "api/config.php"
+  ],
+  "note": "Kekalkan config.php hosting yang sedang berfungsi. Fail baseline asal tidak dipadam."
+}

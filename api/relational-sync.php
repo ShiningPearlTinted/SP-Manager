@@ -456,12 +456,43 @@ function paymentTypeAppMap(array $r): array {
     'openCashDrawer'=>(bool)($r['open_cash_drawer']??0),
     'shortcutKey'=>(string)($r['shortcut_key']??''),
     'position'=>(int)($r['sort_order']??0),
+    'hasCustomerDisplayImage'=>!empty($r['has_customer_display_image']),
   ];
 }
-function paymentTypeList(PDO $pdo,int $outletId): array {
-  $q=$pdo->prepare('SELECT * FROM payment_types WHERE outlet_id=? ORDER BY sort_order ASC,id ASC');
-  $q->execute([$outletId]);
+function paymentTypeList(PDO $pdo,int $masterOutletId,int $imageOutletId): array {
+  if(!tableExists($pdo,'payment_type_display_images'))throw new RuntimeException('Payment Type outlet image migration is required. Apply PAYMENT-TYPE-OUTLET-IMAGE-MIGRATION.sql.');
+  $q=$pdo->prepare('SELECT p.*,CASE WHEN i.customer_display_image IS NOT NULL AND i.customer_display_image<>\'\' THEN 1 ELSE 0 END AS has_customer_display_image FROM payment_types p LEFT JOIN payment_type_display_images i ON i.payment_type_id=p.id AND i.outlet_id=? WHERE p.outlet_id=? ORDER BY p.sort_order ASC,p.id ASC');
+  $q->execute([$imageOutletId,$masterOutletId]);
   return array_map('paymentTypeAppMap',$q->fetchAll());
+}
+function paymentTypeImageOperation(PDO $pdo,int $masterOutletId,int $imageOutletId,array $b):void {
+  if(!tableExists($pdo,'payment_type_display_images'))throw new RuntimeException('Payment Type outlet image migration is required. Apply PAYMENT-TYPE-OUTLET-IMAGE-MIGRATION.sql.');
+  $id=(int)($b['id']??0);
+  if($id<=0)throw new InvalidArgumentException('Payment type id is required.');
+  $q=$pdo->prepare('SELECT id FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');
+  $q->execute([$id,$masterOutletId]);
+  if(!$q->fetchColumn())throw new RuntimeException('Payment type not found.');
+  if(!empty($b['read'])){
+    $q=$pdo->prepare('SELECT customer_display_image FROM payment_type_display_images WHERE payment_type_id=? AND outlet_id=? LIMIT 1');
+    $q->execute([$id,$imageOutletId]);
+    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-image-read','id'=>$id,'imageData'=>(string)($q->fetchColumn()?:'')],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
+  }
+  if(!empty($b['remove']))$image=null;
+  else {
+    $image=(string)($b['image_data']??'');
+    if(!preg_match('#^data:image/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$#i',$image,$m))throw new InvalidArgumentException('Upload a valid PNG, JPG or WebP image.');
+    $raw=base64_decode($m[2],true);
+    if($raw===false||strlen($raw)===0)throw new InvalidArgumentException('The image data is invalid.');
+    if(strlen($raw)>6*1024*1024)throw new InvalidArgumentException('Image is too large. Maximum 6 MB.');
+    $info=@getimagesizefromstring($raw);
+    $mime=is_array($info)?strtolower((string)($info['mime']??'')):'';
+    if(!in_array($mime,['image/png','image/jpeg','image/webp'],true))throw new InvalidArgumentException('Only PNG, JPG or WebP images are supported.');
+    $image='data:'.$mime.';base64,'.base64_encode($raw);
+  }
+  if($image===null){$q=$pdo->prepare('DELETE FROM payment_type_display_images WHERE payment_type_id=? AND outlet_id=?');$q->execute([$id,$imageOutletId]);}
+  else{$q=$pdo->prepare('INSERT INTO payment_type_display_images(outlet_id,payment_type_id,customer_display_image) VALUES(?,?,?) ON DUPLICATE KEY UPDATE customer_display_image=VALUES(customer_display_image)');$q->execute([$imageOutletId,$id,$image]);}
+  spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');
+  echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>$image===null?'payment-types-image-remove':'payment-types-image-save','id'=>$id,'imageData'=>$image??''],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
 }
 function paymentTypeCode(PDO $pdo,int $outletId,string $name,int $exceptId=0): string {
   $base=strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/','_',$name)??'','_'));
@@ -475,11 +506,12 @@ function paymentTypeCode(PDO $pdo,int $outletId,string $name,int $exceptId=0): s
     $candidate=substr($base,0,36).'_'.$n++;
   }
 }
-function paymentTypeOperation(PDO $pdo,int $masterOutletId,array $b): void {
+function paymentTypeOperation(PDO $pdo,int $masterOutletId,int $imageOutletId,array $b): void {
   $op=strtolower(trim((string)($b['operation']??'')));
   if($op==='list'){
-    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-list','data'=>paymentTypeList($pdo,$masterOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
+    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-list','data'=>paymentTypeList($pdo,$masterOutletId,$imageOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
   }
+  if($op==='image')paymentTypeImageOperation($pdo,$masterOutletId,$imageOutletId,$b);
   if($op==='save'){
     $pt=is_array($b['paymentType']??null)?$b['paymentType']:[];
     $name=trim((string)($pt['name']??$pt['paymentName']??''));
@@ -505,7 +537,7 @@ function paymentTypeOperation(PDO $pdo,int $masterOutletId,array $b): void {
     spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');$pdo->commit();
     $q=$pdo->prepare('SELECT * FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');$q->execute([$id,$masterOutletId]);$row=$q->fetch();
     if(!$row)throw new RuntimeException('Payment type was saved but could not be read back from database.');
-    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-save','paymentType'=>paymentTypeAppMap($row),'data'=>paymentTypeList($pdo,$masterOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
+    echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-save','paymentType'=>paymentTypeAppMap($row),'data'=>paymentTypeList($pdo,$masterOutletId,$imageOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
   }
   if($op==='delete'){
     $id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('Payment type id is required.');
@@ -514,7 +546,7 @@ function paymentTypeOperation(PDO $pdo,int $masterOutletId,array $b): void {
     if($inUse){$q=$pdo->prepare('UPDATE payment_types SET enabled=0 WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);}
     else{$q=$pdo->prepare('DELETE FROM payment_types WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);}
     if(tableExists($pdo,'sp_relational_sync')){$q=$pdo->prepare("DELETE FROM sp_relational_sync WHERE state_key='paymentTypes' AND entity='paymentTypes' AND db_id=? AND outlet_id=?");$q->execute([$id,$masterOutletId]);}
-    spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-delete','disabled_instead_of_deleted'=>$inUse,'data'=>paymentTypeList($pdo,$masterOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
+    spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-delete','disabled_instead_of_deleted'=>$inUse,'data'=>paymentTypeList($pdo,$masterOutletId,$imageOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
   }
   throw new InvalidArgumentException('Unsupported Payment Types operation.');
 }
@@ -552,7 +584,7 @@ try {
   $requestedOutletId = resolveOutletId($pdo, (string)($b['outlet_id'] ?? ($_SERVER['SP_AUTH_OUTLET_ID'] ?? '')));
   $outletId = in_array($stateKey,['paymentTypes','promos'],true) ? masterOutletId($pdo) : $requestedOutletId;
   if ($stateKey === 'paymentTypes' && trim((string)($b['operation'] ?? '')) !== '') {
-    paymentTypeOperation($pdo,$outletId,$b);
+    paymentTypeOperation($pdo,$outletId,$requestedOutletId,$b);
   }
 
   $maps = [
