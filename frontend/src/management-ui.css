@@ -113,7 +113,7 @@
 }
 
 /* Shared imperative dialogs use an origin marker; POS dialogs remain unmarked. */
-.sp-action-dialog-backdrop[data-ui="management"] {z-index:1200;padding:24px;background:rgba(15,23,42,.48);}
+.sp-action-dialog-backdrop[data-ui="management"] {z-index:2147483647!important;position:fixed!important;inset:0!important;padding:24px;background:rgba(15,23,42,.48);}
 .sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog {width:min(460px,100%);max-height:calc(100dvh - 48px);overflow:auto;border-radius:12px;box-shadow:0 20px 60px rgba(15,23,42,.18);}
 .sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-kicker {display:none;}
 .sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-head {padding:20px 24px;}
