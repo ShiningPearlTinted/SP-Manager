@@ -409,9 +409,9 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[lastSale,setLastSale]=useState(null);
  const[showCashInOutModal,setShowCashInOutModal]=useState(false);
  const[posOrderMeta,setPosOrderMeta]=useState({name:"",comment:"",serviceType:"Dine In",table:""});
- const[customerDisplayTerminal,setCustomerDisplayTerminal]=useState(()=>load("customerDisplayTerminal",CUSTOMER_DISPLAY_DEFAULTS));
+ const[customerDisplayTerminal,setCustomerDisplayTerminal]=useState(()=>deepMerge(CUSTOMER_DISPLAY_DEFAULTS,load("customerDisplayTerminal",{})));
  const[priceTagSettings,setPriceTagSettings]=useState(()=>load("priceTagSettings",{}));
- const publishCustomerDisplay=useCallback(async(state)=>{const t=customerDisplayTerminal||CUSTOMER_DISPLAY_DEFAULTS;if(!t?.enabled||!t?.displayId)return;let lastError=null;for(let attempt=0;attempt<3;attempt++){try{await customerDisplayRequest("/customer-display.php?action=state",{method:"POST",body:JSON.stringify({display_code:t.displayId,terminal_id:t.terminalId,terminal_name:t.terminalName,terminal_type:t.terminalType,outlet_id:activeOutletId()||t.outletId,state})});return true}catch(e){lastError=e;if(attempt<2)await new Promise(r=>setTimeout(r,350));}}console.warn("Customer Display update failed",lastError?.message||lastError);setNotice("Customer Display update failed: "+String(lastError?.message||lastError||"Unknown error"));return false},[customerDisplayTerminal]);
+ const publishCustomerDisplay=useCallback(async(state)=>{const t=deepMerge(CUSTOMER_DISPLAY_DEFAULTS,customerDisplayTerminal||{});if(t.enabled===false||!t.displayId)return;let lastError=null;for(let attempt=0;attempt<3;attempt++){try{await customerDisplayRequest("/customer-display.php?action=state",{method:"POST",body:JSON.stringify({display_code:t.displayId,terminal_id:t.terminalId,terminal_name:t.terminalName,terminal_type:t.terminalType,outlet_id:activeOutletId()||t.outletId,state})});return true}catch(e){lastError=e;if(attempt<2)await new Promise(r=>setTimeout(r,350));}}console.warn("Customer Display update failed",lastError?.message||lastError);setNotice("Customer Display update failed: "+String(lastError?.message||lastError||"Unknown error"));return false},[customerDisplayTerminal]);
 
 
  useEffect(()=>{if(!notice)return;const ms=Math.max(1,Number(settings.general.messageDuration||5))*1000;const t=setTimeout(()=>setNotice(""),ms);return()=>clearTimeout(t)},[notice,settings.general.messageDuration]);
@@ -478,7 +478,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  }
  const disc=totalDiscount;
  const customerDisplayState={state:cart.length?"CART":"IDLE",items:cart,subtotal,discount:disc,tax,total:grand,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"};
- useEffect(()=>{if(!signedIn||!customerDisplayTerminal?.enabled||!customerDisplayTerminal?.displayId)return; if(cart.length){publishCustomerDisplay(customerDisplayState);return;} let hold=false;try{hold=Number(sessionStorage.getItem("sp_customer_display_payment_hold")||0)>Date.now()}catch{} if(hold)return; publishCustomerDisplay({state:"IDLE",items:[],subtotal:0,discount:0,tax:0,total:0,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});},[signedIn,cart,subtotal,disc,tax,grand,customerDisplayTerminal?.enabled,customerDisplayTerminal?.displayId]);
+ useEffect(()=>{if(!signedIn||customerDisplayTerminal?.enabled===false||!customerDisplayTerminal?.displayId)return; if(cart.length){publishCustomerDisplay(customerDisplayState);return;} let hold=false;try{hold=Number(sessionStorage.getItem("sp_customer_display_payment_hold")||0)>Date.now()}catch{} if(hold)return; publishCustomerDisplay({state:"IDLE",items:[],subtotal:0,discount:0,tax:0,total:0,paymentAmount:0,change:0,currency:"RM",companyName:company?.name||"Shining Pearl Tinted",displayName:customerDisplayTerminal?.displayName||customerDisplayTerminal?.displayId||"Customer Display"});},[signedIn,cart,subtotal,disc,tax,grand,customerDisplayTerminal?.enabled,customerDisplayTerminal?.displayId]);
 
  const persist=(key,val,setter)=>{save(key,val);setter(val)};
  useEffect(()=>{
@@ -550,7 +550,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
     const day=result?.businessDay&&typeof result.businessDay==="object"?result.businessDay:{open:true,openingCash:0,date:new Date().toISOString().slice(0,10)};
     setBusinessDay(day);cacheSet("businessDay",day);
     const tax=Number(result?.taxRate||0);setTaxRate(tax);cacheSet("taxRate",tax);
-    const display=result?.customerDisplayTerminal&&typeof result.customerDisplayTerminal==="object"?result.customerDisplayTerminal:CUSTOMER_DISPLAY_DEFAULTS;
+    const display=deepMerge(CUSTOMER_DISPLAY_DEFAULTS,result?.customerDisplayTerminal&&typeof result.customerDisplayTerminal==="object"?result.customerDisplayTerminal:{});
     setCustomerDisplayTerminal(display);cacheSet("customerDisplayTerminal",display);
     const tags=result?.priceTagSettings&&typeof result.priceTagSettings==="object"?result.priceTagSettings:{};setPriceTagSettings(tags);cacheSet("priceTagSettings",tags);
     if(result?.posSearchMode)setPosSearchMode(String(result.posSearchMode)==="All fields"?"All":String(result.posSearchMode));
