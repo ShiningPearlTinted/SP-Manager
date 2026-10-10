@@ -187,6 +187,38 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card.is-disabled {opacity:.5!important;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card b {font-size:16px;}
 .sp-action-dialog-backdrop[data-ui="management"] {font-family:"Segoe UI",system-ui,-apple-system,sans-serif;}
+
+/* Focused cleanup for the screens in the management workspace. */
+.app[data-ui="management"] .named-orders-page {padding:0 18px 24px!important;}
+.app[data-ui="management"] .named-orders-topbar {display:none!important;}
+.app[data-ui="management"] .named-orders-toolbar {margin:0 0 14px!important;}
+.app[data-ui="management"] .named-orders-card-head {min-height:58px;display:flex;flex-direction:row!important;align-items:center!important;justify-content:space-between;gap:12px;padding:12px 18px!important;}
+.app[data-ui="management"] .named-orders-refresh {width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--mg-border);border-radius:9px;background:var(--mg-surface);color:var(--mg-ink);font-size:19px;cursor:pointer;}
+.app[data-ui="management"] .named-orders-refresh:hover {border-color:var(--mg-accent);color:var(--mg-accent);}
+.app[data-ui="management"] .named-orders-empty {min-height:220px!important;height:auto!important;padding:30px 20px!important;}
+.app[data-ui="management"] .named-orders-empty>div {width:46px!important;height:46px!important;margin-bottom:10px!important;font-size:20px!important;}
+.app[data-ui="management"] .outlet-management-page {padding:20px 28px 32px!important;}
+.app[data-ui="management"] .outlet-management-head {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;}
+.app[data-ui="management"] .outlet-toolbar {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin:0 0 14px;}
+.app[data-ui="management"] .outlet-search {display:grid;grid-template-columns:22px minmax(0,1fr) 30px;align-items:center;min-width:0;min-height:48px;padding:0 10px 0 14px;gap:6px;}
+.app[data-ui="management"] .outlet-search>span {padding:0;font-size:16px;line-height:1;}
+.app[data-ui="management"] .outlet-search input {width:100%;min-width:0;height:44px;margin:0;padding:0 8px;border:0!important;outline:0;box-shadow:none!important;background:transparent;font-size:14px;}
+.app[data-ui="management"] .outlet-search button {width:28px;height:28px;margin:0;display:grid;place-items:center;font-size:17px;}
+.app[data-ui="management"] .outlet-refresh {min-height:48px;padding:0 18px;white-space:nowrap;}
+.app[data-ui="management"] .product-master-toolbar {margin-bottom:14px!important;}
+.app[data-ui="management"] .product-action-strip {display:grid!important;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px!important;}
+.app[data-ui="management"] .product-action-strip>button {width:100%;min-height:44px!important;padding:8px 10px!important;gap:8px!important;white-space:nowrap;}
+.app[data-ui="management"] .product-action-strip>button>span {font-size:12px!important;white-space:nowrap!important;}
+.app[data-ui="management"] .product-action-strip>button::before {width:16px!important;height:16px!important;}
+.app[data-ui="management"] .refund-void-page {padding-top:20px!important;}
+.app[data-ui="management"] .refund-void-page>.panel {padding-top:18px;}
+@media(max-width:760px){
+ .app[data-ui="management"] .named-orders-page,.app[data-ui="management"] .outlet-management-page {padding:12px!important;}
+ .app[data-ui="management"] .outlet-management-head {align-items:stretch;}
+ .app[data-ui="management"] .outlet-toolbar {grid-template-columns:1fr;}
+ .app[data-ui="management"] .outlet-refresh {min-height:42px;}
+ .app[data-ui="management"] .product-action-strip {grid-template-columns:repeat(auto-fit,minmax(132px,1fr));}
+}
 /* Price-tag settings/toolbar only; native label/barcode preview is preserved. */
 .app[data-ui="management"] .price-tags-settings {font-family:"Segoe UI",system-ui,-apple-system,sans-serif;}
 .app[data-ui="management"] .price-tags-settings :is(input,select):not([type=checkbox]):not([type=range]) {height:42px;font:400 14px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;border-radius:9px;}
