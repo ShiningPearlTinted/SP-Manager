@@ -2,15 +2,15 @@
 /* Management-only UI system. Never active on POS, Dashboard or standalone display.
    Existing styles.css and all business functions are deliberately preserved. */
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) {
- --mg-ink:#172b43; --mg-muted:#64748b; --mg-bg:#f6f8fb; --mg-surface:#fff;
- --mg-border:#dce3eb; --mg-accent:#087ea4; --mg-danger:#b42318;
- --mg-radius:9px; --mg-card-radius:12px; font-family:"Segoe UI",system-ui,-apple-system,sans-serif; color:var(--mg-ink);
+ --mg-ink:#202733; --mg-muted:#697386; --mg-bg:#f5f6f8; --mg-surface:#fff;
+ --mg-border:#e2e5ea; --mg-accent:#087ea4; --mg-danger:#b42318;
+ --mg-radius:8px; --mg-card-radius:12px; --mg-space-1:4px; --mg-space-2:8px; --mg-space-3:12px; --mg-space-4:16px; --mg-space-6:24px; --mg-space-8:32px; --mg-title-size:28px; --mg-section-size:18px; --mg-card-size:16px; --mg-body-size:14px; --mg-label-size:13px; --mg-control-height:42px; font-family:"Segoe UI",system-ui,-apple-system,sans-serif; color:var(--mg-ink);
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-night {--mg-ink:#e2e8f0;--mg-muted:#a4b3c6;--mg-bg:#111827;--mg-surface:#1e293b;--mg-border:#37475e;--mg-accent:#38bdf8;--mg-danger:#fda4af;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-high-contrast {--mg-ink:#fff;--mg-muted:#eee;--mg-bg:#000;--mg-surface:#000;--mg-border:#fff;--mg-accent:#6ee7ff;--mg-danger:#ffb4b4;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main {min-width:0;background:var(--mg-bg);color:var(--mg-ink);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header {min-height:76px;padding:18px 28px;gap:16px;border-bottom:1px solid var(--mg-border);background:var(--mg-surface);box-shadow:none;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header h1 {margin:0;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-.5px;color:var(--mg-ink);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header h1 {margin:0;font-size:var(--mg-title-size);line-height:1.25;font-weight:600;letter-spacing:-.5px;color:var(--mg-ink);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header > div:first-of-type > small {display:none;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .head-actions {flex-wrap:wrap;gap:8px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.header-status-pill) {font-size:12px;font-weight:500;background:var(--mg-bg);border-color:var(--mg-border);color:var(--mg-muted);}
@@ -18,7 +18,7 @@
  padding:24px 28px 40px;min-width:0;box-sizing:border-box;background:var(--mg-bg);color:var(--mg-ink);
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(h2,h3,h4,p) {color:var(--mg-ink);}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(h2,h3) {font-weight:700;line-height:1.3;letter-spacing:-.25px;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(h2,h3) {font-weight:600;line-height:1.3;letter-spacing:-.25px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) h2 {font-size:20px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) h3 {font-size:18px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) h4 {font-size:18px;font-weight:600;}
@@ -27,7 +27,7 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.management-head,.outlet-management-head,.customer-topbar,.inventory-topbar,.users-topbar,.payment-types-top,.promotion-toolbar,.loyalty-topbar,.purchase-toolbar,.company-topbar,.document-toolbar) h2 {display:none;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.management-head,.users-topbar,.payment-types-top,.loyalty-topbar,.customer-topbar,.outlet-management-head) > div > p {display:none;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.management-head,.outlet-management-head,.customer-topbar,.inventory-topbar,.users-topbar,.payment-types-top,.promotion-toolbar,.loyalty-topbar,.purchase-toolbar,.company-topbar,.document-toolbar) {
- display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 20px;max-width:none;
+ display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 24px;max-width:none;
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.panel,.product-master-shell,.customer-list-panel,.customer-summary,.inventory-shell,.outlet-table-card,.promotion-list-panel,.purchase-list-card,.document-form-card,.company-shell,.settings-shell) {
  background:var(--mg-surface);border:1px solid var(--mg-border);border-radius:var(--mg-card-radius);box-shadow:0 2px 8px rgba(15,23,42,.025);min-width:0;
@@ -37,11 +37,11 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-form-section,.editor-section,.company-form-block):last-child {margin-bottom:0;border-bottom:0;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.editor-section > h4,.customer-form-section > h4,.company-section-title) {margin:0 0 18px;padding:0;font-size:18px;font-weight:600;color:var(--mg-ink);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.formgrid,.form-grid,.editor-grid,.customer-form-grid,.users-form-grid,.outlet-form-grid,.group-editor-grid,.settings-grid,.company-grid,.document-form-grid,.purchase-meta-grid,.promotion-grid,.payment-type-fields) {
- display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px;min-width:0;
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;min-width:0;
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.settings-grid.single) {grid-template-columns:minmax(0,1fr);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.wide,.full,.document-note,.purchase-notes) {grid-column:1 / -1;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(label,.localize-label-control) {font-size:13px;line-height:1.4;font-weight:600;color:var(--mg-ink);min-width:0;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(label,.localize-label-control) {font-size:var(--mg-label-size);line-height:1.4;font-weight:500;color:var(--mg-ink);min-width:0;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not(.price-tags-modal *) {
  box-sizing:border-box;min-width:0;max-width:100%;height:42px;padding:0 12px;border:1px solid var(--mg-border);border-radius:var(--mg-radius);background:var(--mg-surface);color:var(--mg-ink);font:400 14px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;box-shadow:none;
 }
@@ -50,7 +50,7 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(input,select,textarea):focus-visible:not(.price-tags-modal *) {outline:2px solid var(--mg-accent);outline-offset:2px;border-color:var(--mg-accent);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(input[type=checkbox],input[type=radio]) {width:17px;height:17px;flex-shrink:0;accent-color:var(--mg-accent);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(button,.image-upload-btn):not(.price-tags-modal *) {
- box-sizing:border-box;min-height:42px;padding:9px 16px;border-radius:var(--mg-radius);font:600 14px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;box-shadow:none;cursor:pointer;max-width:100%;white-space:normal;
+ box-sizing:border-box;min-height:42px;padding:9px 16px;border-radius:var(--mg-radius);font:500 14px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;box-shadow:none;cursor:pointer;max-width:100%;white-space:normal;
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) button:disabled {cursor:not-allowed;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) button:focus-visible {outline:2px solid var(--mg-accent);outline-offset:3px;}
@@ -58,7 +58,7 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.secondary,.settings-cancel,.linkish,.back-link,.outlet-back,.outlet-refresh,.company-tabs button,.customer-tabs button,.product-editor-tabs button,.settings-nav button) {background:var(--mg-surface);color:var(--mg-ink);border:1px solid var(--mg-border);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.danger,.danger-button,.delete-yes,.danger-text) {color:var(--mg-danger);border-color:var(--mg-danger);background:var(--mg-surface);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.iconbtn,.outlet-modal-close,.users-modal-head > button,.customer-modal-head > button,.inventory-modal-head > button,.promotion-modal-head > button,.sp-messagebox-close,.sp-notes-close,.print-printer-modal-head > button) {width:42px;height:42px;min-height:42px;padding:0;flex-shrink:0;display:inline-grid;place-items:center;font-size:20px;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.actions,.form-actions,.customer-actions,.inventory-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions) {display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.actions,.form-actions,.customer-actions,.inventory-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions) {display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.table,.product-table-wrap,.customer-table-wrap,.inventory-table-wrap,.promotion-table-wrap,.purchase-table-wrap,.loyalty-table-wrap,.users-table,.outlet-table-card) {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;border-radius:var(--mg-radius);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) table {width:100%;border-collapse:collapse;background:var(--mg-surface);color:var(--mg-ink);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) table th {height:44px;padding:11px 14px;text-align:start;font-size:12px;line-height:1.4;font-weight:600;color:var(--mg-muted);background:var(--mg-bg);border-bottom:1px solid var(--mg-border);text-transform:none;letter-spacing:0;white-space:nowrap;}
@@ -74,8 +74,8 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.modal,.ar-modal,.customer-modal,.users-modal,.outlet-modal,.inventory-modal,.promotion-modal,.payment-type-modal,.print-printer-modal,.sp-notes-modal):not(.price-tags-modal) {width:min(880px,100%);max-width:100%;max-height:calc(100dvh - 48px);overflow:auto;border:1px solid var(--mg-border);border-radius:12px;background:var(--mg-surface);box-shadow:0 20px 60px rgba(15,23,42,.18);color:var(--mg-ink);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.group-confirm-modal,.customer-delete-modal,.sp-messagebox) {width:min(460px,100%);max-width:100%;max-height:calc(100dvh - 48px);overflow:auto;border-radius:12px;background:var(--mg-surface);border:1px solid var(--mg-border);box-shadow:0 20px 60px rgba(15,23,42,.18);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.modal-head,.ar-modal-head,.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head,.print-printer-modal-head,.sp-notes-header) {padding:20px 24px;gap:16px;border-bottom:1px solid var(--mg-border);background:var(--mg-surface);}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.modal-head,.ar-modal-head,.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head,.print-printer-modal-head,.sp-notes-header) :is(h2,h3) {font-size:24px;line-height:1.25;font-weight:700;margin:0;text-transform:uppercase;color:var(--mg-ink);}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-modal-foot,.users-modal-actions,.outlet-modal-foot,.inventory-modal-foot,.promotion-modal-foot,.payment-type-modal-foot,.print-printer-modal-foot,.form-actions,.group-editor-actions,.group-confirm-actions,.customer-delete-actions,.sp-messagebox-actions) {display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding:18px 24px;border-top:1px solid var(--mg-border);background:var(--mg-surface);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.modal-head,.ar-modal-head,.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head,.print-printer-modal-head,.sp-notes-header) :is(h2,h3) {font-size:20px;line-height:1.25;font-weight:600;margin:0;text-transform:none;color:var(--mg-ink);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-modal-foot,.users-modal-actions,.outlet-modal-foot,.inventory-modal-foot,.promotion-modal-foot,.payment-type-modal-foot,.print-printer-modal-foot,.form-actions,.group-editor-actions,.group-confirm-actions,.customer-delete-actions,.sp-messagebox-actions) {display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:16px 24px;border-top:1px solid var(--mg-border);background:var(--mg-surface);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-form-body,.product-editor-tab-content,.payment-type-form,.inventory-modal-body,.promotion-form-top,.document-form-card) {padding:24px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-tabs,.company-tabs,.product-editor-tabs,.purchase-tabs,.print-settings-tabs) {gap:8px;border-color:var(--mg-border);background:var(--mg-surface);overflow-x:auto;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-tabs,.company-tabs,.product-editor-tabs,.purchase-tabs,.print-settings-tabs) button {white-space:nowrap;flex-shrink:0;}
@@ -89,7 +89,7 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-tree,.inventory-tree,.settings-nav) {background:var(--mg-surface);border-color:var(--mg-border);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.settings-title,.tree-title) {font-size:18px;font-weight:600;color:var(--mg-ink);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-main {min-width:0;padding:24px;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-main > h2 {font-size:18px;margin:0 0 20px;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-main > h2 {font-size:18px;margin:0 0 24px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-main > h2:not(:first-child) {margin-top:28px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-grid {margin-bottom:24px;}
 @media (max-width:1050px) {
@@ -99,7 +99,7 @@
 }
 @media (max-width:700px) {
  .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header {padding:16px;gap:12px;}
- .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header h1 {font-size:24px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header h1 {font-size:24px!important;}
  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.content,.management-page,.outlet-management-page,.customer-master,.inventory-modern,.users-modern,.payment-types-modern,.promotion-modern,.loyalty-modern,.purchase-modern,.my-company-page,.document-module,.settings-page) {padding:18px 14px 28px;}
  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.formgrid,.form-grid,.editor-grid,.customer-form-grid,.users-form-grid,.outlet-form-grid,.group-editor-grid,.settings-grid,.company-grid,.document-form-grid,.purchase-meta-grid,.promotion-grid,.payment-type-fields,.management-grid,.permission-grid,.settings-check-grid,.warranty-maintenance-grid) {grid-template-columns:minmax(0,1fr);}
  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-master-shell,.inventory-shell,.settings-shell,.company-general-layout,.promotion-builder) {grid-template-columns:minmax(0,1fr);}
@@ -119,11 +119,11 @@
 .sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-head {padding:20px 24px;}
 .sp-action-dialog-backdrop[data-ui="management"] h3 {font:700 24px/1.25 "Segoe UI",system-ui,-apple-system,sans-serif;text-transform:uppercase;}
 .sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-body {padding:20px 24px;font:400 14px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif;}
-.sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-actions {display:flex;justify-content:flex-end;gap:10px;padding:18px 24px;}
-.sp-action-dialog-backdrop[data-ui="management"] button {min-height:42px;padding:9px 16px;border-radius:9px;font:600 14px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;}
+.sp-action-dialog-backdrop[data-ui="management"] .sp-action-dialog-actions {display:flex;justify-content:flex-end;gap:8px;padding:16px 24px;}
+.sp-action-dialog-backdrop[data-ui="management"] button {min-height:42px;padding:9px 16px;border-radius:9px;font:500 14px/1.3 "Segoe UI",system-ui,-apple-system,sans-serif;}
 @media(max-width:700px){.sp-action-dialog-backdrop[data-ui="management"] {padding:12px;}}
 
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-master-toolbar {border:0;background:transparent;box-shadow:none;padding:0;margin:0 0 20px;display:block;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-master-toolbar {border:0;background:transparent;box-shadow:none;padding:0;margin:0 0 24px;display:block;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-master-toolbar > div:first-child {display:none;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-action-strip {display:flex;justify-content:flex-start;flex-wrap:wrap;gap:8px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-action-strip > button {display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:42px;padding:9px 12px;border:1px solid var(--mg-border);background:var(--mg-surface);font-size:0;color:var(--mg-ink);}
@@ -199,7 +199,7 @@
 .app[data-ui="management"] .named-orders-empty>div {width:46px!important;height:46px!important;margin-bottom:10px!important;font-size:20px!important;}
 .app[data-ui="management"] .outlet-management-page {padding:20px 28px 32px!important;}
 .app[data-ui="management"] .outlet-management-head {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;}
-.app[data-ui="management"] .outlet-toolbar {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin:0 0 14px;}
+.app[data-ui="management"] .outlet-toolbar {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:0 0 14px;}
 .app[data-ui="management"] .outlet-search {display:grid;grid-template-columns:22px minmax(0,1fr) 30px;align-items:center;min-width:0;min-height:48px;padding:0 10px 0 14px;gap:6px;}
 .app[data-ui="management"] .outlet-search>span {padding:0;font-size:16px;line-height:1;}
 .app[data-ui="management"] .outlet-search input {width:100%;min-width:0;height:44px;margin:0;padding:0 8px;border:0!important;outline:0;box-shadow:none!important;background:transparent;font-size:14px;}
@@ -207,7 +207,7 @@
 .app[data-ui="management"] .outlet-refresh {min-height:48px;padding:0 18px;white-space:nowrap;}
 .app[data-ui="management"] .product-master-toolbar {margin-bottom:14px!important;}
 .app[data-ui="management"] .product-action-strip {display:grid!important;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px!important;}
-.app[data-ui="management"] .product-action-strip>button {width:100%;min-height:44px!important;padding:8px 10px!important;gap:8px!important;white-space:nowrap;}
+.app[data-ui="management"] .product-action-strip>button {width:100%;min-height:42px!important;padding:8px 10px!important;gap:8px!important;white-space:nowrap;}
 .app[data-ui="management"] .product-action-strip>button>span {font-size:12px!important;white-space:nowrap!important;}
 .app[data-ui="management"] .product-action-strip>button::before {width:16px!important;height:16px!important;}
 .app[data-ui="management"] .refund-void-page {padding-top:20px!important;}
@@ -228,30 +228,92 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.form-actions,.customer-modal-foot,.promotion-modal-foot,.payment-type-modal-foot) button[type="submit"] {background:var(--mg-accent);color:#fff;border:1px solid var(--mg-accent);}
 }
 
-/* Management button system: Products toolbar is the visual reference. */
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) {
- --mg-button-radius:11px;
- --mg-button-border:#d8e2ee;
- --mg-button-text:#40546f;
- --mg-button-hover:#f3f8fc;
- --mg-button-focus:rgba(8,127,170,.24);
+
+
+@media screen {
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) button:not(.iconbtn):not([class*="close"]) {font-size:14px!important;font-weight:500!important;min-height:42px!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-action-strip > button {height:42px!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]) {font-size:14px!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(button[title^="Delete"],.danger,.delete-button) {color:var(--mg-danger);border-color:#f1c6c2;background:#fff;}
 }
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions,.eod-history-toolbar,.payment-screen-actions) > button {
- box-sizing:border-box!important;min-width:124px!important;min-height:60px!important;padding:10px 14px!important;display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:9px!important;border:1px solid var(--mg-button-border)!important;border-radius:var(--mg-button-radius)!important;background:#fff!important;color:var(--mg-button-text)!important;box-shadow:0 1px 2px rgba(16,42,67,.035)!important;font:600 13px/1.25 "Segoe UI",system-ui,-apple-system,sans-serif!important;white-space:nowrap!important;transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .16s ease!important;
+/* Management shell. Every rule is gated; locked roots inherit their original CSS. */
+@media screen {
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) {font-size:var(--mg-body-size);line-height:1.5;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside {background:#181a1f;color:#d7dbe3;border-right:1px solid #282c34;width:232px;box-shadow:none;padding:20px 12px;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside .brand {display:flex;align-items:center;gap:12px;padding:4px 8px 24px;color:#fff;min-width:0;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside .brand strong {font-size:16px;font-weight:600;letter-spacing:-.2px;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside .brand small {display:block;color:#a8aebc;font-size:12px;line-height:1.4;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-brand-mark {display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:8px;background:#fff;overflow:hidden;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-brand-mark img {width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside > label {display:block;color:#8f97a6;font-size:11px;font-weight:600;letter-spacing:1px;padding:0 12px 8px;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside > button {display:flex;align-items:center;min-height:42px;width:100%;padding:10px 12px;margin:4px 0;border:1px solid transparent;border-radius:8px;background:transparent;color:#c9ced8;font-size:13px;font-weight:500;text-align:start;transition:background .15s,color .15s;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside > button:hover {background:#262a32;color:#fff;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside > button.active {background:#303640;color:#fff;border-color:#414a59;box-shadow:inset 3px 0 var(--mg-accent);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header {padding:24px 32px;min-height:96px;align-items:center;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header h1 {font-size:var(--mg-title-size)!important;font-weight:600!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main {min-width:0;width:auto;margin:0;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.content,.management-page,.outlet-management-page,.customer-master,.inventory-modern,.users-modern,.payment-types-modern,.promotion-modern,.loyalty-modern,.purchase-modern,.my-company-page,.document-module,.settings-page,.price-check-page,.named-orders-page) {max-width:none;min-width:0;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.panel,.card,.settings-shell,.product-master-shell,.customer-list-panel,.inventory-shell,.purchase-list-card,.payment-types-card,.loyalty-panel) {border-color:var(--mg-border);border-radius:var(--mg-card-radius);box-shadow:0 2px 8px rgba(16,24,40,.035);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions,.eod-history-toolbar,.payment-screen-actions) > button {min-height:42px;padding:10px 14px;font-weight:500;transform:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.modal-head,.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head) h2 {display:block;font-size:20px;font-weight:600;text-transform:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) table tbody tr:hover {background:var(--mg-bg);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) table td {font-size:14px;font-variant-numeric:tabular-nums;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.purchase-meta-grid,.document-form-grid,.payment-type-fields,.settings-grid) > * {min-width:0;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.settings-title,.price-check-intro) {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.document-toolbar,.company-topbar,.purchase-toolbar) > div > p {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-main {min-width:0;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.modal,.customer-modal,.users-modal,.outlet-modal,.inventory-modal,.promotion-modal,.payment-type-modal) {overscroll-behavior:contain;}
+@media(min-width:901px) {
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) {display:grid;grid-template-columns:232px minmax(0,1fr);}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside {position:sticky;top:0;height:100dvh;overflow-y:auto;box-sizing:border-box;}
 }
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions,.eod-history-toolbar,.payment-screen-actions) > button:hover:not(:disabled) {background:var(--mg-button-hover)!important;border-color:#b9cddd!important;color:#087fa9!important;box-shadow:0 3px 10px rgba(16,42,67,.07)!important;transform:translateY(-1px);}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions,.eod-history-toolbar,.payment-screen-actions) > button:disabled {opacity:.48!important;box-shadow:none!important;transform:none!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions,.eod-history-toolbar,.payment-screen-actions) > button:is(.primary,.primary-button,.company-save) {border-color:var(--mg-accent)!important;background:var(--mg-accent)!important;color:#fff!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.primary,.primary-button,.settings-save,.company-save,.outlet-add-btn,.users-add,.customer-edit-main,.document-toolbar-actions .primary,.form-actions .primary,.modal-actions .primary,.outlet-modal-foot .primary,.purchase-bottom-actions .primary) {min-height:42px!important;padding:10px 18px!important;border:1px solid var(--mg-accent)!important;border-radius:10px!important;background:var(--mg-accent)!important;color:#fff!important;font:600 14px/1.25 "Segoe UI",system-ui,-apple-system,sans-serif!important;box-shadow:none!important;transition:background .16s ease,border-color .16s ease,box-shadow .16s ease!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.primary,.primary-button,.settings-save,.company-save,.outlet-add-btn,.users-add,.customer-edit-main,.document-toolbar-actions .primary,.form-actions .primary,.modal-actions .primary,.outlet-modal-foot .primary,.purchase-bottom-actions .primary):hover:not(:disabled) {background:#087fa9!important;border-color:#087fa9!important;box-shadow:0 3px 10px rgba(8,127,170,.18)!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.secondary,.settings-cancel,.linkish,.back-link,.outlet-back,.outlet-refresh,.smallbtn,.table-action,.danger-outline,.success-outline,.form-actions button:not(.primary),.modal-actions button:not(.primary),.customer-modal-foot button:not(.primary),.users-modal-actions button:not(.primary),.outlet-modal-foot button:not(.primary),.inventory-modal-foot button:not(.primary),.promotion-modal-foot button:not(.primary),.payment-type-modal-foot button:not(.primary),.purchase-bottom-actions button:not(.primary),.group-editor-actions button:not(.primary),.group-confirm-actions button:not(.primary),.customer-delete-actions button:not(.primary),.sp-messagebox-actions button:not(.primary)) {min-height:42px!important;padding:9px 16px!important;border:1px solid var(--mg-button-border)!important;border-radius:10px!important;background:#fff!important;color:var(--mg-button-text)!important;font:600 14px/1.25 "Segoe UI",system-ui,-apple-system,sans-serif!important;box-shadow:none!important;transition:background .16s ease,border-color .16s ease,color .16s ease!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.secondary,.settings-cancel,.linkish,.back-link,.outlet-back,.outlet-refresh,.smallbtn,.table-action,.danger-outline,.success-outline,.form-actions button:not(.primary),.modal-actions button:not(.primary),.customer-modal-foot button:not(.primary),.users-modal-actions button:not(.primary),.outlet-modal-foot button:not(.primary),.inventory-modal-foot button:not(.primary),.promotion-modal-foot button:not(.primary),.payment-type-modal-foot button:not(.primary),.purchase-bottom-actions button:not(.primary),.group-editor-actions button:not(.primary),.group-confirm-actions button:not(.primary),.customer-delete-actions button:not(.primary),.sp-messagebox-actions button:not(.primary)):hover:not(:disabled) {background:var(--mg-button-hover)!important;border-color:#b9cddd!important;color:#087fa9!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.danger,.danger-button,.danger-outline,.delete-yes) {border-color:#f2c4c4!important;background:#fff!important;color:#b42318!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.danger,.danger-button,.danger-outline,.delete-yes):hover:not(:disabled) {border-color:#e4a3a3!important;background:#fff6f5!important;color:#912018!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .success-outline {border-color:#bfe5d0!important;color:#087443!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.smallbtn,.table-action,table td button,.outlet-actions button,.inventory-row-btn) {min-height:36px!important;padding:7px 12px!important;border-radius:9px!important;font-size:13px!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.iconbtn,.icon-btn,.named-orders-refresh,.outlet-modal-close,.users-modal-head>button,.customer-modal-head>button,.inventory-modal-head>button,.promotion-modal-head>button,.sp-messagebox-close,.sp-notes-close,.print-printer-modal-head>button) {width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;padding:0!important;display:inline-grid!important;place-items:center!important;border-radius:10px!important;border:1px solid var(--mg-button-border)!important;background:#fff!important;color:var(--mg-button-text)!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) button:disabled {cursor:not-allowed!important;opacity:.48;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) button:focus-visible {outline:3px solid var(--mg-button-focus)!important;outline-offset:2px!important;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.actions,.form-actions,.customer-actions,.inventory-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions,.group-editor-actions,.purchase-editor-actions,.purchase-bottom-actions,.settings-actions,.settings-database-actions,.outlet-actions,.users-modal-actions,.customer-delete-actions,.sp-messagebox-actions,.payment-display-image-actions) {gap:10px!important;}
-@media(max-width:760px){.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions,.eod-history-toolbar,.payment-screen-actions) > button {flex:1 1 132px!important;min-width:0!important;min-height:50px!important;}}
+@media(max-width:1100px) {
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header {padding:20px 24px;flex-wrap:wrap;gap:12px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .head-actions {gap:8px;}
+}
+@media(max-width:900px) {
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) {display:block;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside {position:fixed;inset:0 auto 0 0;z-index:1200;height:100dvh;max-width:85vw;overflow-y:auto;transform:translateX(-100%);transition:transform .18s;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside.is-open {transform:translateX(0);}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) .mobile-nav-open,.app[data-ui="management"]:not(:has(.price-tags-overlay)) .mobile-nav-close {display:inline-grid;place-items:center;min-width:42px;min-height:42px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) .mobile-nav-close {color:#fff;background:#303640;border:1px solid #414a59;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main {margin:0;width:100%;}
+}
+@media(max-width:700px) {
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header {padding:16px;min-height:80px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header h1 {font-size:24px!important;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .head-actions {width:100%;gap:4px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) .header-status-pill {padding:5px 8px;font-size:11px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.content,.management-page,.customer-master,.inventory-modern,.users-modern,.payment-types-modern,.promotion-modern,.loyalty-modern,.purchase-modern,.my-company-page,.document-module,.settings-page,.price-check-page) {padding:16px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.formgrid,.form-grid,.editor-grid,.customer-form-grid,.users-form-grid,.outlet-form-grid,.group-editor-grid,.settings-grid,.company-grid,.document-form-grid,.purchase-meta-grid,.promotion-grid,.payment-type-fields) {grid-template-columns:minmax(0,1fr);gap:16px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-form-body,.product-editor-tab-content,.payment-type-form,.document-form-card) {padding:16px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head) {padding:16px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-modal-foot,.users-modal-actions,.outlet-modal-foot,.inventory-modal-foot,.promotion-modal-foot,.payment-type-modal-foot) {padding:16px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.settings-shell,.company-shell) {grid-template-columns:minmax(0,1fr);}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.settings-nav,.company-tabs) {display:flex;overflow:auto;gap:8px;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) .settings-nav button {white-space:nowrap;flex-shrink:0;}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.toolbar,.document-filter,.purchase-filterbar) > input {width:100%;}
+}
+}
+
+@media screen {
+.app[data-ui="management"]:not(:has(.price-tags-overlay))[data-page="Credit payments"] > main > .content > .panel > h2, .app[data-ui="management"]:not(:has(.price-tags-overlay))[data-page="Credit payments"] > main > .content > .panel > h2 + p {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay))[data-page="Reports"] > main > .content > .panel > h2, .app[data-ui="management"]:not(:has(.price-tags-overlay))[data-page="Reports"] > main > .content > .panel > h2 + p {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay))[data-page="X / Z Report"] > main > .content > .panel > h2, .app[data-ui="management"]:not(:has(.price-tags-overlay))[data-page="X / Z Report"] > main > .content > .panel > h2 + p {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay))[data-page="Cash In / Out"] > main > .content > .panel > .toolbar > div:first-child :is(h2,small) {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.payments-toolbar > div:first-child,.pc-heading > div:first-child) {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-topbar,.promotion-toolbar) > div > p {display:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .eod-head h2 {display:none;}
+}
+
+@media screen {
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header > div:first-of-type {flex:1;min-width:0;text-align:start;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header h1 {text-align:start!important;}
+@media(max-width:700px){.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .head-actions {display:flex!important;}}
+}
+
+@media screen {
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside > label {color:#8f97a6!important;font-size:11px!important;font-weight:600!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions) > button > span {font-size:inherit!important;font-weight:inherit;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(label,.settings-field > span) {font-weight:500!important;}
+}
