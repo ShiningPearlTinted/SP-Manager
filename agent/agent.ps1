@@ -50,6 +50,7 @@ function Read-Request($client){
  } finally {$ms.Dispose();$timer.Stop()}
 }
 . (Join-Path $AgentDir 'autostart.ps1')
+. (Join-Path $AgentDir 'display-window.ps1')
 function Handle($req){
   $s=$req.stream
   try{
@@ -60,7 +61,7 @@ function Handle($req){
     if($req.method -ne 'OPTIONS' -and -not $displayAuthorized){$received=[string]$req.headers['authorization'];$expected='Bearer '+$AgentToken;$different=$received.Length -bxor $expected.Length;for($i=0;$i -lt $expected.Length;$i++){$char=if($i -lt $received.Length){[int][char]$received[$i]}else{0};$different=$different -bor ($char -bxor [int][char]$expected[$i])};if($different -ne 0){Send-Json $s 401 @{ok=$false;error='Pair this computer using the local agent token'};return}}
     $req.path=$uri.AbsolutePath
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.1';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.2';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
     if($req.method -eq 'POST' -and $req.path -eq '/install-autostart'){Install-AutoStart|Out-Null;Send-Json $s 200 @{ok=$true;autoStartInstalled=$true;message='Auto-start + auto-restart is installed.'};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     if($req.path -eq '/email'){Send-Json $s 410 @{ok=$false;error='Use authenticated server email endpoint'};return}
@@ -174,67 +175,7 @@ const $=id=>document.getElementById(id);function esc(v){return String(v??'').rep
       }
       Send-Json $s 200 @{ok=$true;monitors=$items};return
     }
-    if($req.method -eq 'POST' -and $req.path -eq '/display-window'){
-      Add-Type -AssemblyName System.Windows.Forms
-      Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-public static class SPDisplayWindow {
-  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-}
-'@
-      $screens=[System.Windows.Forms.Screen]::AllScreens
-      if($screens.Count -lt 2){throw 'No secondary monitor detected. Windows must be set to Extend displays.'}
-      $screen=@($screens|Where-Object{$_.Primary -eq $false}|Select-Object -First 1)[0]
-      if($null -eq $screen){$screen=$screens[1]}
-      $browser=$null
-      foreach($cmd in @('msedge.exe','chrome.exe')){
-        if(-not $browser){$browser=(Get-Command $cmd -ErrorAction SilentlyContinue).Source}
-      }
-      if(-not $browser){
-        $candidates=@(
-          "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
-          "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe",
-          "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe",
-          "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-          "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
-          "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
-        )
-        $browser=$candidates|Where-Object{Test-Path $_}|Select-Object -First 1
-      }
-      if(-not $browser){throw 'Microsoft Edge or Google Chrome was not found on this Windows PC.'}
-      $chars=[Math]::Max(8,[Math]::Min(80,[int]$b.chars));$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$script:DisplayState=@{line1=$line1;line2=$line2;chars=$chars;companyName=[string]$b.companyName;logo=[string]$b.logo;items=@($b.items);total=[double]$b.total;currency=([string]$b.currency);customerName=[string]$b.customerName;updatedAt=(Get-Date).ToUniversalTime().ToString('o')}
-      $url="http://127.0.0.1:$Port/customer-display?key=$DisplayToken"
-      $args=@("--app=$url","--new-window","--window-position=$($screen.Bounds.X),$($screen.Bounds.Y)","--window-size=$($screen.Bounds.Width),$($screen.Bounds.Height)",'--disable-session-crashed-bubble')
-      $started=Start-Process -FilePath $browser -ArgumentList $args -PassThru
-      Start-Sleep -Milliseconds 1800
-      $hwnd=[IntPtr]::Zero
-      for($i=0;$i -lt 20 -and $hwnd -eq [IntPtr]::Zero;$i++){
-        try{
-          $started.Refresh()
-          $rawHandle=$started.MainWindowHandle
-          if($null -ne $rawHandle -and [string]$rawHandle -ne ''){
-            try{$hwnd=[IntPtr]::new([long]$rawHandle)}catch{$hwnd=[IntPtr]::Zero}
-          }
-        }catch{}
-        if($hwnd -eq [IntPtr]::Zero){
-          $name=[IO.Path]::GetFileNameWithoutExtension($browser)
-          $candidate=Get-Process -Name $name -ErrorAction SilentlyContinue|Where-Object{$_.MainWindowHandle -ne 0}|Sort-Object StartTime -Descending|Select-Object -First 1
-          if($candidate){
-            try{
-              $rawCandidate=$candidate.MainWindowHandle
-              if($null -ne $rawCandidate -and [string]$rawCandidate -ne ''){$hwnd=[IntPtr]::new([long]$rawCandidate)}
-            }catch{$hwnd=[IntPtr]::Zero}
-          }
-        }
-        if($hwnd -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 300}
-      }
-      if($hwnd -eq [IntPtr]::Zero){throw 'Customer display browser started, but Windows did not return a usable window handle.'}
-      [SPDisplayWindow]::ShowWindowAsync([IntPtr]$hwnd,3)|Out-Null
-      [SPDisplayWindow]::SetWindowPos([IntPtr]$hwnd,[IntPtr]::Zero,$screen.Bounds.X,$screen.Bounds.Y,$screen.Bounds.Width,$screen.Bounds.Height,0x0040)|Out-Null
-      Send-Json $s 200 @{ok=$true;mode='secondary';details=@{monitor=$screen.DeviceName;x=$screen.Bounds.X;y=$screen.Bounds.Y;width=$screen.Bounds.Width;height=$screen.Bounds.Height;windowFound=$true;browser=$browser}};return
-    }
+    if($req.method -eq 'POST' -and $req.path -eq '/display-window'){Send-Json $s 200 (Open-SPDisplayWindow $b);return}
     if($req.method -eq 'POST' -and $req.path -eq '/display'){$chars=[Math]::Max(8,[Math]::Min(80,[int]$b.chars));$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$script:DisplayState=@{line1=$line1;line2=$line2;chars=$chars;companyName=[string]$b.companyName;logo=[string]$b.logo;items=@($b.items);total=[double]$b.total;currency=([string]$b.currency);customerName=[string]$b.customerName;updatedAt=(Get-Date).ToUniversalTime().ToString('o')};$portName=[string]$b.port;if(!$portName){throw 'COM port is required'};$chars=[Math]::Max(8,[Math]::Min(80,[int]$b.chars));$baud=[int]$b.baud;if(!$baud){$baud=9600};$sp=New-Object IO.Ports.SerialPort($portName,$baud,'None',8,'One');$sp.ReadTimeout=5000;$sp.WriteTimeout=5000;$sp.Open();$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$sp.Write([char]12);$sp.Write($line1+$line2);$sp.Close();Send-Json $s 200 @{ok=$true};return}
     Send-Json $s 404 @{ok=$false;error='Not found'}
   }catch{Send-Json $s 500 @{ok=$false;error=$_.Exception.Message}}
