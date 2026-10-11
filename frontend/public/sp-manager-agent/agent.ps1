@@ -49,57 +49,19 @@ function Read-Request($client){
   $bytes=$ms.ToArray();$body=if($cl -gt 0){[Text.Encoding]::UTF8.GetString($bytes,$offset,$cl)}else{''};return @{stream=$stream;method=$parts[0];path=$parts[1];body=$body;headers=$headers}
  } finally {$ms.Dispose();$timer.Stop()}
 }
-function Test-AutoStartInstalled {
-  try {
-    $task = Get-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -ErrorAction Stop
-    return ($task.State -ne 'Disabled')
-  } catch {
-    try {
-      $q = & schtasks.exe /Query /TN 'SP-Manager Local Agent Watchdog' /FO CSV /NH 2>$null
-      return ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($q -join '')))
-    } catch { return $false }
-  }
-}
-function Install-AutoStart {
-  $watchdog=Join-Path $AgentDir 'watchdog.ps1'
-  if(-not (Test-Path $watchdog)){ throw 'watchdog.ps1 was not found.' }
-  $taskName='SP-Manager Local Agent Watchdog'
-  try {
-    $action = New-ScheduledTaskAction -Execute $PowerShell -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"')
-    $principalUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $principalUser
-    $principal = New-ScheduledTaskPrincipal -UserId $principalUser -LogonType Interactive -RunLevel Limited
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Keeps the SP-Manager Local Agent running and restarts it if it stops.' -Force | Out-Null
-  } catch {
-    # Fallback to schtasks without embedded-quote parsing problems by using a generated launcher BAT.
-    $launcher=Join-Path $AgentDir 'run-watchdog.bat'
-    $launcherText='@echo off' + "`r`n" + '"' + $PowerShell + '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"' + "`r`n"
-    [IO.File]::WriteAllText($launcher,$launcherText,(New-Object Text.UTF8Encoding($false)))
-    & schtasks.exe /Delete /TN $taskName /F 2>$null | Out-Null
-    & schtasks.exe /Create /TN $taskName /SC ONLOGON /TR $launcher /RU $env:USERNAME /RL LIMITED /F 2>&1 | Out-Null
-    if($LASTEXITCODE -ne 0){ throw ('Windows could not register the Local Agent auto-start task. '+$_.Exception.Message) }
-  }
-  if(-not (Test-AutoStartInstalled)){ throw 'Windows task was not created or is disabled.' }
-  try {
-    $flagDir=Join-Path $env:ProgramData 'SP-Manager'
-    if(-not (Test-Path $flagDir)){New-Item -ItemType Directory -Path $flagDir -Force | Out-Null}
-    'SP-Manager Local Agent Auto-Start installed' | Set-Content -LiteralPath (Join-Path $flagDir 'agent-autostart.flag') -Encoding UTF8
-  } catch {}
-  return $true
-}
+. (Join-Path $AgentDir 'autostart.ps1')
+. (Join-Path $AgentDir 'display-window.ps1')
 function Handle($req){
   $s=$req.stream
   try{
     $script:ResponseOrigin='';$hostHeader=[string]$req.headers['host'];if($hostHeader -ne "127.0.0.1:$Port" -and $hostHeader -ne "localhost:$Port"){Send-Json $s 403 @{ok=$false;error='Invalid Host'};return}
     $origin=[string]$req.headers['origin'];if($origin -and $origin -ne "http://127.0.0.1:$Port" -and $AllowedOrigins -notcontains $origin){Send-Json $s 403 @{ok=$false;error='Origin denied'};return};if($origin){$script:ResponseOrigin=$origin}
-    $uri=[Uri]("http://127.0.0.1:$Port"+$req.path);$displayRead=$uri.AbsolutePath -in @('/customer-display','/display-state')
+    $uri=[Uri]("http://127.0.0.1:$Port"+$req.path);$displayRead=$req.method -eq 'GET' -and $uri.AbsolutePath -in @('/customer-display','/display-state')
     $displayAuthorized=$displayRead -and $uri.Query -eq ('?key='+$DisplayToken)
     if($req.method -ne 'OPTIONS' -and -not $displayAuthorized){$received=[string]$req.headers['authorization'];$expected='Bearer '+$AgentToken;$different=$received.Length -bxor $expected.Length;for($i=0;$i -lt $expected.Length;$i++){$char=if($i -lt $received.Length){[int][char]$received[$i]}else{0};$different=$different -bor ($char -bxor [int][char]$expected[$i])};if($different -ne 0){Send-Json $s 401 @{ok=$false;error='Pair this computer using the local agent token'};return}}
     $req.path=$uri.AbsolutePath
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.0';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.4';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
     if($req.method -eq 'POST' -and $req.path -eq '/install-autostart'){Install-AutoStart|Out-Null;Send-Json $s 200 @{ok=$true;autoStartInstalled=$true;message='Auto-start + auto-restart is installed.'};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     if($req.path -eq '/email'){Send-Json $s 410 @{ok=$false;error='Use authenticated server email endpoint'};return}
@@ -198,7 +160,7 @@ function Handle($req){
     }
     if($req.method -eq 'GET' -and $req.path -eq '/customer-display'){
       $html=@'
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SP-Manager Customer Display</title><style>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SP-Manager | Customer Display</title><style>
 :root{--gold:#d6b36a;--gold2:#f4d58c;--red:#c1121f;--bg:#07090d;--panel:rgba(255,255,255,.055);--line:rgba(255,255,255,.1);--muted:#9aa3b2}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:radial-gradient(circle at 15% 10%,rgba(193,18,31,.18),transparent 30%),radial-gradient(circle at 85% 90%,rgba(214,179,106,.12),transparent 32%),var(--bg);color:#fff;font-family:Segoe UI,Arial,sans-serif}body{display:flex;align-items:center;justify-content:center;padding:clamp(12px,2.2vh,26px) clamp(16px,4vw,64px)}.shell{width:min(1500px,100%);height:100%;max-height:900px;min-height:0;display:flex;flex-direction:column;position:relative}.top{display:flex;align-items:center;gap:22px;padding:10px 4px 28px;border-bottom:1px solid var(--line)}.logo{width:74px;height:74px;border-radius:18px;object-fit:contain;background:#fff;padding:7px;display:none;box-shadow:0 10px 35px rgba(0,0,0,.35)}.logo.show{display:block}.fallback{width:74px;height:74px;border-radius:18px;background:linear-gradient(145deg,#171b25,#090b10);border:1px solid rgba(214,179,106,.5);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:var(--gold2);letter-spacing:-2px}.brand{font-size:clamp(15px,1.5vw,22px);font-weight:800;letter-spacing:.16em;text-transform:uppercase}.sub{margin-top:6px;color:var(--muted);font-size:clamp(11px,1vw,15px);letter-spacing:.08em}.main{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}.welcome{text-align:center}.welcome .eyebrow{color:var(--gold2);font-size:clamp(13px,1.3vw,19px);font-weight:700;letter-spacing:.22em;text-transform:uppercase}.welcome h1{font-size:clamp(54px,8vw,128px);line-height:.95;margin:22px 0 12px;font-weight:900;letter-spacing:-.04em}.welcome p{margin:0;color:var(--muted);font-size:clamp(15px,1.5vw,24px)}.sale{position:relative;width:100%;max-width:1500px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025));border:1px solid var(--line);border-radius:30px;padding:clamp(28px,4vw,55px);box-shadow:0 30px 90px rgba(0,0,0,.35);backdrop-filter:blur(16px)}.payment-image-wrap{display:none}.payment-active{padding:clamp(20px,2.6vh,34px) clamp(20px,2.6vw,40px) clamp(20px,2.6vh,34px) 46%;height:100%;max-height:100%;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center}.payment-active.has-payment-image .payment-image-wrap{display:flex;position:absolute;left:clamp(28px,4vw,55px);top:50%;transform:translateY(-50%);width:38%;height:76%;align-items:center;justify-content:center}.payment-image-wrap img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.26)}.payment-active .items{max-height:30vh;overflow:auto}.payment-active .sale-head{margin-bottom:16px}.payment-active .sale-title{font-size:clamp(20px,2.4vw,38px)}.payment-summary{display:none}.payment-active .payment-summary{display:grid;gap:8px;margin-top:18px;padding:16px 20px;border:1px solid rgba(75,170,224,.32);border-radius:16px;background:rgba(10,40,59,.42)}.payment-summary div{display:flex;justify-content:space-between;color:#b5c4d5;font-size:clamp(14px,1.15vw,18px)}.payment-summary b{color:#fff}.sale-head{display:flex;justify-content:space-between;align-items:flex-start;gap:30px;margin-bottom:26px}.sale-title{font-size:clamp(28px,3.5vw,58px);font-weight:850;line-height:1.05}.sale-label{color:var(--gold2);font-size:clamp(12px,1.1vw,17px);font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}.items{display:flex;flex-direction:column;gap:10px;max-height:42vh;overflow:hidden}.item{display:grid;grid-template-columns:1fr auto auto;gap:25px;align-items:center;padding:17px 0;border-bottom:1px solid rgba(255,255,255,.08)}.item-name{font-size:clamp(18px,1.8vw,29px);font-weight:650}.qty{color:var(--muted);font-size:clamp(14px,1.3vw,20px)}.price{font-size:clamp(18px,1.8vw,29px);font-weight:750}.total-row{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin-top:28px;padding-top:25px;border-top:1px solid rgba(214,179,106,.35)}.total-label{color:var(--muted);font-size:clamp(14px,1.2vw,19px);text-transform:uppercase;letter-spacing:.14em}.total{font-size:clamp(38px,4.6vw,72px);line-height:.9;font-weight:950;letter-spacing:-.045em;color:#fff}.footer{display:flex;justify-content:space-between;color:#697386;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding-top:20px}.accent{color:var(--gold2)}@media(max-width:700px){.payment-active{padding:22px;min-height:0}.payment-active.has-payment-image .payment-image-wrap{position:relative;left:auto;top:auto;transform:none;width:100%;height:34vh;margin-bottom:18px}.top{padding-bottom:18px}.logo,.fallback{width:52px;height:52px}.fallback{font-size:21px}.sale{border-radius:20px;padding:22px}.item{grid-template-columns:1fr auto;gap:10px}.price{grid-column:2}.qty{grid-column:1}.sale-head{margin-bottom:12px}.total-row{flex-direction:column;align-items:flex-start}.total{font-size:58px}}
 </style></head><body><div class="shell"><header class="top"><img id="logo" class="logo" alt="Company logo"><div id="fallback" class="fallback">SP</div><div><div id="brand" class="brand">SHINING PEARL TINTED</div><div class="sub">Customer Display</div></div></header><main class="main"><section id="welcome" class="welcome"><div class="eyebrow">Welcome</div><h1 id="welcomeTitle">WELCOME!</h1><p id="welcomeText">Thank you for visiting <span class="accent">Shining Pearl Tinted</span></p></section><section id="sale" class="sale" style="display:none"><div id="paymentImageWrap" class="payment-image-wrap"><img id="paymentImage" alt="Payment type image"></div><div class="sale-head"><div><div class="sale-label">Your order</div><div id="saleTitle" class="sale-title">Thank you for your purchase</div></div></div><div id="items" class="items"></div><div class="total-row"><div class="total-label">Total</div><div id="total" class="total">RM 0.00</div></div><div class="payment-summary"><div><span>Payment</span><b id="paymentAmount">RM 0.00</b></div><div><span>Change</span><b id="paymentChange">RM 0.00</b></div></div></section></main><footer class="footer"><span>SP-MANAGER</span><span id="status">Ready</span></footer></div><script>
 const $=id=>document.getElementById(id);function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function money(v,c='RM'){return c+' '+Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}function render(d){const logo=$('logo'),fb=$('fallback');if(d.logo){logo.src=d.logo;logo.classList.add('show');fb.style.display='none'}else{logo.classList.remove('show');fb.style.display='flex'}$('brand').textContent=d.companyName||'SHINING PEARL TINTED';const items=Array.isArray(d.items)?d.items:[];const paying=d.state==='PAYMENT'&&items.length>0;const paymentImage=paying?String(d.paymentImage||''):'';if(items.length){$('welcome').style.display='none';$('sale').style.display='block';$('sale').classList.toggle('payment-active',paying);$('sale').classList.toggle('has-payment-image',Boolean(paymentImage));$('paymentImage').src=paymentImage;$('saleTitle').textContent=paying?('Customer is paying with '+(d.paymentMethod||'payment')):(d.customerName?('Thank you, '+d.customerName):'Your order');$('items').innerHTML=items.map(i=>`<div class="item"><div class="item-name">${esc(i.name||'Item')}</div><div class="qty">&#215; ${esc(i.qty||1)}</div><div class="price">${money((Number(i.price)||0)*(Number(i.qty)||1),d.currency||'RM')}</div></div>`).join('');$('total').textContent=money(d.total,d.currency||'RM');$('paymentAmount').textContent=money(d.paymentAmount,d.currency||'RM');$('paymentChange').textContent=money(d.change,d.currency||'RM');$('status').textContent=paying?'Payment':'Ready'}else{$('sale').style.display='none';$('sale').classList.remove('payment-active','has-payment-image');$('paymentImage').removeAttribute('src');$('welcome').style.display='block';$('welcomeTitle').textContent=d.line1||'WELCOME!';$('welcomeText').innerHTML='Thank you for visiting <span class="accent">'+esc(d.companyName||'Shining Pearl Tinted')+'</span>';$('status').textContent='Ready'}}async function tick(){try{const r=await fetch('/display-state'+window.location.search,{cache:'no-store'});const d=await r.json();render(d)}catch(e){}}tick();setInterval(tick,400)</script></body></html>
@@ -213,67 +175,7 @@ const $=id=>document.getElementById(id);function esc(v){return String(v??'').rep
       }
       Send-Json $s 200 @{ok=$true;monitors=$items};return
     }
-    if($req.method -eq 'POST' -and $req.path -eq '/display-window'){
-      Add-Type -AssemblyName System.Windows.Forms
-      Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-public static class SPDisplayWindow {
-  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-}
-'@
-      $screens=[System.Windows.Forms.Screen]::AllScreens
-      if($screens.Count -lt 2){throw 'No secondary monitor detected. Windows must be set to Extend displays.'}
-      $screen=@($screens|Where-Object{$_.Primary -eq $false}|Select-Object -First 1)[0]
-      if($null -eq $screen){$screen=$screens[1]}
-      $browser=$null
-      foreach($cmd in @('msedge.exe','chrome.exe')){
-        if(-not $browser){$browser=(Get-Command $cmd -ErrorAction SilentlyContinue).Source}
-      }
-      if(-not $browser){
-        $candidates=@(
-          "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
-          "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe",
-          "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe",
-          "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-          "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
-          "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
-        )
-        $browser=$candidates|Where-Object{Test-Path $_}|Select-Object -First 1
-      }
-      if(-not $browser){throw 'Microsoft Edge or Google Chrome was not found on this Windows PC.'}
-      $chars=[Math]::Max(8,[Math]::Min(80,[int]$b.chars));$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$script:DisplayState=@{line1=$line1;line2=$line2;chars=$chars;companyName=[string]$b.companyName;logo=[string]$b.logo;items=@($b.items);total=[double]$b.total;currency=([string]$b.currency);customerName=[string]$b.customerName;updatedAt=(Get-Date).ToUniversalTime().ToString('o')}
-      $url="http://127.0.0.1:$Port/customer-display?key=$DisplayToken"
-      $args=@("--app=$url","--new-window","--window-position=$($screen.Bounds.X),$($screen.Bounds.Y)","--window-size=$($screen.Bounds.Width),$($screen.Bounds.Height)",'--disable-session-crashed-bubble')
-      $started=Start-Process -FilePath $browser -ArgumentList $args -PassThru
-      Start-Sleep -Milliseconds 1800
-      $hwnd=[IntPtr]::Zero
-      for($i=0;$i -lt 20 -and $hwnd -eq [IntPtr]::Zero;$i++){
-        try{
-          $started.Refresh()
-          $rawHandle=$started.MainWindowHandle
-          if($null -ne $rawHandle -and [string]$rawHandle -ne ''){
-            try{$hwnd=[IntPtr]::new([long]$rawHandle)}catch{$hwnd=[IntPtr]::Zero}
-          }
-        }catch{}
-        if($hwnd -eq [IntPtr]::Zero){
-          $name=[IO.Path]::GetFileNameWithoutExtension($browser)
-          $candidate=Get-Process -Name $name -ErrorAction SilentlyContinue|Where-Object{$_.MainWindowHandle -ne 0}|Sort-Object StartTime -Descending|Select-Object -First 1
-          if($candidate){
-            try{
-              $rawCandidate=$candidate.MainWindowHandle
-              if($null -ne $rawCandidate -and [string]$rawCandidate -ne ''){$hwnd=[IntPtr]::new([long]$rawCandidate)}
-            }catch{$hwnd=[IntPtr]::Zero}
-          }
-        }
-        if($hwnd -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 300}
-      }
-      if($hwnd -eq [IntPtr]::Zero){throw 'Customer display browser started, but Windows did not return a usable window handle.'}
-      [SPDisplayWindow]::ShowWindowAsync([IntPtr]$hwnd,3)|Out-Null
-      [SPDisplayWindow]::SetWindowPos([IntPtr]$hwnd,[IntPtr]::Zero,$screen.Bounds.X,$screen.Bounds.Y,$screen.Bounds.Width,$screen.Bounds.Height,0x0040)|Out-Null
-      Send-Json $s 200 @{ok=$true;mode='secondary';details=@{monitor=$screen.DeviceName;x=$screen.Bounds.X;y=$screen.Bounds.Y;width=$screen.Bounds.Width;height=$screen.Bounds.Height;windowFound=$true;browser=$browser}};return
-    }
+    if($req.method -eq 'POST' -and $req.path -eq '/display-window'){Send-Json $s 200 (Open-SPDisplayWindow $b);return}
     if($req.method -eq 'POST' -and $req.path -eq '/display'){$chars=[Math]::Max(8,[Math]::Min(80,[int]$b.chars));$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$script:DisplayState=@{line1=$line1;line2=$line2;chars=$chars;companyName=[string]$b.companyName;logo=[string]$b.logo;items=@($b.items);total=[double]$b.total;currency=([string]$b.currency);customerName=[string]$b.customerName;updatedAt=(Get-Date).ToUniversalTime().ToString('o')};$portName=[string]$b.port;if(!$portName){throw 'COM port is required'};$chars=[Math]::Max(8,[Math]::Min(80,[int]$b.chars));$baud=[int]$b.baud;if(!$baud){$baud=9600};$sp=New-Object IO.Ports.SerialPort($portName,$baud,'None',8,'One');$sp.ReadTimeout=5000;$sp.WriteTimeout=5000;$sp.Open();$line1=([string]$b.line1).PadRight($chars).Substring(0,$chars);$line2=([string]$b.line2).PadRight($chars).Substring(0,$chars);$sp.Write([char]12);$sp.Write($line1+$line2);$sp.Close();Send-Json $s 200 @{ok=$true};return}
     Send-Json $s 404 @{ok=$false;error='Not found'}
   }catch{Send-Json $s 500 @{ok=$false;error=$_.Exception.Message}}

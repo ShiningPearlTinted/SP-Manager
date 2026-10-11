@@ -1,0 +1,18 @@
+SP-Manager Local Agent — pembaikan installer Startup pengguna
+
+1. Extract ZIP ini pada komputer yang gagal.
+2. Restart komputer untuk menutup agent/watchdog lama.
+3. Login akaun Windows yang digunakan untuk SP-Manager.
+4. Double-click install-windows.bat secara biasa. Jangan Run as administrator menggunakan akaun lain.
+5. Tunggu [OK] Local Agent ready.
+6. Win+R, masukkan %LOCALAPPDATA%\SP-Manager\agent-pairing-token.txt
+7. Salin token ke Settings > Hardware > Pairing token pada komputer ini.
+
+Fail dipasang di %LOCALAPPDATA%\SP-Manager\LocalAgent.
+Auto-start menggunakan shortcut Startup pengguna, bukan Scheduled Task.
+Untuk buang auto-start baru: Win+R > shell:startup, padam SP-Manager Local Agent shortcut.
+Scheduled Task lama tidak dipadam; watchdog baru mengelakkan instance berganda dalam session sama.
+Jika polisi IT menyekat PowerShell/Startup, dapatkan kebenaran IT. Installer tidak menjamin boleh mengatasi polisi tersebut.
+Jangan hantar pairing token kepada orang lain. Jika gagal, hantar mesej error dan agent-watchdog.log; semak log untuk butiran peribadi sebelum berkongsi.
+
+Semakan syntax dibuat; pemasangan pada komputer yang bermasalah belum diuji.

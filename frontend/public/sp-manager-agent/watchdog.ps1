@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'SilentlyContinue'
 $AgentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AgentScript = Join-Path $AgentDir 'agent.ps1'
 $PowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
@@ -36,13 +36,17 @@ function Start-Agent {
     return
   }
   try {
-    $p = Start-Process -FilePath $PowerShell -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$AgentScript) -WindowStyle Hidden -PassThru
+    $p = Start-Process -FilePath $PowerShell -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',('"' + $AgentScript + '"')) -WindowStyle Hidden -PassThru
     Log "Started Local Agent PID $($p.Id)"
   } catch {
     Log "ERROR: failed to start Local Agent: $($_.Exception.Message)"
   }
 }
 
+# One watchdog per Windows logon session; old scheduled tasks may still exist.
+$mutex=New-Object Threading.Mutex($false,'Local\SPManagerLocalAgentWatchdog')
+try {$ownsMutex=$mutex.WaitOne(0)} catch [Threading.AbandonedMutexException] {$ownsMutex=$true}
+if(-not $ownsMutex){$mutex.Dispose();exit}
 Log "Watchdog started. Agent path: $AgentScript"
 while($true){
   if(-not (Test-Agent)){
