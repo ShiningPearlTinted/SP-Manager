@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/security.php';
+require_once __DIR__.'/database-backup-lib.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -43,37 +44,7 @@ function outletId(PDO $pdo, mixed $value='SP01'): int {
     else{$q=$pdo->prepare('SELECT id FROM outlets WHERE outlet_code=? AND active=1 LIMIT 1');$q->execute([$v]);}
     $id=(int)($q->fetchColumn()?:0); if($id<=0)throw new InvalidArgumentException('Outlet not found.'); return $id;
 }
-function allBaseTables(PDO $pdo): array {
-    $q=$pdo->query("SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME");
-    return array_values(array_map(fn($r)=>(string)$r['TABLE_NAME'],$q->fetchAll()));
-}
-function snapshotTable(PDO $pdo, string $table): array {
-    $cols=columns($pdo,$table);
-    $rows=[];
-    $q=$pdo->query('SELECT * FROM '.quoteIdent($table));
-    foreach($q->fetchAll() as $row){
-        foreach($row as $k=>$v){
-            if(is_resource($v)) $row[$k]=null;
-        }
-        $rows[]=$row;
-    }
-    return ['columns'=>array_values(array_keys($cols)),'rows'=>$rows,'row_count'=>count($rows)];
-}
-function makeSnapshot(PDO $pdo): array {
-    $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');$pdo->beginTransaction();
-    $tables=[];
-    foreach(allBaseTables($pdo) as $table){
-        $tables[$table]=snapshotTable($pdo,$table);
-    }
-    $pdo->commit();
-    return [
-        'format'=>'SP-MANAGER-SQL-BACKUP-V1',
-        'created_at'=>gmdate('c'),
-        'database'=> (string)$pdo->query('SELECT DATABASE()')->fetchColumn(),
-        'table_count'=>count($tables),
-        'tables'=>$tables,
-    ];
-}
+function makeSnapshot(PDO $pdo): array { return spBackupSnapshot($pdo); }
 function insertRows(PDO $pdo, string $table, array $columns, array $rows): int {
     if(!$rows) return 0;
     $currentCols=columns($pdo,$table);
@@ -101,19 +72,12 @@ try{
 
     if($action==='backup'){
         $snapshot=makeSnapshot($pdo);
-        $fileName='SP-Manager-SQL-Backup-'.gmdate('Y-m-d_H-i-s').'.json';
+        $fileName='SP-Manager-SQL-Backup-'.gmdate('Y-m-d_H-i-s').'-'.bin2hex(random_bytes(6)).'.json';
         $store=!empty($input['store']);
         $storage='browser-download';
         if($store){
-            $dir=(string)(spApiConfig()['backup_dir']??'');if($dir===''||!is_dir($dir))throw new RuntimeException('Create private backup_dir outside the webroot.');$real=realpath($dir);$web=realpath((string)(($_SERVER['DOCUMENT_ROOT']??'')?:__DIR__));if($web&&str_starts_with(strtolower($real),strtolower($web)))throw new RuntimeException('Backup directory must be outside webroot.');
-            if(!is_dir($dir) && !@mkdir($dir,0700,true)) throw new RuntimeException('Database backup storage is not available.');
-            if(!is_writable($dir)) throw new RuntimeException('Database backup storage is not writable.');
-            $filePath=$dir.'/'.$fileName.'.enc';
-            $encoded=json_encode($snapshot,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-            $compressed=gzencode($encoded,6);
-            if($compressed===false) throw new RuntimeException('Database backup could not be compressed.');
-            $key=(string)(spApiConfig()['encryption_key']??'');if(strlen($key)<64)throw new RuntimeException('Backup encryption key missing.');$iv=random_bytes(12);$tag='';$encrypted=openssl_encrypt($compressed,'aes-256-gcm',hash_hkdf('sha256',$key,32,'SP-Manager:backup'),OPENSSL_RAW_DATA,$iv,$tag,'SPB2');if($encrypted===false)throw new RuntimeException('Backup encryption failed.');
-            if(file_put_contents($filePath,'SPB2'.$iv.$tag.$encrypted,LOCK_EX)===false) throw new RuntimeException('Database backup file could not be written.');
+            $dir=spBackupDirectory();
+            spBackupStore($snapshot,$fileName);
             $storage='private-server-backup';
             $days=max(1,(int)($input['prune_days']??30));
             foreach(glob($dir.'/SP-Manager-SQL-Backup-*.json.enc')?:[] as $old){if(@filemtime($old)<time()-$days*86400)@unlink($old);}

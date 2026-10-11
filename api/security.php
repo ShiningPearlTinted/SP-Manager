@@ -67,7 +67,8 @@ function spBase64UrlDecode(string $value): string|false {
 
 function spIssueApiToken(int $userId): string {
  $q=spApiDatabase()->prepare('SELECT session_version FROM users WHERE id=?');$q->execute([$userId]);$version=(int)$q->fetchColumn();
- $now=time();$payload=spBase64UrlEncode(json_encode(['sub'=>$userId,'ver'=>$version,'iat'=>$now,'exp'=>$now+7200],JSON_THROW_ON_ERROR));
+ $reset=[];if(spTableExists(spApiDatabase(),'outlet_settings'))foreach(spApiDatabase()->query("SELECT outlet_id,setting_value FROM outlet_settings WHERE setting_group='SP-MANAGER' AND setting_key='databaseResetGeneration'")->fetchAll() as $r)$reset[(string)$r['outlet_id']]=$r['setting_value'];
+ $now=time();$payload=spBase64UrlEncode(json_encode(['sub'=>$userId,'ver'=>$version,'iat'=>$now,'exp'=>$now+7200,'rst'=>$reset],JSON_THROW_ON_ERROR));
  return $payload.'.'.spBase64UrlEncode(hash_hmac('sha256',$payload,spAuthSecret(),true));
 }
 
@@ -132,6 +133,14 @@ function spResolveOutlet(PDO $pdo, string $value): int {
     return (int)($q->fetchColumn() ?: 0);
 }
 
+function spTokenOutletFresh(PDO $pdo,int $outlet): bool {
+    if(!spTableExists($pdo,'outlet_settings'))return true;
+    $q=$pdo->prepare("SELECT setting_value FROM outlet_settings WHERE outlet_id=? AND setting_group='SP-MANAGER' AND setting_key='databaseResetGeneration'");$q->execute([$outlet]);$generation=$q->fetchColumn();
+    if($generation===false)return true;
+    $payload=explode('.',spCurrentToken())[0]??'';$data=json_decode((string)spBase64UrlDecode($payload),true);
+    return hash_equals((string)$generation,(string)($data['rst'][(string)$outlet]??''));
+}
+
 function spPermissionForRequest(string $file, string $action, string $stateKey, string $method): string {
     if ($file === 'customer-display.php' && in_array($action, ['terminals','terminal','image'], true)) return 'manageSettings';
     if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? '' : 'manageProducts';
@@ -144,6 +153,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'reports.php') return 'manageReports';
     if ($file === 'loyalty.php') return 'manageLoyalty';
     if ($file === 'settings.php') return $method === 'GET' ? '' : 'manageSettings';
+    if ($file === 'database-reset.php') return 'administrator';
     if ($file === 'database.php') return in_array($action, ['restore','backup'], true) ? 'administrator' : '';
     if ($file === 'sales.php') return 'managePayments';
     if ($file === 'documents.php' && $action==='record-payment') return (spReadRequestBody()['document_type']??'')==='quotation'?'manageQuotation':'manageInvoice';
@@ -278,6 +288,9 @@ function spInstallCorsAndGuard(): void {
         if (!$hasAssignment && !$globalManagement) spApiRespond(['ok'=>false,'error'=>'This user is not assigned to the requested outlet.'], 403);
 
         if(strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'))==='POST'){$lock='spm:'.substr(hash('sha256',(string)$pdo->query('SELECT DATABASE()')->fetchColumn()),0,40);$l=$pdo->prepare('SELECT GET_LOCK(?,10)');$l->execute([$lock]);if((int)$l->fetchColumn()!==1)spApiRespond(['ok'=>false,'error'=>'Database busy. Retry the same request.'],409);register_shutdown_function(static function()use($pdo,$lock){if($pdo->inTransaction())$pdo->rollBack();try{$pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$lock]);}catch(Throwable $e){}});}
+        // Check after the shared writer lock so a queued old write cannot follow a reset.
+        if($file!=='database-reset.php'&&!spTokenOutletFresh($pdo,$outletId))spApiRespond(['ok'=>false,'error'=>'This outlet was reset. Sign in again before continuing.'],401);
+        if($file==='database-reset.php'&&($user['role_name']??'')!=='Administrator')spApiRespond(['ok'=>false,'error'=>'Only an Administrator may reset an outlet.'],403);
         $permission = spPermissionForRequest($file, $action, trim((string)($_GET['state_key'] ?? $body['state_key'] ?? '')), strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
         $permissions = json_decode((string)($user['permissions_json'] ?? ''), true);
         $isAdmin = ($user['role_name'] ?? '') === 'Administrator';

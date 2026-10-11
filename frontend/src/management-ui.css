@@ -317,3 +317,21 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-action-strip,.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions,.company-top-actions,.document-toolbar-actions) > button > span {font-size:inherit!important;font-weight:inherit;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(label,.settings-field > span) {font-weight:500!important;}
 }
+
+/* Database reset: isolated to the new Management tab. */
+.app[data-ui="management"] .database-reset {padding:24px;display:grid;gap:20px;max-width:1000px;}
+.app[data-ui="management"] .database-reset fieldset {border:1px solid #dce3ec;border-radius:12px;padding:20px;display:grid;gap:12px;min-width:0;}
+.app[data-ui="management"] .database-reset legend {font-size:16px;font-weight:600;padding:0 8px;}
+.app[data-ui="management"] .database-reset p {margin:4px 0;overflow-wrap:anywhere;}
+.app[data-ui="management"] .database-reset .reset-warning {background:#fff5e7;border:1px solid #e4b365;color:#70480b;border-radius:8px;padding:16px;}
+.app[data-ui="management"] .database-reset .reset-option {display:flex;align-items:flex-start;gap:12px;padding:12px 0;}
+.app[data-ui="management"] .database-reset .reset-option input {width:18px;height:18px;flex:0 0 18px;margin-top:3px;}
+.app[data-ui="management"] .database-reset small {display:block;font-size:13px;color:#526179;margin-top:4px;line-height:1.6;}
+.app[data-ui="management"] .database-reset .reset-counts {display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.app[data-ui="management"] .database-reset .reset-counts p {display:flex;justify-content:space-between;gap:16px;}
+.app[data-ui="management"] .database-reset .reset-danger {background:#bc2033;color:white;border-color:#bc2033;justify-self:start;}
+.app[data-ui="management"] .database-reset button:disabled {opacity:.55;cursor:not-allowed;}
+.app[data-ui="management"] .database-reset .reset-success {background:#ebf8ef;padding:20px;border-radius:12px;}
+.app[data-ui="management"] .database-reset fieldset>label:not(.reset-option) {display:grid;gap:8px;max-width:520px;}
+.app[data-ui="management"] .database-reset fieldset>label:not(.reset-option) input {width:100%;min-width:0;}
+@media(max-width:600px){.app[data-ui="management"] .database-reset {padding:16px;}.app[data-ui="management"] .database-reset .reset-counts {grid-template-columns:1fr;}}

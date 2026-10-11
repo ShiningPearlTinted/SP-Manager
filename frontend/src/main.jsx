@@ -1,3 +1,4 @@
+import DatabaseReset from "./database-reset.jsx";
 import {createDisplayAutoOpen} from "./customer-display-auto.js";
 import React,{useCallback,useEffect,useMemo,useState}from"react";
 import{createRoot}from"react-dom/client";
@@ -923,7 +924,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
    {page==="POS / Sales"&&showEndOfDay&&isPermissionAllowed(activeUser,"endOfDay")&&<div className="eod-pos-overlay" role="dialog" aria-modal="true" aria-label="End of day"><EndOfDay sales={sales} businessDay={businessDay} paymentTypes={paymentTypes} activeUser={activeUser} orders={orders} cashMovements={cashMovements} setCashMovements={setCashMovements} setSales={setSales} setBusinessDay={setBusinessDay} setNotice={setNotice} onClose={()=>{sessionStorage.removeItem("sp_eod_source");setShowEndOfDay(false)}}/></div>}
    {page==="X / Z Report"&&<XZ sales={sales} businessDay={businessDay} paymentTypes={paymentTypes}/> }
    {page==="Named Order / Takeaway"&&<NamedOrders orders={orders} setOrders={setOrders} setNotice={setNotice} customers={customers} onOpenOrder={retrieveOpenOrder}/>}
-   {page==="My company"&&<MyCompany company={company} setCompany={setCompany}/>}
+   {page==="My company"&&<MyCompany company={company} setCompany={setCompany} activeUser={activeUser}/>}
    {page==="Settings"&&isPermissionAllowed(activeUser,"manageSettings")&&<Settings settings={settings} setSettings={async next=>{const merged=deepMerge(defaultSettings,next);await save("settings",merged);setSettings(merged);return merged}} businessDay={businessDay} toggleBusiness={toggleBusiness} taxRate={taxRate} setTaxRate={async r=>{await save("taxRate",r);setTaxRate(r)}} company={company} customerDisplayTerminal={customerDisplayTerminal} setCustomerDisplayTerminal={v=>persist("customerDisplayTerminal",v,setCustomerDisplayTerminal)} onCancel={()=>setPage("POS / Sales")}/>}
    {!nav.includes(page)&&page!=="Management"&&!['Cash In / Out','Credit payments','End of day'].includes(page)&&<div className="panel"><div className="eyebrow">SP-MANAGER</div><h2>Page not available</h2><p>The selected module could not be loaded.</p><button className="primary" onClick={()=>setPage("POS / Sales")}>Back to POS / Sales</button></div>}
    {showCashInOutModal&&page==="POS / Sales"&&<CashInOutModal movements={cashMovements} activeUser={activeUser} onClose={()=>setShowCashInOutModal(false)} onSave={recordCashMovement} onCashDrawer={cashDrawer}/>}
@@ -1128,7 +1129,20 @@ function XZ({sales,businessDay,paymentTypes}){
  const active=sales.filter(s=>!s.voided&&!s.refunded);const total=active.reduce((a,s)=>a+Number(s.total||0),0);const cash=active.filter(s=>s.payment==="Cash").reduce((a,s)=>a+Number(s.total||0),0);
  return <section className="content"><div className="panel"><div className="eyebrow">END OF DAY</div><h2>X / Z Report</h2><p>Current business-day totals.</p><div className="cards"><Card t="Transactions" v={active.length}/><Card t="Total sales" v={money(total)}/><Card t="Cash sales" v={money(cash)}/><Card t="Business day" v={businessDay.open?"OPEN":"CLOSED"}/></div><Table cols={["Payment type","Transactions","Amount"]} rows={paymentTypes.map(p=>{const a=active.filter(s=>s.payment===p.name);return [p.name,a.length,money(a.reduce((x,s)=>x+Number(s.total||0),0))]})}/></div></section>
 }
-function MyCompany({company,setCompany}){
+function MyCompany({company,setCompany,activeUser}){
+ const resetRequest=async(action,payload)=>{
+  await centralWriteQueue.catch(()=>{});await centralRelationalQueue.catch(()=>{});
+  const r=await fetch(centralDatabaseApi().replace(/database\.php$/,"database-reset.php"),{method:"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"}),body:JSON.stringify({...payload,action,outlet_id:activeOutletId()})});
+  const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false){const e=new Error(data?.error||`Reset response unavailable (HTTP ${r.status}).`);e.status=r.status;throw e;}return data;
+ };
+ const resetComplete=async(receipt)=>{
+  const prefix=`sp_outlet_${String(receipt.outlet_id)}_`;
+  for(const key of Object.keys(localStorage))if(key.startsWith(prefix))localStorage.removeItem(key);
+  sessionStorage.setItem("sp_last_reset_receipt",JSON.stringify(receipt));
+  await showActionMessage("Outlet reset completed",`Verified backup: ${receipt.backup_file}. Sign in again before continuing.`);
+  sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.location.reload();
+ };
+
  const[draft,setDraft]=useState(()=>({...company}));
  const[tab,setTab]=useState("General");
  useEffect(()=>{
@@ -1164,11 +1178,12 @@ function MyCompany({company,setCompany}){
   <div className="company-shell company-shell-ar">
    <div className="company-topbar">
     <div><div className="eyebrow">BUSINESS PROFILE</div><h2>My company</h2><p>Company information used on receipts, invoices and business documents.</p></div>
-    <div className="company-top-actions"><span className="company-status"><i></i> Local data</span><button className="company-save" onClick={saveCompany}>✓ Save</button></div>
+    <div className="company-top-actions"><span className="company-status"><i></i> Local data</span>{tab!=="Reset database"&&<button className="company-save" onClick={saveCompany}>✓ Save</button>}</div>
    </div>
    <div className="company-tabs company-tabs-ar">
-    {["General","Address","Logo","Login screen logo","Bank details"].map(x=><button key={x} type="button" className={tab===x?"active":""} onClick={()=>setTab(x)}>{x}</button>)}
+    {["General","Address","Logo","Login screen logo","Bank details",...(activeUser?.role==="Administrator"?["Reset database"]:[])].map(x=><button key={x} type="button" className={tab===x?"active":""} onClick={()=>setTab(x)}>{x}</button>)}
    </div>
+   {tab==="Reset database"&&activeUser?.role==="Administrator"&&<DatabaseReset request={resetRequest} onComplete={resetComplete}/>}
    {message&&<div className="company-message">✓ {message}</div>}
    {tab==="General"&&<div className="company-body company-general-layout">
     <div className="company-form-block">
@@ -1201,7 +1216,7 @@ function MyCompany({company,setCompany}){
    {tab==="Logo"&&<div className="company-body company-logo-tab"><div className="company-section-title">Company logo</div><div className="company-logo-large">{draft.logo?<img src={draft.logo} alt="Company logo"/>:<div className="logo-placeholder large"><b>SP</b><span>Add your company logo</span></div>}</div><div className="logo-actions logo-actions-ar"><label className="logo-add logo-add-ar">＋ Add logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogo}/></label><button type="button" className="logo-remove-ar" disabled={!draft.logo} onClick={removeLogo}>Remove</button></div>{logoName&&<div className="logo-file-name">Selected: {logoName}</div>}<p className="company-help">The logo is stored locally with this SP-Manager installation and can be used on receipts and business documents.</p></div>}
    {tab==="Login screen logo"&&<div className="company-body company-logo-tab company-login-logo-tab"><div className="company-section-title">Login screen logo</div><p className="company-help company-login-intro">Set a separate logo for the SP-Manager login screen. If no login logo is set, the Company logo will be used automatically.</p><div className="company-logo-large company-login-logo-preview">{draft.loginLogo?<img src={draft.loginLogo} alt="Login screen logo"/>:draft.logo?<img src={draft.logo} alt="Company logo fallback"/>:<div className="logo-placeholder large"><b>SP</b><span>No login logo set</span></div>}</div><div className="logo-actions logo-actions-ar"><label className="logo-add logo-add-ar">＋ Add login logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLoginLogo}/></label><button type="button" className="logo-remove-ar" disabled={!draft.loginLogo} onClick={removeLoginLogo}>Remove</button></div>{loginLogoName&&<div className="logo-file-name">Selected: {loginLogoName}</div>}<p className="company-help">Recommended: transparent PNG or SVG · Maximum 2 MB</p></div>}
    {tab==="Bank details"&&<div className="company-body"><div className="company-section-title">Bank information</div><div className="company-grid company-grid-ar"><label className="wide">Bank account number<input value={draft.bankAccountNumber||""} onChange={e=>update("bankAccountNumber",e.target.value)} /></label><label className="wide">Bank details<textarea value={draft.bankDetails||""} onChange={e=>update("bankDetails",e.target.value)} placeholder="Bank name, branch and payment details"/></label></div></div>}
-   <div className="company-footer"><span>Changes are not applied until you press the <b>Save</b> button above.</span><span className="company-save-note">All company and logo changes are saved together.</span></div>
+   {tab!=="Reset database"&&<div className="company-footer"><span>Changes are not applied until you press the <b>Save</b> button above.</span><span className="company-save-note">All company and logo changes are saved together.</span></div>}
   </div>
  </section>
 }
