@@ -1,21 +1,20 @@
 @echo off
-setlocal EnableExtensions
-set "BASE_URL=https://shiningpearltinted.github.io/SP-Manager/sp-manager-agent"
-set "INSTALL_DIR=%LOCALAPPDATA%\SP-Manager\agent"
+
+setlocal
+
 set "SP_INSTALL_SOURCE=%~dp0"
-set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
-if not exist "%PS_EXE%" (
- echo Windows PowerShell missing.
- pause
- exit /b 1
-)
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';$dir=$env:INSTALL_DIR;New-Item -ItemType Directory -Path $dir -Force|Out-Null;foreach($f in @('agent.ps1','watchdog.ps1')){$tmp=Join-Path $dir ($f+'.download');$local=Join-Path $env:SP_INSTALL_SOURCE ('agent\'+$f);if(Test-Path -LiteralPath $local){Copy-Item -LiteralPath $local -Destination $tmp -Force}else{Invoke-WebRequest -UseBasicParsing -Uri ($env:BASE_URL+'/'+$f) -OutFile $tmp};$expected=if($f -eq 'agent.ps1'){'85156697b8ee156f83e7ef42611725daa3fcd8c3f0169f0541941bba21b21a02'}else{'78946e1b770de8a606f209b9385aadfe48888bd5a39d3bafc762611ef5e68fb0'};if((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower() -ne $expected){throw 'Agent integrity check failed. Use the complete release ZIP.'};Move-Item -LiteralPath $tmp -Destination (Join-Path $dir $f) -Force};Stop-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -ErrorAction SilentlyContinue;foreach($proc in Get-CimInstance Win32_Process){if($proc.CommandLine -and (($proc.CommandLine -match [regex]::Escape((Join-Path $dir 'agent.ps1'))) -or ($proc.CommandLine -match [regex]::Escape((Join-Path $dir 'watchdog.ps1'))))){Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue}};$ps=$env:PS_EXE;$wd=Join-Path $dir 'watchdog.ps1';$u=[Security.Principal.WindowsIdentity]::GetCurrent().Name;$a=New-ScheduledTaskAction -Execute $ps -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File '+[char]34+$wd+[char]34);$t=New-ScheduledTaskTrigger -AtLogOn -User $u;$p=New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive -RunLevel Limited;$s=New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 99 -RestartInterval (New-TimeSpan -Minutes 1);Register-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -Action $a -Trigger $t -Principal $p -Settings $s -Force|Out-Null;Start-Process -FilePath $ps -WindowStyle Hidden -ArgumentList ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File '+[char]34+(Join-Path $dir 'watchdog.ps1')+[char]34)"
-if errorlevel 1 (
- echo Installation failed. No unverified script was executed.
- pause
- exit /b 1
-)
-echo Pairing token is saved at %LOCALAPPDATA%\SP-Manager\agent-pairing-token.txt
-echo Copy it into Settings - Hardware - Pairing token on this computer.
+
+set "SP_AGENT_BASE=https://shiningpearltinted.github.io/SP-Manager/sp-manager-agent"
+
+set "SP_AGENT_HASHES={"agent.ps1":"8263b11a5ddd0eea6d2dc0fad9950cae0031c94054c85f489e9d484d851eb1ab","autostart.ps1":"21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea","check-agent.bat":"dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e","diagnose-agent.bat":"dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e","install-current-user.ps1":"660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed","install-windows.bat":"a96e19c60cb5f56b5c7df7f916e674293dbea45678559c030db9bcc6c9fef9d3","watchdog.ps1":"5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"}"
+
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop';$dir=Join-Path $env:TEMP 'SP-Manager-Verified-Installer-1.0.51';New-Item -ItemType Directory -Path $dir -Force|Out-Null;$expected=ConvertFrom-Json $env:SP_AGENT_HASHES;foreach($entry in $expected.PSObject.Properties){$f=$entry.Name;$tmp=Join-Path $dir ($f+'.download');$local=Join-Path $env:SP_INSTALL_SOURCE ('agent\'+$f);if(Test-Path -LiteralPath $local){Copy-Item -LiteralPath $local -Destination $tmp -Force}else{Invoke-WebRequest -UseBasicParsing -Uri ($env:SP_AGENT_BASE+'/'+$f) -OutFile $tmp};if((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower() -ne $entry.Value){throw ('Agent integrity check failed: '+$f)};Move-Item -LiteralPath $tmp -Destination (Join-Path $dir $f) -Force};& (Join-Path $dir 'install-current-user.ps1')"
+
+set "RESULT=%ERRORLEVEL%"
+
+if not "%RESULT%"=="0" echo Installation failed. Send this message to support.
+
 pause
-exit /b 0
+
+exit /b %RESULT%
+

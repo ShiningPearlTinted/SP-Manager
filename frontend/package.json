@@ -1,11 +1,13 @@
 {
   "name": "sp-manager-frontend",
-  "version": "1.0.50",
+  "version": "1.0.51",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build"
+    "build": "vite build",
+    "prebuild": "node ../scripts/sync-agent.mjs",
+    "predev": "node ../scripts/sync-agent.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.2",

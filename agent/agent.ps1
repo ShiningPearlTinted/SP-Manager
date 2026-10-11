@@ -49,57 +49,18 @@ function Read-Request($client){
   $bytes=$ms.ToArray();$body=if($cl -gt 0){[Text.Encoding]::UTF8.GetString($bytes,$offset,$cl)}else{''};return @{stream=$stream;method=$parts[0];path=$parts[1];body=$body;headers=$headers}
  } finally {$ms.Dispose();$timer.Stop()}
 }
-function Test-AutoStartInstalled {
-  try {
-    $task = Get-ScheduledTask -TaskName 'SP-Manager Local Agent Watchdog' -ErrorAction Stop
-    return ($task.State -ne 'Disabled')
-  } catch {
-    try {
-      $q = & schtasks.exe /Query /TN 'SP-Manager Local Agent Watchdog' /FO CSV /NH 2>$null
-      return ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($q -join '')))
-    } catch { return $false }
-  }
-}
-function Install-AutoStart {
-  $watchdog=Join-Path $AgentDir 'watchdog.ps1'
-  if(-not (Test-Path $watchdog)){ throw 'watchdog.ps1 was not found.' }
-  $taskName='SP-Manager Local Agent Watchdog'
-  try {
-    $action = New-ScheduledTaskAction -Execute $PowerShell -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"')
-    $principalUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $principalUser
-    $principal = New-ScheduledTaskPrincipal -UserId $principalUser -LogonType Interactive -RunLevel Limited
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Keeps the SP-Manager Local Agent running and restarts it if it stops.' -Force | Out-Null
-  } catch {
-    # Fallback to schtasks without embedded-quote parsing problems by using a generated launcher BAT.
-    $launcher=Join-Path $AgentDir 'run-watchdog.bat'
-    $launcherText='@echo off' + "`r`n" + '"' + $PowerShell + '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watchdog + '"' + "`r`n"
-    [IO.File]::WriteAllText($launcher,$launcherText,(New-Object Text.UTF8Encoding($false)))
-    & schtasks.exe /Delete /TN $taskName /F 2>$null | Out-Null
-    & schtasks.exe /Create /TN $taskName /SC ONLOGON /TR $launcher /RU $env:USERNAME /RL LIMITED /F 2>&1 | Out-Null
-    if($LASTEXITCODE -ne 0){ throw ('Windows could not register the Local Agent auto-start task. '+$_.Exception.Message) }
-  }
-  if(-not (Test-AutoStartInstalled)){ throw 'Windows task was not created or is disabled.' }
-  try {
-    $flagDir=Join-Path $env:ProgramData 'SP-Manager'
-    if(-not (Test-Path $flagDir)){New-Item -ItemType Directory -Path $flagDir -Force | Out-Null}
-    'SP-Manager Local Agent Auto-Start installed' | Set-Content -LiteralPath (Join-Path $flagDir 'agent-autostart.flag') -Encoding UTF8
-  } catch {}
-  return $true
-}
+. (Join-Path $AgentDir 'autostart.ps1')
 function Handle($req){
   $s=$req.stream
   try{
     $script:ResponseOrigin='';$hostHeader=[string]$req.headers['host'];if($hostHeader -ne "127.0.0.1:$Port" -and $hostHeader -ne "localhost:$Port"){Send-Json $s 403 @{ok=$false;error='Invalid Host'};return}
     $origin=[string]$req.headers['origin'];if($origin -and $origin -ne "http://127.0.0.1:$Port" -and $AllowedOrigins -notcontains $origin){Send-Json $s 403 @{ok=$false;error='Origin denied'};return};if($origin){$script:ResponseOrigin=$origin}
-    $uri=[Uri]("http://127.0.0.1:$Port"+$req.path);$displayRead=$uri.AbsolutePath -in @('/customer-display','/display-state')
+    $uri=[Uri]("http://127.0.0.1:$Port"+$req.path);$displayRead=$req.method -eq 'GET' -and $uri.AbsolutePath -in @('/customer-display','/display-state')
     $displayAuthorized=$displayRead -and $uri.Query -eq ('?key='+$DisplayToken)
     if($req.method -ne 'OPTIONS' -and -not $displayAuthorized){$received=[string]$req.headers['authorization'];$expected='Bearer '+$AgentToken;$different=$received.Length -bxor $expected.Length;for($i=0;$i -lt $expected.Length;$i++){$char=if($i -lt $received.Length){[int][char]$received[$i]}else{0};$different=$different -bor ($char -bxor [int][char]$expected[$i])};if($different -ne 0){Send-Json $s 401 @{ok=$false;error='Pair this computer using the local agent token'};return}}
     $req.path=$uri.AbsolutePath
     if($req.method -eq 'OPTIONS'){Send-Json $s 204 @{};return}
-    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.0';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
+    if($req.method -eq 'GET' -and ($req.path -eq '/' -or $req.path -eq '/status')){Send-Json $s 200 @{connected=$true;agentDetected=$true;agent='SP-Manager Local Agent';version='1.2.1';port=$Port;host=$HostName;platform='win32';pid=$PID;startedAt=$StartedAt;uptimeSeconds=[int]((Get-Date)-[datetime]$StartedAt).TotalSeconds;autoStartInstalled=(Test-AutoStartInstalled)};return}
     if($req.method -eq 'POST' -and $req.path -eq '/install-autostart'){Install-AutoStart|Out-Null;Send-Json $s 200 @{ok=$true;autoStartInstalled=$true;message='Auto-start + auto-restart is installed.'};return}
     if($req.method -eq 'GET' -and $req.path -eq '/printers'){$ps=Get-Printer|Select-Object Name,PrinterStatus,WorkOffline;Send-Json $s 200 @{connected=$true;printers=@($ps)};return}
     if($req.path -eq '/email'){Send-Json $s 410 @{ok=$false;error='Use authenticated server email endpoint'};return}

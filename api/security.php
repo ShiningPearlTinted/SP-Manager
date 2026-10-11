@@ -164,6 +164,11 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
         'zReports' => 'endOfDay',
         default => '',
     };
+    if ($file === 'relational-sync.php' && $stateKey === 'paymentTypes') {
+        $body = spReadRequestBody();
+        $operation = (string)($body['operation'] ?? '');
+        if ($operation === 'list' || ($operation === 'image' && ($body['read'] ?? false) === true && !isset($body['image_data']) && empty($body['remove']))) return '';
+    }
     if ($file === 'relational-sync.php') return match ($stateKey) {
         'purchases','suppliers' => 'managePurchases',
         'cashMovements' => 'cashInOut',
