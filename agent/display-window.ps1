@@ -54,5 +54,9 @@ public static class SPDisplayWindow {
   if(-not [SPDisplayWindow]::SetWindowPos($handle,[IntPtr]::Zero,$screen.Bounds.X,$screen.Bounds.Y,$screen.Bounds.Width,$screen.Bounds.Height,0x0014)){throw 'Windows could not place the customer display on the secondary monitor.'}
   [uint32]$ownerId=0;[SPDisplayWindow]::GetWindowThreadProcessId($handle,[ref]$ownerId)|Out-Null
   $script:SPDisplayHandle=$handle;$script:SPDisplayOwner=$ownerId
+  $fullscreenHelper=Join-Path $AgentDir 'display-fullscreen.ps1'
+  if(-not(Test-Path -LiteralPath $fullscreenHelper)){throw 'Customer Display fullscreen helper is missing. Reinstall the complete Local Agent package.'}
+  $fullscreenArgs='-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "'+$fullscreenHelper+'" -WindowHandle '+$handle.ToInt64()+' -OwnerId '+$ownerId
+  Start-Process -FilePath $PowerShell -ArgumentList $fullscreenArgs -WindowStyle Hidden | Out-Null
   return @{ok=$true;mode='secondary';details=@{monitor=$screen.DeviceName;x=$screen.Bounds.X;y=$screen.Bounds.Y;width=$screen.Bounds.Width;height=$screen.Bounds.Height;windowFound=$true;reused=$reused}}
 }
