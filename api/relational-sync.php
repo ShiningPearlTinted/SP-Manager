@@ -477,6 +477,7 @@ function paymentTypeImageOperation(PDO $pdo,int $masterOutletId,int $imageOutlet
     $q->execute([$id,$imageOutletId]);
     echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-image-read','id'=>$id,'imageData'=>(string)($q->fetchColumn()?:'')],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
   }
+  $pdo->beginTransaction();
   if(!empty($b['remove']))$image=null;
   else {
     $image=(string)($b['image_data']??'');
@@ -492,6 +493,7 @@ function paymentTypeImageOperation(PDO $pdo,int $masterOutletId,int $imageOutlet
   if($image===null){$q=$pdo->prepare('DELETE FROM payment_type_display_images WHERE payment_type_id=? AND outlet_id=?');$q->execute([$id,$imageOutletId]);}
   else{$q=$pdo->prepare('INSERT INTO payment_type_display_images(outlet_id,payment_type_id,customer_display_image) VALUES(?,?,?) ON DUPLICATE KEY UPDATE customer_display_image=VALUES(customer_display_image)');$q->execute([$imageOutletId,$id,$image]);}
   spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');
+  $pdo->commit();
   echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>$image===null?'payment-types-image-remove':'payment-types-image-save','id'=>$id,'imageData'=>$image??''],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
 }
 function paymentTypeCode(PDO $pdo,int $outletId,string $name,int $exceptId=0): string {
@@ -543,10 +545,11 @@ function paymentTypeOperation(PDO $pdo,int $masterOutletId,int $imageOutletId,ar
     $id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('Payment type id is required.');
     $q=$pdo->prepare('SELECT id FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');$q->execute([$id,$masterOutletId]);if(!$q->fetchColumn())throw new RuntimeException('Payment type not found.');
     $inUse=false;foreach([['sale_payments','payment_type_id'],['document_payments','payment_type_id']] as [$table,$field]){if(!tableExists($pdo,$table))continue;$x=$pdo->prepare("SELECT COUNT(*) FROM `$table` WHERE `$field`=?");$x->execute([$id]);if((int)$x->fetchColumn()>0){$inUse=true;break;}}
+    $pdo->beginTransaction();
     if($inUse){$q=$pdo->prepare('UPDATE payment_types SET enabled=0 WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);}
     else{$q=$pdo->prepare('DELETE FROM payment_types WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);}
     if(tableExists($pdo,'sp_relational_sync')){$q=$pdo->prepare("DELETE FROM sp_relational_sync WHERE state_key='paymentTypes' AND entity='paymentTypes' AND db_id=? AND outlet_id=?");$q->execute([$id,$masterOutletId]);}
-    spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-delete','disabled_instead_of_deleted'=>$inUse,'data'=>paymentTypeList($pdo,$masterOutletId,$imageOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
+    spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');$pdo->commit();echo json_encode(['ok'=>true,'api_version'=>'V10','operation'=>'payment-types-delete','disabled_instead_of_deleted'=>$inUse,'data'=>paymentTypeList($pdo,$masterOutletId,$imageOutletId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
   }
   throw new InvalidArgumentException('Unsupported Payment Types operation.');
 }

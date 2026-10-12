@@ -1,6 +1,10 @@
-@echo off
-setlocal
-"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-current-user.ps1"
-set "RESULT=%ERRORLEVEL%"
-pause
-exit /b %RESULT%
+@echo off
+setlocal
+set "INSTALLER=%~dp0..\RESTART-SP-MANAGER-LOCAL-AGENT.bat"
+if not exist "%INSTALLER%" (
+ echo Verified SP-Manager installer was not found beside the project root.
+ pause
+ exit /b 1
+)
+call "%INSTALLER%"
+exit /b %ERRORLEVEL%

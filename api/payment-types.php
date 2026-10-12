@@ -167,13 +167,14 @@ try {
             if(!ptTableExists($pdo,$table))continue;
             $x=$pdo->prepare("SELECT COUNT(*) FROM `$table` WHERE `$field`=?");$x->execute([$id]);if((int)$x->fetchColumn()>0){$inUse=true;break;}
         }
+        $pdo->beginTransaction();
         if($inUse){
             $q=$pdo->prepare('UPDATE payment_types SET enabled=0 WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);
         } else {
             $q=$pdo->prepare('DELETE FROM payment_types WHERE id=? AND outlet_id=?');$q->execute([$id,$masterOutletId]);
         }
         if(ptTableExists($pdo,'sp_relational_sync')){$q=$pdo->prepare("DELETE FROM sp_relational_sync WHERE state_key='paymentTypes' AND entity='paymentTypes' AND db_id=? AND outlet_id=?");$q->execute([$id,$masterOutletId]);}
-        spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');ptOut(['ok'=>true,'api_version'=>'V1','disabled_instead_of_deleted'=>$inUse,'data'=>ptList($pdo,$masterOutletId,$requestedOutletId)]);
+        spAdvanceStateRevision($pdo,$masterOutletId,'paymentTypes');$pdo->commit();ptOut(['ok'=>true,'api_version'=>'V1','disabled_instead_of_deleted'=>$inUse,'data'=>ptList($pdo,$masterOutletId,$requestedOutletId)]);
     }
 
     ptOut(['ok'=>false,'error'=>'Unsupported action.'],400);

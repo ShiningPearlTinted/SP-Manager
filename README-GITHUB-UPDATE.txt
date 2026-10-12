@@ -1,9 +1,11 @@
-SP-Manager â€” clean source / Local Agent 1.2.4
+SP-Manager 1.0.54 — release notes
 
-Upload kandungan folder SP-Manager-main ke root repository, termasuk .github dan .gitignore. ZIP source mempunyai kurang100files. GitHub upload tidak memadam fail lama: padam frontend/dist dan frontend/public/sp-manager-agent serta frontend/public/RESTART-SP-MANAGER-LOCAL-AGENT.bat daripada repository jika masih tracked. Padam pnpm-lock.yaml, frontend/pnpm-workspace.yaml dan REMOVED-FILES.json yang lama. Kekalkan agent/ dan scripts/sync-agent.mjs.
+Source package: copy the contents of this ZIP to the repository root. It has fewer than 100 files. Keep .github and .gitignore. If the repository already contains generated/obsolete files, remove `frontend/dist/`, `frontend/public/sp-manager-agent/`, `frontend/public/RESTART-SP-MANAGER-LOCAL-AGENT.bat`, `pnpm-lock.yaml`, `frontend/pnpm-workspace.yaml` and `REMOVED-FILES.json`; `.gitignore` does not remove files already tracked.
 
-Build: npm install --prefix frontend, kemudian npm run build. prebuild menjana hosted agent daripada agent/ dan installer daripada root. Jangan upload dist ke GitHub source; pakej hosting berasingan sudah siap build.
+Never publish a production database export. The `database/` folder is intentionally excluded from this release; `.gitignore` also blocks SQL exports stored there. Keep the SQL schema/migration files under `api/`.
 
-API config.php/private config tidak disertakan. Kekalkan konfigurasi hosting sedia ada. Database dan SQL production tidak perlu reset/import untuk cleanup. Skrip SQL dalam api/ ialah alat schema/migration sedia ada; jangan import semua sekaligus.
+Generated `frontend/dist/` and `frontend/public/sp-manager-agent/` are intentionally omitted. The frontend build creates these from `agent/`; GitHub Actions then deploys `frontend/dist` to Pages. Build locally with `npm ci --prefix frontend` followed by `npm run build`.
 
-Local Agent fullscreen perlu dipasang pada komputer POS menggunakan agent/install-windows.bat. Menukar source di GitHub sahaja tidak update agent yang sudah berjalan. Build/deploy mesti selesai sebelum Ctrl+Shift+R.
+Deploy the frontend and API from this same release. The frontend verifies API release 1.0.54 before saving transactions. Back up the database first. On an existing database, run `api/PAYMENT-TYPE-OUTLET-IMAGE-MIGRATION.sql` once if `payment_type_display_images` is missing. Do not import a production dump to apply an upgrade.
+
+To update the Windows Local Agent, run the root `RESTART-SP-MANAGER-LOCAL-AGENT.bat`. `agent/install-windows.bat` delegates to that SHA-256-verified installer. For fullscreen Customer Display, install the agent on the POS computer and enable the secondary monitor with Windows set to Extend.

@@ -21,6 +21,8 @@ function copyPaymentTypes(PDO $pdo,int $sourceId,int $targetId):int{
 }
 
 try{
+ $actor=$GLOBALS['spActor']??[];
+ if(($actor['role_name']??'')!=='Administrator')out(['ok'=>false,'error'=>'Only an Administrator may provision outlets.'],403);
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
  $pdo=spApiDatabase();
  $b=body();$action=strtolower(trim((string)($_GET['action']??$_POST['action']??$b['action']??'provision')));
