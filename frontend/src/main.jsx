@@ -1178,7 +1178,7 @@ function MyCompany({company,setCompany,activeUser}){
   <div className="company-shell company-shell-ar">
    <div className="company-topbar">
     <div><div className="eyebrow">BUSINESS PROFILE</div><h2>My company</h2><p>Company information used on receipts, invoices and business documents.</p></div>
-    <div className="company-top-actions"><span className="company-status"><i></i> Local data</span>{tab!=="Reset database"&&<button className="company-save" onClick={saveCompany}>✓ Save</button>}</div>
+    <div className="company-top-actions"><span className="company-status"><i></i> Local data</span>{tab!=="Reset database"&&<button className="company-save" title="Save company details" onClick={saveCompany}><span>Save</span></button>}</div>
    </div>
    <div className="company-tabs company-tabs-ar">
     {["General","Address","Logo","Login screen logo","Bank details",...(activeUser?.role==="Administrator"?["Reset database"]:[])].map(x=><button key={x} type="button" className={tab===x?"active":""} onClick={()=>setTab(x)}>{x}</button>)}
