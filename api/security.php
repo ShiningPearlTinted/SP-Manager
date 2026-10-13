@@ -143,6 +143,9 @@ function spTokenOutletFresh(PDO $pdo,int $outlet): bool {
 
 function spPermissionForRequest(string $file, string $action, string $stateKey, string $method): string {
     if ($file === 'customer-display.php' && in_array($action, ['terminals','terminal','image'], true)) return 'manageSettings';
+    // POS users who can process payments may publish the live cart/payment state.
+    // Keep terminal pairing and display configuration restricted to managers.
+    if ($file === 'customer-display.php' && $action === 'state' && $method === 'POST') return 'managePayments';
     if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? '' : 'manageProducts';
     if ($file === 'users.php') return $action==='logout'?'':'manageUsers';
     if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
@@ -287,7 +290,7 @@ function spInstallCorsAndGuard(): void {
         $globalManagement = ($user['role_name'] ?? '') === 'Administrator' && in_array($file, ['outlets.php','outlet-provision.php'], true);
         if (!$hasAssignment && !$globalManagement) spApiRespond(['ok'=>false,'error'=>'This user is not assigned to the requested outlet.'], 403);
 
-        if(strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'))==='POST'){$lock='spm:'.substr(hash('sha256',(string)$pdo->query('SELECT DATABASE()')->fetchColumn()),0,40);$l=$pdo->prepare('SELECT GET_LOCK(?,10)');$l->execute([$lock]);if((int)$l->fetchColumn()!==1)spApiRespond(['ok'=>false,'error'=>'Database busy. Retry the same request.'],409);register_shutdown_function(static function()use($pdo,$lock){if($pdo->inTransaction())$pdo->rollBack();try{$pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$lock]);}catch(Throwable $e){}});}
+        if(strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'))==='POST'){$database=(string)$pdo->query('SELECT DATABASE()')->fetchColumn();$lock='spm:'.substr(hash('sha256',$database.'|outlet:'.$outletId),0,40);$l=$pdo->prepare('SELECT GET_LOCK(?,10)');$l->execute([$lock]);if((int)$l->fetchColumn()!==1)spApiRespond(['ok'=>false,'error'=>'Outlet database busy. Retry the same request.'],409);register_shutdown_function(static function()use($pdo,$lock){if($pdo->inTransaction())$pdo->rollBack();try{$pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$lock]);}catch(Throwable $e){}});}
         // Check after the shared writer lock so a queued old write cannot follow a reset.
         if($file!=='database-reset.php'&&!spTokenOutletFresh($pdo,$outletId))spApiRespond(['ok'=>false,'error'=>'This outlet was reset. Sign in again before continuing.'],401);
         if($file==='database-reset.php'&&($user['role_name']??'')!=='Administrator')spApiRespond(['ok'=>false,'error'=>'Only an Administrator may reset an outlet.'],403);
