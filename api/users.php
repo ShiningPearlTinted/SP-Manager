@@ -90,6 +90,7 @@ function normalizeUser(PDO $pdo,array $u,int $outletId):array{
  return['id'=>$id,'dbId'=>$id,'name'=>$name,'username'=>$username,'role'=>$roleName,'enabled'=>!empty($u['enabled']),'permissions'=>$permissions,'outlets'=>assignedOutletRows($pdo,$id),'outlet_ids'=>$assignedOutletIds,'default_outlet_id'=>$defaultOutletId];
 }
 $permissionLabels=['viewSalesHistory'=>'View sales history','viewOpenSales'=>'View open sales','cashInOut'=>'Cash In / Out','creditPayments'=>'Credit payments','endOfDay'=>'End of day','userInfo'=>'User info','manageUsers'=>'Users & Permissions','manageProducts'=>'Products','manageInventory'=>'Inventory','manageCustomers'=>'Customers','managePurchases'=>'Purchases','managePayments'=>'Payments','manageManagement'=>'Management','manageSettings'=>'Settings','manageReports'=>'Reports','manageTax'=>'Tax','manageDiscount'=>'Discount / Promotion','manageLoyalty'=>'Loyalty','manageQuotation'=>'Quotation','manageInvoice'=>'Invoice'];
+$permissionLabels += ['viewHrEmployees'=>'HR Employees','manageHrEmployees'=>'HR Employee Management','transferHrEmployees'=>'HR Outlet Transfers','viewHrSalary'=>'HR Salary Access','manageHrSalary'=>'HR Salary Revisions','manageHrSettings'=>'HR Settings','viewHrSensitive'=>'HR IC / Passport Access'];
 try{
  if($name===''||$user==='')throw new RuntimeException('Database configuration is incomplete.');
  $pdo=spApiDatabase();

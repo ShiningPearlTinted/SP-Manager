@@ -1,0 +1,256 @@
+{
+  "baseline": "SP-Manager-HR-Phase1-FULL-SIDEBAR",
+  "removed": [
+    {
+      "path": "api/common.php",
+      "reason": "Unreferenced helpers of retired legacy router",
+      "sha256": "487ea21519de82878627dd6a66ebf01e5778d0cbcb523ea228e1ef41f19946c4"
+    },
+    {
+      "path": "api/db.php",
+      "reason": "Unreferenced helpers of retired legacy router",
+      "sha256": "e565a2a1297804287a687a018c97864680e0ad756771a554f8b86b9302bae62a"
+    },
+    {
+      "path": "api/PAYMENT-TYPE-CUSTOMER-DISPLAY-MIGRATION.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "cca9dd9c83ccd186ba9a015243a7b0017145fa9d4726837a3abf25692b53f8fc"
+    },
+    {
+      "path": "api/SCHEMA-EMPTY-1.0.45.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "15ce9bea244213336d411fc1cb9760f1c425c52b2cd88971d034ead4d96b350f"
+    },
+    {
+      "path": "api/SCHEMA-EMPTY-1.0.48.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "abd63fdd5407c81d33d2a19e80fe910d6f829d561d6acc8a8ba46a26d89fdb7d"
+    },
+    {
+      "path": "api/schema_app_state.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "96910e86a85f531ec42202475d2aa31c89917a69797b87fa1b2d2b33b0f35c46"
+    },
+    {
+      "path": "api/schema_customer_display.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "71da4a87e014eab0aeedb35f27daedbfbf9e618f2041e445b72b863778b9f621"
+    },
+    {
+      "path": "api/schema_product_outlets.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "2a37e614229869d85a254bd398b33b18a0fcb3df1c62b1cd5c99b44f1d1a7e1f"
+    },
+    {
+      "path": "api/schema_repair_1_0_41.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "6aa9975dffc22c8c277743991e06f95f723b7bb38667ee8a4b64a0f519aa73e1"
+    },
+    {
+      "path": "api/schema_settings.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "586ac3007d45fa1947d439422a372511ea84a4d35e20db5d2a7480abafc765a4"
+    },
+    {
+      "path": "api/UPGRADE-1.0.45.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "01f9e0f4575d1cfb5a010c3b6211c24d3c27738f2b12f96d245638107e726ed7"
+    },
+    {
+      "path": "api/UPGRADE-1.0.48.sql",
+      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
+      "sha256": "cb98f8e1113fc3a27502f22464b65b394a5e26a45eed1fca1dc2616862441841"
+    },
+    {
+      "path": "database/u729423317_SPCentral.sql",
+      "reason": "Production reference dump archived separately",
+      "sha256": "4e782f8f3f183b4d27eddc82d3609f51bac2cf8a7c5c37336a141c84b70d899e"
+    },
+    {
+      "path": "frontend/dist/assets/app.css",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "4ed7c5afe2b49dcd1a16f579d219a18a7f1600ebfa35e09292e45adcb48a5a1a"
+    },
+    {
+      "path": "frontend/dist/assets/app.js",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "2ac098f0d1512b6b2f31e10f06d78be266ad2475e7e1f1a05460bc06d47beade"
+    },
+    {
+      "path": "frontend/dist/customer-display/index.html",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "6c5fea6b2dece37cb013dcec519fb940281de93e8bb0b58bae001b8831e31548"
+    },
+    {
+      "path": "frontend/dist/index.html",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "f221255229cb39325ab420bc435d8602b958f07cecda12e85a77ef485d169dc2"
+    },
+    {
+      "path": "frontend/dist/RESTART-SP-MANAGER-LOCAL-AGENT.bat",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "4c3abc1c893e0c1ba23c3cafa215c9506e71aea05365bfe8180fc74b459e4ca0"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/agent.ps1",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "99270167d78526a7b54a8d995e5ad8cb22ba4bbf866d35fe14141793cc589e06"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/autostart.ps1",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/BACA-DAHULU.txt",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "0f1e2cc5ce4a87b6c6171f9d0f3958429479d53e6c8263028b80e2e1275b29eb"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/check-agent.bat",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/diagnose-agent.bat",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "71e724ffe924d44d70f3b45866506405c3b4807e893847828578fb64060a821c"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/display-fullscreen.ps1",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "0e68cf40bf993974f18f90687963900495c505ea6b80c4f8dc832df697f4b45f"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/display-window.ps1",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "89ef053943f69d0342a676ab738c12827b73fc71e8c795663771e8bacab64399"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/install-current-user.ps1",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/install-windows.bat",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "a96e19c60cb5f56b5c7df7f916e674293dbea45678559c030db9bcc6c9fef9d3"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/SHA256.json",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "515f25eea6095a70bfce2d83c8a7a372c15cdee85343edfa05d72aa718d82e01"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/watchdog.ps1",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"
+    },
+    {
+      "path": "frontend/dist/vendor/xlsx-LICENSE.txt",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+    },
+    {
+      "path": "frontend/dist/vendor/xlsx.full.min.js",
+      "reason": "Generated frontend deployment copied to separate deployment ZIP",
+      "sha256": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99"
+    },
+    {
+      "path": "frontend/pnpm-workspace.yaml",
+      "reason": "Unused pnpm metadata; active project/CI uses npm and package-lock",
+      "sha256": "ac02d96368617c760f093cfe61fdec64b6244007ab3553e0d6621f706f54a353"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/autostart.ps1",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/BACA-DAHULU.txt",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "0f1e2cc5ce4a87b6c6171f9d0f3958429479d53e6c8263028b80e2e1275b29eb"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/check-agent.bat",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/diagnose-agent.bat",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "71e724ffe924d44d70f3b45866506405c3b4807e893847828578fb64060a821c"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/display-fullscreen.ps1",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "0e68cf40bf993974f18f90687963900495c505ea6b80c4f8dc832df697f4b45f"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/display-window.ps1",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "89ef053943f69d0342a676ab738c12827b73fc71e8c795663771e8bacab64399"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/install-current-user.ps1",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/watchdog.ps1",
+      "reason": "Byte-identical agent asset generated by prebuild",
+      "sha256": "5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"
+    },
+    {
+      "path": "HR-PHASE1-README.md",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "be987a7aa7074d791b3128be198bd4401a19c547b5d896fa1fbb2178e4e05819"
+    },
+    {
+      "path": "HR-PHASE1-TEST-RESULTS.txt",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "6fa212168e7694d13a4add9841395eb6d26a2cd224dc2b2487763f89e5f65376"
+    },
+    {
+      "path": "HR-SIDEBAR-UPDATE.md",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "6be0e348f73623c4ef864d7bb836d805568cfab5483317e5a01ba7207f9a621f"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "reason": "Unused pnpm metadata; active project/CI uses npm and package-lock",
+      "sha256": "17c814b167307942d3609c7b9d916ceddb85839573ab39baa114e30edb132a1a"
+    },
+    {
+      "path": "README-GITHUB-UPDATE.txt",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "32c6ec9d4edb0460471eb3f94b6d2c417900da25be56a7530e848d9bd0acc908"
+    },
+    {
+      "path": "rel.txt",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "331126eea483fc70a1912ed3776b8424a4be1c60cce746406ca93639d383f830"
+    },
+    {
+      "path": "REMOVED-FILES.json",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "52a27f7645f6eb6402c6bc9b1730cb3a7c90bf9066afc3fa3f4140eef38565e4"
+    },
+    {
+      "path": "SHA256-MANIFEST.json",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "12526fff73afbbb8f66d226d5ca4a3f5fe934181ebcbbb656af5284283194fe5"
+    },
+    {
+      "path": "START-HERE.md",
+      "reason": "Previous handoff notes consolidated into README",
+      "sha256": "cf7df676b275250bcf87c7487ade016e80fbfea1234c64a7d9f0131067a133c4"
+    }
+  ],
+  "modified": [
+    "scripts/sync-agent.mjs",
+    "frontend/src/price-check.jsx",
+    "tests/hr-phase1-regression.mjs"
+  ],
+  "notes": "All omitted files retained in the separate cleanup archive; frontend/dist delivered separately. No database operation performed."
+}

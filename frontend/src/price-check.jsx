@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {BATTERY_HEADERS,emptyBattery,validateBattery,parseBatterySheet,resolveBatteryImport,batteryWorkbook} from './price-check-excel.js';
+import {emptyBattery,validateBattery,parseBatterySheet,resolveBatteryImport,batteryWorkbook} from './price-check-excel.js';
 import './price-check.css';
 
 let excelLoading;

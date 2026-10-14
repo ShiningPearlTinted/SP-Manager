@@ -142,6 +142,12 @@ function spTokenOutletFresh(PDO $pdo,int $outlet): bool {
 }
 
 function spPermissionForRequest(string $file, string $action, string $stateKey, string $method): string {
+    if ($file === 'hr.php') return match ($action) {
+        'save-master'=>'manageHrSettings', 'save-employee'=>'manageHrEmployees',
+        'transfer','temporary-assignment'=>'transferHrEmployees',
+        'salary-history'=>'viewHrSalary', 'revise-salary'=>'manageHrSalary',
+        default=>'viewHrEmployees',
+    };
     if ($file === 'customer-display.php' && in_array($action, ['terminals','terminal','image'], true)) return 'manageSettings';
     // POS users who can process payments may publish the live cart/payment state.
     // Keep terminal pairing and display configuration restricted to managers.
