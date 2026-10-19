@@ -5,6 +5,17 @@ function hrPayslipCents(string $amount): int {
     [$whole,$fraction]=array_pad(explode('.',$amount,2),2,'00');
     return ((int)$whole*100)+(int)str_pad($fraction,2,'0');
 }
+function hrPayslipFlexibleMoney(mixed $value,string $label): string {
+    if($value===null)$value='0';
+    if(is_scalar($value)){
+        $text=trim((string)$value);
+        if($text==='')$text='0';
+        if(preg_match('/^\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$/',$text))$text=str_replace(',','',$text);
+        if(preg_match('/^\.\d{1,2}$/',$text))$text='0'.$text;
+        $value=$text;
+    }
+    return hrMoney($value,$label);
+}
 function hrPayslipAmount(int $cents): string { return number_format($cents/100,2,'.',''); }
 function hrPayslipLines(mixed $input,string $label): array {
     if (!is_array($input) || count($input)>50) throw new HrError($label.' must contain no more than 50 lines.');
@@ -64,7 +75,7 @@ function hrPayslipSnapshot(PDO $pdo,int $employeeId,int $outlet,string $profileD
 }
 function hrPayslipAdvance(PDO $pdo,array $body,int $employeeId,int $outlet): array {
     $advanceId=hrId($body['advance_id']??null,'Salary advance',true);
-    $repayment=hrMoney($body['advance_repayment']??'0','Salary advance repayment');
+    $repayment=hrPayslipFlexibleMoney($body['advance_repayment']??'0','Salary advance repayment');
     if(!$advanceId){if((float)$repayment>0)throw new HrError('Choose a salary advance before entering a repayment.');return [null,'0.00'];}
     $advance=hrQuery($pdo,'SELECT id,balance FROM hr_salary_advances WHERE id=? AND employee_id=? AND outlet_id=? AND status=\'OPEN\' FOR UPDATE',[$advanceId,$employeeId,$outlet])->fetch();
     if(!$advance)throw new HrError('Open salary advance not found for this employee.',404);
