@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/security.php';
 require_once __DIR__.'/hr-lib.php';
+require_once __DIR__.'/hr-payslip-lib.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -9,8 +10,8 @@ $pdo=null;
 try {
     $method=strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $action=strtolower(trim((string)($_GET['action'] ?? '')));
-    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history'];
-    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary'];
+    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','list-payslips','payslip-employees','payslip'];
+    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-payslip','update-payslip','issue-payslip','void-payslip'];
     if (!in_array($action,[...$read,...$write],true)) throw new HrError('Unknown HR action.');
     if (($method==='GET' && !in_array($action,$read,true)) || ($method==='POST' && !in_array($action,$write,true)) || !in_array($method,['GET','POST'],true)) throw new HrError('Method not allowed.',405);
     // Every action is independently authorized, including actions added later.
@@ -18,6 +19,8 @@ try {
         'save-master'=>'manageHrSettings','save-employee'=>'manageHrEmployees',
         'transfer','temporary-assignment'=>'transferHrEmployees',
         'revise-salary'=>'manageHrSalary','salary-history'=>'viewHrSalary',
+        'list-payslips','payslip-employees','payslip'=>'viewHrSalary',
+        'create-payslip','update-payslip','issue-payslip','void-payslip'=>'manageHrSalary',
         default=>'viewHrEmployees'
     };
     hrRequire($permission);
@@ -27,6 +30,24 @@ try {
     $pdo->exec("SET time_zone = '+08:00'");
     foreach (['hr_employees','hr_departments','hr_positions','hr_employment_types','hr_employment_statuses','hr_outlet_history','hr_salary_history'] as $table) spRequireTable($pdo,$table);
     if ($method==='GET') {
+        if ($action==='list-payslips') {
+            hrRequire('viewHrSalary');spRequireTable($pdo,'hr_payslips');
+            $period=(string)($_GET['period_start']??'');
+            spApiRespond(['ok'=>true,'payslips'=>hrPayslipList($pdo,$outlet,$period)],200);
+        }
+        if ($action==='payslip') {
+            hrRequire('viewHrSalary');spRequireTable($pdo,'hr_payslips');
+            $id=hrId($_GET['id']??null,'Payslip');
+            spApiRespond(['ok'=>true,'payslip'=>hrPayslipRead($pdo,$id,$outlet)],200);
+        }
+        if ($action==='payslip-employees') {
+            hrRequire('viewHrSalary');
+            $period=hrDate($_GET['period_start']??null,'Pay period',true);
+            if((new DateTimeImmutable($period))->format('Y-m-01')!==$period)throw new HrError('Choose a valid pay month.');
+            $periodEnd=(new DateTimeImmutable($period))->modify('last day of this month')->format('Y-m-d');
+            $rows=hrQuery($pdo,'SELECT e.id,e.staff_code,e.full_name,d.name AS department_name,p.name AS position_name,s.id AS salary_history_id,s.salary_type,s.basic_rate,s.fixed_allowance,s.currency_code FROM hr_employees e LEFT JOIN hr_departments d ON d.id=e.department_id LEFT JOIN hr_positions p ON p.id=e.position_id LEFT JOIN hr_salary_history s ON s.id=(SELECT sh.id FROM hr_salary_history sh WHERE sh.employee_id=e.id AND sh.effective_from<=? ORDER BY sh.effective_from DESC,sh.id DESC LIMIT 1) WHERE '.hrOutletExpression().'=? AND e.join_date<=? ORDER BY e.full_name,e.id LIMIT 1000',[$periodEnd,$outlet,$periodEnd])->fetchAll();
+            spApiRespond(['ok'=>true,'employees'=>$rows],200);
+        }
         if ($action==='masters') spApiRespond(['ok'=>true,'masters'=>hrMasters($pdo),'can_manage_settings'=>spHasPermission('manageHrSettings') && hrHq()],200);
         if ($action==='options') {
             $users=[];
@@ -84,6 +105,10 @@ try {
         'transfer'=>hrAssignment($pdo,$body,$outlet,'transfer',$key),
         'temporary-assignment'=>hrAssignment($pdo,$body,$outlet,'temporary',$key),
         'revise-salary'=>hrSalary($pdo,$body,$outlet,$key),
+        'create-payslip'=>hrPayslipCreate($pdo,$body,$outlet),
+        'update-payslip'=>hrPayslipUpdate($pdo,$body,$outlet),
+        'issue-payslip'=>hrPayslipIssue($pdo,$body,$outlet),
+        'void-payslip'=>hrPayslipVoid($pdo,$body,$outlet),
         default=>throw new HrError('Unknown HR action.')
     };
     spRequestComplete($pdo,$key,$response); $pdo->commit(); spApiRespond($response,200);
@@ -92,7 +117,7 @@ try {
     if ($e instanceof HrError) spApiRespond(['ok'=>false,'error'=>$e->getMessage()],$e->status);
     if ($e instanceof InvalidArgumentException) spApiRespond(['ok'=>false,'error'=>$e->getMessage()],400);
     if ($e instanceof RuntimeException && $e->getMessage()==='request_id was already used with a different request.') spApiRespond(['ok'=>false,'error'=>'This request identifier was already used. Refresh before submitting a different change.'],409);
-    if ($e instanceof PDOException && $e->getCode()==='23000') spApiRespond(['ok'=>false,'error'=>'Staff code, linked user, master code or salary date already exists, or a referenced record is invalid.'],409);
+    if ($e instanceof PDOException && $e->getCode()==='23000') spApiRespond(['ok'=>false,'error'=>in_array($action,['create-payslip'],true)?'A payslip already exists for this employee and month or a referenced record is invalid.':'Staff code, linked user, master code or salary date already exists, or a referenced record is invalid.'],409);
     // No payload, SQL or sensitive value is written to server logs or sent to clients.
     error_log('SP HR operation failed: '.get_class($e));
     spApiRespond(['ok'=>false,'error'=>'HR operation failed. Verify the migration/configuration or refresh and retry.'],503);

@@ -1,39 +1,23 @@
-# SP-Manager — Source kemas, HR Fasa 1 + Sidebar
+# SP-Manager 1.0.58
 
-Source penuh untuk GitHub/CI. Gunakan folder kandungan ZIP sebagai root repository supaya .github/workflows/pages.yml berada di root, bukan folder bersarang tambahan. Pakej GitHub mempunyai 97 fail; frontend/dist dan salinan agent yang dijana tidak dimasukkan. Skrip npm prebuild/predev menjana semula lapan fail agent yang sama dengan salinan canonical. Empat public variant sedia ada dikekalkan kerana berbeza daripada canonical.
+GitHub source package for SP-Manager. Use the contents of this ZIP as the repository root. It keeps application source, required migrations, npm lockfiles, and the GitHub workflow. It omits generated `frontend/dist`, generated agent copies, and production database exports. This archive contains 99 files, within the 100-file upload limit.
 
-## Deployment
-Frontend siap compile terdapat dalam DEPLOYMENT.zip di pakej FULL-CLEAN, atau gunakan ZIP DEPLOY terdahulu: JavaScript/CSS adalah sama byte demi byte selepas cleanup. Upload kandungan frontend daripada deployment ZIP ke /SP-Manager/. API penuh kekal dalam api/. Jangan gantikan config.php sebenar di server dengan template source. Tiada migration SQL baru diperlukan untuk cleanup atau sidebar jika HR sudah dipasang.
+## Build the frontend
 
-Build source: dalam frontend, jalankan npm ci dan npm run build. Workflow GitHub Pages asal dikekalkan. Skrip generator kini mengekalkan public overrides asal; ia tidak lagi menimpa agent runtime berbeza secara tidak sengaja. node_modules, dist dan asset agent yang dijana disenaraikan dalam .gitignore. npm/package-lock dikekalkan; metadata pnpm yang tidak digunakan dikeluarkan.
+From `frontend/`, run `npm ci` and `npm run build`. The prebuild script copies the canonical local agent assets from `agent/` into the public folder. Deploy the resulting `frontend/dist` separately from this source archive.
 
-## Pemasangan HR pertama
-Backup database dan fail dahulu. Gunakan Central MySQL sedia ada; jalankan database/migrations/hr-phase1.sql pada staging kemudian database pusat apabila disahkan. Jangan import dump penuh ke atas database aktif. Jika jadual hr_* sudah wujud, jangan jalankan semula migration.
+## Configure the API
 
-Backend PHP 8.1+ dengan PDO MySQL dan OpenSSL. Dalam config API sebenar, tambah hr_encryption_key (secret berasingan 64 hexadecimal chars; jana menggunakan bin2hex(random_bytes(32))). Kekalkan auth/database/encryption keys sedia ada. hr_hq_user_ids ialah array ID HQ bukan admin yang dibenarkan mengurus master global; default kosong. Simpan HR key untuk recovery, jangan tukar tanpa decrypt/re-encrypt terancang.
+Use PHP 8.1 or later with PDO MySQL and OpenSSL. Before running the API, copy `api/config.example.php` to `api/config.php` or configure a private config file outside `public_html`. Configure database credentials and API secrets on the PHP host. Do not commit real credentials or encryption keys. Keep `auth_secret`, `encryption_key`, and `hr_encryption_key` separate and stable. The HR key is read from `SP_MANAGER_HR_ENCRYPTION_KEY`, or from `hr_encryption_key` in the private config array. Each key must be at least 64 characters.
 
-Sign in semula. Berikan viewHrEmployees serta permissions HR yang sesuai melalui Users & Permissions. manageManagement diperlukan untuk masuk ke Management dari POS jika peranan tersebut belum ada akses. Permission tambahan: manageHrEmployees, transferHrEmployees, viewHrSalary, manageHrSalary, manageHrSettings, viewHrSensitive. Non-admin master settings memerlukan HQ ID dalam config juga. Outlet source/destination mesti assigned. Tiada permission atau data production diubah oleh cleanup.
+## HR migrations
 
-Tambah department/position/employment types/statuses sebenar di HR Settings dahulu. Employee ID kekal; staff code unik. Status inactive/terminated mengekalkan sejarah. Transfer bertarikh masa depan tidak berkuat kuasa awal; temporary assignment tidak menukar primary outlet. Revisi gaji kekal dengan tarikh bertambah; IC/bank/statutory identifiers dienkripsi.
+Back up the database and test against a staging copy first. For a database without HR, apply `database/migrations/hr-phase1.sql`. Then apply `database/migrations/hr-phase3-payslip.sql`. Do not re-run a migration if its tables already exist. Never import the attached production SQL dump as an upgrade; it contains live records.
 
-Skop siap ialah HR Fasa 1 sahaja. Attendance/shift/leave/OT ialah Fasa 2; payroll/statutory/payslip ialah Fasa 3; claims/documents/ESS/reports advanced ialah Fasa 4. Cleanup tidak menambah modul fasa berikutnya. Production belum dikemas kini oleh agent.
+After migration, assign `viewHrEmployees`, `viewHrSalary`, and `manageHrSalary` to the appropriate roles through Users & Permissions. HR outlet access follows the user's assigned outlets. The HR key is required to protect sensitive employee fields; keep a secure backup of it because rotating or losing the key prevents decryption of existing fields.
 
-## Apa yang dibuang atau diasingkan
-- Dua helper PHP lama api/common.php dan api/db.php: tiada rujukan atau pemanggilan spm_* dalam source runtime semasa. api/index.php (respons legacy 410) dikekalkan.
-- Import BATTERY_HEADERS yang tidak digunakan dalam Price Check. React dikekalkan kerana compiler JSX memerlukannya.
-- Lapan salinan agent yang byte-identical: dijana semula dari agent/, tanpa mengubah URL fail public.
-- Build frontend dipindahkan ke ZIP deployment; ini output yang diperlukan, bukan kod mati.
-- SQL lama/duplicate dan dump rujukan dipindahkan ke arkib maintenance. Schema terkini dan feature migrations yang digunakan dikekalkan.
-- Nota handoff lama digabungkan dalam README ini; rekod asal berada dalam arkib.
+## Payslips
 
-Semua fail yang dikeluarkan boleh dipulihkan daripada MAINTENANCE-ARCHIVE.zip. ZIP arkib mengandungi dump database rujukan; simpan sebagai backup tempatan, bukan muat naik ke GitHub. Tidak semua fail yang tiada import dibuang: endpoint HTTP, CLI backup/restore/bootstrap, receipt-pdf wrapper, version, database-health, PDF, licenses dan vendor masih diperlukan.
+The Payslip tab supports monthly payslip drafts, manual earnings and deductions, review/edit of drafts, issuing, and browser printing. Monthly basic pay and fixed allowance are prefilled from the employee salary profile; daily/hourly staff enter the actual period amount. Verify amounts before saving. Statutory deductions such as EPF, SOCSO, EIS, and PCB are entered by the payroll administrator; the app does not calculate statutory rates. Issued payslips are locked unless voided with a reason.
 
-## Semakan yang dijalankan
-- AST: tiada binding peringkat atas tidak digunakan dalam main.jsx atau HR; hanya import BATTERY_HEADERS yang selamat dikeluarkan. Tidak membuang React secara salah.
-- PHP syntax: semua 38 fail API yang dikekalkan lulus. Semua target include literal __DIR__ wujud.
-- Source regression: 88 fail asal yang dikekalkan sama; source POS/Dashboard/Price Tag/Login dan CSS global dikekalkan. Price Check berubah hanya pada unused import. Backend aplikasi/HR/security/users kekal.
-- Generator: 14 public assets selepas prebuild sama byte demi byte dengan pakej penuh sebelum cleanup.
-- Production esbuild compile: app.js dan app.css sama byte demi byte dengan deployment sebelumnya.
-- 74 semakan backend HR daripada fasa sebelumnya tidak diulang kerana runtime API tidak berubah, selain mengeluarkan dua helper yang tiada rujukan. Tiada transaksi POS, printing hardware atau production deployment dibuat dalam cleanup ini. Batasan Vite spawn EPERM dalam sandbox Windows kekal; build standard perlu disahkan di CI/hosting.
-
-CLEANUP-MANIFEST.json merekod paths, sebab pengasingan dan hash fail asal. Test regression memerlukan HR_ORIGINAL_ROOT ke extraction ZIP asal 1.0.56; ia menerima pengasingan yang direkodkan dalam manifest. Test API tetap memerlukan isolated API copy dengan DB localhost prefix spm_hr_test, bukan production config. Arkib menyimpan panduan ujian lama untuk maklumat lanjut.
+Deploy the frontend build and API from this same release. Do not overwrite a production `api/config.php` with the source placeholder config. No production database changes or deployment are performed by preparing this source package.

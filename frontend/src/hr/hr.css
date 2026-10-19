@@ -44,6 +44,25 @@
 .hr-module fieldset {border:0;padding:0;margin:0;min-width:0;}
 .hr-module .hr-form-actions {display:flex;justify-content:end;gap:var(--mg-space-3);margin-top:var(--mg-space-6);}
 .hr-module .hr-check {display:flex;align-items:center;gap:var(--mg-space-2);}
+.hr-module .hr-payslip-lines {margin:var(--mg-space-4) 0;padding-top:var(--mg-space-3);border-top:1px solid var(--mg-border);}
+.hr-module .hr-payslip-lines h4 {margin:0 auto 0 0;}
+.hr-module .hr-payslip-line {display:grid;grid-template-columns:minmax(150px,1fr) minmax(100px,180px) auto;gap:var(--mg-space-2);margin:var(--mg-space-2) 0;}
+.hr-module .hr-payslip-actions {display:flex;gap:var(--mg-space-2);flex-wrap:wrap;}
+.hr-module .hr-payslip-paper {max-width:900px;margin-top:var(--mg-space-6);padding:var(--mg-space-6);}
+.hr-module .hr-payslip-head {display:flex;justify-content:space-between;align-items:start;gap:var(--mg-space-4);border-bottom:2px solid var(--mg-border);padding-bottom:var(--mg-space-3);}
+.hr-module .hr-payslip-head h2 {margin:0;}
+.hr-module .hr-payslip-head p {color:var(--mg-muted);}
+.hr-module .hr-payslip-facts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--mg-space-4);margin:var(--mg-space-5) 0;}
+.hr-module .hr-payslip-facts div {display:flex;flex-direction:column;gap:4px;}
+.hr-module .hr-payslip-facts b {font-size:var(--mg-label-size);color:var(--mg-muted);}
+.hr-module .hr-payslip-total th {border-top:1px solid var(--mg-border);}
+.hr-module .hr-payslip-net {display:flex;justify-content:space-between;align-items:center;margin-top:var(--mg-space-5);padding:var(--mg-space-4);background:var(--mg-bg);font-size:1.15em;}
+@media print {
+ body * {visibility:hidden!important;}
+ .hr-module .hr-payslip-paper,.hr-module .hr-payslip-paper * {visibility:visible!important;}
+ .hr-module .hr-payslip-paper {position:absolute!important;inset:0!important;width:100%!important;max-width:none!important;margin:0!important;border:0!important;box-shadow:none!important;}
+ .hr-module .hr-no-print {display:none!important;}
+}
 @media(max-width:700px) {
  .hr-module.hr-layout {grid-template-columns:minmax(0,1fr);gap:var(--mg-space-4);}
  .hr-module .hr-sidebar-shell {position:static;}
@@ -54,5 +73,7 @@
  .hr-module .hr-stats,.hr-module .hr-grid,.hr-module .hr-form-grid {grid-template-columns:minmax(0,1fr);}
  .hr-module .hr-facts {grid-template-columns:120px minmax(0,1fr);}
  .hr-module .hr-toolbar .hr-field {max-width:none;}
+ .hr-module .hr-payslip-line {grid-template-columns:minmax(0,1fr);}
+ .hr-module .hr-payslip-facts {grid-template-columns:repeat(2,minmax(0,1fr));}
  .hr-module.hr-dialog {padding:var(--mg-space-4);width:calc(100vw - 20px);}
 }

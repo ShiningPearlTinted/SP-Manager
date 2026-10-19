@@ -6,6 +6,7 @@ The frontend talks to the PHP API; the PHP API connects to MySQL/MariaDB. The ZI
 - `SP_MANAGER_DB_USER`, `SP_MANAGER_DB_PASSWORD`, `SP_MANAGER_DB_CHARSET` (defaults to `utf8mb4`)
 - `SP_MANAGER_AUTH_SECRET` (at least 64 random characters)
 - `SP_MANAGER_ENCRYPTION_KEY` (a separate random value, at least 64 characters)
+- `SP_MANAGER_HR_ENCRYPTION_KEY` (a different random value, at least 64 characters)
 - `SP_MANAGER_BACKUP_DIR` (writable path outside the web root)
 - `SP_MANAGER_ALLOWED_ORIGINS` (comma-separated exact frontend origins)
 
