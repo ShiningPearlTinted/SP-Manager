@@ -145,7 +145,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'hr.php') return match ($action) {
         'save-master'=>'manageHrSettings', 'save-employee'=>'manageHrEmployees',
         'transfer','temporary-assignment'=>'transferHrEmployees',
-        'salary-history'=>'viewHrSalary', 'revise-salary'=>'manageHrSalary',
+        'salary-history','salary-advances'=>'viewHrSalary', 'revise-salary','create-salary-advance'=>'manageHrSalary',
         'list-payslips','payslip-employees','payslip'=>'viewHrSalary',
         'create-payslip','update-payslip','issue-payslip','void-payslip'=>'manageHrSalary',
         default=>'viewHrEmployees',

@@ -257,3 +257,14 @@ function hrSalary(PDO $pdo, array $body, int $outlet, string $key): array {
     spAudit($pdo,'HR_SALARY_REVISION','hr_employees',$id,null,['salary_history_id'=>$salaryId,'effective_from'=>$from]);
     return ['ok'=>true,'id'=>$salaryId];
 }
+function hrSalaryAdvanceCreate(PDO $pdo,array $body,int $outlet): array {
+    hrRequire('manageHrSalary');spRequireTable($pdo,'hr_salary_advances');
+    $employeeId=hrId($body['employee_id']??null,'Employee');$employee=hrEmployee($pdo,$employeeId,$outlet,true);
+    $amount=hrMoney($body['amount']??null,'Advance amount');
+    if((float)$amount<=0)throw new HrError('Advance amount must be greater than zero.');
+    $date=hrDate($body['advance_date']??null,'Advance date',true);
+    $reason=hrText($body['reason']??null,'Advance reason',500,true);
+    hrWrite($pdo,'hr_salary_advances',['outlet_id'=>$outlet,'employee_id'=>$employeeId,'staff_code_snapshot'=>$employee['staff_code'],'full_name_snapshot'=>$employee['full_name'],'advance_date'=>$date,'amount'=>$amount,'balance'=>$amount,'reason'=>$reason,'status'=>'OPEN','created_by'=>(int)$_SERVER['SP_AUTH_USER_ID']],null);
+    $id=(int)$pdo->lastInsertId();spAudit($pdo,'HR_SALARY_ADVANCE_CREATE','hr_salary_advances',$id,null,['employee_id'=>$employeeId,'amount'=>$amount]);
+    return ['ok'=>true,'id'=>$id,'balance'=>$amount];
+}

@@ -46,7 +46,7 @@ function hrPayslipDecode(array $row): array {
 function hrPayslipList(PDO $pdo,int $outlet,string $periodStart): array {
     $start=hrDate($periodStart,'Pay period',true);
     if((new DateTimeImmutable($start))->format('Y-m-01')!==$start)throw new HrError('Choose a valid pay month.');
-    $rows=hrQuery($pdo,'SELECT id,payslip_no,outlet_id,employee_id,staff_code_snapshot,full_name_snapshot,department_snapshot,position_snapshot,period_start,period_end,pay_date,currency_code,basic_pay,fixed_allowance,earnings_json,deductions_json,gross_pay,total_deductions,net_pay,status,notes,created_at,issued_at FROM hr_payslips WHERE outlet_id=? AND period_start=? ORDER BY full_name_snapshot,id LIMIT 500',[$outlet,$start])->fetchAll();
+    $rows=hrQuery($pdo,'SELECT id,payslip_no,outlet_id,employee_id,staff_code_snapshot,full_name_snapshot,department_snapshot,position_snapshot,period_start,period_end,pay_date,currency_code,basic_pay,fixed_allowance,salary_advance_id,salary_advance_repayment,earnings_json,deductions_json,gross_pay,total_deductions,net_pay,status,notes,created_at,issued_at FROM hr_payslips WHERE outlet_id=? AND period_start=? ORDER BY full_name_snapshot,id LIMIT 500',[$outlet,$start])->fetchAll();
     return array_map('hrPayslipDecode',$rows);
 }
 function hrPayslipRead(PDO $pdo,int $id,int $outlet): array {
@@ -62,11 +62,27 @@ function hrPayslipSnapshot(PDO $pdo,int $employeeId,int $outlet,string $profileD
     $details=hrQuery($pdo,'SELECT d.name AS department_snapshot,p.name AS position_snapshot FROM hr_employees e LEFT JOIN hr_departments d ON d.id=e.department_id LEFT JOIN hr_positions p ON p.id=e.position_id WHERE e.id=?',[$employeeId])->fetch()?:[];
     return [$employee,$salary,$details];
 }
+function hrPayslipAdvance(PDO $pdo,array $body,int $employeeId,int $outlet): array {
+    $advanceId=hrId($body['advance_id']??null,'Salary advance',true);
+    $repayment=hrMoney($body['advance_repayment']??'0','Salary advance repayment');
+    if(!$advanceId){if((float)$repayment>0)throw new HrError('Choose a salary advance before entering a repayment.');return [null,'0.00'];}
+    $advance=hrQuery($pdo,'SELECT id,balance FROM hr_salary_advances WHERE id=? AND employee_id=? AND outlet_id=? AND status=\'OPEN\' FOR UPDATE',[$advanceId,$employeeId,$outlet])->fetch();
+    if(!$advance)throw new HrError('Open salary advance not found for this employee.',404);
+    if(hrPayslipCents($repayment)<=0)throw new HrError('Enter the salary advance repayment amount.');
+    if(hrPayslipCents($repayment)>hrPayslipCents((string)$advance['balance']))throw new HrError('Repayment cannot exceed the outstanding salary advance balance.');
+    return [$advanceId,$repayment];
+}
+function hrPayslipWithAdvance(array $body,string $repayment): array {
+    $deductions=$body['deductions']??[];
+    if((float)$repayment>0)$deductions[]=['label'=>'Salary advance repayment','amount'=>$repayment];
+    $body['deductions']=$deductions;return $body;
+}
 function hrPayslipCreate(PDO $pdo,array $body,int $outlet): array {
     hrRequire('manageHrSalary');hrRequire('viewHrSalary');spRequireTable($pdo,'hr_payslips');
     $employeeId=hrId($body['employee_id']??null,'Employee');[$start,$end,$payDate]=hrPayslipPeriod($body);
     [$employee,$salary,$details]=hrPayslipSnapshot($pdo,$employeeId,$outlet,$end);
-    $finance=hrPayslipFinancials($body);$notes=hrText($body['notes']??null,'Notes',1000);
+    [$advanceId,$repayment]=hrPayslipAdvance($pdo,$body,$employeeId,$outlet);
+    $finance=hrPayslipFinancials(hrPayslipWithAdvance($body,$repayment));$notes=hrText($body['notes']??null,'Notes',1000);
     $duplicate=hrQuery($pdo,'SELECT id FROM hr_payslips WHERE outlet_id=? AND employee_id=? AND period_start=? AND period_end=? AND status<>\'VOID\' FOR UPDATE',[$outlet,$employeeId,$start,$end])->fetchColumn();
     if($duplicate)throw new HrError('A payslip already exists for this employee and month.',409);
     $values=['outlet_id'=>$outlet,'employee_id'=>$employeeId,'salary_history_id'=>(int)$salary['id'],
@@ -74,6 +90,7 @@ function hrPayslipCreate(PDO $pdo,array $body,int $outlet): array {
         'department_snapshot'=>$details['department_snapshot']??null,'position_snapshot'=>$details['position_snapshot']??null,
         'period_start'=>$start,'period_end'=>$end,'pay_date'=>$payDate,'salary_type'=>$salary['salary_type'],
         'currency_code'=>$salary['currency_code'],'basic_pay'=>$finance['basic_pay'],'fixed_allowance'=>$finance['fixed_allowance'],
+        'salary_advance_id'=>$advanceId,'salary_advance_repayment'=>$repayment,
         'earnings_json'=>json_encode($finance['earnings'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
         'deductions_json'=>json_encode($finance['deductions'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
         'gross_pay'=>$finance['gross_pay'],'total_deductions'=>$finance['total_deductions'],'net_pay'=>$finance['net_pay'],
@@ -88,8 +105,10 @@ function hrPayslipUpdate(PDO $pdo,array $body,int $outlet): array {
     hrRequire('manageHrSalary');hrRequire('viewHrSalary');spRequireTable($pdo,'hr_payslips');
     $id=hrId($body['id']??null,'Payslip');$old=hrQuery($pdo,'SELECT * FROM hr_payslips WHERE id=? AND outlet_id=? FOR UPDATE',[$id,$outlet])->fetch();
     if(!$old)throw new HrError('Payslip not found.',404);if($old['status']!=='DRAFT')throw new HrError('Only draft payslips can be edited.',409);
-    $finance=hrPayslipFinancials($body);$notes=hrText($body['notes']??null,'Notes',1000);
-    hrQuery($pdo,'UPDATE hr_payslips SET basic_pay=?,fixed_allowance=?,earnings_json=?,deductions_json=?,gross_pay=?,total_deductions=?,net_pay=?,notes=? WHERE id=? AND outlet_id=? AND status=\'DRAFT\'',[
+    [$advanceId,$repayment]=hrPayslipAdvance($pdo,$body,(int)$old['employee_id'],$outlet);
+    $finance=hrPayslipFinancials(hrPayslipWithAdvance($body,$repayment));$notes=hrText($body['notes']??null,'Notes',1000);
+    hrQuery($pdo,'UPDATE hr_payslips SET salary_advance_id=?,salary_advance_repayment=?,basic_pay=?,fixed_allowance=?,earnings_json=?,deductions_json=?,gross_pay=?,total_deductions=?,net_pay=?,notes=? WHERE id=? AND outlet_id=? AND status=\'DRAFT\'',[
+        $advanceId,$repayment,
         $finance['basic_pay'],$finance['fixed_allowance'],json_encode($finance['earnings'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
         json_encode($finance['deductions'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$finance['gross_pay'],$finance['total_deductions'],$finance['net_pay'],$notes,$id,$outlet]);
     spAudit($pdo,'HR_PAYSLIP_UPDATE','hr_payslips',$id,null,['status'=>'DRAFT']);return ['ok'=>true,'id'=>$id];
@@ -99,6 +118,12 @@ function hrPayslipIssue(PDO $pdo,array $body,int $outlet): array {
     $id=hrId($body['id']??null,'Payslip');$row=hrQuery($pdo,'SELECT * FROM hr_payslips WHERE id=? AND outlet_id=? FOR UPDATE',[$id,$outlet])->fetch();
     if(!$row)throw new HrError('Payslip not found.',404);if($row['status']==='ISSUED')return ['ok'=>true,'id'=>$id,'status'=>'ISSUED'];
     if($row['status']!=='DRAFT')throw new HrError('This payslip cannot be issued.',409);
+    if(!empty($row['salary_advance_id'])&&hrPayslipCents((string)$row['salary_advance_repayment'])>0){
+        $advance=hrQuery($pdo,'SELECT balance FROM hr_salary_advances WHERE id=? AND employee_id=? AND outlet_id=? AND status=\'OPEN\' FOR UPDATE',[(int)$row['salary_advance_id'],(int)$row['employee_id'],$outlet])->fetch();
+        if(!$advance||hrPayslipCents((string)$row['salary_advance_repayment'])>hrPayslipCents((string)$advance['balance']))throw new HrError('Outstanding advance changed; edit this draft and review its repayment amount.',409);
+        $balance=hrPayslipCents((string)$advance['balance'])-hrPayslipCents((string)$row['salary_advance_repayment']);
+        hrQuery($pdo,'UPDATE hr_salary_advances SET balance=?,status=? WHERE id=?',[hrPayslipAmount($balance),$balance===0?'SETTLED':'OPEN',(int)$row['salary_advance_id']]);
+    }
     hrQuery($pdo,'UPDATE hr_payslips SET status=\'ISSUED\',issued_by=?,issued_at=NOW() WHERE id=? AND outlet_id=? AND status=\'DRAFT\'',[(int)$_SERVER['SP_AUTH_USER_ID'],$id,$outlet]);
     spAudit($pdo,'HR_PAYSLIP_ISSUE','hr_payslips',$id,null,['status'=>'ISSUED']);return ['ok'=>true,'id'=>$id,'status'=>'ISSUED'];
 }
@@ -108,6 +133,15 @@ function hrPayslipVoid(PDO $pdo,array $body,int $outlet): array {
     $row=hrQuery($pdo,'SELECT * FROM hr_payslips WHERE id=? AND outlet_id=? FOR UPDATE',[$id,$outlet])->fetch();
     if(!$row)throw new HrError('Payslip not found.',404);
     if($row['status']==='VOID')return ['ok'=>true,'id'=>$id,'status'=>'VOID'];
+    if($row['status']==='ISSUED'&&!empty($row['salary_advance_id'])&&hrPayslipCents((string)$row['salary_advance_repayment'])>0){
+        $later=hrQuery($pdo,'SELECT id FROM hr_payslips WHERE salary_advance_id=? AND status=\'ISSUED\' AND period_start>? LIMIT 1 FOR UPDATE',[(int)$row['salary_advance_id'],$row['period_start']])->fetchColumn();
+        if($later)throw new HrError('Void later issued payslips first to reverse this advance repayment safely.',409);
+        $advance=hrQuery($pdo,'SELECT amount,balance FROM hr_salary_advances WHERE id=? AND employee_id=? AND outlet_id=? FOR UPDATE',[(int)$row['salary_advance_id'],(int)$row['employee_id'],$outlet])->fetch();
+        if(!$advance)throw new HrError('Linked salary advance was not found.',409);
+        $balance=hrPayslipCents((string)$advance['balance'])+hrPayslipCents((string)$row['salary_advance_repayment']);
+        if($balance>hrPayslipCents((string)$advance['amount']))throw new HrError('Advance repayment cannot be reversed safely.',409);
+        hrQuery($pdo,'UPDATE hr_salary_advances SET balance=?,status=\'OPEN\' WHERE id=?',[hrPayslipAmount($balance),(int)$row['salary_advance_id']]);
+    }
     hrQuery($pdo,'UPDATE hr_payslips SET status=\'VOID\',voided_by=?,voided_at=NOW(),void_reason=? WHERE id=? AND outlet_id=? AND status IN (\'DRAFT\',\'ISSUED\')',[(int)$_SERVER['SP_AUTH_USER_ID'],$reason,$id,$outlet]);
     spAudit($pdo,'HR_PAYSLIP_VOID','hr_payslips',$id,null,['status'=>'VOID']);return ['ok'=>true,'id'=>$id,'status'=>'VOID'];
 }

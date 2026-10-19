@@ -1,6 +1,6 @@
-# SP-Manager 1.0.58
+# SP-Manager 1.0.59
 
-GitHub source package for SP-Manager. Use the contents of this ZIP as the repository root. It keeps application source, required migrations, npm lockfiles, and the GitHub workflow. It omits generated `frontend/dist`, generated agent copies, and production database exports. This archive contains 99 files, within the 100-file upload limit.
+GitHub source package for SP-Manager. Use the contents of this ZIP as the repository root. It keeps application source, required migrations, npm lockfiles, and the GitHub workflow. It omits generated `frontend/dist`, generated agent copies, and production database exports. This archive contains no more than 100 files.
 
 ## Build the frontend
 
@@ -12,12 +12,12 @@ Use PHP 8.1 or later with PDO MySQL and OpenSSL. Before running the API, copy `a
 
 ## HR migrations
 
-Back up the database and test against a staging copy first. For a database without HR, apply `database/migrations/hr-phase1.sql`. Then apply `database/migrations/hr-phase3-payslip.sql`. Do not re-run a migration if its tables already exist. Never import the attached production SQL dump as an upgrade; it contains live records.
+Back up the database and test against a staging copy first. For a database without HR, apply `database/migrations/hr-phase1.sql`. Then apply `database/migrations/hr-phase3-payslip.sql`, followed by `database/migrations/hr-phase3-salary-advance.sql`. The last migration adds salary advances and links them to payslips; run it once after the Payslip migration. Do not re-run migrations if their tables or columns already exist. Never import the attached production SQL dump as an upgrade; it contains live records.
 
 After migration, assign `viewHrEmployees`, `viewHrSalary`, and `manageHrSalary` to the appropriate roles through Users & Permissions. HR outlet access follows the user's assigned outlets. The HR key is required to protect sensitive employee fields; keep a secure backup of it because rotating or losing the key prevents decryption of existing fields.
 
 ## Payslips
 
-The Payslip tab supports monthly payslip drafts, manual earnings and deductions, review/edit of drafts, issuing, and browser printing. Monthly basic pay and fixed allowance are prefilled from the employee salary profile; daily/hourly staff enter the actual period amount. Verify amounts before saving. Statutory deductions such as EPF, SOCSO, EIS, and PCB are entered by the payroll administrator; the app does not calculate statutory rates. Issued payslips are locked unless voided with a reason.
+The Payslip tab supports monthly payslip drafts, manual earnings and deductions, salary advance repayment, review/edit of drafts, issuing, and browser printing. Record a salary advance from the employee profile after the advance has been paid. On Payslip, choose its outstanding balance and repayment amount; the repayment appears as a deduction and reduces the balance only when the payslip is issued. The system does not transfer money. Monthly basic pay and fixed allowance are prefilled from the employee salary profile; daily/hourly staff enter the actual period amount. Verify amounts before saving. Statutory deductions such as EPF, SOCSO, EIS, and PCB are entered by the payroll administrator; the app does not calculate statutory rates. Issued payslips are locked unless voided with a reason.
 
 Deploy the frontend build and API from this same release. Do not overwrite a production `api/config.php` with the source placeholder config. No production database changes or deployment are performed by preparing this source package.

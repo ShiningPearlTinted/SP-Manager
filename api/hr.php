@@ -10,15 +10,15 @@ $pdo=null;
 try {
     $method=strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $action=strtolower(trim((string)($_GET['action'] ?? '')));
-    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','list-payslips','payslip-employees','payslip'];
-    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-payslip','update-payslip','issue-payslip','void-payslip'];
+    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','salary-advances','list-payslips','payslip-employees','payslip'];
+    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-salary-advance','create-payslip','update-payslip','issue-payslip','void-payslip'];
     if (!in_array($action,[...$read,...$write],true)) throw new HrError('Unknown HR action.');
     if (($method==='GET' && !in_array($action,$read,true)) || ($method==='POST' && !in_array($action,$write,true)) || !in_array($method,['GET','POST'],true)) throw new HrError('Method not allowed.',405);
     // Every action is independently authorized, including actions added later.
     $permission=match($action) {
         'save-master'=>'manageHrSettings','save-employee'=>'manageHrEmployees',
         'transfer','temporary-assignment'=>'transferHrEmployees',
-        'revise-salary'=>'manageHrSalary','salary-history'=>'viewHrSalary',
+        'revise-salary','create-salary-advance'=>'manageHrSalary','salary-history','salary-advances'=>'viewHrSalary',
         'list-payslips','payslip-employees','payslip'=>'viewHrSalary',
         'create-payslip','update-payslip','issue-payslip','void-payslip'=>'manageHrSalary',
         default=>'viewHrEmployees'
@@ -92,6 +92,12 @@ try {
             unset($row);
             spApiRespond(['ok'=>true,'history'=>$rows],200);
         }
+        if ($action==='salary-advances') {
+            hrRequire('viewHrSalary');spRequireTable($pdo,'hr_salary_advances');
+            $id=hrId($_GET['employee_id']??null,'Employee');hrEmployee($pdo,$id,$outlet);
+            $rows=hrQuery($pdo,'SELECT id,employee_id,advance_date,amount,balance,reason,status,created_at FROM hr_salary_advances WHERE employee_id=? AND outlet_id=? ORDER BY advance_date DESC,id DESC LIMIT 200',[$id,$outlet])->fetchAll();
+            spApiRespond(['ok'=>true,'advances'=>$rows],200);
+        }
     }
     $body=spReadRequestBody();
     $key=spRequestKey($body,'hr:'.$action);
@@ -105,6 +111,7 @@ try {
         'transfer'=>hrAssignment($pdo,$body,$outlet,'transfer',$key),
         'temporary-assignment'=>hrAssignment($pdo,$body,$outlet,'temporary',$key),
         'revise-salary'=>hrSalary($pdo,$body,$outlet,$key),
+        'create-salary-advance'=>hrSalaryAdvanceCreate($pdo,$body,$outlet),
         'create-payslip'=>hrPayslipCreate($pdo,$body,$outlet),
         'update-payslip'=>hrPayslipUpdate($pdo,$body,$outlet),
         'issue-payslip'=>hrPayslipIssue($pdo,$body,$outlet),

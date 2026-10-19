@@ -25,6 +25,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
   const [period,setPeriod]=useState(today().slice(0,7));
   const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]);
   const [employeeId,setEmployeeId]=useState(''),[payDate,setPayDate]=useState(today());
+  const [advances,setAdvances]=useState([]),[advanceId,setAdvanceId]=useState(''),[advanceRepayment,setAdvanceRepayment]=useState('');
   const [basicPay,setBasicPay]=useState(''),[fixedAllowance,setFixedAllowance]=useState('0.00');
   const [earnings,setEarnings]=useState([]),[deductions,setDeductions]=useState([]),[notes,setNotes]=useState('');
   const [selected,setSelected]=useState(null),[editingId,setEditingId]=useState(null);
@@ -41,21 +42,28 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
   },[period,outlet,refresh,canView]);
+  useEffect(()=>{
+    let active=true;setAdvances([]);
+    if(!employeeId){if(!editingId){setAdvanceId('');setAdvanceRepayment('');}return ()=>{active=false;};}
+    apiRef.current('salary-advances',{employee_id:employeeId}).then(response=>{if(active)setAdvances((response.advances||[]).filter(row=>row.status==='OPEN'&&Number(row.balance)>0));}).catch(()=>{if(active)setAdvances([]);});
+    return ()=>{active=false;};
+  },[employeeId,outlet,editingId]);
   const selectedEmployee=employees.find(employee=>String(employee.id)===String(employeeId));
   const net=()=>{
     const sum=lines=>lines.reduce((total,line)=>total+Number(line.amount||0),0);
-    return Number(basicPay||0)+Number(fixedAllowance||0)+sum(earnings)-sum(deductions);
+    return Number(basicPay||0)+Number(fixedAllowance||0)+sum(earnings)-sum(deductions)-Number(advanceRepayment||0);
   };
-  const resetForm=()=>{setEditingId(null);setEmployeeId('');setPayDate(today());setBasicPay('');setFixedAllowance('0.00');setEarnings([]);setDeductions([]);setNotes('');};
+  const resetForm=()=>{setEditingId(null);setEmployeeId('');setPayDate(today());setBasicPay('');setFixedAllowance('0.00');setEarnings([]);setDeductions([]);setNotes('');setAdvanceId('');setAdvanceRepayment('');};
   const editDraft=row=>{
     setSelected(row);setEditingId(row.id);setEmployeeId(String(row.employee_id));setPayDate(row.pay_date);
-    setBasicPay(String(row.basic_pay));setFixedAllowance(String(row.fixed_allowance));setEarnings(cleanLines(row.earnings||[]));setDeductions(cleanLines(row.deductions||[]));setNotes(row.notes||'');
+    setBasicPay(String(row.basic_pay));setFixedAllowance(String(row.fixed_allowance));setEarnings(cleanLines(row.earnings||[]));setDeductions(cleanLines((row.deductions||[]).filter(line=>line.label!=='Salary advance repayment')));setNotes(row.notes||'');
+    setAdvanceId(row.salary_advance_id?String(row.salary_advance_id):'');setAdvanceRepayment(row.salary_advance_repayment&&Number(row.salary_advance_repayment)>0?String(row.salary_advance_repayment):'');
     window.scrollTo({top:0,behavior:'smooth'});
   };
   const save=async event=>{
     event.preventDefault();if(busy)return;setBusy(true);setError('');setNotice('');
     try {
-      const payload={request_id:crypto.randomUUID(),basic_pay:basicPay,fixed_allowance:fixedAllowance,
+      const payload={request_id:crypto.randomUUID(),basic_pay:basicPay,fixed_allowance:fixedAllowance,advance_id:advanceId||null,advance_repayment:advanceId?advanceRepayment:'0.00',
         earnings:cleanLines(earnings),deductions:cleanLines(deductions),notes};
       let result;
       if(editingId) result=await apiRef.current('update-payslip',{...payload,id:editingId},true);
@@ -105,7 +113,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
       <section class="section"><h2>Earnings</h2><table>${earningRows}<tr class="total"><td>Gross pay</td><td class="money">${htmlEscape(amount(selected.gross_pay,selected.currency_code))}</td></tr></table></section>
       <section class="section"><h2>Deductions</h2><table>${deductionRows}<tr class="total"><td>Total deductions</td><td class="money">${htmlEscape(amount(selected.total_deductions,selected.currency_code))}</td></tr></table></section>
       <div class="net"><strong>Net pay</strong><strong>${htmlEscape(amount(selected.net_pay,selected.currency_code))}</strong></div>${selected.notes?`<p class="notes"><strong>Notes:</strong> ${htmlEscape(selected.notes)}</p>`:''}${selected.void_reason?`<p class="notes"><strong>Void reason:</strong> ${htmlEscape(selected.void_reason)}</p>`:''}<footer class="footer">This payslip is system generated.</footer></main></body></html>`);
-    popup.document.close();popup.focus();popup.onload=()=>{popup.print();};
+    popup.document.close();popup.focus();popup.setTimeout(()=>popup.print(),250);
   };
   if(!canView)return <div className="panel"><h3>Payslip</h3><p>You need HR Salary Access permission to view payslips.</p></div>;
   return <div className="hr-payslip-module">
@@ -114,12 +122,13 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
     {canManage&&<form className="panel hr-payslip-form" onSubmit={save}>
       <h3>{editingId?'Edit Draft Payslip':'Create Payslip Draft'}</h3>
       <div className="hr-form-grid">
-        <PayslipField label="Employee"><select value={employeeId} disabled={Boolean(editingId)||busy} onChange={event=>{const id=event.target.value;setEmployeeId(id);const item=employees.find(row=>String(row.id)===id);setBasicPay(item?.salary_type==='monthly'?String(item.basic_rate||''):'');setFixedAllowance(String(item?.fixed_allowance||'0.00'));}} required><option value="">Select employee</option>{employees.map(item=><option key={item.id} value={item.id}>{item.staff_code} · {item.full_name}{!item.salary_history_id?' — no salary profile':''}</option>)}</select></PayslipField>
+        <PayslipField label="Employee"><select value={employeeId} disabled={Boolean(editingId)||busy} onChange={event=>{const id=event.target.value;setEmployeeId(id);setAdvanceId('');setAdvanceRepayment('');const item=employees.find(row=>String(row.id)===id);setBasicPay(item?.salary_type==='monthly'?String(item.basic_rate||''):'');setFixedAllowance(String(item?.fixed_allowance||'0.00'));}} required><option value="">Select employee</option>{employees.map(item=><option key={item.id} value={item.id}>{item.staff_code} · {item.full_name}{!item.salary_history_id?' — no salary profile':''}</option>)}</select></PayslipField>
         <PayslipField label="Pay date"><input type="date" value={payDate} disabled={Boolean(editingId)||busy} onChange={event=>setPayDate(event.target.value)} required/></PayslipField>
         <PayslipField label="Basic pay for this period (MYR)"><input type="number" min="0" step="0.01" value={basicPay} onChange={event=>setBasicPay(event.target.value)} required/></PayslipField>
         <PayslipField label="Fixed allowance for this period (MYR)"><input type="number" min="0" step="0.01" value={fixedAllowance} onChange={event=>setFixedAllowance(event.target.value)} required/></PayslipField>
       </div>
       {selectedEmployee&&<p className="hr-muted">Salary profile: {selectedEmployee.salary_type||'not set'} · {selectedEmployee.department_name||'No department'} · {selectedEmployee.position_name||'No position'}. Monthly basic and fixed allowance are prefilled; verify amounts before saving.</p>}
+      <div className="hr-advance-repayment"><PayslipField label="Outstanding salary advance"><select value={advanceId} onChange={event=>{setAdvanceId(event.target.value);setAdvanceRepayment('');}} disabled={!employeeId||busy}><option value="">No advance repayment</option>{advances.map(item=><option key={item.id} value={item.id}>Advance {item.advance_date} · balance {amount(item.balance)}</option>)}</select></PayslipField><PayslipField label="Repayment this payslip (MYR)"><input type="number" min="0" max={advances.find(item=>String(item.id)===advanceId)?.balance||undefined} step="0.01" value={advanceRepayment} disabled={!advanceId||busy} onChange={event=>setAdvanceRepayment(event.target.value)} placeholder="0.00"/></PayslipField></div>
       <LinesEditor title="Additional earnings" lines={earnings} onChange={setEarnings}/>
       <LinesEditor title="Deductions" lines={deductions} onChange={setDeductions}/>
       <PayslipField label="Notes"><textarea maxLength="1000" rows="2" value={notes} onChange={event=>setNotes(event.target.value)}/></PayslipField>
@@ -127,7 +136,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
       <p><strong>Estimated net pay: {amount(net())}</strong></p>
       <div className="hr-form-actions"><button type="button" disabled={busy} onClick={resetForm}>Clear</button><button type="submit" className="primary" disabled={busy}>{busy?'Saving…':editingId?'Update Draft':'Save Draft'}</button></div>
     </form>}
-    <div className="panel hr-table-wrap"><h3>Payslips · {period}</h3>{loading?<p role="status">Loading payslips…</p>:<table><thead><tr><th>Payslip</th><th>Employee</th><th>Pay date</th><th>Gross</th><th>Deductions</th><th>Net pay</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    <div className="panel hr-table-wrap"><h3>Payslips · {period}</h3>{loading?<p role="status">Loading payslips…</p>:<table className="hr-payslip-table"><thead><tr><th>Payslip</th><th>Employee</th><th>Pay date</th><th>Gross</th><th>Deductions</th><th>Net pay</th><th>Status</th><th>Actions</th></tr></thead><tbody>
       {rows.map(row=><tr key={row.id}><td>{row.payslip_no}</td><td>{row.staff_code_snapshot} · {row.full_name_snapshot}</td><td>{row.pay_date}</td><td>{amount(row.gross_pay,row.currency_code)}</td><td>{amount(row.total_deductions,row.currency_code)}</td><td>{amount(row.net_pay,row.currency_code)}</td><td><span className={'hr-badge '+(row.status==='ISSUED'?'active':'')}>{row.status}</span></td><td className="hr-payslip-actions"><button type="button" disabled={busy} onClick={()=>openRow(row)}>View / Print</button>{row.status==='DRAFT'&&canManage&&<><button type="button" disabled={busy} onClick={()=>editDraft(row)}>Edit</button><button type="button" className="primary" disabled={busy} onClick={()=>issue(row)}>Issue</button></>}{row.status!=='VOID'&&canManage&&<button type="button" disabled={busy} onClick={()=>voidPayslip(row)}>Void</button>}</td></tr>)}
       {!rows.length&&<tr><td colSpan="8">No payslips for this month yet.</td></tr>}</tbody></table>}</div>
     {selected&&<section className="panel hr-payslip-paper" aria-label="Payslip preview"><div className="hr-payslip-head"><div><h2>{outletName}</h2><p>Payslip · {selected.payslip_no} · {selected.status}</p></div><button className="hr-no-print" type="button" onClick={printPayslip}>Print payslip</button></div>
