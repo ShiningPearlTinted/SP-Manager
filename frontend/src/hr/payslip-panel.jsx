@@ -8,6 +8,16 @@ const cleanLines=lines=>lines.map(line=>({label:String(line.label||'').trim(),am
 const htmlEscape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 function PayslipField({label,children}) {return <label className="hr-field"><span>{label}</span>{children}</label>;}
+function PayslipActionDialog({action,reason,onReasonChange,onCancel,onConfirm,busy,error}) {
+  const dialog=useRef(null);
+  useEffect(()=>{dialog.current?.showModal();return ()=>dialog.current?.close();},[]);
+  const isVoid=action?.kind==='void';
+  return <dialog ref={dialog} className="hr-dialog hr-module hr-confirm-dialog" aria-labelledby="payslip-action-title" onCancel={event=>{event.preventDefault();if(!busy)onCancel();}}>
+    <div className="hr-dialog-head"><div className="hr-confirm-heading"><span className={isVoid?'hr-confirm-icon danger':'hr-confirm-icon'}>{isVoid?'!':'✓'}</span><div><h2 id="payslip-action-title">{isVoid?'Void payslip':'Issue payslip'}</h2><p>{action?.row?.payslip_no}</p></div></div><button type="button" aria-label="Close" disabled={busy} onClick={onCancel}>×</button></div>
+    <div className="hr-confirm-body">{error&&<div className="hr-error" role="alert">{error}</div>}{isVoid?<><p>This payslip will be marked <strong>VOID</strong> and kept in the record. Enter a reason to continue.</p><PayslipField label="Reason for voiding"><textarea rows="3" maxLength="500" required autoFocus value={reason} onChange={event=>onReasonChange(event.target.value)} placeholder="Explain why this payslip is being voided"/></PayslipField></>:<><p>Issue this payslip for <strong>{action?.row?.full_name_snapshot}</strong>?</p><div className="hr-confirm-summary"><span>Net pay</span><strong>{amount(action?.row?.net_pay,action?.row?.currency_code)}</strong></div><p className="hr-muted">Once issued, the payslip is locked. Any salary advance repayment will be applied to its outstanding balance.</p></>}</div>
+    <div className="hr-form-actions"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="button" className={isVoid?'danger':'primary'} disabled={busy||isVoid&&!reason.trim()} onClick={onConfirm}>{busy?'Processing…':isVoid?'Void Payslip':'Issue Payslip'}</button></div>
+  </dialog>;
+}
 function LinesEditor({title,lines,onChange}) {
   const update=(index,key,value)=>onChange(lines.map((line,i)=>i===index?{...line,[key]:value}:line));
   return <div className="hr-payslip-lines"><div className="hr-toolbar"><h4>{title}</h4><button type="button" onClick={()=>onChange([...lines,{label:'',amount:''}])}>Add line</button></div>
@@ -29,6 +39,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
   const [basicPay,setBasicPay]=useState(''),[fixedAllowance,setFixedAllowance]=useState('0.00');
   const [earnings,setEarnings]=useState([]),[deductions,setDeductions]=useState([]),[notes,setNotes]=useState('');
   const [selected,setSelected]=useState(null),[editingId,setEditingId]=useState(null);
+  const [actionDialog,setActionDialog]=useState(null),[actionReason,setActionReason]=useState('');
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[refresh,setRefresh]=useState(0);
   const canView=can('viewHrSalary'),canManage=can('manageHrSalary')&&canView;
   useEffect(()=>{
@@ -79,19 +90,23 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
   const [selectAfterRefresh,setSelectAfterRefresh]=useState(null);
   const setSelectedIdAfterRefresh=id=>setSelectAfterRefresh(id);
   useEffect(()=>{if(selectAfterRefresh){const row=rows.find(item=>Number(item.id)===Number(selectAfterRefresh));if(row){setSelected(row);setSelectAfterRefresh(null);}}},[rows,selectAfterRefresh]);
-  const issue=async row=>{
-    if(!window.confirm(`Issue payslip ${row.payslip_no}? An issued payslip is locked.`))return;
+  const issue=row=>{setError('');setActionDialog({kind:'issue',row});};
+  const voidPayslip=row=>{setError('');setActionReason('');setActionDialog({kind:'void',row});};
+  const confirmStatusChange=async()=>{
+    if(!actionDialog||busy)return;
+    const action=actionDialog,reason=actionReason.trim();
+    if(action.kind==='void'&&!reason){setError('Please enter a reason before voiding this payslip.');return;}
     setBusy(true);setError('');
-    try {await apiRef.current('issue-payslip',{id:row.id,request_id:crypto.randomUUID()},true);setNotice('Payslip issued.');setRefresh(value=>value+1);setSelected({...row,status:'ISSUED'});}
-    catch(e){setError(e.message);}finally{setBusy(false);}
-  };
-  const voidPayslip=async row=>{
-    const reason=window.prompt(`Reason for voiding ${row.payslip_no}:`);
-    if(!reason?.trim())return;
-    if(!window.confirm('Void this payslip? It will remain in the record as VOID.'))return;
-    setBusy(true);setError('');
-    try {await apiRef.current('void-payslip',{id:row.id,reason:reason.trim(),request_id:crypto.randomUUID()},true);setNotice('Payslip voided. You can create a replacement for this month.');setRefresh(value=>value+1);setSelected({...row,status:'VOID',void_reason:reason.trim()});}
-    catch(e){setError(e.message);}finally{setBusy(false);}
+    try {
+      if(action.kind==='issue'){
+        await apiRef.current('issue-payslip',{id:action.row.id,request_id:crypto.randomUUID()},true);
+        setNotice('Payslip issued.');setSelected({...action.row,status:'ISSUED'});
+      } else {
+        await apiRef.current('void-payslip',{id:action.row.id,reason,request_id:crypto.randomUUID()},true);
+        setNotice('Payslip voided. You can create a replacement for this month.');setSelected({...action.row,status:'VOID',void_reason:reason});
+      }
+      setActionDialog(null);setRefresh(value=>value+1);
+    } catch(e){setError(e.message);} finally{setBusy(false);}
   };
   const openRow=async row=>{
     setBusy(true);setError('');
@@ -145,5 +160,6 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
       <h3>Deductions</h3><table><tbody>{(selected.deductions||[]).map((line,index)=><tr key={index}><td>{line.label}</td><td>{amount(line.amount,selected.currency_code)}</td></tr>)}<tr className="hr-payslip-total"><th>Total deductions</th><th>{amount(selected.total_deductions,selected.currency_code)}</th></tr></tbody></table>
       <div className="hr-payslip-net"><span>Net pay</span><strong>{amount(selected.net_pay,selected.currency_code)}</strong></div>{selected.notes&&<p><b>Notes:</b> {selected.notes}</p>}{selected.void_reason&&<p><b>Void reason:</b> {selected.void_reason}</p>}
     </section>}
+    {actionDialog&&<PayslipActionDialog action={actionDialog} reason={actionReason} onReasonChange={setActionReason} onCancel={()=>{if(!busy){setActionDialog(null);setError('');}}} onConfirm={confirmStatusChange} busy={busy} error={error}/>}
   </div>;
 }

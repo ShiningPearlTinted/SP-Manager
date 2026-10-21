@@ -39,6 +39,18 @@
 .hr-module .hr-facts dd {margin:0;overflow-wrap:anywhere;white-space:pre-wrap;}
 .hr-module.hr-dialog {width:min(850px,calc(100vw - 40px));max-height:90vh;overflow:auto;box-sizing:border-box;background:var(--mg-surface);border:1px solid var(--mg-border);border-radius:var(--mg-card-radius);padding:var(--mg-space-6);}
 .hr-module.hr-dialog::backdrop {background:var(--mg-ink);opacity:.45;}
+.hr-module.hr-confirm-dialog {width:min(480px,calc(100vw - 32px));max-height:88vh;padding:22px 24px;border-radius:18px;box-shadow:0 24px 80px #0f172a40;}
+.hr-module.hr-confirm-dialog::backdrop {background:#101828;opacity:.56;backdrop-filter:blur(3px);}
+.hr-module .hr-confirm-heading {display:flex;align-items:center;gap:12px;min-width:0;}
+.hr-module .hr-confirm-heading h2 {margin:0;font-size:20px;}
+.hr-module .hr-confirm-heading p {margin:4px 0 0;color:var(--mg-muted);font-size:13px;}
+.hr-module .hr-confirm-icon {display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:#e7f6fb;color:#087ca4;font-weight:800;font-size:19px;}
+.hr-module .hr-confirm-icon.danger {background:#fff1f0;color:#c43224;}
+.hr-module .hr-confirm-body {display:grid;gap:14px;line-height:1.5;}
+.hr-module .hr-confirm-body>p {margin:0;}
+.hr-module .hr-confirm-summary {display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#f4f7fa;border:1px solid var(--mg-border);border-radius:10px;}
+.hr-module .hr-confirm-dialog button.danger {background:#c43224;border-color:#c43224;color:#fff;}
+.hr-module .hr-confirm-dialog button.danger:hover:not(:disabled) {background:#a9291e;border-color:#a9291e;}
 .hr-module .hr-dialog-head {display:flex;align-items:center;justify-content:space-between;gap:var(--mg-space-3);margin-bottom:var(--mg-space-4);}
 .hr-module .hr-dialog-head h2 {margin:0;}
 .hr-module fieldset {border:0;padding:0;margin:0;min-width:0;}
