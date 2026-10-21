@@ -11,6 +11,16 @@ export function createHrRequest({base,headers}) {
       sessionStorage.removeItem('sp_api_token'); sessionStorage.removeItem('sp_auth'); sessionStorage.removeItem('sp_auth_version');
       window.dispatchEvent(new Event('sp-api-session-expired'));
     }
+    if(action==='payslip-pdf') {
+      if(!response.ok) {
+        let data=null;try{data=await response.json();}catch{}
+        throw new Error(data?.error||'Could not prepare the payslip PDF (HTTP '+response.status+').');
+      }
+      const blob=await response.blob();
+      const disposition=response.headers.get('content-disposition')||'';
+      const match=disposition.match(/filename="?([^";]+)"?/i);
+      return {blob,filename:match?.[1]||'Payslip.pdf'};
+    }
     let data;
     try {data=await response.json();} catch {throw new Error('Invalid HR API response (HTTP '+response.status+').');}
     if(!response.ok||data?.ok!==true) throw new Error(data?.error||'HR request failed (HTTP '+response.status+').');

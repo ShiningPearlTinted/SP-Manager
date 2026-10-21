@@ -146,7 +146,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
         'save-master'=>'manageHrSettings', 'save-employee'=>'manageHrEmployees',
         'transfer','temporary-assignment'=>'transferHrEmployees',
         'salary-history','salary-advances'=>'viewHrSalary', 'revise-salary','create-salary-advance'=>'manageHrSalary',
-        'list-payslips','payslip-employees','payslip'=>'viewHrSalary',
+        'list-payslips','payslip-employees','payslip','payslip-pdf'=>'viewHrSalary',
         'payslip-contact','email-payslip','create-payslip','update-payslip','issue-payslip','void-payslip'=>'manageHrSalary',
         default=>'viewHrEmployees',
     };

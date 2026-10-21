@@ -10,7 +10,7 @@ $pdo=null;
 try {
     $method=strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $action=strtolower(trim((string)($_GET['action'] ?? '')));
-    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','salary-advances','list-payslips','payslip-employees','payslip','payslip-contact'];
+    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','salary-advances','list-payslips','payslip-employees','payslip','payslip-contact','payslip-pdf'];
     $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-salary-advance','create-payslip','update-payslip','issue-payslip','void-payslip','email-payslip'];
     if (!in_array($action,[...$read,...$write],true)) throw new HrError('Unknown HR action.');
     if (($method==='GET' && !in_array($action,$read,true)) || ($method==='POST' && !in_array($action,$write,true)) || !in_array($method,['GET','POST'],true)) throw new HrError('Method not allowed.',405);
@@ -19,7 +19,7 @@ try {
         'save-master'=>'manageHrSettings','save-employee'=>'manageHrEmployees',
         'transfer','temporary-assignment'=>'transferHrEmployees',
         'revise-salary','create-salary-advance'=>'manageHrSalary','salary-history','salary-advances'=>'viewHrSalary',
-        'list-payslips','payslip-employees','payslip'=>'viewHrSalary',
+        'list-payslips','payslip-employees','payslip','payslip-pdf'=>'viewHrSalary',
         'create-payslip','update-payslip','issue-payslip','void-payslip','email-payslip','payslip-contact'=>'manageHrSalary',
         default=>'viewHrEmployees'
     };
@@ -47,6 +47,14 @@ try {
             $q->execute([$id,$outlet]);$contact=$q->fetch();
             if(!$contact)throw new HrError('Payslip not found.',404);
             spApiRespond(['ok'=>true,'contact'=>['email'=>(string)($contact['email']??''),'phone'=>(string)($contact['phone']??'')]],200);
+        }
+        if ($action==='payslip-pdf') {
+            spRequireTable($pdo,'hr_payslips');
+            $id=hrId($_GET['id']??null,'Payslip');$slip=hrPayslipRead($pdo,$id,$outlet);
+            $q=$pdo->prepare('SELECT outlet_name FROM outlets WHERE id=?');$q->execute([$outlet]);$name=(string)($q->fetchColumn()?:'Company');
+            $pdf=hrPayslipPdfDocument($slip,$name);$safeNo=preg_replace('/[^A-Za-z0-9_-]/','_',(string)$slip['payslip_no']);
+            header('Content-Type: application/pdf');header('Content-Disposition: attachment; filename="Payslip-'.$safeNo.'.pdf"');
+            echo $pdf;exit;
         }
         if ($action==='payslip-employees') {
             hrRequire('viewHrSalary');
@@ -122,6 +130,7 @@ try {
         $q=$pdo->prepare('SELECT * FROM email_settings WHERE outlet_id=? AND enabled=1 LIMIT 1');$q->execute([$outlet]);$smtp=$q->fetch();
         if(!$smtp)throw new HrError('Email settings are not enabled. Configure SMTP in Settings > Email.');
         $q=$pdo->prepare('SELECT outlet_name FROM outlets WHERE id=?');$q->execute([$outlet]);$company=(string)($q->fetchColumn()?:'Company');
+        $pdf=hrPayslipPdfDocument($slip,$company);
         $e=static fn($value)=>htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
         $money=static fn($value)=>'RM '.number_format((float)$value,2,'.',',');
         $earningRows='<tr><td>Basic pay</td><td style="text-align:right">'.$e($money($slip['basic_pay'])).'</td></tr><tr><td>Fixed allowance</td><td style="text-align:right">'.$e($money($slip['fixed_allowance'])).'</td></tr>';
@@ -132,7 +141,7 @@ try {
         try {
             $mail=new \PHPMailer\PHPMailer\PHPMailer(true);$mail->isSMTP();$mail->Host=(string)$smtp['smtp_host'];$mail->Port=(int)$smtp['smtp_port'];$mail->Timeout=15;$mail->getSMTPInstance()->Timelimit=20;$mail->SMTPAuth=true;$mail->Username=(string)$smtp['username'];$mail->Password=decryptSecret((string)$smtp['password_encrypted'],'');
             $mail->SMTPSecure=$mail->Port===465?\PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS:\PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->CharSet='UTF-8';$mail->setFrom((string)$smtp['from_email'],(string)$smtp['from_name']);$mail->addAddress($recipient,(string)$slip['full_name_snapshot']);$mail->Subject='Payslip '.$slip['payslip_no'].' · '.$slip['period_start'];$mail->isHTML(true);$mail->Body=$html;$mail->AltBody='Payslip '.$slip['payslip_no'].' for '.$slip['period_start'].' to '.$slip['period_end'].'. Net pay: '.$money($slip['net_pay']);$mail->send();
+            $mail->CharSet='UTF-8';$mail->setFrom((string)$smtp['from_email'],(string)$smtp['from_name']);$mail->addAddress($recipient,(string)$slip['full_name_snapshot']);$mail->Subject='Payslip '.$slip['payslip_no'].' · '.$slip['period_start'];$mail->isHTML(true);$mail->Body=$html;$mail->AltBody='Payslip '.$slip['payslip_no'].' for '.$slip['period_start'].' to '.$slip['period_end'].'. Net pay: '.$money($slip['net_pay']);$mail->addStringAttachment($pdf,'Payslip-'.$slip['payslip_no'].'.pdf','base64','application/pdf');$mail->send();
         } catch(Throwable $mailError) {error_log('SP payslip email failed: '.get_class($mailError));throw new HrError('Email could not be sent. Check the SMTP configuration in Settings > Email.',503);}
         spAudit($pdo,'HR_PAYSLIP_EMAIL','hr_payslips',$id);
         spApiRespond(['ok'=>true],200);
