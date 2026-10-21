@@ -133,6 +133,12 @@ function hrWrite(PDO $pdo, string $table, array $values, ?int $id): void {
     if ($id) hrQuery($pdo,'UPDATE '.$table.' SET '.implode(',',array_map(fn($c)=>'`'.$c.'`=?',$columns)).' WHERE id=?',[...array_values($values),$id]);
     else hrQuery($pdo,'INSERT INTO '.$table.' (`'.implode('`,`',$columns).'`) VALUES('.implode(',',array_fill(0,count($columns),'?')).')',array_values($values));
 }
+function hrReleaseStaffCodeLock(PDO $pdo): void {
+    $lockName=$_SERVER['SP_HR_STAFF_CODE_LOCK']??null;
+    if (!is_string($lockName) || $lockName==='') return;
+    unset($_SERVER['SP_HR_STAFF_CODE_LOCK']);
+    try { hrQuery($pdo,'SELECT RELEASE_LOCK(?)',[$lockName]); } catch (Throwable $ignored) { /* Connection cleanup also releases MySQL advisory locks. */ }
+}
 function hrRevision(array $row, array $body): void {
     $revision=hrId($body['revision'] ?? null,'Revision');
     if ($revision !== (int)$row['revision']) throw new HrError('Employee changed. Refresh and try again.',409);
@@ -144,10 +150,11 @@ function hrSaveEmployee(PDO $pdo, array $body, int $outlet): array {
     if ($old) hrRevision($old,$body);
     $values = [];
     foreach (['staff_code'=>50,'full_name'=>150,'gender'=>50,'nationality'=>100,'marital_status'=>50,'phone'=>50,'email'=>150,'address'=>2000,'emergency_contact_name'=>150,'emergency_contact_phone'=>50,'emergency_contact_relationship'=>80] as $key=>$max) {
-        $values[$key] = hrText($body[$key] ?? null,str_replace('_',' ',$key),$max,in_array($key,['staff_code','full_name'],true));
+        $values[$key] = hrText($body[$key] ?? null,str_replace('_',' ',$key),$max,$key==='full_name');
     }
-    $values['staff_code'] = strtoupper($values['staff_code']);
-    if (!preg_match('/^[A-Z0-9_-]+$/',$values['staff_code'])) throw new HrError('Staff code may contain letters, numbers, underscores and hyphens.');
+    // Staff codes are immutable once assigned. New codes are generated below,
+    // so client supplied values can never cause duplicates or skip the sequence.
+    if ($id) $values['staff_code'] = (string)$old['staff_code'];
     if ($values['email'] && !filter_var($values['email'],FILTER_VALIDATE_EMAIL)) throw new HrError('Email is invalid.');
     foreach (['date_of_birth','join_date','confirmation_date','contract_start','contract_end','resignation_date','termination_date'] as $key) $values[$key] = hrDate($body[$key] ?? null,str_replace('_',' ',$key),$key==='join_date');
     if ($values['date_of_birth'] && $values['date_of_birth'] >= $values['join_date']) throw new HrError('Date of birth must precede join date.');
@@ -196,7 +203,29 @@ function hrSaveEmployee(PDO $pdo, array $body, int $outlet): array {
         $values['created_by']=(int)$_SERVER['SP_AUTH_USER_ID'];
     }
     $values['updated_by']=(int)$_SERVER['SP_AUTH_USER_ID'];
-    hrWrite($pdo,'hr_employees',$values,$id); $id = $id ?: (int)$pdo->lastInsertId();
+    if ($id) {
+        hrWrite($pdo,'hr_employees',$values,$id);
+    } else {
+        // Serialize generation across all outlets. Outlet codes that share a
+        // numeric suffix also share a sequence prefix, and staff_code is globally unique.
+        $database=(string)$pdo->query('SELECT DATABASE()')->fetchColumn();
+        $lockName='spm:hr-staff-code:'.substr(hash('sha256',$database),0,40);
+        $locked=(int)hrQuery($pdo,'SELECT GET_LOCK(?,10)',[$lockName])->fetchColumn();
+        if ($locked!==1) throw new HrError('Could not generate a staff code right now. Please retry.',503);
+        // Keep the advisory lock until hr.php commits or rolls back this request.
+        // Releasing it here would let a concurrent transaction miss this uncommitted insert.
+        $_SERVER['SP_HR_STAFF_CODE_LOCK']=$lockName;
+        $outletCode=(string)hrQuery($pdo,'SELECT outlet_code FROM outlets WHERE id=?',[$outlet])->fetchColumn();
+        if (!preg_match('/(\d{2})$/',$outletCode,$match)) throw new HrError('The outlet code must end with two digits before a staff code can be generated.');
+        $prefix=$match[1];
+        $existing=hrQuery($pdo,'SELECT staff_code FROM hr_employees WHERE staff_code LIKE ? AND CHAR_LENGTH(staff_code)=6',[$prefix.'%'])->fetchAll(PDO::FETCH_COLUMN);
+        $last=0;
+        foreach ($existing as $code) if (preg_match('/^'.preg_quote($prefix,'/').'([0-9]{4})$/',(string)$code,$seq)) $last=max($last,(int)$seq[1]);
+        if ($last>=9999) throw new HrError('This outlet has reached the four digit staff code limit.');
+        $values['staff_code']=$prefix.str_pad((string)($last+1),4,'0',STR_PAD_LEFT);
+        hrWrite($pdo,'hr_employees',$values,null);
+        $id=(int)$pdo->lastInsertId();
+    }
     spAudit($pdo,'HR_EMPLOYEE_SAVE','hr_employees',$id,null,['revision'=>$values['revision'] ?? 1,'outlet_id'=>$outlet]);
     return ['ok'=>true,'id'=>$id];
 }

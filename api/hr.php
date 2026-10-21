@@ -164,9 +164,10 @@ try {
         'void-payslip'=>hrPayslipVoid($pdo,$body,$outlet),
         default=>throw new HrError('Unknown HR action.')
     };
-    spRequestComplete($pdo,$key,$response); $pdo->commit(); spApiRespond($response,200);
+    spRequestComplete($pdo,$key,$response); $pdo->commit(); hrReleaseStaffCodeLock($pdo); spApiRespond($response,200);
 } catch (Throwable $e) {
     if ($pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
+    if ($pdo instanceof PDO) hrReleaseStaffCodeLock($pdo);
     if ($e instanceof HrError) spApiRespond(['ok'=>false,'error'=>$e->getMessage()],$e->status);
     if ($e instanceof InvalidArgumentException) spApiRespond(['ok'=>false,'error'=>$e->getMessage()],400);
     if ($e instanceof RuntimeException && $e->getMessage()==='request_id was already used with a different request.') spApiRespond(['ok'=>false,'error'=>'This request identifier was already used. Refresh before submitting a different change.'],409);

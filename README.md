@@ -1,4 +1,4 @@
-# SP-Manager 1.0.65
+# SP-Manager 1.0.66
 
 GitHub source package for SP-Manager. Use the contents of this ZIP as the repository root. It keeps application source, required migrations, npm lockfiles, and the GitHub workflow. It omits generated `frontend/dist`, generated agent copies, and production database exports. This archive contains no more than 100 files.
 
