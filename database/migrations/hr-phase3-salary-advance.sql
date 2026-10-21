@@ -24,3 +24,21 @@ ALTER TABLE hr_payslips
  ADD COLUMN salary_advance_repayment DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER salary_advance_id,
  ADD KEY ix_hr_payslip_salary_advance(salary_advance_id),
  ADD CONSTRAINT fk_hr_payslip_salary_advance FOREIGN KEY(salary_advance_id) REFERENCES hr_salary_advances(id) ON DELETE RESTRICT;
+
+-- Supports multiple advance repayments on one payslip. For an existing
+-- installation, apply this CREATE TABLE and INSERT section once after the
+-- original salary-advance migration has already been applied.
+CREATE TABLE hr_payslip_salary_advances (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ payslip_id BIGINT UNSIGNED NOT NULL,
+ salary_advance_id BIGINT UNSIGNED NOT NULL,
+ repayment DECIMAL(14,2) NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uq_hr_payslip_advance(payslip_id,salary_advance_id),
+ KEY ix_hr_payslip_advance_link(salary_advance_id),
+ CONSTRAINT fk_hr_payslip_advance_link_payslip FOREIGN KEY(payslip_id) REFERENCES hr_payslips(id) ON DELETE RESTRICT,
+ CONSTRAINT fk_hr_payslip_advance_link_advance FOREIGN KEY(salary_advance_id) REFERENCES hr_salary_advances(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO hr_payslip_salary_advances (payslip_id,salary_advance_id,repayment)
+ SELECT id,salary_advance_id,salary_advance_repayment FROM hr_payslips
+ WHERE salary_advance_id IS NOT NULL AND salary_advance_repayment>0;

@@ -45,7 +45,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
   const [period,setPeriod]=useState(today().slice(0,7));
   const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]);
   const [employeeId,setEmployeeId]=useState(''),[payDate,setPayDate]=useState(today());
-  const [advances,setAdvances]=useState([]),[advanceId,setAdvanceId]=useState(''),[advanceRepayment,setAdvanceRepayment]=useState('');
+  const [advances,setAdvances]=useState([]),[advanceRepayments,setAdvanceRepayments]=useState({});
   const [basicPay,setBasicPay]=useState(''),[fixedAllowance,setFixedAllowance]=useState('0.00');
   const [earnings,setEarnings]=useState([]),[deductions,setDeductions]=useState([]),[notes,setNotes]=useState('');
   const [selected,setSelected]=useState(null),[editingId,setEditingId]=useState(null);
@@ -66,26 +66,28 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
   },[period,outlet,refresh,canView]);
   useEffect(()=>{
     let active=true;setAdvances([]);
-    if(!employeeId){if(!editingId){setAdvanceId('');setAdvanceRepayment('');}return ()=>{active=false;};}
+    if(!employeeId){if(!editingId)setAdvanceRepayments({});return ()=>{active=false;};}
     apiRef.current('salary-advances',{employee_id:employeeId}).then(response=>{if(active)setAdvances((response.advances||[]).filter(row=>row.status==='OPEN'&&Number(row.balance)>0));}).catch(()=>{if(active)setAdvances([]);});
     return ()=>{active=false;};
   },[employeeId,outlet,editingId]);
   const selectedEmployee=employees.find(employee=>String(employee.id)===String(employeeId));
   const net=()=>{
     const sum=lines=>lines.reduce((total,line)=>total+Number(line.amount||0),0);
-    return Number(basicPay||0)+Number(fixedAllowance||0)+sum(earnings)-sum(deductions)-Number(advanceRepayment||0);
+    const advanceTotal=Object.values(advanceRepayments).reduce((total,value)=>total+Number(value||0),0);
+    return Number(basicPay||0)+Number(fixedAllowance||0)+sum(earnings)-sum(deductions)-advanceTotal;
   };
-  const resetForm=()=>{setEditingId(null);setEmployeeId('');setPayDate(today());setBasicPay('');setFixedAllowance('0.00');setEarnings([]);setDeductions([]);setNotes('');setAdvanceId('');setAdvanceRepayment('');};
+  const resetForm=()=>{setEditingId(null);setEmployeeId('');setPayDate(today());setBasicPay('');setFixedAllowance('0.00');setEarnings([]);setDeductions([]);setNotes('');setAdvanceRepayments({});};
   const editDraft=row=>{
     setSelected(row);setEditingId(row.id);setEmployeeId(String(row.employee_id));setPayDate(row.pay_date);
-    setBasicPay(String(row.basic_pay));setFixedAllowance(String(row.fixed_allowance));setEarnings(cleanLines(row.earnings||[]));setDeductions(cleanLines((row.deductions||[]).filter(line=>line.label!=='Salary advance repayment')));setNotes(row.notes||'');
-    setAdvanceId(row.salary_advance_id?String(row.salary_advance_id):'');setAdvanceRepayment(row.salary_advance_repayment&&Number(row.salary_advance_repayment)>0?String(row.salary_advance_repayment):'');
+    setBasicPay(String(row.basic_pay));setFixedAllowance(String(row.fixed_allowance));setEarnings(cleanLines(row.earnings||[]));setDeductions(cleanLines((row.deductions||[]).filter(line=>!String(line.label||'').startsWith('Salary advance repayment'))));setNotes(row.notes||'');
+    const repayments=row.salary_advance_repayments?.length?row.salary_advance_repayments:(row.salary_advance_id&&Number(row.salary_advance_repayment)>0?[{advance_id:row.salary_advance_id,repayment:row.salary_advance_repayment}]:[]);
+    setAdvanceRepayments(Object.fromEntries(repayments.map(item=>[String(item.advance_id),String(item.repayment)])));
     window.scrollTo({top:0,behavior:'smooth'});
   };
   const save=async event=>{
     event.preventDefault();if(busy)return;setBusy(true);setError('');setNotice('');
     try {
-      const payload={request_id:crypto.randomUUID(),basic_pay:basicPay,fixed_allowance:fixedAllowance,advance_id:advanceId||null,advance_repayment:advanceId?advanceRepayment:'0.00',
+      const payload={request_id:crypto.randomUUID(),basic_pay:basicPay,fixed_allowance:fixedAllowance,advance_repayments:Object.entries(advanceRepayments).filter(([,value])=>Number(value)>0).map(([advance_id,repayment])=>({advance_id,repayment})),
         earnings:cleanLines(earnings),deductions:cleanLines(deductions),notes};
       let result;
       if(editingId) result=await apiRef.current('update-payslip',{...payload,id:editingId},true);
@@ -189,13 +191,13 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
     {canManage&&<form className="panel hr-payslip-form" onSubmit={save}>
       <h3>{editingId?'Edit Draft Payslip':'Create Payslip Draft'}</h3>
       <div className="hr-form-grid">
-        <PayslipField label="Employee"><select value={employeeId} disabled={Boolean(editingId)||busy} onChange={event=>{const id=event.target.value;setEmployeeId(id);setAdvanceId('');setAdvanceRepayment('');const item=employees.find(row=>String(row.id)===id);setBasicPay(item?.salary_type==='monthly'?String(item.basic_rate||''):'');setFixedAllowance(String(item?.fixed_allowance||'0.00'));}} required><option value="">Select employee</option>{employees.map(item=><option key={item.id} value={item.id}>{item.staff_code} · {item.full_name}{!item.salary_history_id?' — no salary profile':''}</option>)}</select></PayslipField>
+        <PayslipField label="Employee"><select value={employeeId} disabled={Boolean(editingId)||busy} onChange={event=>{const id=event.target.value;setEmployeeId(id);setAdvanceRepayments({});const item=employees.find(row=>String(row.id)===id);setBasicPay(item?.salary_type==='monthly'?String(item.basic_rate||''):'');setFixedAllowance(String(item?.fixed_allowance||'0.00'));}} required><option value="">Select employee</option>{employees.map(item=><option key={item.id} value={item.id}>{item.staff_code} · {item.full_name}{!item.salary_history_id?' — no salary profile':''}</option>)}</select></PayslipField>
         <PayslipField label="Pay date"><input type="date" value={payDate} disabled={Boolean(editingId)||busy} onChange={event=>setPayDate(event.target.value)} required/></PayslipField>
         <PayslipField label="Basic pay for this period (MYR)"><input type="number" min="0" step="0.01" value={basicPay} onChange={event=>setBasicPay(event.target.value)} required/></PayslipField>
         <PayslipField label="Fixed allowance for this period (MYR)"><input type="number" min="0" step="0.01" value={fixedAllowance} onChange={event=>setFixedAllowance(event.target.value)} required/></PayslipField>
       </div>
       {selectedEmployee&&<p className="hr-muted">Salary profile: {selectedEmployee.salary_type||'not set'} · {selectedEmployee.department_name||'No department'} · {selectedEmployee.position_name||'No position'}. Monthly basic and fixed allowance are prefilled; verify amounts before saving.</p>}
-      <div className="hr-advance-repayment"><PayslipField label="Outstanding salary advance"><select value={advanceId} onChange={event=>{setAdvanceId(event.target.value);setAdvanceRepayment('');}} disabled={!employeeId||busy}><option value="">No advance repayment</option>{advances.map(item=><option key={item.id} value={item.id}>Advance {item.advance_date} · balance {amount(item.balance)}</option>)}</select></PayslipField><PayslipField label="Repayment this payslip (MYR)"><input type="number" min="0.01" max={advances.find(item=>String(item.id)===advanceId)?.balance||undefined} step="0.01" value={advanceRepayment} required={Boolean(advanceId)} disabled={!advanceId||busy} onChange={event=>setAdvanceRepayment(event.target.value)} placeholder="Example: 100.50"/></PayslipField></div>
+      <div className="hr-advance-repayment"><strong>Salary advance repayments (MYR)</strong>{!employeeId?<p className="hr-muted">Select an employee to view outstanding advances.</p>:!advances.length?<p className="hr-muted">No outstanding advances for this employee.</p>:advances.map(item=>{const key=String(item.id),value=advanceRepayments[key]||'';return <div className="hr-payslip-advance-row" key={key}><label><input type="checkbox" checked={Boolean(value)} disabled={busy} onChange={event=>setAdvanceRepayments(current=>{const next={...current};if(event.target.checked)next[key]=String(item.balance);else delete next[key];return next;})}/><span>Advance {item.advance_date} · outstanding {amount(item.balance)} · {item.reason}</span></label><PayslipField label="Repayment"><input type="number" min="0.01" max={item.balance} step="0.01" value={value} disabled={!value||busy} onChange={event=>setAdvanceRepayments(current=>({...current,[key]:event.target.value}))} placeholder="Enter repayment amount"/></PayslipField></div>})}<p className="hr-muted">You can add several advances during the month. Select each one to deduct it; advance balances change only when the payslip is issued.</p></div>
       <LinesEditor title="Additional earnings" lines={earnings} onChange={setEarnings}/>
       <LinesEditor title="Deductions" lines={deductions} onChange={setDeductions}/>
       <PayslipField label="Notes"><textarea maxLength="1000" rows="2" value={notes} onChange={event=>setNotes(event.target.value)}/></PayslipField>
