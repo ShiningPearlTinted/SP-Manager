@@ -72,19 +72,27 @@
 .hr-module .hr-payslip-table td {vertical-align:middle;}
 .hr-module .hr-payslip-paper {max-width:980px;margin-top:var(--mg-space-6);padding:var(--mg-space-6);background:#fff;color:#172033;}
 .hr-module .hr-payslip-head {display:flex;justify-content:space-between;align-items:center;gap:var(--mg-space-4);border-radius:12px;background:#075985;color:#fff;padding:var(--mg-space-5);}
-.hr-module .hr-payslip-title>span {display:block;color:#bae6fd;font-size:11px;font-weight:700;letter-spacing:2px;}
-.hr-module .hr-payslip-title h2 {margin:4px 0 6px;font-size:30px;letter-spacing:1.5px;color:#fff;}
-.hr-module .hr-payslip-title p {margin:4px 0;color:#e0f2fe;}
-.hr-module .hr-payslip-title small {color:#bae6fd;}
+.app[data-ui="management"] .hr-module .hr-payslip-title>span {display:block!important;color:#bae6fd!important;font-size:11px;font-weight:700;letter-spacing:2px;}
+.app[data-ui="management"] .hr-module .hr-payslip-title h2 {margin:4px 0 6px!important;font-size:30px!important;line-height:1.15!important;letter-spacing:1.5px;color:#fff!important;}
+.app[data-ui="management"] .hr-module .hr-payslip-title p {margin:4px 0!important;color:#e0f2fe!important;}
+.app[data-ui="management"] .hr-module .hr-payslip-title small {display:block;margin-top:5px;color:#bae6fd!important;font-size:12px;}
+.hr-module .hr-payslip-actions-panel {display:flex;flex-direction:column;align-items:flex-end;gap:12px;flex:0 0 auto;}
+.app[data-ui="management"] .hr-module .hr-payslip-status {display:inline-flex;align-items:center;border:1px solid #bae6fd;border-radius:999px;padding:5px 11px;color:#e0f2fe;font-size:11px;font-weight:700;letter-spacing:.6px;}
 .hr-module .hr-payslip-tools {display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;}
-.hr-module .hr-payslip-tools button {background:#fff;color:#075985;border-color:#dbeafe;white-space:nowrap;}
+.app[data-ui="management"] .hr-module .hr-payslip-tools button {min-height:40px;padding:8px 14px;background:#fff!important;color:#075985!important;border:1px solid #dbeafe;white-space:nowrap;}
+.app[data-ui="management"] .hr-module .hr-payslip-tools button:hover:not(:disabled) {background:#e0f2fe!important;color:#075985!important;}
 .hr-module .hr-payslip-tools button:disabled {opacity:.55;cursor:not-allowed;}
-.hr-module .hr-payslip-facts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--mg-space-4);margin:var(--mg-space-5) 0;}
-.hr-module .hr-payslip-facts div {display:flex;flex-direction:column;gap:4px;}
+.hr-module .hr-payslip-facts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 24px;margin:24px 0 28px;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;}
+.hr-module .hr-payslip-facts div {display:flex;flex-direction:column;gap:6px;min-width:0;}
+.hr-module .hr-payslip-facts span {overflow-wrap:anywhere;}
 .hr-module .hr-payslip-facts b {font-size:var(--mg-label-size);color:var(--mg-muted);}
 .hr-module .hr-payslip-total th {border-top:1px solid var(--mg-border);}
 .hr-module .hr-payslip-net {display:flex;justify-content:space-between;align-items:center;margin-top:var(--mg-space-5);padding:var(--mg-space-4);background:#f1f6f8;border:1px solid #d8e0e8;font-size:1.15em;}
 .hr-module .hr-payslip-net {background:#e0f2fe;border-color:#bae6fd;border-radius:8px;font-size:1.25em;}
+.hr-module .hr-payslip-paper>h3 {margin-top:26px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;}
+.hr-module .hr-payslip-paper>table {border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;}
+.hr-module .hr-payslip-paper>table td,.hr-module .hr-payslip-paper>table th {padding:12px 14px;}
+.hr-module .hr-payslip-total th {background:#f1f5f9;}
 .hr-module .hr-payslip-paper h3 {margin:var(--mg-space-5) 0 var(--mg-space-2);}
 .hr-module .hr-payslip-paper table {font-variant-numeric:tabular-nums;}
 .hr-module .hr-payslip-paper td:last-child,.hr-module .hr-payslip-paper th:last-child {text-align:right;}
@@ -101,6 +109,8 @@
  .hr-module .hr-payslip-line {grid-template-columns:minmax(0,1fr);}
  .hr-module .hr-payslip-facts {grid-template-columns:repeat(2,minmax(0,1fr));}
  .hr-module .hr-payslip-head {align-items:flex-start;flex-direction:column;}
- .hr-module .hr-payslip-tools {justify-content:flex-start;}
+ .hr-module .hr-payslip-actions-panel {align-items:flex-start;width:100%;}
+ .hr-module .hr-payslip-tools {justify-content:flex-start;width:100%;}
+ .hr-module .hr-payslip-tools button {flex:1 1 auto;}
  .hr-module.hr-dialog {padding:var(--mg-space-4);width:calc(100vw - 20px);}
 }
