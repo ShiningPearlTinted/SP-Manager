@@ -147,7 +147,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
         'transfer','temporary-assignment'=>'transferHrEmployees',
         'salary-history','salary-advances'=>'viewHrSalary', 'revise-salary','create-salary-advance'=>'manageHrSalary',
         'list-payslips','payslip-employees','payslip','payslip-pdf'=>'viewHrSalary',
-        'payslip-contact','email-payslip','create-payslip','update-payslip','issue-payslip','void-payslip'=>'manageHrSalary',
+        'payslip-contact','email-payslip','create-payslip','update-payslip','issue-payslip','void-payslip','reset-issued-payslip'=>'manageHrSalary',
         default=>'viewHrEmployees',
     };
     if ($file === 'customer-display.php' && in_array($action, ['terminals','terminal','image'], true)) return 'manageSettings';

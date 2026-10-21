@@ -156,6 +156,30 @@ function hrPayslipVoid(PDO $pdo,array $body,int $outlet): array {
     hrQuery($pdo,'UPDATE hr_payslips SET status=\'VOID\',voided_by=?,voided_at=NOW(),void_reason=? WHERE id=? AND outlet_id=? AND status IN (\'DRAFT\',\'ISSUED\')',[(int)$_SERVER['SP_AUTH_USER_ID'],$reason,$id,$outlet]);
     spAudit($pdo,'HR_PAYSLIP_VOID','hr_payslips',$id,null,['status'=>'VOID']);return ['ok'=>true,'id'=>$id,'status'=>'VOID'];
 }
+function hrPayslipResetIssued(PDO $pdo,array $body,int $outlet): array {
+    hrRequire('manageHrSalary');spRequireTable($pdo,'hr_payslips');
+    $actor=$GLOBALS['spActor']??[];
+    if(($actor['role_name']??'')!=='Administrator')throw new HrError('Only an Administrator can reset an issued payslip.',403);
+    $adminId=hrId($body['admin_id']??null,'Administrator ID');
+    $userId=(int)($_SERVER['SP_AUTH_USER_ID']??0);
+    if($adminId!==$userId)throw new HrError('Administrator ID does not match the signed-in account.',403);
+    $payslipNo=strtoupper((string)hrText($body['payslip_no']??null,'Payslip reference',40,true));
+    $row=hrQuery($pdo,'SELECT * FROM hr_payslips WHERE payslip_no=? AND outlet_id=? FOR UPDATE',[$payslipNo,$outlet])->fetch();
+    if(!$row)throw new HrError('Payslip not found in the selected outlet.',404);
+    if($row['status']!=='ISSUED')throw new HrError('Only an ISSUED payslip can be reset.',409);
+    if(!empty($row['salary_advance_id'])&&hrPayslipCents((string)$row['salary_advance_repayment'])>0){
+        $later=hrQuery($pdo,'SELECT id FROM hr_payslips WHERE salary_advance_id=? AND status=\'ISSUED\' AND period_start>? LIMIT 1 FOR UPDATE',[(int)$row['salary_advance_id'],$row['period_start']])->fetchColumn();
+        if($later)throw new HrError('Reset later issued payslips first to reverse this advance repayment safely.',409);
+        $advance=hrQuery($pdo,'SELECT amount,balance FROM hr_salary_advances WHERE id=? AND employee_id=? AND outlet_id=? FOR UPDATE',[(int)$row['salary_advance_id'],(int)$row['employee_id'],$outlet])->fetch();
+        if(!$advance)throw new HrError('Linked salary advance was not found.',409);
+        $balance=hrPayslipCents((string)$advance['balance'])+hrPayslipCents((string)$row['salary_advance_repayment']);
+        if($balance>hrPayslipCents((string)$advance['amount']))throw new HrError('Advance repayment cannot be reversed safely.',409);
+        hrQuery($pdo,'UPDATE hr_salary_advances SET balance=?,status=\'OPEN\' WHERE id=?',[hrPayslipAmount($balance),(int)$row['salary_advance_id']]);
+    }
+    hrQuery($pdo,'UPDATE hr_payslips SET status=\'DRAFT\',issued_by=NULL,issued_at=NULL WHERE id=? AND outlet_id=? AND status=\'ISSUED\'',[(int)$row['id'],$outlet]);
+    spAudit($pdo,'HR_PAYSLIP_RESET','hr_payslips',(int)$row['id'],['status'=>'ISSUED'],['status'=>'DRAFT','admin_id'=>$userId]);
+    return ['ok'=>true,'id'=>(int)$row['id'],'status'=>'DRAFT'];
+}
 
 /** Generate a self-contained, text-based PDF payslip from the issued database snapshot. */
 function hrPayslipPdfDocument(array $slip,string $outletName): string {

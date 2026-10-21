@@ -15,6 +15,8 @@
 .hr-module .hr-menu-toggle {display:none;}
 .hr-module button {border:1px solid var(--mg-border);background:var(--mg-surface);color:var(--mg-ink);}
 .hr-module button.primary {background:var(--mg-accent);border-color:var(--mg-accent);color:var(--mg-surface);}
+.hr-module button.danger {background:#c43224;border-color:#c43224;color:#fff;}
+.hr-module button.danger:hover:not(:disabled) {background:#a9291e;border-color:#a9291e;}
 .hr-module button:disabled {opacity:.5;cursor:not-allowed;}
 .hr-module .hr-sidebar small {display:block;font-size:11px;color:var(--mg-muted);font-weight:400;margin-top:2px;}
 .hr-module .hr-stats {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--mg-space-4);margin-bottom:var(--mg-space-6);}

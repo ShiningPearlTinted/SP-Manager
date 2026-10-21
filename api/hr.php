@@ -11,7 +11,7 @@ try {
     $method=strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $action=strtolower(trim((string)($_GET['action'] ?? '')));
     $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','salary-advances','list-payslips','payslip-employees','payslip','payslip-contact','payslip-pdf'];
-    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-salary-advance','create-payslip','update-payslip','issue-payslip','void-payslip','email-payslip'];
+    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-salary-advance','create-payslip','update-payslip','issue-payslip','void-payslip','reset-issued-payslip','email-payslip'];
     if (!in_array($action,[...$read,...$write],true)) throw new HrError('Unknown HR action.');
     if (($method==='GET' && !in_array($action,$read,true)) || ($method==='POST' && !in_array($action,$write,true)) || !in_array($method,['GET','POST'],true)) throw new HrError('Method not allowed.',405);
     // Every action is independently authorized, including actions added later.
@@ -20,7 +20,7 @@ try {
         'transfer','temporary-assignment'=>'transferHrEmployees',
         'revise-salary','create-salary-advance'=>'manageHrSalary','salary-history','salary-advances'=>'viewHrSalary',
         'list-payslips','payslip-employees','payslip','payslip-pdf'=>'viewHrSalary',
-        'create-payslip','update-payslip','issue-payslip','void-payslip','email-payslip','payslip-contact'=>'manageHrSalary',
+        'create-payslip','update-payslip','issue-payslip','void-payslip','reset-issued-payslip','email-payslip','payslip-contact'=>'manageHrSalary',
         default=>'viewHrEmployees'
     };
     hrRequire($permission);
@@ -162,6 +162,7 @@ try {
         'update-payslip'=>hrPayslipUpdate($pdo,$body,$outlet),
         'issue-payslip'=>hrPayslipIssue($pdo,$body,$outlet),
         'void-payslip'=>hrPayslipVoid($pdo,$body,$outlet),
+        'reset-issued-payslip'=>hrPayslipResetIssued($pdo,$body,$outlet),
         default=>throw new HrError('Unknown HR action.')
     };
     spRequestComplete($pdo,$key,$response); $pdo->commit(); hrReleaseStaffCodeLock($pdo); spApiRespond($response,200);
