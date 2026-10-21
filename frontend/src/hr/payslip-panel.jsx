@@ -18,6 +18,16 @@ function PayslipActionDialog({action,reason,onReasonChange,onCancel,onConfirm,bu
     <div className="hr-form-actions"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="button" className={isVoid?'danger':'primary'} disabled={busy||isVoid&&!reason.trim()} onClick={onConfirm}>{busy?'Processing…':isVoid?'Void Payslip':'Issue Payslip'}</button></div>
   </dialog>;
 }
+function PayslipShareDialog({channel,employee,onCancel,onConfirm,busy,error}) {
+  const dialog=useRef(null);
+  useEffect(()=>{dialog.current?.showModal();return ()=>dialog.current?.close();},[]);
+  const email=channel==='email';
+  return <dialog ref={dialog} className="hr-dialog hr-module hr-confirm-dialog" aria-labelledby="payslip-share-title" onCancel={event=>{event.preventDefault();if(!busy)onCancel();}}>
+    <div className="hr-dialog-head"><div className="hr-confirm-heading"><span className="hr-confirm-icon">{email?'✉':'↗'}</span><div><h2 id="payslip-share-title">{email?'Email payslip':'WhatsApp payslip notice'}</h2><p>{employee||'Employee'}</p></div></div><button type="button" aria-label="Close" disabled={busy} onClick={onCancel}>×</button></div>
+    <div className="hr-confirm-body">{error&&<div className="hr-error" role="alert">{error}</div>}<p>{email?'The issued payslip will be sent to the employee email saved in HR.':'WhatsApp will open with a short payslip notice ready to send. You can review it and press Send in WhatsApp.'}</p><p className="hr-muted">{email?'The message includes confidential pay details.':'This action does not attach the payslip file. Use Print payslip to save or print a copy.'}</p></div>
+    <div className="hr-form-actions"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="button" className="primary" disabled={busy} onClick={onConfirm}>{busy?'Processing…':email?'Send email':'Open WhatsApp'}</button></div>
+  </dialog>;
+}
 function LinesEditor({title,lines,onChange}) {
   const update=(index,key,value)=>onChange(lines.map((line,i)=>i===index?{...line,[key]:value}:line));
   return <div className="hr-payslip-lines"><div className="hr-toolbar"><h4>{title}</h4><button type="button" onClick={()=>onChange([...lines,{label:'',amount:''}])}>Add line</button></div>
@@ -40,6 +50,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
   const [earnings,setEarnings]=useState([]),[deductions,setDeductions]=useState([]),[notes,setNotes]=useState('');
   const [selected,setSelected]=useState(null),[editingId,setEditingId]=useState(null);
   const [actionDialog,setActionDialog]=useState(null),[actionReason,setActionReason]=useState('');
+  const [shareDialog,setShareDialog]=useState(null);
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[refresh,setRefresh]=useState(0);
   const canView=can('viewHrSalary'),canManage=can('manageHrSalary')&&canView;
   useEffect(()=>{
@@ -113,6 +124,29 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
     try {const response=await apiRef.current('payslip',{id:row.id});setSelected(response.payslip);}
     catch(e){setError(e.message);}finally{setBusy(false);}
   };
+  const sharePayslip=channel=>{if(!selected)return;setError('');setShareDialog({channel});};
+  const confirmShare=async()=>{
+    if(!shareDialog||!selected||busy)return;
+    const channel=shareDialog.channel;let whatsappWindow=null;
+    if(channel==='whatsapp'){whatsappWindow=window.open('about:blank','_blank');if(!whatsappWindow){setError('Benarkan pop-up untuk membuka WhatsApp.');return;}}
+    setBusy(true);setError('');
+    try {
+      if(channel==='email'){
+        await apiRef.current('email-payslip',{id:selected.id,request_id:crypto.randomUUID()},true);
+        setNotice('Payslip telah dihantar ke email pekerja yang didaftarkan.');
+      } else {
+        const response=await apiRef.current('payslip-contact',{id:selected.id});
+        let phone=String(response.contact?.phone||'').replace(/\D/g,'');
+        if(phone.startsWith('00'))phone=phone.slice(2);else if(phone.startsWith('0'))phone='60'+phone.slice(1);
+        if(phone.length<8)throw new Error('Nombor telefon pekerja tiada atau tidak sah dalam rekod HR.');
+        const message=`Salam ${selected.full_name_snapshot}, payslip ${selected.payslip_no} untuk tempoh ${selected.period_start} hingga ${selected.period_end} telah dikeluarkan. Sila semak salinan payslip melalui saluran syarikat.`;
+        whatsappWindow.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        setNotice('WhatsApp dibuka. Semak mesej dan tekan Send untuk menghantarnya.');
+      }
+      setShareDialog(null);
+    } catch(e){if(whatsappWindow)whatsappWindow.close();setError(e.message);setShareDialog(current=>current?{...current,error:e.message}:null);}
+    finally{setBusy(false);}
+  };
   const printPayslip=()=>{
     if(!selected)return;
     const popup=window.open('','_blank','width=900,height=900');
@@ -122,8 +156,8 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
     const deductionRows=(selected.deductions||[]).map(line=>cell(line.label,amount(line.amount,selected.currency_code))).join('')||'<tr><td colspan="2" class="empty">No deductions</td></tr>';
     popup.document.open();
     popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Payslip ${htmlEscape(selected.payslip_no)}</title><style>
-      @page{size:A4;margin:16mm}*{box-sizing:border-box}body{font:14px Arial,sans-serif;color:#172033;margin:0}.sheet{max-width:780px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;border-bottom:2px solid #1683a5;padding-bottom:16px}.top h1{font-size:23px;margin:0 0 8px}.top p{margin:4px 0;color:#526174}.tag{border:1px solid #9aa9b8;border-radius:20px;padding:6px 12px;font-size:11px}.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 24px;margin:24px 0}.fact span{display:block;color:#64748b;font-size:11px;margin-bottom:5px}.fact strong{overflow-wrap:anywhere}.section{margin-top:22px}.section h2{font-size:15px;margin:0 0 8px;padding-bottom:7px;border-bottom:1px solid #d8e0e8}table{width:100%;border-collapse:collapse}td{padding:9px 8px;border-bottom:1px solid #e5eaf0}.money{text-align:right;font-variant-numeric:tabular-nums}.total td{font-weight:700;border-top:1px solid #98a6b5}.net{display:flex;justify-content:space-between;background:#f1f6f8;padding:15px 12px;margin-top:20px;font-size:17px}.notes{margin-top:18px;white-space:pre-wrap}.empty{color:#64748b;text-align:center}.footer{margin-top:32px;padding-top:10px;border-top:1px solid #d8e0e8;color:#64748b;font-size:10px;text-align:center}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet{max-width:none}}
-    </style></head><body><main class="sheet"><header class="top"><div><h1>${htmlEscape(outletName||'Company')}</h1><p>Payslip: <strong>${htmlEscape(selected.payslip_no)}</strong></p><p>Pay period: ${htmlEscape(selected.period_start)} – ${htmlEscape(selected.period_end)}</p></div><span class="tag">${htmlEscape(selected.status)}</span></header>
+      @page{size:A4;margin:16mm}*{box-sizing:border-box}body{font:14px Arial,sans-serif;color:#172033;margin:0}.sheet{max-width:780px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:24px;align-items:center;border-radius:12px;background:#075985;color:#fff;padding:24px 26px}.top h1{font-size:32px;letter-spacing:2px;margin:4px 0 8px}.top p{margin:5px 0;color:#e0f2fe}.eyebrow{font-size:11px;letter-spacing:2px;font-weight:bold;color:#bae6fd}.tag{border:1px solid #bfdbfe;border-radius:20px;padding:7px 13px;font-size:11px;font-weight:bold}.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 24px;margin:24px 0}.fact span{display:block;color:#64748b;font-size:11px;margin-bottom:5px}.fact strong{overflow-wrap:anywhere}.section{margin-top:22px}.section h2{font-size:15px;margin:0 0 8px;padding-bottom:7px;border-bottom:1px solid #d8e0e8}table{width:100%;border-collapse:collapse}td{padding:9px 8px;border-bottom:1px solid #e5eaf0}.money{text-align:right;font-variant-numeric:tabular-nums}.total td{font-weight:700;border-top:1px solid #98a6b5}.net{display:flex;justify-content:space-between;background:#e0f2fe;border:1px solid #bae6fd;border-radius:8px;padding:16px 14px;margin-top:20px;font-size:18px}.notes{margin-top:18px;white-space:pre-wrap}.empty{color:#64748b;text-align:center}.footer{margin-top:32px;padding-top:10px;border-top:1px solid #d8e0e8;color:#64748b;font-size:10px;text-align:center}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet{max-width:none}}
+    </style></head><body><main class="sheet"><header class="top"><div><div class="eyebrow">PENYATA GAJI</div><h1>PAYSLIP</h1><p>${htmlEscape(outletName||'Company')}</p><p><strong>${htmlEscape(selected.payslip_no)}</strong> · ${htmlEscape(selected.period_start)} – ${htmlEscape(selected.period_end)}</p></div><span class="tag">${htmlEscape(selected.status)}</span></header>
       <section class="facts"><div class="fact"><span>Employee</span><strong>${htmlEscape(selected.full_name_snapshot)}</strong></div><div class="fact"><span>Staff code</span><strong>${htmlEscape(selected.staff_code_snapshot)}</strong></div><div class="fact"><span>Pay date</span><strong>${htmlEscape(selected.pay_date)}</strong></div><div class="fact"><span>Department</span><strong>${htmlEscape(selected.department_snapshot||'—')}</strong></div><div class="fact"><span>Position</span><strong>${htmlEscape(selected.position_snapshot||'—')}</strong></div></section>
       <section class="section"><h2>Earnings</h2><table>${earningRows}<tr class="total"><td>Gross pay</td><td class="money">${htmlEscape(amount(selected.gross_pay,selected.currency_code))}</td></tr></table></section>
       <section class="section"><h2>Deductions</h2><table>${deductionRows}<tr class="total"><td>Total deductions</td><td class="money">${htmlEscape(amount(selected.total_deductions,selected.currency_code))}</td></tr></table></section>
@@ -154,12 +188,13 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
     <div className="panel hr-table-wrap"><h3>Payslips · {period}</h3>{loading?<p role="status">Loading payslips…</p>:<table className="hr-payslip-table"><thead><tr><th>Payslip</th><th>Employee</th><th>Pay date</th><th>Gross</th><th>Deductions</th><th>Net pay</th><th>Status</th><th>Actions</th></tr></thead><tbody>
       {rows.map(row=><tr key={row.id}><td>{row.payslip_no}</td><td>{row.staff_code_snapshot} · {row.full_name_snapshot}</td><td>{row.pay_date}</td><td>{amount(row.gross_pay,row.currency_code)}</td><td>{amount(row.total_deductions,row.currency_code)}</td><td>{amount(row.net_pay,row.currency_code)}</td><td><span className={'hr-badge '+(row.status==='ISSUED'?'active':'')}>{row.status}</span></td><td><div className="hr-payslip-actions"><button type="button" disabled={busy} onClick={()=>openRow(row)}>View / Print</button>{row.status==='DRAFT'&&canManage&&<><button type="button" disabled={busy} onClick={()=>editDraft(row)}>Edit</button><button type="button" className="primary" disabled={busy} onClick={()=>issue(row)}>Issue</button></>}{row.status!=='VOID'&&canManage&&<button type="button" disabled={busy} onClick={()=>voidPayslip(row)}>Void</button>}</div></td></tr>)}
       {!rows.length&&<tr><td colSpan="8">No payslips for this month yet.</td></tr>}</tbody></table>}</div>
-    {selected&&<section className="panel hr-payslip-paper" aria-label="Payslip preview"><div className="hr-payslip-head"><div><h2>{outletName}</h2><p>Payslip · {selected.payslip_no} · {selected.status}</p></div><button className="hr-no-print" type="button" onClick={printPayslip}>Print payslip</button></div>
+    {selected&&<section className="panel hr-payslip-paper" aria-label="Payslip preview"><div className="hr-payslip-head"><div className="hr-payslip-title"><span>PENYATA GAJI</span><h2>PAYSLIP</h2><p>{outletName} · {selected.payslip_no} · {selected.status}</p><small>{selected.period_start} – {selected.period_end}</small></div><div className="hr-payslip-tools"><button className="hr-no-print" type="button" disabled={busy||!canManage||selected.status!=='ISSUED'} title={selected.status!=='ISSUED'?'Issue this payslip before sharing it':'Email this payslip to the employee'} onClick={()=>sharePayslip('email')}>Email</button><button className="hr-no-print" type="button" disabled={busy||!canManage||selected.status!=='ISSUED'} title={selected.status!=='ISSUED'?'Issue this payslip before sharing it':'Open WhatsApp with a payslip notice'} onClick={()=>sharePayslip('whatsapp')}>WhatsApp</button><button className="hr-no-print" type="button" onClick={printPayslip}>Print payslip</button></div></div>
       <div className="hr-payslip-facts"><div><b>Employee</b><span>{selected.full_name_snapshot}</span></div><div><b>Staff code</b><span>{selected.staff_code_snapshot}</span></div><div><b>Department</b><span>{selected.department_snapshot||'—'}</span></div><div><b>Position</b><span>{selected.position_snapshot||'—'}</span></div><div><b>Period</b><span>{selected.period_start} – {selected.period_end}</span></div><div><b>Pay date</b><span>{selected.pay_date}</span></div></div>
       <h3>Earnings</h3><table><tbody><tr><td>Basic pay</td><td>{amount(selected.basic_pay,selected.currency_code)}</td></tr><tr><td>Fixed allowance</td><td>{amount(selected.fixed_allowance,selected.currency_code)}</td></tr>{(selected.earnings||[]).map((line,index)=><tr key={index}><td>{line.label}</td><td>{amount(line.amount,selected.currency_code)}</td></tr>)}<tr className="hr-payslip-total"><th>Gross pay</th><th>{amount(selected.gross_pay,selected.currency_code)}</th></tr></tbody></table>
       <h3>Deductions</h3><table><tbody>{(selected.deductions||[]).map((line,index)=><tr key={index}><td>{line.label}</td><td>{amount(line.amount,selected.currency_code)}</td></tr>)}<tr className="hr-payslip-total"><th>Total deductions</th><th>{amount(selected.total_deductions,selected.currency_code)}</th></tr></tbody></table>
       <div className="hr-payslip-net"><span>Net pay</span><strong>{amount(selected.net_pay,selected.currency_code)}</strong></div>{selected.notes&&<p><b>Notes:</b> {selected.notes}</p>}{selected.void_reason&&<p><b>Void reason:</b> {selected.void_reason}</p>}
     </section>}
     {actionDialog&&<PayslipActionDialog action={actionDialog} reason={actionReason} onReasonChange={setActionReason} onCancel={()=>{if(!busy){setActionDialog(null);setError('');}}} onConfirm={confirmStatusChange} busy={busy} error={error}/>}
+    {shareDialog&&<PayslipShareDialog channel={shareDialog.channel} employee={selected?.full_name_snapshot} onCancel={()=>{if(!busy){setShareDialog(null);setError('');}}} onConfirm={confirmShare} busy={busy} error={shareDialog.error||''}/>}
   </div>;
 }
