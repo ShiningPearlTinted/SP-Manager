@@ -1,1 +1,1 @@
-1.0.56 | SP-Manager release | Frontend and API must be deployed together.
+1.0.69 | SP-Manager release | Frontend and API must be deployed together.

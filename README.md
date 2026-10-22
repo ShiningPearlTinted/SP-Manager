@@ -1,4 +1,4 @@
-# SP-Manager 1.0.68
+# SP-Manager 1.0.69
 
 GitHub source package for SP-Manager. Use the contents of this ZIP as the repository root. It keeps application source, required migrations, npm lockfiles, and the GitHub workflow. It omits generated `frontend/dist`, generated agent copies, and production database exports. This archive contains no more than 100 files.
 
@@ -22,4 +22,4 @@ The Payslip tab supports monthly payslip drafts, manual earnings and deductions,
 
 Deploy the frontend build and API from this same release. Do not overwrite a production `api/config.php` with the source placeholder config. No production database changes or deployment are performed by preparing this source package.
 
-Release 1.0.68 supports multiple salary advance repayments on one draft payslip. The salary advance migration now creates hr_payslip_salary_advances and backfills existing links. For an existing database that already ran the original migration, apply only the appended CREATE TABLE and INSERT statements once.
+Release 1.0.69 supports multiple salary advance repayments on one draft payslip. The salary advance migration now creates hr_payslip_salary_advances and backfills existing links. For an existing database that already ran the original migration, apply only the appended CREATE TABLE and INSERT statements once.
