@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import './hr.css';
 import PayslipPanel from './payslip-panel.jsx';
+import OperationsPanel from './operations-panel.jsx';
 
 const permitted=(user,key)=>user?.role==='Administrator'||user?.permissions?.[key]===true;
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'});
@@ -71,7 +72,7 @@ export default function HrModule({activeUser,initialOutlet,request}) {
   const masterName=(kind,id)=>masters[kind]?.find(item=>String(item.id)===String(id))?.name||'—';
   const activeItems=(kind,current)=>masters[kind].filter(item=>String(item.active)==='1'||String(item.id)===String(current));
   const totals=useMemo(()=>summary.statuses.reduce((result,row)=>({all:result.all+Number(row.total),active:result.active+(Number(row.is_active_employment)?Number(row.total):0)}),{all:0,active:0}),[summary]);
-  const availableTabs=tabs.filter(name=>name!=='HR Settings'||canSettings);
+  const availableTabs=tabs.filter(name=>name==='HR Settings'?canSettings:['Payslip','Payroll','Claims & Advances'].includes(name)?can('viewHrSalary'):name==='HR Documents'?can('viewHrSensitive'):true);
   return <section className="hr-module content hr-layout">
     <div className="hr-sidebar-shell">
       <button type="button" className="hr-menu-toggle" aria-expanded={menuOpen} aria-controls="hr-navigation" onClick={()=>setMenuOpen(value=>!value)}><span>{tab}</span><span>{menuOpen?'Close menu':'HR Menu'} ▾</span></button>
@@ -96,7 +97,7 @@ export default function HrModule({activeUser,initialOutlet,request}) {
       </>}
       {tab==='HR Settings'&&canSettings&&<Settings masters={masters} api={api} isAdmin={activeUser?.role==='Administrator'} adminUserId={activeUser?.id} onComplete={message=>{setNotice(message);setRefresh(value=>value+1);}} onEdit={(kind,data)=>setDialog({kind:'master',master:kind,data})}/>}
       {tab==='Payslip'&&<PayslipPanel api={api} outlet={outlet} outletName={options.outlets.find(item=>String(item.id)===String(outlet))?.outlet_name||'SP-Manager'} can={can}/>}
-      {!['HR Dashboard','Employees','Payslip','HR Settings'].includes(tab)&&<div className="panel"><h3>{tab}</h3><p className="hr-muted">Coming soon.</p></div>}
+      {['Attendance','Shift & Schedule','Leave Management','Overtime','Payroll','Claims & Advances','HR Documents','HR Reports'].includes(tab)&&<OperationsPanel tab={tab} api={api} can={can} onNavigate={setTab}/>}
     </>}
     </div>
     {dialog&&<Editor key={dialog.kind+String(dialog.data?.id||'new')} dialog={dialog} masters={masters} options={options} activeItems={activeItems} can={can} outlet={outlet} api={api} onClose={()=>setDialog(null)} onComplete={complete}/>}

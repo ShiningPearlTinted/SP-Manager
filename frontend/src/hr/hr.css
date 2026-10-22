@@ -98,6 +98,18 @@
 .hr-module .hr-payslip-paper>h3 {margin-top:26px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;}
 .hr-module .hr-payslip-paper>table {border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;}
 .hr-module .hr-payslip-paper>table td,.hr-module .hr-payslip-paper>table th {padding:12px 14px;}
+.hr-module .hr-ops {min-width:0;}
+.hr-module .hr-ops .hr-stats {grid-template-columns:repeat(3,minmax(0,1fr));}
+.hr-module .hr-ops .hr-stats strong {font-size:clamp(18px,2.3vw,28px);overflow-wrap:anywhere;}
+.hr-module .hr-ops-form {border-color:var(--mg-accent);}
+.hr-module .hr-ops-form .hr-toolbar h3 {margin:0 auto 0 0;}
+.hr-module .hr-ops-form .hr-form-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+.hr-module .hr-ops-form input[type="file"] {padding:8px;}
+.hr-module .hr-ops-actions {display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:180px;}
+.hr-module .hr-ops-actions button {white-space:nowrap;}
+.hr-module .hr-ops .hr-table-wrap table {min-width:720px;}
+@media(max-width:900px){.hr-module .hr-ops-form .hr-form-grid,.hr-module .hr-ops .hr-stats{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.hr-module .hr-ops-form .hr-form-grid,.hr-module .hr-ops .hr-stats{grid-template-columns:1fr;}.hr-module .hr-ops-actions{min-width:140px;}}
 .hr-module .hr-payslip-total th {background:#f1f5f9;}
 .hr-module .hr-payslip-paper h3 {margin:var(--mg-space-5) 0 var(--mg-space-2);}
 .hr-module .hr-payslip-paper table {font-variant-numeric:tabular-nums;}

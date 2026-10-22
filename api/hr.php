@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/security.php';
 require_once __DIR__.'/hr-lib.php';
 require_once __DIR__.'/hr-payslip-lib.php';
+require_once __DIR__.'/hr-operations-lib.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -10,10 +11,11 @@ $pdo=null;
 try {
     $method=strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $action=strtolower(trim((string)($_GET['action'] ?? '')));
-    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','salary-advances','list-payslips','payslip-employees','payslip','payslip-contact','payslip-pdf'];
-    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-salary-advance','create-payslip','update-payslip','issue-payslip','void-payslip','reset-issued-payslip','email-payslip'];
+    $read=['masters','options','summary','list-employees','employee','outlet-history','salary-history','salary-advances','list-payslips','payslip-employees','payslip','payslip-contact','payslip-pdf','operations-options','operations','operation-download'];
+    $write=['save-master','save-employee','transfer','temporary-assignment','revise-salary','create-salary-advance','create-payslip','update-payslip','issue-payslip','void-payslip','reset-issued-payslip','email-payslip','save-operation','decide-operation','delete-operation','upload-hr-document','delete-hr-document','pay-claim'];
     if (!in_array($action,[...$read,...$write],true)) throw new HrError('Unknown HR action.');
     if (($method==='GET' && !in_array($action,$read,true)) || ($method==='POST' && !in_array($action,$write,true)) || !in_array($method,['GET','POST'],true)) throw new HrError('Method not allowed.',405);
+    $body=$method==='POST'?spReadRequestBody():[];
     // Every action is independently authorized, including actions added later.
     $permission=match($action) {
         'save-master'=>'manageHrSettings','save-employee'=>'manageHrEmployees',
@@ -21,6 +23,11 @@ try {
         'revise-salary','create-salary-advance'=>'manageHrSalary','salary-history','salary-advances'=>'viewHrSalary',
         'list-payslips','payslip-employees','payslip','payslip-pdf'=>'viewHrSalary',
         'create-payslip','update-payslip','issue-payslip','void-payslip','reset-issued-payslip','email-payslip','payslip-contact'=>'manageHrSalary',
+        'operations-options'=>'viewHrEmployees',
+        'operations'=>match($_GET['module']??''){'Claims & Advances'=>'viewHrSalary','HR Documents'=>'viewHrSensitive',default=>'viewHrEmployees'},
+        'save-operation','decide-operation','delete-operation'=>($body['module']??'')==='Claims & Advances'?'manageHrSalary':'manageHrEmployees',
+        'pay-claim'=>'manageHrSalary',
+        'upload-hr-document'=>'manageHrEmployees','delete-hr-document'=>'manageHrEmployees','operation-download'=>'viewHrSensitive',
         default=>'viewHrEmployees'
     };
     hrRequire($permission);
@@ -30,6 +37,15 @@ try {
     $pdo->exec("SET time_zone = '+08:00'");
     foreach (['hr_employees','hr_departments','hr_positions','hr_employment_types','hr_employment_statuses','hr_outlet_history','hr_salary_history'] as $table) spRequireTable($pdo,$table);
     if ($method==='GET') {
+        if($action==='operations-options'){spApiRespond(['ok'=>true,'employees'=>hrOpsEmployees($pdo,$outlet)],200);}
+        if($action==='operations'){
+            $module=hrText($_GET['module']??null,'Module',40,true);
+            if($module==='Claims & Advances')hrRequire('viewHrSalary');
+            spApiRespond(['ok'=>true,'records'=>hrOpsList($pdo,$module,$outlet,(string)($_GET['month']??date('Y-m')))],200);
+        }
+        if($action==='operation-download'){
+            $id=(int)hrId($_GET['id']??null,'Document');hrOpsDownloadDocument($pdo,$id,$outlet);
+        }
         if ($action==='list-payslips') {
             hrRequire('viewHrSalary');spRequireTable($pdo,'hr_payslips');
             $period=(string)($_GET['period_start']??'');
@@ -115,7 +131,6 @@ try {
             spApiRespond(['ok'=>true,'advances'=>$rows],200);
         }
     }
-    $body=spReadRequestBody();
     if($action==='email-payslip') {
         spRequireTable($pdo,'hr_payslips');
         require_once __DIR__.'/vendor/PHPMailer/src/Exception.php';
@@ -152,6 +167,12 @@ try {
     $replay=spRequestReplay($pdo,$key,$body);
     if ($replay) { $pdo->commit(); spApiRespond($replay,200); }
     $response=match($action) {
+        'save-operation'=>hrOpsSave($pdo,$body,$outlet),
+        'decide-operation'=>hrOpsDecide($pdo,$body,$outlet),
+        'delete-operation'=>hrOpsDelete($pdo,$body,$outlet),
+        'pay-claim'=>hrOpsPayClaim($pdo,$body,$outlet),
+        'upload-hr-document'=>hrOpsUploadDocument($pdo,$body,$outlet),
+        'delete-hr-document'=>hrOpsDeleteDocument($pdo,$body,$outlet),
         'save-master'=>hrSaveMaster($pdo,$body),
         'save-employee'=>hrSaveEmployee($pdo,$body,$outlet),
         'transfer'=>hrAssignment($pdo,$body,$outlet,'transfer',$key),

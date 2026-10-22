@@ -1,4 +1,4 @@
-# SP-Manager 1.0.69
+# SP-Manager 1.0.70
 
 GitHub source package for SP-Manager. Use the contents of this ZIP as the repository root. It keeps application source, required migrations, npm lockfiles, and the GitHub workflow. It omits generated `frontend/dist`, generated agent copies, and production database exports. This archive contains no more than 100 files.
 
@@ -12,7 +12,7 @@ Use PHP 8.1 or later with PDO MySQL and OpenSSL. Before running the API, copy `a
 
 ## HR migrations
 
-Back up the database and test against a staging copy first. For a database without HR, apply `database/migrations/hr-phase1.sql`. Then apply `database/migrations/hr-phase3-payslip.sql`, followed by `database/migrations/hr-phase3-salary-advance.sql`. The last migration adds salary advances and links them to payslips; run it once after the Payslip migration. Do not re-run migrations if their tables or columns already exist. Never import the attached production SQL dump as an upgrade; it contains live records.
+Back up the database and test against a staging copy first. For a database without HR, apply `database/migrations/hr-phase1.sql`. Then apply `database/migrations/hr-phase3-payslip.sql`, followed by `database/migrations/hr-phase3-salary-advance.sql`, and finally `database/migrations/hr-phase4-operations.sql`. Phase 4 adds attendance, shifts, leave, overtime, claims and secure HR document storage. Run each migration once in this order. Do not re-run migrations if their tables or columns already exist. Never import a production SQL dump as an upgrade; it may contain live records.
 
 After migration, assign `viewHrEmployees`, `viewHrSalary`, and `manageHrSalary` to the appropriate roles through Users & Permissions. HR outlet access follows the user's assigned outlets. The HR key is required to protect sensitive employee fields; keep a secure backup of it because rotating or losing the key prevents decryption of existing fields.
 
@@ -22,4 +22,8 @@ The Payslip tab supports monthly payslip drafts, manual earnings and deductions,
 
 Deploy the frontend build and API from this same release. Do not overwrite a production `api/config.php` with the source placeholder config. No production database changes or deployment are performed by preparing this source package.
 
-Release 1.0.69 supports multiple salary advance repayments on one draft payslip. The salary advance migration now creates hr_payslip_salary_advances and backfills existing links. For an existing database that already ran the original migration, apply only the appended CREATE TABLE and INSERT statements once.
+Release 1.0.70 activates Attendance, Shift & Schedule, Leave Management, Overtime, Payroll, Claims & Advances, HR Documents and HR Reports. Payroll is summarized from payslips; leave and overtime support pending, approved and rejected states; approved claims can be marked paid. HR Documents are encrypted before storage, require the HR encryption key and the HR Sensitive Data permission, and support PDF, JPG and PNG files up to 5 MB. HR Reports can be exported to CSV. Continue using HR Settings for HR master data and administrator-only payslip reset. Statutory payroll deductions remain manually entered on payslips and are not calculated automatically.
+
+Release 1.0.69 supports multiple salary advance repayments on one draft payslip. The salary advance migration creates `hr_payslip_salary_advances` and backfills existing links. For an existing database that already ran the original migration, apply only its appended CREATE TABLE and INSERT statements once.
+
+Grant HR permissions in Users & Permissions: `viewHrEmployees` for employee and operations screens; `manageHrEmployees` to maintain attendance, schedules, leave, overtime and HR documents; `viewHrSalary` and `manageHrSalary` for payroll, payslips, advances and claims; `viewHrSensitive` to view/download HR documents; and `manageHrSettings` for HR master settings. Document upload requires employee-management access, and documents are encrypted with the configured HR encryption key.
