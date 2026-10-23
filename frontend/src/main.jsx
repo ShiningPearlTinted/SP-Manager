@@ -8,6 +8,7 @@ import PriceCheck from "./price-check.jsx";
 import HrModule from "./hr/hr-module.jsx";
 import {createHrRequest} from "./hr/hr-api.js";
 import BookingModule from "./booking/booking-module.jsx";
+import {bookingEmailTarget} from "./booking/booking-link.js";
 import {createBookingRequest} from "./booking/booking-api.js";
 
 const AUTH_VERSION="1.0.45";
@@ -376,7 +377,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[activeUser,setCurrentUser]=useState(()=>load("activeUser",null));
  const[dbOnline,setDbOnline]=useState(false);
  useEffect(()=>{const expired=()=>{setSignedIn(false);setDbOnline(false)};window.addEventListener("sp-api-session-expired",expired);return()=>window.removeEventListener("sp-api-session-expired",expired)},[]);
- const[page,setPage]=useState("POS / Sales");
+ const[page,setPage]=useState(()=>bookingEmailTarget()?"Booking":"POS / Sales");
  const[posMenu,setPosMenu]=useState(false);
  const[showEndOfDay,setShowEndOfDay]=useState(false);
  const openEndOfDayFromPOS=()=>{sessionStorage.setItem("sp_eod_source","pos");setShowEndOfDay(true)};
@@ -898,7 +899,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
    throw new Error("Unable to connect securely to the database. Check the API configuration and connection.");
   }
  };
- if(!signedIn)return <Login users={users} company={company} onAuthenticate={authenticate} onLogin={u=>{const {_apiToken,...user}=u||{};if(!_apiToken)throw new Error("Database sign-in token is missing.");cacheSet("activeUser",user);sessionStorage.setItem("sp_api_token",_apiToken);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(user);setSignedIn(true);setPage("POS / Sales")}}/>;
+ if(!signedIn)return <Login users={users} company={company} onAuthenticate={authenticate} onLogin={u=>{const {_apiToken,...user}=u||{};if(!_apiToken)throw new Error("Database sign-in token is missing.");cacheSet("activeUser",user);sessionStorage.setItem("sp_api_token",_apiToken);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(user);setSignedIn(true);setPage(bookingEmailTarget()?"Booking":"POS / Sales")}}/>;
  return <div data-page={page} data-ui={["HR Management","Booking","Management","Outlet Management","Price Check","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Cash In / Out","Credit payments","End of day","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"].includes(page)?"management":undefined} className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
   <aside className={mobileNavOpen?"mobile-nav is-open":"mobile-nav"}><div className="brand"><button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={()=>setMobileNavOpen(false)}>×</button>{page!=="POS / Sales"&&page!=="Dashboard"?<><div className="management-brand-mark">{(company?.loginLogo||company?.logo)?<img src={company.loginLogo||company.logo} alt="Company logo"/>:<b>SP</b>}</div><span><strong>SP-Manager</strong><small>{company?.name||"Shining Pearl Tinted"}</small></span></>:<><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></>}</div><label>MODULES</label>
    {nav.filter(n=>{if(n==="HR Management"&&(page==="POS / Sales"||page==="Dashboard"))return false;const map={"HR Management":"viewHrEmployees","Booking":"viewBookings","Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Quotation":"manageQuotation","Invoice":"manageInvoice","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Outlet Management":"manageManagement","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return n==="Management"?hasManagementAccess(activeUser):(!map[n]||isPermissionAllowed(activeUser,map[n]))}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("");setMobileNavOpen(false)}} key={n}>▸ {n}</button>)}

@@ -1,3 +1,4 @@
+import {bookingEmailTarget} from './booking-link.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {STATUSES,statusLabel,localDate,shiftDate,calendarRange,calendarDays,bookingCalendarFile} from './booking-utils.js';
 import './booking.css';
@@ -13,9 +14,9 @@ function downloadCalendar(row){const url=URL.createObjectURL(new Blob([bookingCa
 export default function BookingModule({activeUser,initialOutlet,request}){
  // Booking outlet selection is local. It never writes POS outlet/session state.
  const requestRef=useRef(request);requestRef.current=request;
- const [outlet,setOutlet]=useState(String(initialOutlet)),[tab,setTab]=useState('Bookings'),[config,setConfig]=useState(null);
- const [rows,setRows]=useState([]),[events,setEvents]=useState([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[query,setQuery]=useState(''),[status,setStatus]=useState('');
- const [date,setDate]=useState(localDate()),[view,setView]=useState('month'),[refresh,setRefresh]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[dialog,setDialog]=useState(null);
+ const [outlet,setOutlet]=useState(()=>bookingEmailTarget()?.outlet||String(initialOutlet)),[tab,setTab]=useState('Bookings'),[config,setConfig]=useState(null);
+ const [rows,setRows]=useState([]),[events,setEvents]=useState([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[query,setQuery]=useState(()=>bookingEmailTarget()?.reference||''),[status,setStatus]=useState('');
+ const [date,setDate]=useState(()=>bookingEmailTarget()?.date||localDate()),[view,setView]=useState('month'),[refresh,setRefresh]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[dialog,setDialog]=useState(null);
  const generation=useRef(0);const range=useMemo(()=>calendarRange(date,view),[date,view]);
  const manage=can(activeUser,'manageBookings'),settings=can(activeUser,'manageBookingSettings');
  const api=(action,payload={},write=false)=>requestRef.current(action,{...payload,outlet_id:outlet},write);

@@ -235,6 +235,13 @@ function spInstallCorsAndGuard(): void {
     $action = strtolower(trim((string)($_GET['action'] ?? $_POST['action'] ?? '')));
     if (spIsPublicHealth($file, $action)) return;
 
+    // Website Booking has a dedicated signed server-to-server boundary only.
+    if ($file === 'booking-bridge.php') {
+        require_once __DIR__.'/booking-bridge-auth.php';
+        spBookingBridgeGuard();
+        return;
+    }
+
     // The customer-facing display is a read-only capability URL. Its HMAC key is
     // issued only when an authenticated manager saves the terminal pairing.
     if ($file === 'customer-display.php' && $action === 'state' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
