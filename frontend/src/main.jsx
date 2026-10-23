@@ -909,7 +909,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
     <span>{notice}</span>{settings.general.showClose!==false&&<button onClick={e=>{e.stopPropagation();setNotice("")}}>×</button>}
    </div>}
    {page==="HR Management"&&isPermissionAllowed(activeUser,"viewHrEmployees")&&<HrModule activeUser={activeUser} initialOutlet={activeOutletId()} request={createHrRequest({base:centralApiBase(),headers:apiHeaders})}/>}
-   {page==="Booking"&&isPermissionAllowed(activeUser,"viewBookings")&&<BookingModule activeUser={activeUser} initialOutlet={activeOutletId()} request={createBookingRequest({base:centralApiBase(),headers:apiHeaders})}/>}
+   {page==="Booking"&&isPermissionAllowed(activeUser,"viewBookings")&&<BookingModule companyLogo={company?.loginLogo||company?.logo||""} activeUser={activeUser} initialOutlet={activeOutletId()} request={createBookingRequest({base:centralApiBase(),headers:apiHeaders})}/>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="Management"&&hasManagementAccess(activeUser)&&<Management activeUser={activeUser} setPage={setPage}/>}
    {page==="Outlet Management"&&hasManagementAccess(activeUser)&&<OutletManagement onBack={()=>setPage("Management")}/> }

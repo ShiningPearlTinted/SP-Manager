@@ -88,3 +88,38 @@ function bookingSave(PDO $pdo,int $outlet,array $b):array{
  else{$ref='SPB-'.bookingNow()->format('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));$q=$pdo->prepare('INSERT INTO sp_bookings(outlet_id,reference,service_id,service_name,service_category,description,price,starts_at,ends_at,status,customer_name,phone,email,car_model,plate,notes,created_by,updated_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');$q->execute([$outlet,$ref,$service['id'],$snapshot['service_name'],$snapshot['service_category'],$snapshot['description'],$snapshot['price'],$start->format('Y-m-d H:i:s'),$end->format('Y-m-d H:i:s'),$status,$name,$phone,$email,$car,$plate,$notes,$user,$user,$stamp,$stamp]);$id=(int)$pdo->lastInsertId();}
  $row=bookingRead($pdo,$outlet,$id);bookingEvent($pdo,$outlet,$id,$old?($changed?'rescheduled':'updated'):'created',($old?'Updated':'Created').' '.$row['reference'].' · '.$status.' · '.$start->format('d M Y H:i'));spAudit($pdo,$old?'booking.update':'booking.create','booking',$id,$old,$row);return $row;
 }
+
+
+function bookingEmailDefaults():array{
+ return ['customer'=>['subject'=>'{{event_title}} | {{booking_reference}}','body'=>'{{default_content}}'],'shop'=>['subject'=>'{{event_title}} — {{branch_name}} | {{booking_reference}}','body'=>'{{default_content}}'],'attach_calendar'=>false];
+}
+function bookingEmailClean(string $html):string{
+ if(strlen($html)>50000)throw new BookingError('Email template must be under 50,000 bytes.');
+ if(!class_exists('DOMDocument'))throw new BookingError('PHP DOM extension is required for email templates.',503);
+ $doc=new DOMDocument();$previous=libxml_use_internal_errors(true);$doc->loadHTML('<?xml encoding="utf-8" ?><div id="email-root">'.$html.'</div>',LIBXML_HTML_NOIMPLIED|LIBXML_HTML_NODEFDTD|LIBXML_NONET);libxml_clear_errors();libxml_use_internal_errors($previous);
+ $allowed=['div','span','p','br','strong','b','em','i','u','h1','h2','h3','h4','ul','ol','li','a','table','tbody','thead','tr','td','th','hr'];
+ $nodes=[];foreach($doc->getElementsByTagName('*') as $node)$nodes[]=$node;
+ foreach(array_reverse($nodes) as $node){if(!in_array(strtolower($node->tagName),$allowed,true)){$node->parentNode?->removeChild($node);continue;}
+  $attrs=[];foreach($node->attributes as $a)$attrs[]=$a->name;
+  foreach($attrs as $name){$v=$node->getAttribute($name);$keep=false;
+   if($name==='href'&&strtolower($node->tagName)==='a')$keep=(bool)preg_match('~^(https://|mailto:|tel:|\{\{manage_booking_url(?:_customer|_shop)?\}\}$)~i',$v);
+   elseif(in_array($name,['width','height','cellpadding','cellspacing','border','colspan'],true))$keep=(bool)preg_match('/^[0-9]{1,4}%?$/D',$v);
+   elseif($name==='style'){
+    $safe=[];foreach(explode(';',$v) as $rule){$pair=explode(':',$rule,2);if(count($pair)!==2)continue;[$property,$value]=array_map('trim',$pair);$property=strtolower($property);
+     if(in_array($property,['color','background-color','font-size','font-weight','font-family','line-height','text-align','text-decoration','padding','padding-top','padding-bottom','padding-left','padding-right','margin','margin-top','margin-bottom','border','border-top','border-bottom','border-radius','width','max-width','display'],true)&&preg_match('/^[a-zA-Z0-9#.,% ()\-]+$/D',$value)&&!preg_match('/url|expression|javascript|behavior|import/i',$value))$safe[]=$property.':'.$value;
+    }$node->setAttribute('style',implode(';',$safe));$keep=true;
+   }if(!$keep)$node->removeAttribute($name);
+  }
+ }
+ $root=$doc->getElementsByTagName('div')->item(0);if(!$root)return ''; $out='';foreach($root->childNodes as $child)$out.=$doc->saveHTML($child);return $out;
+}
+function bookingEmailValidate(array $v):array{
+ $d=bookingEmailDefaults();foreach(['customer','shop'] as $audience){$a=$v[$audience]??null;if(!is_array($a))throw new BookingError('Both email templates are required.');$d[$audience]['subject']=bookingText($a['subject']??null,'Email subject',200,true);if(preg_match('/[\r\n]/',$d[$audience]['subject']))throw new BookingError('Invalid email subject.');$d[$audience]['body']=bookingEmailClean(bookingText($a['body']??null,'Email content',50000,true));}
+ $d['attach_calendar']=bookingBool($v['attach_calendar']??false);return $d;
+}
+function bookingEmailConfig(PDO $pdo,int $outlet):array{
+ $record=bookingSettings($pdo,$outlet);$saved=$record['values']['email_templates']??[];$templates=array_replace_recursive(bookingEmailDefaults(),is_array($saved)?$saved:[]);$logo='';
+ if(spTableExists($pdo,'sp_app_state')){$q=$pdo->prepare("SELECT state_json FROM sp_app_state WHERE outlet_id=? AND state_key='company'");$q->execute([$outlet]);$company=json_decode((string)$q->fetchColumn(),true);if(is_array($company))$logo=(string)($company['loginLogo']??'')?: (string)($company['logo']??'');}
+ if(!preg_match('~^data:image/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+$~D',$logo)&&!preg_match('~^https://[^\s<>"\x27]+$~D',$logo))$logo='';
+ return ['templates'=>$templates,'version'=>$record['version'],'logo'=>$logo];
+}

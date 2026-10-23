@@ -7,13 +7,14 @@ header('Cache-Control: no-store');
 $pdo=null;
 try{
  $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$action=strtolower(trim((string)($_GET['action']??'')));
- $read=['config','list','slots','events'];$write=['save','status','save-service','save-settings'];
+ $read=['config','list','slots','events','email-settings'];$write=['save','status','save-service','save-settings','save-email-settings'];
  if(!in_array($action,[...$read,...$write],true))throw new BookingError('Unknown booking action.',404);
  if(($method==='GET'&&!in_array($action,$read,true))||($method==='POST'&&!in_array($action,$write,true))||!in_array($method,['GET','POST'],true))throw new BookingError('Method not allowed.',405);
- $permission=in_array($action,['save-service','save-settings'],true)?'manageBookingSettings':($method==='POST'?'manageBookings':'viewBookings');bookingRequire($permission);
+ $permission=in_array($action,['save-service','save-settings','email-settings','save-email-settings'],true)?'manageBookingSettings':($method==='POST'?'manageBookings':'viewBookings');bookingRequire($permission);
  $pdo=spApiDatabase();$outlet=(int)($_SERVER['SP_AUTH_OUTLET_ID']??0);if($outlet<=0)throw new BookingError('An assigned outlet is required.',403);
  foreach(['sp_bookings','sp_booking_services','sp_booking_settings','sp_booking_events'] as $table)if(!spTableExists($pdo,$table))throw new BookingError('Booking migration is required. Apply database/migrations/booking-v1.sql before using this module.',503);
  if($method==='GET'){
+  if($action==='email-settings')spApiRespond(['ok'=>true,...bookingEmailConfig($pdo,$outlet)],200);
   if($action==='config'){
    $q=$pdo->prepare('SELECT * FROM sp_booking_services WHERE outlet_id=? ORDER BY active DESC,category,name');$q->execute([$outlet]);$services=$q->fetchAll();
    $q=$pdo->prepare('SELECT DISTINCT o.id,o.outlet_code,o.outlet_name FROM outlets o LEFT JOIN user_outlets uo ON uo.outlet_id=o.id AND uo.user_id=? AND uo.active=1 WHERE o.active=1 AND (uo.user_id IS NOT NULL OR o.id=?) ORDER BY o.outlet_name');$q->execute([(int)$_SERVER['SP_AUTH_USER_ID'],(int)($GLOBALS['spActor']['outlet_id']??0)]);$outlets=$q->fetchAll();
@@ -55,8 +56,14 @@ try{
   else{$q=$pdo->prepare('INSERT INTO sp_booking_services(outlet_id,name,category,description,duration_minutes,price,active,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)');$q->execute([$outlet,$name,$category,$description,$duration,$price,$active,$stamp,$stamp]);$id=(int)$pdo->lastInsertId();}
   $saved=bookingService($pdo,$outlet,$id);spAudit($pdo,'booking.service','booking_service',$id,$old,$saved);$response=['ok'=>true,'service'=>$saved];
  }
+ elseif($action==='save-email-settings'){
+  $old=bookingSettings($pdo,$outlet);if((int)($body['version']??-1)!==$old['version'])throw new BookingError('Settings changed. Reload before saving.',409);$values=$old['values'];$values['email_templates']=bookingEmailValidate((array)($body['templates']??[]));$json=json_encode($values,JSON_THROW_ON_ERROR);$stamp=bookingNow()->format('Y-m-d H:i:s');
+  if($old['version']===0)$pdo->prepare('INSERT INTO sp_booking_settings(outlet_id,settings_json,updated_at) VALUES(?,?,?)')->execute([$outlet,$json,$stamp]);
+  else $pdo->prepare('UPDATE sp_booking_settings SET settings_json=?,version=version+1,updated_at=? WHERE outlet_id=?')->execute([$json,$stamp,$outlet]);
+  spAudit($pdo,'booking.email_settings','booking_settings',$outlet,null,['updated'=>true]);$response=['ok'=>true,...bookingEmailConfig($pdo,$outlet)];
+ }
  elseif($action==='save-settings'){
-  $old=bookingSettings($pdo,$outlet);if((int)($body['version']??-1)!==$old['version'])throw new BookingError('Schedule changed. Refresh before saving.',409);$settings=bookingValidateSettings((array)($body['settings']??[]));$json=json_encode($settings,JSON_THROW_ON_ERROR);$stamp=bookingNow()->format('Y-m-d H:i:s');
+  $old=bookingSettings($pdo,$outlet);if((int)($body['version']??-1)!==$old['version'])throw new BookingError('Schedule changed. Refresh before saving.',409);$settings=array_replace($old['values'],bookingValidateSettings((array)($body['settings']??[])));$json=json_encode($settings,JSON_THROW_ON_ERROR);$stamp=bookingNow()->format('Y-m-d H:i:s');
   if($old['version']===0)$pdo->prepare('INSERT INTO sp_booking_settings(outlet_id,settings_json,updated_at) VALUES(?,?,?)')->execute([$outlet,$json,$stamp]);
   else{$q=$pdo->prepare('UPDATE sp_booking_settings SET settings_json=?,version=version+1,updated_at=? WHERE outlet_id=? AND version=?');$q->execute([$json,$stamp,$outlet,$old['version']]);if($q->rowCount()!==1)throw new BookingError('Schedule changed. Refresh before saving.',409);}
   spAudit($pdo,'booking.settings','booking_settings',$outlet,$old['values'],$settings);$response=['ok'=>true,'settings'=>bookingSettings($pdo,$outlet)];

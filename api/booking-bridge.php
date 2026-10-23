@@ -7,9 +7,10 @@ header('Cache-Control: no-store');
 $pdo=null;$locks=[];$response=[];$code=200;
 try{
  $proof=$GLOBALS['spBookingBridge']??null;if(!is_array($proof))throw new BookingError('Bridge authentication required.',401);
- $body=$proof['body'];$site=$proof['site_hash'];$action=bookingText($body['action']??null,'Action',24,true);if(!in_array($action,['ping','sync','slots','create','import','statuses'],true))throw new BookingError('Unsupported website bridge action.',404);
+ $body=$proof['body'];$site=$proof['site_hash'];$action=bookingText($body['action']??null,'Action',24,true);if(!in_array($action,['ping','sync','slots','create','import','statuses','email-settings'],true))throw new BookingError('Unsupported website bridge action.',404);
  $pdo=spApiDatabase();foreach(['sp_bookings','sp_booking_services','sp_booking_settings','sp_booking_events','sp_booking_website_services','sp_booking_bridge_calls'] as $table)if(!spTableExists($pdo,$table))throw new BookingError('Apply booking-v1.sql and booking-website-bridge.sql before connecting the website.',503);
  if($action==='ping'){$rows=$pdo->query('SELECT id,outlet_code,outlet_name FROM outlets WHERE active=1 ORDER BY outlet_name')->fetchAll();$response=['ok'=>true,'protocol'=>1,'outlets'=>$rows];}
+ elseif($action==='email-settings'){$outlet=bookingBridgeOutlet($pdo,$body['outlet_id']??null);$response=['ok'=>true,...bookingEmailConfig($pdo,$outlet)];}
  elseif($action==='slots'){$outlet=bookingBridgeOutlet($pdo,$body['outlet_id']??null);$service=bookingBridgeMappedService($pdo,$site,$outlet,$body['package_id']??null);$response=['ok'=>true,'slots'=>bookingSlots($pdo,$outlet,$service,bookingDate($body['date']??null)->format('Y-m-d'))];}
  elseif($action==='statuses'){
   $ids=$body['ids']??[];if(!is_array($ids)||count($ids)>100)throw new BookingError('Invalid website booking batch.');$ids=array_values(array_unique(array_map(fn($id)=>bookingId($id),$ids)));
