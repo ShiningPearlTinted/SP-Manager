@@ -396,3 +396,13 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-top-actions > button::before {content:"";width:16px;height:16px;background:currentColor;mask:var(--mg-action-save) center/contain no-repeat;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) {--mg-action-save:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 3h12l4 4v14H3V3zM7 3v6h10V3M7 21v-8h10v8'/%3E%3C/svg%3E");}
 @media(max-width:700px){.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions){grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important;}}
+
+/* Keep Booking status pills inside their own header on phones. */
+@media(max-width:720px){
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header.spmb-app-header{height:auto!important;min-height:0!important;position:relative!important;top:auto!important;display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:10px!important;padding:12px 16px!important;z-index:30!important;box-sizing:border-box!important}
+ .app[data-ui="management"] > main > header.spmb-app-header > div:first-of-type{flex:1!important;min-width:0!important}
+ .app[data-ui="management"] > main > header.spmb-app-header .head-actions{position:static!important;display:flex!important;flex:1 0 100%!important;width:100%!important;max-width:100%!important;flex-wrap:wrap!important;gap:5px!important;justify-content:flex-start!important;margin:0!important;transform:none!important}
+ .app[data-ui="management"] > main > header.spmb-app-header .header-status-pill{font-size:10px!important;padding:5px 7px!important;min-height:26px!important;box-sizing:border-box!important;white-space:nowrap!important;line-height:1.3!important}
+ .app[data-ui="management"] > main > header.spmb-app-header .mobile-nav-open{min-width:40px!important;width:40px!important;height:40px!important;margin:0!important}
+ .app:has(header.spmb-app-header) .spmb-heading h1,.app:has(header.spmb-app-header) .spmb-heading .spmb-eyebrow{display:none}
+}

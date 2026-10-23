@@ -66,7 +66,7 @@ function bookingEvent(PDO $pdo,int $outlet,int $id,string $type,string $message)
  $q=$pdo->prepare('INSERT INTO sp_booking_events(outlet_id,booking_id,actor_id,event_type,message,created_at) VALUES(?,?,?,?,?,?)');$q->execute([$outlet,$id,(int)($_SERVER['SP_AUTH_USER_ID']??0)?:null,$type,$message,bookingNow()->format('Y-m-d H:i:s')]);
 }
 function bookingSave(PDO $pdo,int $outlet,array $b):array{
- $id=empty($b['id'])?0:bookingId($b['id']);$old=$id?bookingRead($pdo,$outlet,$id):null;
+ $id=empty($b['id'])?0:bookingId($b['id']);$old=$id?bookingRead($pdo,$outlet,$id):null;if($old&&$old['status']==='deleted')throw new BookingError('Restore this deleted booking before editing it.',409);
  if($old&&(int)($b['version']??-1)!==(int)$old['version'])throw new BookingError('This appointment changed. Refresh before saving.',409);
  $service=bookingService($pdo,$outlet,bookingId($b['service_id']??null,'Service'));if(!(int)$service['active']&&(!$old||(int)$old['service_id']!==(int)$service['id']))throw new BookingError('Choose an active service.');
  $date=bookingDate($b['date']??null);$time=bookingText($b['time']??null,'Time',5,true);if(!preg_match('/^(?:[01][0-9]|2[0-3]):(?:00|30)$/D',$time))throw new BookingError('Choose a time on a 30-minute boundary.');
@@ -124,4 +124,13 @@ function bookingEmailConfig(PDO $pdo,int $outlet):array{
  if($logo===''&&spTableExists($pdo,'sp_app_state')){$q=$pdo->prepare("SELECT state_json FROM sp_app_state WHERE outlet_id=? AND state_key='company'");$q->execute([$outlet]);$company=json_decode((string)$q->fetchColumn(),true);if(is_array($company))$logo=(string)($company['loginLogo']??'')?: (string)($company['logo']??'');}
  if(!preg_match('~^data:image/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+$~D',$logo)&&!preg_match('~^https://[^\s<>"\x27]+$~D',$logo))$logo='';
  return ['templates'=>$templates,'version'=>$record['version'],'logo'=>$logo];
+}
+
+function bookingTrash(PDO $pdo,int $outlet,array $body,bool $restore=false):array{
+ $old=bookingRead($pdo,$outlet,bookingId($body['id']??null));if((int)($body['version']??-1)!==(int)$old['version'])throw new BookingError('This booking changed. Refresh before continuing.',409);
+ if($restore&&$old['status']!=='deleted')throw new BookingError('This booking is not deleted.',409);
+ if(!$restore&&$old['status']==='deleted')throw new BookingError('This booking is already deleted.',409);
+ $status=$restore?'cancelled':'deleted';$q=$pdo->prepare('UPDATE sp_bookings SET status=?,version=version+1,updated_by=?,updated_at=? WHERE id=? AND outlet_id=? AND version=?');$q->execute([$status,(int)($_SERVER['SP_AUTH_USER_ID']??0)?:null,bookingNow()->format('Y-m-d H:i:s'),$old['id'],$outlet,$old['version']]);if($q->rowCount()!==1)throw new BookingError('This booking changed. Refresh before continuing.',409);
+ bookingEvent($pdo,$outlet,(int)$old['id'],$restore?'restored':'deleted',$restore?'Restored as cancelled; confirm the booking to reserve capacity again.':'Moved to Deleted bookings. Previous status: '.$old['status']);
+ $row=bookingRead($pdo,$outlet,(int)$old['id']);spAudit($pdo,$restore?'booking.restore':'booking.delete','booking',(int)$old['id'],$old,$row);return $row;
 }

@@ -7,7 +7,7 @@ header('Cache-Control: no-store');
 $pdo=null;
 try{
  $method=strtoupper($_SERVER['REQUEST_METHOD']??'GET');$action=strtolower(trim((string)($_GET['action']??'')));
- $read=['config','list','slots','events','email-settings'];$write=['save','status','save-service','save-settings','save-email-settings'];
+ $read=['config','list','slots','events','email-settings'];$write=['save','status','save-service','save-settings','save-email-settings','delete','restore'];
  if(!in_array($action,[...$read,...$write],true))throw new BookingError('Unknown booking action.',404);
  if(($method==='GET'&&!in_array($action,$read,true))||($method==='POST'&&!in_array($action,$write,true))||!in_array($method,['GET','POST'],true))throw new BookingError('Method not allowed.',405);
  $permission=in_array($action,['save-service','save-settings','email-settings','save-email-settings'],true)?'manageBookingSettings':($method==='POST'?'manageBookings':'viewBookings');bookingRequire($permission);
@@ -29,9 +29,9 @@ try{
   }
   if($action==='list'){
    $from=bookingDate($_GET['from']??bookingNow()->format('Y-m-01'));$to=bookingDate($_GET['to']??bookingNow()->format('Y-m-t'));if($to<$from||$to>$from->modify('+62 days'))throw new BookingError('Choose a date range of at most 63 days.');
-   $where='outlet_id=? AND starts_at>=? AND starts_at<?';$params=[$outlet,$from->format('Y-m-d H:i:s'),$to->modify('+1 day')->format('Y-m-d H:i:s')];
+   $where='outlet_id=? AND starts_at>=? AND starts_at<?'.(($_GET['status']??'')==='deleted'?'':" AND status<>'deleted'");$params=[$outlet,$from->format('Y-m-d H:i:s'),$to->modify('+1 day')->format('Y-m-d H:i:s')];
    $search=bookingText($_GET['q']??'','Search',150);if($search!==''){$where.=' AND (customer_name LIKE ? OR phone LIKE ? OR plate LIKE ? OR reference LIKE ?)';$like='%'.strtr($search,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';$where=str_replace(' LIKE ?',' LIKE ? ESCAPE \'!\'',$where);$params=[...$params,$like,$like,$like,$like];}
-   $status=bookingText($_GET['status']??'','Status',24);if($status!==''){if(!in_array($status,bookingStatuses(),true))throw new BookingError('Invalid status.');$where.=' AND status=?';$params[]=$status;}
+   $status=bookingText($_GET['status']??'','Status',24);if($status!==''){if(!in_array($status,[...bookingStatuses(),'deleted'],true))throw new BookingError('Invalid status.');$where.=' AND status=?';$params[]=$status;}
    $q=$pdo->prepare('SELECT COUNT(*) FROM sp_bookings WHERE '.$where);$q->execute($params);$total=(int)$q->fetchColumn();
    $page=max(1,min(10000,(int)($_GET['page']??1)));$limit=max(1,min(500,(int)($_GET['limit']??50)));$q=$pdo->prepare('SELECT * FROM sp_bookings WHERE '.$where.' ORDER BY starts_at,id LIMIT '.$limit.' OFFSET '.(($page-1)*$limit));$q->execute($params);
    spApiRespond(['ok'=>true,'bookings'=>$q->fetchAll(),'total'=>$total,'page'=>$page,'limit'=>$limit],200);
@@ -40,8 +40,9 @@ try{
  $body=spReadRequestBody();$pdo->beginTransaction();spLockOutlet($pdo,$outlet);
  $key=spRequestKey($body,'booking:'.$action);$replay=spRequestReplay($pdo,$key,$body);if($replay!==null){$pdo->commit();spApiRespond($replay,200);}
  if($action==='save')$response=['ok'=>true,'booking'=>bookingSave($pdo,$outlet,$body)];
+ elseif(in_array($action,['delete','restore'],true))$response=['ok'=>true,'booking'=>bookingTrash($pdo,$outlet,$body,$action==='restore')];
  elseif($action==='status'){
-  $old=bookingRead($pdo,$outlet,bookingId($body['id']??null));if((int)($body['version']??-1)!==(int)$old['version'])throw new BookingError('This appointment changed. Refresh before updating.',409);
+  $old=bookingRead($pdo,$outlet,bookingId($body['id']??null));if($old['status']==='deleted')throw new BookingError('Restore this deleted booking first.',409);if((int)($body['version']??-1)!==(int)$old['version'])throw new BookingError('This appointment changed. Refresh before updating.',409);
   $status=bookingText($body['status']??null,'Status',24,true);if(!in_array($status,bookingStatuses(),true))throw new BookingError('Invalid status.');
   if($status!==$old['status']){
    if(bookingConsumesCapacity($status)){$start=new DateTimeImmutable($old['starts_at'],new DateTimeZone('Asia/Kuala_Lumpur'));$end=new DateTimeImmutable($old['ends_at'],new DateTimeZone('Asia/Kuala_Lumpur'));$s=bookingSettings($pdo,$outlet)['values'];if(!bookingConsumesCapacity($old['status'])&&$start<bookingNow())throw new BookingError('A past cancelled/completed appointment cannot be reactivated.');if(bookingPeak(bookingOverlaps($pdo,$outlet,$start,$end,(int)$old['id']),$start,$end)>(int)$s['capacity'])throw new BookingError('This time is full.',409);}
