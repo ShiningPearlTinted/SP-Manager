@@ -7,6 +7,8 @@ import"./management-ui.css";
 import PriceCheck from "./price-check.jsx";
 import HrModule from "./hr/hr-module.jsx";
 import {createHrRequest} from "./hr/hr-api.js";
+import BookingModule from "./booking/booking-module.jsx";
+import {createBookingRequest} from "./booking/booking-api.js";
 
 const AUTH_VERSION="1.0.45";
 const stateRevisions=new Map();
@@ -47,6 +49,8 @@ const PERMISSION_KEYS=["viewSalesHistory","viewOpenSales","cashInOut","creditPay
 const PERMISSION_LABELS={viewSalesHistory:"View sales history",viewOpenSales:"View open sales",cashInOut:"Cash In / Out",creditPayments:"Credit payments",endOfDay:"End of day",userInfo:"User info",manageUsers:"Users & Permissions",manageProducts:"Products",manageInventory:"Inventory",manageCustomers:"Customers",managePurchases:"Purchases",manageQuotation:"Quotation",manageInvoice:"Invoice",managePayments:"Payments",manageSettings:"Settings",manageReports:"Reports",manageTax:"Tax",manageDiscount:"Discount / Promotion",manageLoyalty:"Loyalty",manageManagement:"Management"};
 PERMISSION_KEYS.push("viewHrEmployees","manageHrEmployees","transferHrEmployees","viewHrSalary","manageHrSalary","manageHrSettings","viewHrSensitive");
 Object.assign(PERMISSION_LABELS,{"viewHrEmployees":"HR Employees","manageHrEmployees":"HR Employee Management","transferHrEmployees":"HR Outlet Transfers","viewHrSalary":"HR Salary Access","manageHrSalary":"HR Salary Revisions","manageHrSettings":"HR Settings","viewHrSensitive":"HR IC / Passport Access"});
+PERMISSION_KEYS.push("viewBookings","manageBookings","manageBookingSettings");
+Object.assign(PERMISSION_LABELS,{viewBookings:"View Booking",manageBookings:"Manage Booking",manageBookingSettings:"Booking Services & Schedule"});
 const ALL_PERMISSIONS=Object.fromEntries(PERMISSION_KEYS.map(k=>[k,true]));
 const CASHIER_PERMISSIONS={viewSalesHistory:false,viewOpenSales:false,cashInOut:true,creditPayments:false,endOfDay:true,userInfo:false,manageUsers:false,manageProducts:false,manageInventory:false,manageCustomers:true,managePurchases:false,manageQuotation:false,manageInvoice:false,managePayments:true,manageSettings:false,manageReports:false,manageTax:false,manageDiscount:true,manageLoyalty:false,manageManagement:false};
 
@@ -65,7 +69,7 @@ const defaultSettings={
 };
 const deepMerge=(base,override)=>{if(!override||typeof override!=="object")return base;const out={...base};Object.keys(override).forEach(k=>{if(override[k]&&typeof override[k]==="object"&&!Array.isArray(override[k]))out[k]=deepMerge(base[k]||{},override[k]);else out[k]=override[k]});return out};
 
-const nav=["HR Management","Dashboard","POS / Sales","Price Check","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Management","Outlet Management","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"];
+const nav=["HR Management","Booking","Dashboard","POS / Sales","Price Check","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Management","Outlet Management","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"];
 const money=n=>"RM "+Number(n||0).toFixed(2);
 
 const escapeHtml=value=>String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -895,15 +899,16 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
   }
  };
  if(!signedIn)return <Login users={users} company={company} onAuthenticate={authenticate} onLogin={u=>{const {_apiToken,...user}=u||{};if(!_apiToken)throw new Error("Database sign-in token is missing.");cacheSet("activeUser",user);sessionStorage.setItem("sp_api_token",_apiToken);sessionStorage.setItem("sp_auth","1");sessionStorage.setItem("sp_auth_version",AUTH_VERSION);setCurrentUser(user);setSignedIn(true);setPage("POS / Sales")}}/>;
- return <div data-page={page} data-ui={["HR Management","Management","Outlet Management","Price Check","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Cash In / Out","Credit payments","End of day","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"].includes(page)?"management":undefined} className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
+ return <div data-page={page} data-ui={["HR Management","Booking","Management","Outlet Management","Price Check","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Cash In / Out","Credit payments","End of day","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"].includes(page)?"management":undefined} className={"app app-theme-"+String(settings.general.colorScheme||"Light").toLowerCase().replace(/\s+/g,"-")} dir={settings.general.direction||"ltr"} style={{zoom:Number(settings.general.zoom||100)/100}}>
   <aside className={mobileNavOpen?"mobile-nav is-open":"mobile-nav"}><div className="brand"><button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={()=>setMobileNavOpen(false)}>×</button>{page!=="POS / Sales"&&page!=="Dashboard"?<><div className="management-brand-mark">{(company?.loginLogo||company?.logo)?<img src={company.loginLogo||company.logo} alt="Company logo"/>:<b>SP</b>}</div><span><strong>SP-Manager</strong><small>{company?.name||"Shining Pearl Tinted"}</small></span></>:<><b>SP</b><span><strong>SP-Manager</strong><small>Shining Pearl Tinted</small></span></>}</div><label>MODULES</label>
-   {nav.filter(n=>{if(n==="HR Management"&&(page==="POS / Sales"||page==="Dashboard"))return false;const map={"HR Management":"viewHrEmployees","Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Quotation":"manageQuotation","Invoice":"manageInvoice","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Outlet Management":"manageManagement","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return n==="Management"?hasManagementAccess(activeUser):(!map[n]||isPermissionAllowed(activeUser,map[n]))}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("");setMobileNavOpen(false)}} key={n}>▸ {n}</button>)}
+   {nav.filter(n=>{if(n==="HR Management"&&(page==="POS / Sales"||page==="Dashboard"))return false;const map={"HR Management":"viewHrEmployees","Booking":"viewBookings","Products":"manageProducts","Inventory":"manageInventory","Customers":"manageCustomers","Purchases":"managePurchases","Quotation":"manageQuotation","Invoice":"manageInvoice","Payments":"managePayments","Payment Types":"managePayments","Refund / Void":"managePayments","Discount / Promotion":"manageDiscount","Tax":"manageTax","Loyalty":"manageLoyalty","Users & Permissions":"manageUsers","Outlet Management":"manageManagement","Reports":"manageReports","X / Z Report":"endOfDay","Named Order / Takeaway":"viewOpenSales","My company":"manageSettings","Settings":"manageSettings"};return n==="Management"?hasManagementAccess(activeUser):(!map[n]||isPermissionAllowed(activeUser,map[n]))}).map(n=><button className={page===n?"active":""} onClick={()=>{setPage(n);setQ("");setMobileNavOpen(false)}} key={n}>▸ {n}</button>)}
   </aside>
   <main><header><button type="button" className="mobile-nav-open" aria-label="Open menu" onClick={()=>setMobileNavOpen(true)}>☰</button><div><small>SHINING PEARL TINTED</small><h1>{page}</h1></div><div className="head-actions"><span className={"header-status-pill header-status-business "+(businessDay.open?"is-open":"is-closed")}><i/> {businessDay.open?"Business Day Open":"Closed"}</span><span className={"header-status-pill header-status-online "+(dbOnline?"is-open":"is-closed")}><i/> {dbOnline?"Database Connected":"Database Offline"}</span><span className="header-status-pill"><i/> Outlet: {String(activeUser?.outlets?.find(o=>Number(o.id)===Number(activeUser?.default_outlet_id))?.outlet_code||activeUser?.outlet_code||"SP01")}</span></div></header>
    {notice&&<div className={"notice notice-"+String(settings.general.notificationPosition||settings.general.messagePosition||"Top").toLowerCase()+(settings.general.slideIn?" notice-slide-in":"")} onClick={()=>settings.general.clickToClose&&setNotice("")}>
     <span>{notice}</span>{settings.general.showClose!==false&&<button onClick={e=>{e.stopPropagation();setNotice("")}}>×</button>}
    </div>}
    {page==="HR Management"&&isPermissionAllowed(activeUser,"viewHrEmployees")&&<HrModule activeUser={activeUser} initialOutlet={activeOutletId()} request={createHrRequest({base:centralApiBase(),headers:apiHeaders})}/>}
+   {page==="Booking"&&isPermissionAllowed(activeUser,"viewBookings")&&<BookingModule activeUser={activeUser} initialOutlet={activeOutletId()} request={createBookingRequest({base:centralApiBase(),headers:apiHeaders})}/>}
    {page==="Dashboard"&&<Dashboard sales={activeSales} total={today} products={products} customers={customers} lowStock={lowStock} setPage={setPage} businessDay={businessDay} toggleBusiness={toggleBusiness}/>}
    {page==="Management"&&hasManagementAccess(activeUser)&&<Management activeUser={activeUser} setPage={setPage}/>}
    {page==="Outlet Management"&&hasManagementAccess(activeUser)&&<OutletManagement onBack={()=>setPage("Management")}/> }
@@ -1310,6 +1315,7 @@ function Management({activeUser,setPage}){
  if(view==="outlets")return <OutletManagement onBack={()=>setView("home")}/>;
  const items=[
   ["♙","HR Management","HR Management","viewHrEmployees"],
+  ["▦","Booking","Booking","viewBookings"],
   ["▣","View sales history","Payments","viewSalesHistory"],
   ["▱","View open sales","Named Order / Takeaway","viewOpenSales"],
   ["↕","Cash In / Out","Cash In / Out","cashInOut"],
