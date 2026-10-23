@@ -91,7 +91,7 @@ function bookingSave(PDO $pdo,int $outlet,array $b):array{
 
 
 function bookingEmailDefaults():array{
- return ['customer'=>['subject'=>'{{event_title}} | {{booking_reference}}','body'=>'{{default_content}}'],'shop'=>['subject'=>'{{event_title}} — {{branch_name}} | {{booking_reference}}','body'=>'{{default_content}}'],'attach_calendar'=>false];
+ return ['customer'=>['subject'=>'{{event_title}} | {{booking_reference}}','body'=>'{{default_content}}'],'shop'=>['subject'=>'{{event_title}} — {{branch_name}} | {{booking_reference}}','body'=>'{{default_content}}'],'attach_calendar'=>false,'manager_url'=>'https://shiningpearltinted.github.io/SP-Manager/'];
 }
 function bookingEmailClean(string $html):string{
  if(strlen($html)>50000)throw new BookingError('Email template must be under 50,000 bytes.');
@@ -115,11 +115,13 @@ function bookingEmailClean(string $html):string{
 }
 function bookingEmailValidate(array $v):array{
  $d=bookingEmailDefaults();foreach(['customer','shop'] as $audience){$a=$v[$audience]??null;if(!is_array($a))throw new BookingError('Both email templates are required.');$d[$audience]['subject']=bookingText($a['subject']??null,'Email subject',200,true);if(preg_match('/[\r\n]/',$d[$audience]['subject']))throw new BookingError('Invalid email subject.');$d[$audience]['body']=bookingEmailClean(bookingText($a['body']??null,'Email content',50000,true));}
+ $url=bookingText($v['manager_url']??$d['manager_url'],'Web app URL',500,true);$parts=parse_url($url);if(!filter_var($url,FILTER_VALIDATE_URL)||strtolower($parts['scheme']??'')!=='https'||isset($parts['user'])||isset($parts['pass'])||isset($parts['query'])||isset($parts['fragment']))throw new BookingError('Enter the HTTPS web app address without a query or #fragment.');$d['manager_url']=rtrim($url,'/').'/';
  $d['attach_calendar']=bookingBool($v['attach_calendar']??false);return $d;
 }
 function bookingEmailConfig(PDO $pdo,int $outlet):array{
  $record=bookingSettings($pdo,$outlet);$saved=$record['values']['email_templates']??[];$templates=array_replace_recursive(bookingEmailDefaults(),is_array($saved)?$saved:[]);$logo='';
- if(spTableExists($pdo,'sp_app_state')){$q=$pdo->prepare("SELECT state_json FROM sp_app_state WHERE outlet_id=? AND state_key='company'");$q->execute([$outlet]);$company=json_decode((string)$q->fetchColumn(),true);if(is_array($company))$logo=(string)($company['loginLogo']??'')?: (string)($company['logo']??'');}
+ if(spTableExists($pdo,'company_settings')){$q=$pdo->prepare('SELECT metadata_json,logo_url FROM company_settings WHERE outlet_id=?');$q->execute([$outlet]);$companyRow=$q->fetch();if($companyRow){$meta=json_decode((string)($companyRow['metadata_json']??''),true);$meta=is_array($meta)?$meta:[];$logo=trim((string)($meta['loginLogo']??''))?:trim((string)($meta['logo']??''))?:trim((string)($companyRow['logo_url']??''));}}
+ if($logo===''&&spTableExists($pdo,'sp_app_state')){$q=$pdo->prepare("SELECT state_json FROM sp_app_state WHERE outlet_id=? AND state_key='company'");$q->execute([$outlet]);$company=json_decode((string)$q->fetchColumn(),true);if(is_array($company))$logo=(string)($company['loginLogo']??'')?: (string)($company['logo']??'');}
  if(!preg_match('~^data:image/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+$~D',$logo)&&!preg_match('~^https://[^\s<>"\x27]+$~D',$logo))$logo='';
  return ['templates'=>$templates,'version'=>$record['version'],'logo'=>$logo];
 }
