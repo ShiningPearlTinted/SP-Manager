@@ -555,3 +555,51 @@
   font-size:14px!important;
   line-height:1.25!important;
 }
+
+/* Dashboard: prevent the legacy fixed-sidebar offset from adding a blank column. */
+@media screen and (min-width:701px) {
+  .app[data-page="Dashboard"] {
+    display:grid!important;
+    grid-template-columns:250px minmax(0,1fr)!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  .app[data-page="Dashboard"] > aside.app-sidebar {grid-column:1!important;}
+  .app[data-page="Dashboard"] > aside.app-sidebar + main {
+    grid-column:2!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+    overflow-x:hidden!important;
+  }
+  .app[data-page="Dashboard"] > main > .spmanager-dashboard {
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    padding:12px 14px 28px!important;
+  }
+}
+.app[data-page="Dashboard"] .ar-dashboard-monthly,
+.app[data-page="Dashboard"] .ar-dashboard-grid {min-width:0!important;}
+.app[data-page="Dashboard"] .ar-dashboard-grid > .panel {min-width:0!important;}
+.app[data-page="Dashboard"] .big-sales-value {
+  max-width:100%!important;
+  font-size:clamp(40px,4vw,80px)!important;
+  line-height:.98!important;
+  letter-spacing:-2px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+@media screen and (min-width:1201px) {
+  .app[data-page="Dashboard"] .ar-dashboard-grid {
+    grid-template-columns:minmax(0,1.08fr) minmax(0,1.34fr) minmax(280px,.86fr)!important;
+  }
+}
+@media screen and (max-width:700px) {
+  .app[data-page="Dashboard"] {display:block!important;width:100%!important;min-width:0!important;}
+  .app[data-page="Dashboard"] > aside.app-sidebar + main {display:block!important;grid-column:auto!important;width:100%!important;margin:0!important;}
+  .app[data-page="Dashboard"] > main > .spmanager-dashboard {width:100%!important;}
+}

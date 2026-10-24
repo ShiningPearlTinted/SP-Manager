@@ -70,7 +70,7 @@ const defaultSettings={
 };
 const deepMerge=(base,override)=>{if(!override||typeof override!=="object")return base;const out={...base};Object.keys(override).forEach(k=>{if(override[k]&&typeof override[k]==="object"&&!Array.isArray(override[k]))out[k]=deepMerge(base[k]||{},override[k]);else out[k]=override[k]});return out};
 
-const nav=["HR Management","Booking","Dashboard","POS / Sales","Price Check","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Management","Outlet Management","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"];
+const nav=["HR Management","POS / Sales","Booking","Price Check","Dashboard","Products","Inventory","Customers","Purchases","Quotation","Invoice","Payments","Payment Types","Refund / Void","Discount / Promotion","Tax","Loyalty","Users & Permissions","Management","Outlet Management","Reports","X / Z Report","Named Order / Takeaway","My company","Settings"];
 const money=n=>"RM "+Number(n||0).toFixed(2);
 
 const escapeHtml=value=>String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
