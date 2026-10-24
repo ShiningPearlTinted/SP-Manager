@@ -462,3 +462,87 @@
 .app > aside.app-sidebar > button:hover {background:#262d36!important;color:#fff!important;}
 .app > aside.app-sidebar > button.active {background:#fff!important;color:#111820!important;border-color:#fff!important;box-shadow:none!important;font-weight:600!important;}
 .app:not([data-ui="management"]) > aside.app-sidebar + main {width:calc(100% - 250px)!important;margin-left:250px!important;}
+
+/* Shared application shell: Dashboard and every module use the same sidebar geometry. */
+@media screen and (min-width:701px) {
+  .app:not(:has(.price-tags-overlay)) {
+    display:grid!important;
+    grid-template-columns:250px minmax(0,1fr)!important;
+    min-height:100vh!important;
+  }
+  .app:not(:has(.price-tags-overlay)) > aside.app-sidebar {
+    position:sticky!important;
+    inset:auto!important;
+    top:0!important;
+    width:250px!important;
+    min-width:250px!important;
+    max-width:250px!important;
+    height:100vh!important;
+    max-height:100vh!important;
+    margin:0!important;
+    padding:16px 10px!important;
+    overflow-x:hidden!important;
+    overflow-y:scroll!important;
+    scrollbar-gutter:stable!important;
+    transform:none!important;
+  }
+  .app:not(:has(.price-tags-overlay)) > main {
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    margin:0!important;
+  }
+}
+.app > aside.app-sidebar .brand {
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:0!important;
+  width:100%!important;
+  height:132px!important;
+  min-height:132px!important;
+  margin:0 0 8px!important;
+  padding:8px 4px 16px!important;
+  box-sizing:border-box!important;
+}
+.app > aside.app-sidebar .brand .sidebar-company-logo {
+  display:block!important;
+  flex:0 0 auto!important;
+  width:210px!important;
+  height:104px!important;
+  max-width:100%!important;
+  max-height:104px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+.app > aside.app-sidebar > button:not(.mobile-nav-close),
+.app > aside.mobile-nav button:not(.mobile-nav-close) {
+  display:flex!important;
+  align-items:center!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  height:42px!important;
+  min-height:42px!important;
+  max-height:42px!important;
+  margin:0 0 4px!important;
+  padding:0 12px!important;
+  border:1px solid transparent!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  color:#c5ced6!important;
+  font-size:14px!important;
+  font-weight:500!important;
+  line-height:1!important;
+  text-align:start!important;
+  white-space:nowrap!important;
+}
+.app > aside.app-sidebar > button:not(.mobile-nav-close):hover,
+.app > aside.mobile-nav button:not(.mobile-nav-close):hover {background:#262d36!important;color:#fff!important;}
+.app > aside.app-sidebar > button:not(.mobile-nav-close).active,
+.app > aside.mobile-nav button:not(.mobile-nav-close).active {background:#fff!important;color:#111820!important;border-color:#fff!important;box-shadow:none!important;font-weight:600!important;}
