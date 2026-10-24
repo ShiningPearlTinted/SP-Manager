@@ -425,8 +425,8 @@
   flex: 0 0 auto;
   width: auto;
   height: auto;
-  max-width: 48px;
-  max-height: 42px;
+  max-width: 58px;
+  max-height: 48px;
   object-fit: contain;
   object-position: left center;
   background: transparent;
@@ -445,4 +445,17 @@
 }
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside {
   overflow-x: hidden;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside .brand .sidebar-brand-fallback {
+  display: block;
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  padding: 0;
+  color: #fff;
+  background: transparent;
+  border-radius: 0;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
 }
