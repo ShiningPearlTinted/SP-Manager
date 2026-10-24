@@ -406,3 +406,11 @@
  .app[data-ui="management"] > main > header.spmb-app-header .mobile-nav-open{min-width:40px!important;width:40px!important;height:40px!important;margin:0!important}
  .app:has(header.spmb-app-header) .spmb-heading h1,.app:has(header.spmb-app-header) .spmb-heading .spmb-eyebrow{display:none}
 }
+
+/* Management cards use stable SVG icons independent of menu permissions. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card>span {display:grid!important;place-items:center!important;flex:0 0 38px!important;width:38px!important;height:38px!important;font-size:0!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card>span::before {display:none!important;content:none!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card>span svg {display:block!important;width:20px!important;height:20px!important;min-width:20px;min-height:20px;stroke:currentColor;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card {min-height:72px;grid-template-columns:38px minmax(0,1fr) 18px;gap:12px;padding:14px;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card>div {min-width:0;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-head>div>p {display:none!important;}
