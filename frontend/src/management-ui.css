@@ -414,3 +414,35 @@
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card {min-height:72px;grid-template-columns:38px minmax(0,1fr) 18px;gap:12px;padding:14px;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card>div {min-width:0;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-head>div>p {display:none!important;}
+/* Keep Booking and Management navigation aligned with the compact Dashboard sidebar. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside .brand {
+  min-height: 52px;
+  padding: 4px 8px 16px;
+  gap: 12px;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside .brand .sidebar-company-logo {
+  display: block;
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  max-width: 48px;
+  max-height: 42px;
+  object-fit: contain;
+  object-position: left center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside > button {
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 7px 10px;
+  margin: 2px 0;
+  line-height: 1.3;
+  border-radius: 7px;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > aside {
+  overflow-x: hidden;
+}
