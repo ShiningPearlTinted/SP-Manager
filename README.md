@@ -2,7 +2,14 @@
 
 GitHub source package for SP-Manager. Use the contents of this ZIP as the repository root. It keeps application source, required migrations, npm lockfiles, and the GitHub workflow. It omits generated `frontend/dist`, generated agent copies, and production database exports. This archive contains no more than 100 files.
 
-## Build the frontend
+## Database setup
+
+The source package stays below GitHub's 100-file web upload limit. It omits generated `frontend/dist` and duplicate public agent copies; the build regenerates those from `agent/`. It includes the current schema-only `database/u729423317_SPCentral.sql` with no production row data. Use it only to initialize a new empty MariaDB database. It was generated from MariaDB 11.8 and uses that release family's collation; confirm compatibility before importing on another server. Never import it over an existing database.
+
+For an existing database, back it up and apply only the missing additive migration. `api/UPGRADE-1.0.51.sql` covers the older car battery and payment type image structures. Apply Booking migrations in `database/migrations/booking-v1.sql` and, for the website bridge, `booking-website-bridge.sql`. Apply HR migrations in the order listed under HR migrations below. Do not rerun migrations unless their instructions explicitly permit it.
+
+Configure `SP_MANAGER_DB_HOST`, `SP_MANAGER_DB_PORT`, `SP_MANAGER_DB_NAME`, `SP_MANAGER_DB_USER`, `SP_MANAGER_DB_PASSWORD`, `SP_MANAGER_DB_CHARSET`, `SP_MANAGER_AUTH_SECRET`, `SP_MANAGER_ENCRYPTION_KEY`, `SP_MANAGER_HR_ENCRYPTION_KEY`, `SP_MANAGER_BACKUP_DIR`, and `SP_MANAGER_ALLOWED_ORIGINS` privately on the PHP host. Alternatively, use a private `sp-manager-private.php` outside `public_html`. Set `VITE_API_BASE_URL` to the API directory when building for a different host. For a new empty database, run `php api/bootstrap-admin.php` once from a trusted terminal after importing the schema and configuring the API. It creates the initial outlet and administrator only if there are no users.
+## Local Agent\n\nThe Windows Local Agent can be installed or repaired with `RESTART-SP-MANAGER-LOCAL-AGENT.bat`. For a new installation, use `agent/install-windows.bat`. Run it in the Windows account used for SP-Manager POS. Keep pairing tokens private.\n\n## Build the frontend
 
 From `frontend/`, run `npm ci` and `npm run build`. The prebuild script copies the canonical local agent assets from `agent/` into the public folder. Deploy the resulting `frontend/dist` separately from this source archive.
 

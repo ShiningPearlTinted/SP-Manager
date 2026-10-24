@@ -52,7 +52,7 @@ function batterySave(PDO $pdo, int $outlet, array $input, bool $import=false): i
 
 try {
     $pdo=spApiDatabase(); $outlet=(int)$_SERVER['SP_AUTH_OUTLET_ID'];
-    if (!spTableExists($pdo,'car_batteries')) spApiRespond(['ok'=>false,'error'=>'Run PRICE-CHECK-MIGRATION.sql before using Car Battery.'],503);
+    if (!spTableExists($pdo,'car_batteries')) spApiRespond(['ok'=>false,'error'=>'Apply UPGRADE-1.0.51.sql before using Car Battery.'],503);
     $action=strtolower(trim((string)($_GET['action']??'list')));
     $method=strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'));
     if ($action==='list' && $method==='GET') {
