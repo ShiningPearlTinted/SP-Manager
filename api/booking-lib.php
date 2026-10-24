@@ -127,10 +127,16 @@ function bookingEmailConfig(PDO $pdo,int $outlet):array{
 }
 
 function bookingTrash(PDO $pdo,int $outlet,array $body,bool $restore=false):array{
+ if($restore)throw new BookingError('Permanent deletion cannot be restored.',409);
  $old=bookingRead($pdo,$outlet,bookingId($body['id']??null));if((int)($body['version']??-1)!==(int)$old['version'])throw new BookingError('This booking changed. Refresh before continuing.',409);
- if($restore&&$old['status']!=='deleted')throw new BookingError('This booking is not deleted.',409);
- if(!$restore&&$old['status']==='deleted')throw new BookingError('This booking is already deleted.',409);
- $status=$restore?'cancelled':'deleted';$q=$pdo->prepare('UPDATE sp_bookings SET status=?,version=version+1,updated_by=?,updated_at=? WHERE id=? AND outlet_id=? AND version=?');$q->execute([$status,(int)($_SERVER['SP_AUTH_USER_ID']??0)?:null,bookingNow()->format('Y-m-d H:i:s'),$old['id'],$outlet,$old['version']]);if($q->rowCount()!==1)throw new BookingError('This booking changed. Refresh before continuing.',409);
- bookingEvent($pdo,$outlet,(int)$old['id'],$restore?'restored':'deleted',$restore?'Restored as cancelled; confirm the booking to reserve capacity again.':'Moved to Deleted bookings. Previous status: '.$old['status']);
- $row=bookingRead($pdo,$outlet,(int)$old['id']);spAudit($pdo,$restore?'booking.restore':'booking.delete','booking',(int)$old['id'],$old,$row);return $row;
+ $id=(int)$old['id'];
+ // Retain only an idempotency marker, never the deleted customer snapshot.
+ if(spTableExists($pdo,'sp_booking_bridge_calls')){
+  $q=$pdo->prepare('SELECT call_key FROM sp_booking_bridge_calls WHERE booking_id=?');$q->execute([$id]);
+  foreach($q->fetchAll() as $call)$pdo->prepare('UPDATE sp_booking_bridge_calls SET booking_id=NULL,response_json=? WHERE call_key=?')->execute([json_encode(['ok'=>true,'deleted_booking_id'=>$id],JSON_THROW_ON_ERROR),$call['call_key']]);
+ }
+ $pdo->prepare('DELETE FROM sp_booking_events WHERE booking_id=? AND outlet_id=?')->execute([$id,$outlet]);
+ $q=$pdo->prepare('DELETE FROM sp_bookings WHERE id=? AND outlet_id=? AND version=?');$q->execute([$id,$outlet,$old['version']]);if($q->rowCount()!==1)throw new BookingError('This booking changed. Refresh before continuing.',409);
+ spAudit($pdo,'booking.delete','booking',$id,null,['permanently_deleted'=>true]);
+ return ['id'=>$id,'outlet_id'=>$outlet,'deleted'=>true];
 }
