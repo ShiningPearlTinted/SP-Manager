@@ -62,3 +62,4 @@
  .spmb-dialog{padding:16px}
  .spmb-dialog>header{margin-bottom:14px}
 }
+.spmb-dialog .spmb-dialog-close{appearance:none;display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;min-height:40px;padding:0;border:1px solid #e1e6ed;border-radius:11px;background:#f8fafc;color:#556274;box-shadow:none;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease}.spmb-dialog .spmb-dialog-close svg{display:block;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}.spmb-dialog .spmb-dialog-close:hover:not(:disabled){background:#fff1f3;border-color:#efc4cb;color:#a91d32;transform:rotate(4deg)}.spmb-dialog .spmb-dialog-close:active:not(:disabled){transform:scale(.96)}.spmb-dialog .spmb-dialog-close:focus-visible{outline:2px solid #b51f35;outline-offset:3px}
