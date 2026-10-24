@@ -603,3 +603,25 @@
   .app[data-page="Dashboard"] > aside.app-sidebar + main {display:block!important;grid-column:auto!important;width:100%!important;margin:0!important;}
   .app[data-page="Dashboard"] > main > .spmanager-dashboard {width:100%!important;}
 }
+
+/* Lock the same logo frame and rendered size for Dashboard and every module. */
+.app > aside.app-sidebar.mobile-nav .brand {
+  height:132px!important;
+  min-height:132px!important;
+  max-height:132px!important;
+  justify-content:center!important;
+  padding:8px 4px 16px!important;
+}
+.app > aside.app-sidebar.mobile-nav .brand .sidebar-company-logo {
+  display:block!important;
+  flex:0 0 210px!important;
+  width:210px!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:104px!important;
+  min-height:0!important;
+  max-height:104px!important;
+  margin:0!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
