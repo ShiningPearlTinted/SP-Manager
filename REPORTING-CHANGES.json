@@ -1,0 +1,52 @@
+{
+  "originalArchive": "SP-Manager-main 1.0.61.zip",
+  "actualMetadataVersion": "1.0.70",
+  "scope": "Reports only; no SQL migration",
+  "files": [
+    {
+      "path": "frontend/src/main.jsx",
+      "sha256": "f042addebb540e83ad62c94924288173ee765f547d1e4e31c5756634777efcc8"
+    },
+    {
+      "path": "frontend/src/reporting/reporting-page.jsx",
+      "sha256": "f657cede6889482f1ce31de4fe3e51dc872780424e3bab46684198fd6a00c3ab"
+    },
+    {
+      "path": "frontend/src/reporting/report-exports.js",
+      "sha256": "4c8dd9717f0e09728b86b9777887600f06731b7e6cfadd282b043332f2bc71db"
+    },
+    {
+      "path": "frontend/src/reporting/reporting.css",
+      "sha256": "f7e520db0c63111d1395b6d3905721adfb762abcb1edb3b21176f1a67b8941dd"
+    },
+    {
+      "path": "api/reports.php",
+      "sha256": "2d908618f2004c7484d44e82b977f7df24a92d44e535d18ede33ca939eed6512"
+    },
+    {
+      "path": "api/reporting-lib.php",
+      "sha256": "33cb1d70448357e96abd6028bef3133c32f3ac0db8138177722ebeecb19ebe33"
+    },
+    {
+      "path": "api/reporting-dispatch.php",
+      "sha256": "164936be8141e40e92aa9bf276fcf2f180a87ffd340029913f3a112142a05dc2"
+    },
+    {
+      "path": "api/reporting-pdf.php",
+      "sha256": "c579378d57c0d268ee43d277a8a86b5830c87600fb7e7a841e8fe21528eb5c87"
+    },
+    {
+      "path": "tests/reporting-engine.php",
+      "sha256": "fd8d4a8de77d31c7a7e131c96dfeeda10cb019d2fb9b6da28810559f0043c28a"
+    },
+    {
+      "path": "tests/reporting-http.mjs",
+      "sha256": "552438ed3e35158c253cf572a1254fd98b40bd42477f70173f7fdcb8b4cf892e"
+    },
+    {
+      "path": "tests/reporting-regression.py",
+      "sha256": "6b3c328a03f68c18c9130e201c141b238e96f2c77ed3fc4e41c9341c54bcfca9"
+    }
+  ],
+  "cleanup": "Non-runtime resources bundled; only unused centralReportsRequest removed from main.jsx"
+}

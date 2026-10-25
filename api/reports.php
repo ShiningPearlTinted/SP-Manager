@@ -7,6 +7,12 @@ header('X-SP-Manager-DB-Version: V10');
 header('X-SP-Manager-Reports-Version: V1');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
+// Reporting extension: legacy summary below remains unchanged.
+if (in_array((string)($_GET['action'] ?? ''), ['report-catalog','report-options','run-report','report-pdf'], true)) {
+    require __DIR__.'/reporting-dispatch.php';
+    exit;
+}
+
 $config = require __DIR__ . '/config.php';
 $db = $config['db'] ?? null;
 $host = (string)($db['host'] ?? $config['db_host'] ?? 'localhost');

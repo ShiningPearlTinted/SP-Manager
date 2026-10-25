@@ -1,256 +1,592 @@
 {
-  "baseline": "SP-Manager-HR-Phase1-FULL-SIDEBAR",
+  "baseline": "SP-Manager-REPORTING-FULL.zip",
   "removed": [
     {
-      "path": "api/common.php",
-      "reason": "Unreferenced helpers of retired legacy router",
-      "sha256": "487ea21519de82878627dd6a66ebf01e5778d0cbcb523ea228e1ef41f19946c4"
+      "path": "CLEANUP-MANIFEST.json",
+      "reason": "Previous handoff documentation consolidated",
+      "sha256": "dfc9275f78ddd63e81f22c9af4a16aa18bcf5a890dd843baee3a8513aa248f54"
     },
     {
-      "path": "api/db.php",
-      "reason": "Unreferenced helpers of retired legacy router",
-      "sha256": "e565a2a1297804287a687a018c97864680e0ad756771a554f8b86b9302bae62a"
-    },
-    {
-      "path": "api/PAYMENT-TYPE-CUSTOMER-DISPLAY-MIGRATION.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "cca9dd9c83ccd186ba9a015243a7b0017145fa9d4726837a3abf25692b53f8fc"
-    },
-    {
-      "path": "api/SCHEMA-EMPTY-1.0.45.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "15ce9bea244213336d411fc1cb9760f1c425c52b2cd88971d034ead4d96b350f"
-    },
-    {
-      "path": "api/SCHEMA-EMPTY-1.0.48.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "abd63fdd5407c81d33d2a19e80fe910d6f829d561d6acc8a8ba46a26d89fdb7d"
-    },
-    {
-      "path": "api/schema_app_state.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "96910e86a85f531ec42202475d2aa31c89917a69797b87fa1b2d2b33b0f35c46"
-    },
-    {
-      "path": "api/schema_customer_display.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "71da4a87e014eab0aeedb35f27daedbfbf9e618f2041e445b72b863778b9f621"
-    },
-    {
-      "path": "api/schema_product_outlets.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "2a37e614229869d85a254bd398b33b18a0fcb3df1c62b1cd5c99b44f1d1a7e1f"
-    },
-    {
-      "path": "api/schema_repair_1_0_41.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "6aa9975dffc22c8c277743991e06f95f723b7bb38667ee8a4b64a0f519aa73e1"
-    },
-    {
-      "path": "api/schema_settings.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "586ac3007d45fa1947d439422a372511ea84a4d35e20db5d2a7480abafc765a4"
-    },
-    {
-      "path": "api/UPGRADE-1.0.45.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "01f9e0f4575d1cfb5a010c3b6211c24d3c27738f2b12f96d245638107e726ed7"
-    },
-    {
-      "path": "api/UPGRADE-1.0.48.sql",
-      "reason": "Historical/redundant SQL archived; latest schemas and active feature migrations retained",
-      "sha256": "cb98f8e1113fc3a27502f22464b65b394a5e26a45eed1fca1dc2616862441841"
-    },
-    {
-      "path": "database/u729423317_SPCentral.sql",
-      "reason": "Production reference dump archived separately",
-      "sha256": "4e782f8f3f183b4d27eddc82d3609f51bac2cf8a7c5c37336a141c84b70d899e"
-    },
-    {
-      "path": "frontend/dist/assets/app.css",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "4ed7c5afe2b49dcd1a16f579d219a18a7f1600ebfa35e09292e45adcb48a5a1a"
-    },
-    {
-      "path": "frontend/dist/assets/app.js",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "2ac098f0d1512b6b2f31e10f06d78be266ad2475e7e1f1a05460bc06d47beade"
-    },
-    {
-      "path": "frontend/dist/customer-display/index.html",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "6c5fea6b2dece37cb013dcec519fb940281de93e8bb0b58bae001b8831e31548"
-    },
-    {
-      "path": "frontend/dist/index.html",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "f221255229cb39325ab420bc435d8602b958f07cecda12e85a77ef485d169dc2"
-    },
-    {
-      "path": "frontend/dist/RESTART-SP-MANAGER-LOCAL-AGENT.bat",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "4c3abc1c893e0c1ba23c3cafa215c9506e71aea05365bfe8180fc74b459e4ca0"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/agent.ps1",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "99270167d78526a7b54a8d995e5ad8cb22ba4bbf866d35fe14141793cc589e06"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/autostart.ps1",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/BACA-DAHULU.txt",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "0f1e2cc5ce4a87b6c6171f9d0f3958429479d53e6c8263028b80e2e1275b29eb"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/check-agent.bat",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/diagnose-agent.bat",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "71e724ffe924d44d70f3b45866506405c3b4807e893847828578fb64060a821c"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/display-fullscreen.ps1",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "0e68cf40bf993974f18f90687963900495c505ea6b80c4f8dc832df697f4b45f"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/display-window.ps1",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "89ef053943f69d0342a676ab738c12827b73fc71e8c795663771e8bacab64399"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/install-current-user.ps1",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/install-windows.bat",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "a96e19c60cb5f56b5c7df7f916e674293dbea45678559c030db9bcc6c9fef9d3"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/SHA256.json",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "515f25eea6095a70bfce2d83c8a7a372c15cdee85343edfa05d72aa718d82e01"
-    },
-    {
-      "path": "frontend/dist/sp-manager-agent/watchdog.ps1",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"
-    },
-    {
-      "path": "frontend/dist/vendor/xlsx-LICENSE.txt",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
-    },
-    {
-      "path": "frontend/dist/vendor/xlsx.full.min.js",
-      "reason": "Generated frontend deployment copied to separate deployment ZIP",
-      "sha256": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99"
-    },
-    {
-      "path": "frontend/pnpm-workspace.yaml",
-      "reason": "Unused pnpm metadata; active project/CI uses npm and package-lock",
-      "sha256": "ac02d96368617c760f093cfe61fdec64b6244007ab3553e0d6621f706f54a353"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/autostart.ps1",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/BACA-DAHULU.txt",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "0f1e2cc5ce4a87b6c6171f9d0f3958429479d53e6c8263028b80e2e1275b29eb"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/check-agent.bat",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/diagnose-agent.bat",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "71e724ffe924d44d70f3b45866506405c3b4807e893847828578fb64060a821c"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/display-fullscreen.ps1",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "0e68cf40bf993974f18f90687963900495c505ea6b80c4f8dc832df697f4b45f"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/display-window.ps1",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "89ef053943f69d0342a676ab738c12827b73fc71e8c795663771e8bacab64399"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/install-current-user.ps1",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed"
-    },
-    {
-      "path": "frontend/public/sp-manager-agent/watchdog.ps1",
-      "reason": "Byte-identical agent asset generated by prebuild",
-      "sha256": "5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"
-    },
-    {
-      "path": "HR-PHASE1-README.md",
-      "reason": "Previous handoff notes consolidated into README",
-      "sha256": "be987a7aa7074d791b3128be198bd4401a19c547b5d896fa1fbb2178e4e05819"
-    },
-    {
-      "path": "HR-PHASE1-TEST-RESULTS.txt",
-      "reason": "Previous handoff notes consolidated into README",
-      "sha256": "6fa212168e7694d13a4add9841395eb6d26a2cd224dc2b2487763f89e5f65376"
-    },
-    {
-      "path": "HR-SIDEBAR-UPDATE.md",
-      "reason": "Previous handoff notes consolidated into README",
-      "sha256": "6be0e348f73623c4ef864d7bb836d805568cfab5483317e5a01ba7207f9a621f"
+      "path": "GITHUB-UPLOAD.md",
+      "reason": "Previous handoff documentation consolidated",
+      "sha256": "5f17380e709b0b888f41d4fc783d77ae8902613b3f5da33ff3ddf619f6091374"
     },
     {
       "path": "pnpm-lock.yaml",
-      "reason": "Unused pnpm metadata; active project/CI uses npm and package-lock",
+      "reason": "Unused pnpm metadata; active build uses npm lock",
       "sha256": "17c814b167307942d3609c7b9d916ceddb85839573ab39baa114e30edb132a1a"
     },
     {
       "path": "README-GITHUB-UPDATE.txt",
-      "reason": "Previous handoff notes consolidated into README",
+      "reason": "Previous handoff documentation consolidated",
       "sha256": "32c6ec9d4edb0460471eb3f94b6d2c417900da25be56a7530e848d9bd0acc908"
     },
     {
+      "path": "README.md",
+      "reason": "Previous handoff documentation consolidated",
+      "sha256": "a23b743e2f0d322f28a705692bb39dcec99be805cac0cff2942f671a617f34f9"
+    },
+    {
       "path": "rel.txt",
-      "reason": "Previous handoff notes consolidated into README",
-      "sha256": "331126eea483fc70a1912ed3776b8424a4be1c60cce746406ca93639d383f830"
+      "reason": "Previous handoff documentation consolidated",
+      "sha256": "20c626135beedd6d5db9d363f0a4d9bd673e3c5d81705526145a828c97e451ae"
     },
     {
       "path": "REMOVED-FILES.json",
-      "reason": "Previous handoff notes consolidated into README",
+      "reason": "Previous handoff documentation consolidated",
       "sha256": "52a27f7645f6eb6402c6bc9b1730cb3a7c90bf9066afc3fa3f4140eef38565e4"
     },
     {
-      "path": "SHA256-MANIFEST.json",
-      "reason": "Previous handoff notes consolidated into README",
-      "sha256": "12526fff73afbbb8f66d226d5ca4a3f5fe934181ebcbbb656af5284283194fe5"
+      "path": "REPORTING-TESTS.txt",
+      "reason": "Previous handoff documentation consolidated",
+      "sha256": "66e5c48a16ff2557b5fb365211968ab5ef51ecd5ae4fc89deebedbd7d36f3572"
     },
     {
-      "path": "START-HERE.md",
-      "reason": "Previous handoff notes consolidated into README",
-      "sha256": "cf7df676b275250bcf87c7487ade016e80fbfea1234c64a7d9f0131067a133c4"
+      "path": "RESTART-SP-MANAGER-LOCAL-AGENT.bat",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "ce1149d3e061827cefad7eabcf2831bb8788acac8a17ed7f6ba77d5489682890"
+    },
+    {
+      "path": "agent/agent.ps1",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "ad43f23234bed7def4efd9c1f00f50b151c61cafbc36f3177374f0202246f653"
+    },
+    {
+      "path": "agent/autostart.ps1",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea"
+    },
+    {
+      "path": "agent/BACA-DAHULU.txt",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "0f1e2cc5ce4a87b6c6171f9d0f3958429479d53e6c8263028b80e2e1275b29eb"
+    },
+    {
+      "path": "agent/check-agent.bat",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e"
+    },
+    {
+      "path": "agent/diagnose-agent.bat",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "71e724ffe924d44d70f3b45866506405c3b4807e893847828578fb64060a821c"
+    },
+    {
+      "path": "agent/display-fullscreen.ps1",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "0e68cf40bf993974f18f90687963900495c505ea6b80c4f8dc832df697f4b45f"
+    },
+    {
+      "path": "agent/display-window.ps1",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "89ef053943f69d0342a676ab738c12827b73fc71e8c795663771e8bacab64399"
+    },
+    {
+      "path": "agent/install-current-user.ps1",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed"
+    },
+    {
+      "path": "agent/install-windows.bat",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "91f6437ffded6da27ca32c524a93b2a4f3d94fb8e8605f31f39284a5b15d9abe"
+    },
+    {
+      "path": "agent/SHA256.json",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "5206d1ff837596796b51a0c1032c3e61d364da069607d6a8fdfdc6ca6612274d"
+    },
+    {
+      "path": "agent/watchdog.ps1",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"
+    },
+    {
+      "path": "api/CENTRAL-MASTER-MIGRATION-1.0.41.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "56ec61aa8eb44c207c60a2808190d7a0a69a09a2e824d60395afe29fe582fac2"
+    },
+    {
+      "path": "api/common.php",
+      "reason": "Unreferenced retired-router helper",
+      "sha256": "487ea21519de82878627dd6a66ebf01e5778d0cbcb523ea228e1ef41f19946c4"
+    },
+    {
+      "path": "api/db.php",
+      "reason": "Unreferenced retired-router helper",
+      "sha256": "e565a2a1297804287a687a018c97864680e0ad756771a554f8b86b9302bae62a"
+    },
+    {
+      "path": "api/PAYMENT-TYPE-CUSTOMER-DISPLAY-MIGRATION.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "cca9dd9c83ccd186ba9a015243a7b0017145fa9d4726837a3abf25692b53f8fc"
+    },
+    {
+      "path": "api/PAYMENT-TYPE-OUTLET-IMAGE-MIGRATION.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "effa815cc9911ecaf1c41db489bf03b4cc2590cb5da595151f6543ed73e65a9b"
+    },
+    {
+      "path": "api/PRICE-CHECK-MIGRATION.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "49b22411faa681bd795ede8c3e73adea524986d01ee84d85e17ebb41092b8445"
+    },
+    {
+      "path": "api/QUOTATION-INVOICE-DEPOSIT-MIGRATION-1.0.44.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "67b0957ea7a22ea415a2b01b68041d3077b746e2957bf974cfd1ea3b548d2b10"
+    },
+    {
+      "path": "api/QUOTATION-INVOICE-MIGRATION-1.0.43.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "b4a8a8cce70b1ea7aaa3d4c084007b15b9f8ad7ecdce27248054a4635c83a627"
+    },
+    {
+      "path": "api/SCHEMA-EMPTY-1.0.45.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "15ce9bea244213336d411fc1cb9760f1c425c52b2cd88971d034ead4d96b350f"
+    },
+    {
+      "path": "api/SCHEMA-EMPTY-1.0.48.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "abd63fdd5407c81d33d2a19e80fe910d6f829d561d6acc8a8ba46a26d89fdb7d"
+    },
+    {
+      "path": "api/SCHEMA-EMPTY-1.0.51.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "abd63fdd5407c81d33d2a19e80fe910d6f829d561d6acc8a8ba46a26d89fdb7d"
+    },
+    {
+      "path": "api/schema_app_state.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "96910e86a85f531ec42202475d2aa31c89917a69797b87fa1b2d2b33b0f35c46"
+    },
+    {
+      "path": "api/schema_customer_display.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "71da4a87e014eab0aeedb35f27daedbfbf9e618f2041e445b72b863778b9f621"
+    },
+    {
+      "path": "api/schema_product_outlets.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "2a37e614229869d85a254bd398b33b18a0fcb3df1c62b1cd5c99b44f1d1a7e1f"
+    },
+    {
+      "path": "api/schema_repair_1_0_41.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "6aa9975dffc22c8c277743991e06f95f723b7bb38667ee8a4b64a0f519aa73e1"
+    },
+    {
+      "path": "api/schema_settings.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "586ac3007d45fa1947d439422a372511ea84a4d35e20db5d2a7480abafc765a4"
+    },
+    {
+      "path": "api/UPGRADE-1.0.45.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "01f9e0f4575d1cfb5a010c3b6211c24d3c27738f2b12f96d245638107e726ed7"
+    },
+    {
+      "path": "api/UPGRADE-1.0.48.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "cb98f8e1113fc3a27502f22464b65b394a5e26a45eed1fca1dc2616862441841"
+    },
+    {
+      "path": "api/UPGRADE-1.0.51.sql",
+      "reason": "Database maintenance script, outside runtime",
+      "sha256": "cb98f8e1113fc3a27502f22464b65b394a5e26a45eed1fca1dc2616862441841"
+    },
+    {
+      "path": "frontend/pnpm-workspace.yaml",
+      "reason": "Unused pnpm metadata; active build uses npm lock",
+      "sha256": "ac02d96368617c760f093cfe61fdec64b6244007ab3553e0d6621f706f54a353"
+    },
+    {
+      "path": "tests/hr-phase1-api.php",
+      "reason": "Tests preserved in maintenance archive",
+      "sha256": "535598e101c92071aaf4b198e5195f834c4073dd6190b5d95a358d4da6a144f4"
+    },
+    {
+      "path": "tests/hr-phase1-http.mjs",
+      "reason": "Tests preserved in maintenance archive",
+      "sha256": "9473c1e515670a43638ce75108a3b00e42a8d2e721ab512edb5d82045495102c"
+    },
+    {
+      "path": "tests/hr-phase1-regression.mjs",
+      "reason": "Tests preserved in maintenance archive",
+      "sha256": "44660476a5b450bedbf1e43c39d74c2d79caf8db5714ecd62ca1545f1761cf9b"
+    },
+    {
+      "path": "tests/reporting-engine.php",
+      "reason": "Tests preserved in maintenance archive",
+      "sha256": "fd8d4a8de77d31c7a7e131c96dfeeda10cb019d2fb9b6da28810559f0043c28a"
+    },
+    {
+      "path": "tests/reporting-http.mjs",
+      "reason": "Tests preserved in maintenance archive",
+      "sha256": "552438ed3e35158c253cf572a1254fd98b40bd42477f70173f7fdcb8b4cf892e"
+    },
+    {
+      "path": "tests/reporting-regression.py",
+      "reason": "Tests preserved in maintenance archive",
+      "sha256": "6b3c328a03f68c18c9130e201c141b238e96f2c77ed3fc4e41c9341c54bcfca9"
+    },
+    {
+      "path": "frontend/dist/index.html",
+      "reason": "Generated deployment output",
+      "sha256": "f221255229cb39325ab420bc435d8602b958f07cecda12e85a77ef485d169dc2"
+    },
+    {
+      "path": "frontend/dist/RESTART-SP-MANAGER-LOCAL-AGENT.bat",
+      "reason": "Generated deployment output",
+      "sha256": "4c3abc1c893e0c1ba23c3cafa215c9506e71aea05365bfe8180fc74b459e4ca0"
+    },
+    {
+      "path": "frontend/public/RESTART-SP-MANAGER-LOCAL-AGENT.bat",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "4c3abc1c893e0c1ba23c3cafa215c9506e71aea05365bfe8180fc74b459e4ca0"
+    },
+    {
+      "path": "frontend/dist/assets/app.css",
+      "reason": "Generated deployment output",
+      "sha256": "ce7833554c4835798c08db3edab1cda8286bec15d1b564dca041e48fa089f046"
+    },
+    {
+      "path": "frontend/dist/assets/app.js",
+      "reason": "Generated deployment output",
+      "sha256": "6c65ae53522503587a169a854f8bdb9c9dc750cd52e6e7d4f03b9959da43dea8"
+    },
+    {
+      "path": "frontend/dist/customer-display/index.html",
+      "reason": "Generated deployment output",
+      "sha256": "6c5fea6b2dece37cb013dcec519fb940281de93e8bb0b58bae001b8831e31548"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/agent.ps1",
+      "reason": "Generated deployment output",
+      "sha256": "99270167d78526a7b54a8d995e5ad8cb22ba4bbf866d35fe14141793cc589e06"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/autostart.ps1",
+      "reason": "Generated deployment output",
+      "sha256": "21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/BACA-DAHULU.txt",
+      "reason": "Generated deployment output",
+      "sha256": "0f1e2cc5ce4a87b6c6171f9d0f3958429479d53e6c8263028b80e2e1275b29eb"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/check-agent.bat",
+      "reason": "Generated deployment output",
+      "sha256": "dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/diagnose-agent.bat",
+      "reason": "Generated deployment output",
+      "sha256": "71e724ffe924d44d70f3b45866506405c3b4807e893847828578fb64060a821c"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/display-fullscreen.ps1",
+      "reason": "Generated deployment output",
+      "sha256": "0e68cf40bf993974f18f90687963900495c505ea6b80c4f8dc832df697f4b45f"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/display-window.ps1",
+      "reason": "Generated deployment output",
+      "sha256": "89ef053943f69d0342a676ab738c12827b73fc71e8c795663771e8bacab64399"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/install-current-user.ps1",
+      "reason": "Generated deployment output",
+      "sha256": "660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/install-windows.bat",
+      "reason": "Generated deployment output",
+      "sha256": "a96e19c60cb5f56b5c7df7f916e674293dbea45678559c030db9bcc6c9fef9d3"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/SHA256.json",
+      "reason": "Generated deployment output",
+      "sha256": "515f25eea6095a70bfce2d83c8a7a372c15cdee85343edfa05d72aa718d82e01"
+    },
+    {
+      "path": "frontend/dist/sp-manager-agent/watchdog.ps1",
+      "reason": "Generated deployment output",
+      "sha256": "5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"
+    },
+    {
+      "path": "frontend/dist/vendor/xlsx-LICENSE.txt",
+      "reason": "Generated deployment output",
+      "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+    },
+    {
+      "path": "frontend/dist/vendor/xlsx.full.min.js",
+      "reason": "Generated deployment output",
+      "sha256": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/agent.ps1",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "99270167d78526a7b54a8d995e5ad8cb22ba4bbf866d35fe14141793cc589e06"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/autostart.ps1",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "21dc4f018a43393de93476f59ad943db00b82af9084d61a09ff82b67c57aa4ea"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/BACA-DAHULU.txt",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "0f1e2cc5ce4a87b6c6171f9d0f3958429479d53e6c8263028b80e2e1275b29eb"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/check-agent.bat",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "dd9d625c2829dd04dfa9ca6ea8f0254656ec463d153a25edbf5af53ed724822e"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/diagnose-agent.bat",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "71e724ffe924d44d70f3b45866506405c3b4807e893847828578fb64060a821c"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/display-fullscreen.ps1",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "0e68cf40bf993974f18f90687963900495c505ea6b80c4f8dc832df697f4b45f"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/display-window.ps1",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "89ef053943f69d0342a676ab738c12827b73fc71e8c795663771e8bacab64399"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/install-current-user.ps1",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "660d6960b625352bc1fcfdf7f0525d2dd4fa6f58632c46ac1787cc58e4b2e4ed"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/install-windows.bat",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "a96e19c60cb5f56b5c7df7f916e674293dbea45678559c030db9bcc6c9fef9d3"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/SHA256.json",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "515f25eea6095a70bfce2d83c8a7a372c15cdee85343edfa05d72aa718d82e01"
+    },
+    {
+      "path": "frontend/public/sp-manager-agent/watchdog.ps1",
+      "reason": "Exact duplicate generated from canonical agent asset",
+      "sha256": "5d07f2b05c76feafd1d6b62c2b2d72d3f20a4ea4902519335921e48e75e280b8"
+    },
+    {
+      "path": "frontend/public/vendor/xlsx-LICENSE.txt",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+    },
+    {
+      "path": "frontend/public/vendor/xlsx.full.min.js",
+      "reason": "Losslessly stored in build-assets.json; generated before build/dev",
+      "sha256": "c9506197caf809a075b6dee1da0d36fb19da7158ffe8a88e7b0c96c5d8623c99"
     }
   ],
+  "assets_bundle": "build-assets.json",
   "modified": [
     "scripts/sync-agent.mjs",
-    "frontend/src/price-check.jsx",
-    "tests/hr-phase1-regression.mjs"
+    "frontend/src/main.jsx",
+    "REPORTING-CHANGES.json"
   ],
-  "notes": "All omitted files retained in the separate cleanup archive; frontend/dist delivered separately. No database operation performed."
+  "archive_groups": {
+    "archived": [
+      "CLEANUP-MANIFEST.json",
+      "GITHUB-UPLOAD.md",
+      "pnpm-lock.yaml",
+      "README-GITHUB-UPDATE.txt",
+      "README.md",
+      "rel.txt",
+      "REMOVED-FILES.json",
+      "REPORTING-TESTS.txt",
+      "api/common.php",
+      "api/db.php",
+      "api/PAYMENT-TYPE-CUSTOMER-DISPLAY-MIGRATION.sql",
+      "api/SCHEMA-EMPTY-1.0.45.sql",
+      "api/SCHEMA-EMPTY-1.0.48.sql",
+      "api/schema_app_state.sql",
+      "api/schema_customer_display.sql",
+      "api/schema_product_outlets.sql",
+      "api/schema_repair_1_0_41.sql",
+      "api/schema_settings.sql",
+      "api/UPGRADE-1.0.45.sql",
+      "api/UPGRADE-1.0.48.sql",
+      "frontend/pnpm-workspace.yaml",
+      "frontend/dist/index.html",
+      "frontend/dist/RESTART-SP-MANAGER-LOCAL-AGENT.bat",
+      "frontend/dist/assets/app.css",
+      "frontend/dist/assets/app.js",
+      "frontend/dist/customer-display/index.html",
+      "frontend/dist/sp-manager-agent/agent.ps1",
+      "frontend/dist/sp-manager-agent/autostart.ps1",
+      "frontend/dist/sp-manager-agent/BACA-DAHULU.txt",
+      "frontend/dist/sp-manager-agent/check-agent.bat",
+      "frontend/dist/sp-manager-agent/diagnose-agent.bat",
+      "frontend/dist/sp-manager-agent/display-fullscreen.ps1",
+      "frontend/dist/sp-manager-agent/display-window.ps1",
+      "frontend/dist/sp-manager-agent/install-current-user.ps1",
+      "frontend/dist/sp-manager-agent/install-windows.bat",
+      "frontend/dist/sp-manager-agent/SHA256.json",
+      "frontend/dist/sp-manager-agent/watchdog.ps1",
+      "frontend/dist/vendor/xlsx-LICENSE.txt",
+      "frontend/dist/vendor/xlsx.full.min.js",
+      "frontend/public/sp-manager-agent/autostart.ps1",
+      "frontend/public/sp-manager-agent/BACA-DAHULU.txt",
+      "frontend/public/sp-manager-agent/check-agent.bat",
+      "frontend/public/sp-manager-agent/diagnose-agent.bat",
+      "frontend/public/sp-manager-agent/display-fullscreen.ps1",
+      "frontend/public/sp-manager-agent/display-window.ps1",
+      "frontend/public/sp-manager-agent/install-current-user.ps1",
+      "frontend/public/sp-manager-agent/watchdog.ps1"
+    ],
+    "database-tools": [
+      "api/CENTRAL-MASTER-MIGRATION-1.0.41.sql",
+      "api/PAYMENT-TYPE-OUTLET-IMAGE-MIGRATION.sql",
+      "api/PRICE-CHECK-MIGRATION.sql",
+      "api/QUOTATION-INVOICE-DEPOSIT-MIGRATION-1.0.44.sql",
+      "api/QUOTATION-INVOICE-MIGRATION-1.0.43.sql",
+      "api/SCHEMA-EMPTY-1.0.51.sql",
+      "api/UPGRADE-1.0.51.sql"
+    ],
+    "tests": [
+      "tests/hr-phase1-api.php",
+      "tests/hr-phase1-http.mjs",
+      "tests/hr-phase1-regression.mjs",
+      "tests/reporting-engine.php",
+      "tests/reporting-http.mjs",
+      "tests/reporting-regression.py"
+    ]
+  },
+  "notes": "All baseline files retained as source, recoverable build resources or archived maintenance material. No SQL operation performed.",
+  "code_removed": [
+    {
+      "path": "frontend/src/main.jsx",
+      "binding": "centralReportsRequest",
+      "source": "const centralReportsRequest=async(action=\"summary\",outlet_id=activeOutletId())=>{const url=centralReportsApi()+\"?action=\"+encodeURIComponent(action)+\"&outlet_id=\"+encodeURIComponent(outlet_id);const r=await fetch(url,{method:\"GET\",cache:\"no-store\",headers:apiHeaders({\"Content-Type\":\"application/json\"})});const data=await r.json().catch(()=>null);if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);if(data?.api_version&&data.api_version!==\"V10\")throw new Error(`Database API version mismatch: expected V10, got ${data.api_version}`);return data};",
+      "sha256": "c29914e334a206fe6387adaf1248a712f53a6c1771e9b6936e1ee34040c8b441"
+    }
+  ],
+  "new_files": [
+    "build-assets.json",
+    "MAINTENANCE.zip",
+    "README.md",
+    ".gitignore"
+  ],
+  "retained_hashes": {
+    ".github/workflows/pages.yml": "45e8bc9698f89fca372bd27c2f34b3c7d6805b678d05f84d68d06806739284a5",
+    ".gitignore": "1e1c1aa7b2575f7725c9a536f556992d9fa0607c4ce0c33766fd5891a4576963",
+    "api/app-state.php": "4ae363362b0d404ad70d94bf179b61c29770b4d02fc6d20f88d48da7ed958e7e",
+    "api/assets/invoice-logo.jpg": "19f59d28b97e59497e2d98f0290c19a7d6d58db9600936e684f7fddf7a972074",
+    "api/backup-cli.php": "680362190dbf56bc064239b6e1e007615b4c47d89319428817ca96266e8f1848",
+    "api/booking-bridge-auth.php": "1d6a0b67b30cc5426ebe9ea25f1f0ee63a89ba18ae482f09c378414b1b72bf1f",
+    "api/booking-bridge-key.example.php": "212fd0fcd535f2f8605814a62cfa96e5bd3b2beddc94a992007d364721128327",
+    "api/booking-bridge-lib.php": "6f159358b402a21b5264e4bc40a6859f8a1ef19a0eea046792a1bd1e19616f4a",
+    "api/booking-bridge.php": "c8166f3e2725e02b05a9ae57a173f9c5605f09eab4479bb6986b4c502de62cce",
+    "api/booking-lib.php": "eaf55b980c164ce413aa935acf8cb56d7acab8b55f5f8ebef015e1900f94fe53",
+    "api/bookings.php": "1684fd8adc19514e5384a071379205503f9d0138a714bc638da85a32a24b799f",
+    "api/bootstrap-admin.php": "5b2362606ecc5bb0bc3012b01836c45487f6f23e1c731e9e153dde52f6c49fdd",
+    "api/car-batteries.php": "a60333cf9065af37899127e3e2d883980d14f6f58ad9a25a690b53bdd004fc14",
+    "api/config.example.php": "5da06a2dfeece5912dd28765bf90f2ea8d2e1d1cf58283aaced4b864f609188b",
+    "api/config.php": "6eb1bd94e2366bd9107f045eb32f0ab3963f31899c755cf3b40e6e5cbf652ef7",
+    "api/customer-display.php": "fe3bf9060592ace13e99051e532a775e5aa4ee607ab67d5e4837e3f7947186bd",
+    "api/customers.php": "464e6f56f1c9fc6ad0455fffd3e1fa88819cf72b745e07fc059f3c36f33c1725",
+    "api/database-backup-lib.php": "88c50eb63a4877548daeb08b7af51b1e3d5d244a98d297393a481b93ab3a6c7c",
+    "api/database-health.php": "012f3dbc4dd7cd97527a0f5d62c5b2f3dd9d2bb36453601da430c8eb281117fe",
+    "api/database-reset-lib.php": "7ead4932d80266d964be77dc08281ecf97655e460e5b53b5515a58d3fd7206a8",
+    "api/database-reset.php": "5f7ee8b1ffd95b972f475fe1e9b05d436f87d06064c4967ef92d2b5b2e14e2f1",
+    "api/database.php": "cf7192508d94cea134f7db0630311a1153adf9b3f526b73b313496bd450155c4",
+    "api/document-counter.php": "330eec329753e80a7e4b9b92573a32a1b784718a3477f8463d7d3fd657212da5",
+    "api/documents.php": "6421789c9f4c5b62173eca3773f861676d336b670ca19177d717c84d0e675c1f",
+    "api/email.php": "ded7868cc0ef311627e75beb8ce19a500d32353fc1a26088aaac244429d427a6",
+    "api/hardening.php": "3e5e4f0869478f9ebbf7dfe85714e7e7415ccd034fc7f068f2fe1d65d7688c8f",
+    "api/hr-lib.php": "0f66e7dc47455ff8beca67057553acaa1a33f35ae183de1a52a0efa09db89c78",
+    "api/hr-operations-lib.php": "72ed614f16d6678a32f73872959ef3fb23f51a50f5e66e935ae6b1b65fe2418f",
+    "api/hr-payslip-lib.php": "a9c961fe5cda9a371622ea94bae5e1093d6c735caa2d77ccaef78b12bc2f903e",
+    "api/hr.php": "73de076e39e563363ed535d0eb4f9f01e050949427d1f6d9254d01f845397271",
+    "api/index.php": "78fe01006f2fe163bd47a75d5c9951c7358aae9ce3ec424656f64be2531f0eab",
+    "api/invoice-pdf.php": "47a2296452a3c5c5b2d6c3836c5d0fda762bea82df018b711b9e02cd300eac2e",
+    "api/loyalty.php": "c63076ad62b31cf894dc126eccefce75a50afad2e26c17f1ad66cfe6095c027a",
+    "api/outlet-provision.php": "a001b93a77653b2918fcc49697ef8db6b1bea045517f3cd17a0db1ff67671a38",
+    "api/outlets.php": "f33ee2366c14dedf6f6dc2cdeca2ee1d8e04a99cdc4469e2a54e1342a99ff7a5",
+    "api/payment-types.php": "a1fc96b22200d91baf6748385998dc77ea40a57a5670b67f1ae37dd4ef3336c2",
+    "api/products.php": "3c18468119d8367593b1e207d0ec210cb8bfcdbd1dc4e3f0e34c18050d35ef2e",
+    "api/promotions.php": "cc7bb658d0b7366b58d998cbd7ac03f96786f15781e5a4f39846eba69315de00",
+    "api/receipt-pdf.php": "196e88aa1b0ab4583b19bbe3029d503da6a26838de7dee9d2eb1903f6d4392c5",
+    "api/relational-data.php": "b4dc791fa693553dea3f238d3c7824caddbabd02f7089e02abec858d73ce0473",
+    "api/relational-sync.php": "b31ebbc2d3811dd79b4565a0b15cd11d20d65b7bc0dc8b5d1caefb42c0c23c2f",
+    "api/reporting-dispatch.php": "164936be8141e40e92aa9bf276fcf2f180a87ffd340029913f3a112142a05dc2",
+    "api/reporting-lib.php": "33cb1d70448357e96abd6028bef3133c32f3ac0db8138177722ebeecb19ebe33",
+    "api/reporting-pdf.php": "c579378d57c0d268ee43d277a8a86b5830c87600fb7e7a841e8fe21528eb5c87",
+    "api/reports.php": "2d908618f2004c7484d44e82b977f7df24a92d44e535d18ede33ca939eed6512",
+    "api/restore-backup-cli.php": "cc1d20ec47eba9a34345d1e3e74c922f65b1221bbcfcd7fe531f7729ee485f43",
+    "api/sales-delete.php": "948dcc3f23b0469e51f32d6641ecfbde13376b0003b7b5a9f2749309742966e1",
+    "api/sales.php": "767e7f68992d5185169b24b0b12fe27243edde594c8afe3ed362c99dee2a2895",
+    "api/security.php": "e6c3ce7c1c358a15c6b18a8f3cd435c5973e04cad0f7b2308b4017c0e33c6874",
+    "api/settings.php": "0a7757a3a1b88e27cc85ee965217cb48fd9c722516ca828241b3df944ce77a6e",
+    "api/SQL-CONNECTION-SETUP.md": "176cc2fe77cc3a4bc789315a8491aa586d194c317481c1a06a1f6cc9c8ecceaf",
+    "api/users.php": "95c1ef852544de7684cfe686e71dc9bd4ff768bc6e5abe29fcab079f46687fe4",
+    "api/vendor/PHPMailer/composer.json": "0d29d0a9c86be376433530333bee758ba563e7267347300c181299f5a1d920a4",
+    "api/vendor/PHPMailer/LICENSE": "a1a33180d02960ab1c5de36cf20b1a2f0fe9888d83826ad263da5db52f1b183b",
+    "api/vendor/PHPMailer/PROVENANCE.json": "191637dfd98be109db6327395026b744f7b8dda97aefc1dee71f9614711c862a",
+    "api/vendor/PHPMailer/src/Exception.php": "22ab858ae438d98f58f41f38ad2191d1b0d59570aebea0463a7948cfae1021b7",
+    "api/vendor/PHPMailer/src/PHPMailer.php": "45599a196ae7944ee2dcd4f3d3da0ac4243513d346b2d77bbd15dbd0c37f7064",
+    "api/vendor/PHPMailer/src/SMTP.php": "522bcf0d07be7e7e00114711db5c9ce2b4d59ac041c5ec36eaadd979d5fa7046",
+    "api/version.php": "ef66b03a5b1f1ef2b4424246bb414f4eb09fa537c778a9dbe44b68c453bd306b",
+    "build-assets.json": "5478e7c0b6c60e0da0ad488b9f997131cd7068adf421c1d37b7788267f693b4d",
+    "database/migrations/booking-v1.sql": "4efae428d9cdbb18e8f0763c9ea1408513b23a6ef3960af6936c3295fb4ce49d",
+    "database/migrations/booking-website-bridge.sql": "bd2fd7ea55f59cc1d3ae618c7edbedbab8fed9a70ee6b04ed7e5d7e74c4281a3",
+    "database/migrations/hr-phase1.sql": "2a2d012a13f2aedcde2a365ac5dda68d4dda6b6803baf57753af56b99b08d18d",
+    "database/migrations/hr-phase3-payslip.sql": "5d53a3c852ebf446ec70f9703e7f7e75b1c7f125e2429cdb3bbecd3c8c1fd258",
+    "database/migrations/hr-phase3-salary-advance.sql": "51e5909013618d7183e9b73ffb521a6fe436b7056fd423f4185b46976db648c6",
+    "database/migrations/hr-phase4-operations.sql": "e7b9faf02cf4d5ba60327b9c1deb068f53f7db37b684f4d94c0e7779b1ea1228",
+    "frontend/customer-display/index.html": "e0d95978bc305b79a11aa9edc39b0c0e6957d5925ba67d4457db1513dc529492",
+    "frontend/index.html": "53467989150588249dba86370dc4fa9d701f84f0256e515e43cd5b9f7fe3eaaf",
+    "frontend/package-lock.json": "0e1232c3ae35ab7c21b07d48cdd8e3faed74cc0020344020d4f90c5c52f390ef",
+    "frontend/package.json": "1a13a54a9c9d8a72af0e4328eccc261f385e855f7273f5c630b20e98cc30354d",
+    "frontend/src/booking/booking-api.js": "b3e3bf412fe9689c466b5a72a453551f3d52a45f62705483d18a32d87039b006",
+    "frontend/src/booking/booking-link.js": "e021cecdf4e73d8c590ea65d11050d74c831519978eb595e33513d7aedf951de",
+    "frontend/src/booking/booking-module.jsx": "61a299cc2d5656f213209c8d9c882fdcab34355c914a3298ce1f66acc212bdf3",
+    "frontend/src/booking/booking-utils.js": "dd02df42e0ffbf2063a1131480c3d786604496b25479dad00be63803da55d7ad",
+    "frontend/src/booking/booking.css": "ecf682775eb2c4845ca8ddca94ed3352b8adf641cca5d50de5c5f058ea1fb1c3",
+    "frontend/src/customer-display-auto.js": "c21970fead862ee63e3849f55b64e4126ce815835d87b3ef3faed314c0fda8ad",
+    "frontend/src/database-reset.jsx": "2aac2f13fa738f650c776023bb50921485168d434cc8915f5500054d2f2cd4b8",
+    "frontend/src/hr/hr-api.js": "5a732099673160d84eebe8302b9fede7a733580c2852f961b4ee29e5f2044046",
+    "frontend/src/hr/hr-module.jsx": "2f8383abeebf969ca6cdd1e6bdbdd24b70c407f756a84928870474a8c84528bc",
+    "frontend/src/hr/hr.css": "1001c915f11c10a6269218f771ddfd496cb498e27a1d2255b819ab012cd7e6d6",
+    "frontend/src/hr/operations-panel.jsx": "06041f92bf3887e87846d1b5f7a6b58e5af4e7044ccb266d8668f428b05aff3c",
+    "frontend/src/hr/payslip-panel.jsx": "581d57b87c4fd6ff6c6b978d81e15a958b4ae4b8d90d625a515bd4b24dfb8d82",
+    "frontend/src/main.jsx": "f042addebb540e83ad62c94924288173ee765f547d1e4e31c5756634777efcc8",
+    "frontend/src/management-ui.css": "92cc717c276f5979c8b26cbf761e62c4f59fdae0a80b64d50b2580351f7f34d2",
+    "frontend/src/price-check-excel.js": "8349863e5db371f23848bce978316c3997e6bc631c2d4a4f4665d37e5da7bed9",
+    "frontend/src/price-check.css": "a0506b8db384fa3d47104983e4bba41edcbc15ecc2dda7df1e4b56855d94ea04",
+    "frontend/src/price-check.jsx": "9bcf2be14b2a21a852a31a45ceec9303b67bd1f020ad784d705e3b7632b8fd5a",
+    "frontend/src/reporting/report-exports.js": "4c8dd9717f0e09728b86b9777887600f06731b7e6cfadd282b043332f2bc71db",
+    "frontend/src/reporting/reporting-page.jsx": "f657cede6889482f1ce31de4fe3e51dc872780424e3bab46684198fd6a00c3ab",
+    "frontend/src/reporting/reporting.css": "f7e520db0c63111d1395b6d3905721adfb762abcb1edb3b21176f1a67b8941dd",
+    "frontend/src/styles.css": "5eb2793efb1bc4ce80c61c70f1cda3823f605999faac8516ddf6fd872a9cc4cc",
+    "frontend/vite.config.js": "561effd5a8665f094769d1c349f1c7e9534f25436b90169aa11933d80c14f136",
+    "MAINTENANCE.zip": "afc8dcc6dd1a5ef0cb16d96dddd1ba0031edc5dcf1807e5339e5d6905388a833",
+    "package.json": "56f2f304fabcfb80c1852ae4beb33534386e09810ad558316581b5cb848e0547",
+    "README.md": "30a3df9da058f9e9d62c2444b300b1fe377c9ca0777e0b6e7685b0b27b209c7d",
+    "REPORTING-CHANGES.json": "e903cde24fc9b5bc442c2a86d71c0d128a962166cf4e5d961d99e189f8e9fe56",
+    "REPORTING-README.md": "45bdd99f03be5a731d1083800a2e6535791696fa243483e1c09d037d36f5a5fd",
+    "scripts/sync-agent.mjs": "00fc2b0a00923ddc65b332bd69befd606089ef207e6c00691d6dccfde64d0a78"
+  },
+  "verification": {
+    "outer_file_count": 99,
+    "restored_assets_identical": 26,
+    "unchanged_retained_baseline_files": 91,
+    "php_syntax_files": 52,
+    "literal_php_include_targets_checked": 73,
+    "frontend_bundle": "compiled successfully; CSS identical; main source differs only by archived unused helper"
+  }
 }
