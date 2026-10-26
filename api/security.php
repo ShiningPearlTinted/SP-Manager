@@ -154,13 +154,13 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     // POS users who can process payments may publish the live cart/payment state.
     // Keep terminal pairing and display configuration restricted to managers.
     if ($file === 'customer-display.php' && $action === 'state' && $method === 'POST') return 'managePayments';
-    if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? '' : 'manageProducts';
+    if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? 'accessPriceCheck' : 'manageProducts';
     if ($file === 'users.php') return $action==='logout'?'':'manageUsers';
     if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
     if ($file === 'payment-types.php') return 'managePayments';
     if ($file === 'email.php') return 'managePayments';
     if ($file === 'document-counter.php')return match(strtolower((string)(spReadRequestBody()['document_type']??$_GET['document_type']??''))){'purchase'=>'managePurchases','quotation'=>'manageQuotation','customer'=>'manageCustomers',default=>'managePayments'};
-    if ($file === 'outlets.php' || $file === 'outlet-provision.php') return 'manageManagement';
+    if ($file === 'outlets.php' || $file === 'outlet-provision.php') return 'accessOutletManagement';
     if ($file === 'reports.php') return 'manageReports';
     if ($file === 'loyalty.php') return 'manageLoyalty';
     if ($file === 'settings.php') return $method === 'GET' ? '' : 'manageSettings';
@@ -318,10 +318,13 @@ function spInstallCorsAndGuard(): void {
         $permission = spPermissionForRequest($file, $action, trim((string)($_GET['state_key'] ?? $body['state_key'] ?? '')), strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
         $permissions = json_decode((string)($user['permissions_json'] ?? ''), true);
         $isAdmin = ($user['role_name'] ?? '') === 'Administrator';
-        if ($permission !== '' && !$isAdmin && empty($permissions[$permission])) {
-            spApiRespond(['ok'=>false,'error'=>'This user does not have permission for this database operation.'], 403);
+        $legacyAllowed = false;
+        if ($permission !== '' && !$isAdmin && is_array($permissions) && !array_key_exists($permission, $permissions)) {
+            $legacyAllowed = $permission === 'accessPriceCheck' || ($permission === 'accessOutletManagement' && !empty($permissions['manageManagement']));
         }
-        if ($file === 'database.php' && $action === 'restore' && !$isAdmin) {
+        if ($permission !== '' && !$isAdmin && empty($permissions[$permission]) && !$legacyAllowed) {
+            spApiRespond(['ok'=>false,'error'=>'This user does not have permission for this database operation.'], 403);
+        }        if ($file === 'database.php' && $action === 'restore' && !$isAdmin) {
             spApiRespond(['ok'=>false,'error'=>'Only an Administrator may restore a database backup.'], 403);
         }
     } catch (Throwable $e) {
