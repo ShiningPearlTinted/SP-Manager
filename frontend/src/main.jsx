@@ -229,12 +229,13 @@ const centralRelationalInflight=new Map();
 // Keep SP01 only as a safe fallback for legacy/local sessions.
 const activeOutletId=()=>{try{const u=JSON.parse(localStorage.getItem("sp_activeUser")||"null");const assigned=Array.isArray(u?.outlets)?u.outlets:[];const v=u?.default_outlet_id??u?.outlet_id??u?.defaultOutletId??assigned.find(o=>o?.is_default)?.id??assigned[0]?.id;return(v!==undefined&&v!==null&&String(v).trim()!=="")?v:"SP01";}catch{return"SP01"}};
 const apiHeaders=(headers={})=>{const token=sessionStorage.getItem("sp_api_token");return token?{...headers,Authorization:`Bearer ${token}`}:{...headers};};
+const handleApiUnauthorized=response=>{if(response?.status===401&&sessionStorage.getItem("sp_api_token")){sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.dispatchEvent(new Event("sp-api-session-expired"));}return response;};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const fetchWithTransientRetry=async(url,opts={},attempts=2)=>{
  let lastError=null;
  for(let attempt=0;attempt<attempts;attempt++){
   try{
-   const r=await fetch(url,opts);
+   const r=handleApiUnauthorized(await fetch(url,opts));
    if((r.status===502||r.status===503||r.status===504)&&attempt<attempts-1){await sleep(250*(attempt+1));continue}
    return r;
   }catch(e){lastError=e;if(attempt<attempts-1){await sleep(250*(attempt+1));continue}throw e}
@@ -242,7 +243,7 @@ const fetchWithTransientRetry=async(url,opts={},attempts=2)=>{
  throw lastError||new Error("Network request failed");
 };
 
-const centralRequest=async(action,body=null)=>{if(action==="all"||action==="health"){try{await centralWriteQueue}catch{}}const base=centralApiBase();const url=base+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="all"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body){body.request_id=body.request_id||crypto.randomUUID();opts.body=JSON.stringify(body);}const r=await fetch(url,opts);if(r.status===401&&sessionStorage.getItem("sp_api_token")){sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.dispatchEvent(new Event("sp-api-session-expired"));}let data=null;try{data=await r.json()}catch{throw new Error(`Invalid central API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
+const centralRequest=async(action,body=null)=>{if(action==="all"||action==="health"){try{await centralWriteQueue}catch{}}const base=centralApiBase();const url=base+"?action="+encodeURIComponent(action)+(body?.outlet_id?"&outlet_id="+encodeURIComponent(body.outlet_id):"");const isGet=action==="all"||action==="health";const opts={method:isGet?"GET":"POST",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"})};if(!isGet&&body){body.request_id=body.request_id||crypto.randomUUID();opts.body=JSON.stringify(body);}const r=handleApiUnauthorized(await fetch(url,opts));let data=null;try{data=await r.json()}catch{throw new Error(`Invalid central API response (HTTP ${r.status})`)}if(!r.ok||data?.ok===false)throw new Error(data?.error||`HTTP ${r.status}`);return data};
 // Price Check reads the current outlet Product Master; battery writes use a dedicated endpoint.
 const centralBatteryRequest=async(action,payload={})=>{
  const base=centralApiBase().replace(/\/app-state\.php$/i,"")+"/car-batteries.php";
