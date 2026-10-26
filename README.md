@@ -1,11 +1,11 @@
-# SP-Manager 1.0.62 — Clean offline source
+# SP-Manager 1.0.70 — Documents update
 
-This package contains 99 files. It keeps the current frontend, PHP API, offline queue, service worker, SQL upgrade and current database migrations. Old build output, generated copies, production database export and duplicate files are excluded.
+This package contains the unified Documents register and the existing offline workflow. It includes the frontend, PHP API, SQL migration and build assets; production database exports and duplicate generated files are excluded.
 
 ## Build
 
-1. Open `frontend`.
-2. Run `npm install`.
-3. Run `npm run build`.
+1. Open frontend.
+2. Run npm install.
+3. Run npm run build.
 
-The build regenerates agent and vendor assets from `build-assets.json` through `scripts/sync-agent.mjs`. Deploy the frontend and API from this same package. Apply `api/UPGRADE-OFFLINE-1.0.62.sql` once to the existing Central MySQL database before using offline sync. See `OFFLINE-SETUP.md`.
+Deploy the frontend and API from this package. Apply database/DOCUMENTS-REGISTER-MIGRATION.sql to the existing Central MySQL database to add the Documents permission. Keep using the existing Central MySQL database; the migration does not remove or replace transaction tables. For offline setup, follow OFFLINE-SETUP.md.

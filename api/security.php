@@ -168,6 +168,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'database.php') return in_array($action, ['restore','backup'], true) ? 'administrator' : '';
     if ($file === 'offline.php') return 'managePayments';
     if ($file === 'sales.php') return 'managePayments';
+    if ($file === 'documents.php' && $action==='list-register') return 'manageDocuments';
     if ($file === 'documents.php' && $action==='record-payment') return (spReadRequestBody()['document_type']??'')==='quotation'?'manageQuotation':'manageInvoice';
     if ($file === 'documents.php') return in_array($action, ['list-quotations','save-quotation','delete-quotation','convert'], true) ? 'manageQuotation' : 'manageInvoice';
     if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete'], true) ? 'manageCustomers' : '';
