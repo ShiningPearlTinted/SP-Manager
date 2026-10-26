@@ -65,13 +65,17 @@ function spBase64UrlDecode(string $value): string|false {
     return base64_decode(strtr($value, '-_', '+/'), true);
 }
 
-function spIssueApiToken(int $userId): string {
+function spIssueApiToken(int $userId,string $deviceId=''): string {
  $q=spApiDatabase()->prepare('SELECT session_version FROM users WHERE id=?');$q->execute([$userId]);$version=(int)$q->fetchColumn();
  $reset=[];if(spTableExists(spApiDatabase(),'outlet_settings'))foreach(spApiDatabase()->query("SELECT outlet_id,setting_value FROM outlet_settings WHERE setting_group='SP-MANAGER' AND setting_key='databaseResetGeneration'")->fetchAll() as $r)$reset[(string)$r['outlet_id']]=$r['setting_value'];
- $now=time();$payload=spBase64UrlEncode(json_encode(['sub'=>$userId,'ver'=>$version,'iat'=>$now,'exp'=>$now+7200,'rst'=>$reset],JSON_THROW_ON_ERROR));
- return $payload.'.'.spBase64UrlEncode(hash_hmac('sha256',$payload,spAuthSecret(),true));
+ $claims=['sub'=>$userId,'ver'=>$version,'iat'=>time(),'exp'=>time()+7200,'rst'=>$reset];if($deviceId!=='')$claims['dev']=$deviceId;$payload=spBase64UrlEncode(json_encode($claims,JSON_THROW_ON_ERROR));return $payload.'.'.spBase64UrlEncode(hash_hmac('sha256',$payload,spAuthSecret(),true));
 }
-
+function spIssueOfflineApiToken(int $userId,int $outletId,string $deviceId,int $ttl=259200): string {
+ $pdo=spApiDatabase();$q=$pdo->prepare('SELECT session_version FROM users WHERE id=? AND enabled=1 LIMIT 1');$q->execute([$userId]);$version=$q->fetchColumn();if($version===false)throw new RuntimeException('Offline user is unavailable.');
+ $reset=[];if(spTableExists($pdo,'outlet_settings'))foreach($pdo->query("SELECT outlet_id,setting_value FROM outlet_settings WHERE setting_group='SP-MANAGER' AND setting_key='databaseResetGeneration'")->fetchAll() as $r)$reset[(string)$r['outlet_id']]=$r['setting_value'];
+ $now=time();$payload=spBase64UrlEncode(json_encode(['sub'=>$userId,'ver'=>(int)$version,'iat'=>$now,'exp'=>$now+max(3600,min(259200,$ttl)),'rst'=>$reset,'off'=>1,'device'=>$deviceId,'outlet'=>$outletId],JSON_THROW_ON_ERROR));return $payload.'.'.spBase64UrlEncode(hash_hmac('sha256',$payload,spAuthSecret(),true));
+}
+function spTokenClaims(string $token): array {$parts=explode('.',$token);if(count($parts)!==2)return[];[$payload,$signature]=$parts;$expected=spBase64UrlEncode(hash_hmac('sha256',$payload,spAuthSecret(),true));if(!hash_equals($expected,$signature))return[];$json=spBase64UrlDecode($payload);$data=is_string($json)?json_decode($json,true):null;return is_array($data)?$data:[];}
 function spReadRequestBody(): array {
     static $body = null;
     if ($body !== null) return $body;
@@ -89,19 +93,15 @@ function spCurrentToken(): string {
 }
 
 function spDecodeApiToken(string $token): int {
-    $parts = explode('.', $token);
-    if (count($parts) !== 2) return 0;
-    [$payload, $signature] = $parts;
-    $expected = spBase64UrlEncode(hash_hmac('sha256', $payload, spAuthSecret(), true));
-    if (!hash_equals($expected, $signature)) return 0;
-    $json = spBase64UrlDecode($payload);
-    $data = is_string($json) ? json_decode($json, true) : null;
-    if (!is_array($data) || (int)($data['exp'] ?? 0) < time()) return 0;
-    $q=spApiDatabase()->prepare('SELECT session_version FROM users WHERE id=?');$q->execute([(int)($data['sub']??0)]);$version=$q->fetchColumn();
-    if($version===false || !isset($data['ver']) || (int)$data['ver']!==(int)$version)return 0;
-    return max(0, (int)($data['sub'] ?? 0));
+    $parts=explode('.',$token);if(count($parts)!==2)return 0;[$payload,$signature]=$parts;
+    $expected=spBase64UrlEncode(hash_hmac('sha256',$payload,spAuthSecret(),true));if(!hash_equals($expected,$signature))return 0;
+    $json=spBase64UrlDecode($payload);$data=is_string($json)?json_decode($json,true):null;if(!is_array($data)||(int)($data['exp']??0)<time())return 0;
+    $pdo=spApiDatabase();$q=$pdo->prepare('SELECT session_version FROM users WHERE id=? AND enabled=1');$q->execute([(int)($data['sub']??0)]);$version=$q->fetchColumn();
+    if($version===false||!isset($data['ver'])||(int)$data['ver']!==(int)$version)return 0;
+    if((string)($data['dev']??'')!=='')$_SERVER['SP_AUTH_DEVICE_ID']=(string)$data['dev'];
+    if((int)($data['off']??0)===1){$device=(string)($data['device']??'');$outlet=(int)($data['outlet']??0);if($device===''||$outlet<=0||!spTableExists($pdo,'sp_offline_devices'))return 0;$d=$pdo->prepare("SELECT 1 FROM sp_offline_devices WHERE device_id=? AND outlet_id=? AND user_id=? AND status='ACTIVE' AND expires_at>NOW() LIMIT 1");$d->execute([$device,$outlet,(int)$data['sub']]);if(!$d->fetchColumn())return 0;$_SERVER['SP_AUTH_OFFLINE']='1';$_SERVER['SP_AUTH_DEVICE_ID']=$device;$_SERVER['SP_AUTH_OUTLET_ID']=(string)$outlet;}
+    return max(0,(int)($data['sub']??0));
 }
-
 function spTableExists(PDO $pdo, string $table): bool {
     $q = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
     $q->execute([$table]);
@@ -166,6 +166,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'settings.php') return $method === 'GET' ? '' : 'manageSettings';
     if ($file === 'database-reset.php') return 'administrator';
     if ($file === 'database.php') return in_array($action, ['restore','backup'], true) ? 'administrator' : '';
+    if ($file === 'offline.php') return 'managePayments';
     if ($file === 'sales.php') return 'managePayments';
     if ($file === 'documents.php' && $action==='record-payment') return (spReadRequestBody()['document_type']??'')==='quotation'?'manageQuotation':'manageInvoice';
     if ($file === 'documents.php') return in_array($action, ['list-quotations','save-quotation','delete-quotation','convert'], true) ? 'manageQuotation' : 'manageInvoice';
@@ -207,6 +208,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
 
 function spIsPublicHealth(string $file, string $action): bool {
     return $file === 'version.php'
+        || ($file === 'offline.php' && $action === 'health')
         || ($action === 'auth' && $file === 'users.php');
 }
 
@@ -255,6 +257,8 @@ function spInstallCorsAndGuard(): void {
     }
 
     try {
+        $claims=spTokenClaims(spCurrentToken());$offline=(int)($claims['off']??0)===1;
+        if($offline&&($file!=='sales.php'||strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'))!=='POST'))spApiRespond(['ok'=>false,'error'=>'Offline access can only synchronize POS sales.'],403);
         $userId = spDecodeApiToken(spCurrentToken());
         if ($userId <= 0) spApiRespond(['ok'=>false,'error'=>'A valid signed-in session is required.'], 401);
         $pdo = spApiDatabase();
@@ -289,6 +293,7 @@ function spInstallCorsAndGuard(): void {
             $outletId = $candidateOutletId;
         }
         if ($outletId <= 0) $outletId = spResolveOutlet($pdo, $defaultOutlet);
+        if($offline&&(int)($requestClaims['outlet']??0)!==$outletId)spApiRespond(['ok'=>false,'error'=>'Offline access is limited to its registered outlet.'],403);
         if ($outletId <= 0) spApiRespond(['ok'=>false,'error'=>'An active outlet is required.'], 403);
         $_SERVER['SP_AUTH_OUTLET_ID'] = (string)$outletId;
         // Normalize legacy handlers to the outlet that was authenticated above.

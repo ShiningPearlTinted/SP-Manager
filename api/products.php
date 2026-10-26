@@ -376,7 +376,10 @@ try {
     $sql.=' WHERE p.active=1 ORDER BY p.id ASC';
     $q=$pdo->prepare($sql);$q->execute([$outletId]);$rows=$q->fetchAll();
     hydrateOutletFields($pdo,$outletId,$rows); hydrateProductRelations($pdo,$rows);
-    respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows,'product_source'=>'PRODUCT_MASTER+PRODUCT_OUTLETS']);
+    $device=trim((string)($_GET['device_id']??''));$signedDevice=(string)($_SERVER['SP_AUTH_DEVICE_ID']??'');if($device!==''&&$signedDevice!==''&&!hash_equals($signedDevice,$device))throw new RuntimeException('Terminal identity does not match this signed-in session.');$quotas=[];
+    if($device!==''&&spTableExists($pdo,'sp_offline_stock_quotas')){$q=$pdo->prepare("SELECT product_id,GREATEST(0,reserved_qty-consumed_qty) remaining FROM sp_offline_stock_quotas WHERE outlet_id=? AND device_id=?");$q->execute([$outletId,$device]);foreach($q->fetchAll() as $quota)$quotas[(string)$quota['product_id']]=(float)$quota['remaining'];}
+    foreach($rows as &$product){$pid=(int)($product['id']??0);$physical=max(0,(float)($product['stock']??0));if($device!==''&&spTableExists($pdo,'sp_offline_stock_quotas')){$q=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(0,q.reserved_qty-q.consumed_qty)),0) FROM sp_offline_stock_quotas q JOIN sp_offline_devices d ON d.device_id=q.device_id WHERE q.outlet_id=? AND q.product_id=? AND d.status='ACTIVE' AND d.expires_at>NOW()");$q->execute([$outletId,$pid]);$held=(float)$q->fetchColumn();$own=$quotas[(string)$pid]??0;$product['stock']=max(0,$physical-$held+$own);$product['offline_quota_remaining']=$own;}}
+    unset($product);respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows,'product_source'=>'PRODUCT_MASTER+PRODUCT_OUTLETS']);
   }
 
   if($action==='master-list' && $_SERVER['REQUEST_METHOD']==='GET'){

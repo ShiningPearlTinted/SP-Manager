@@ -219,7 +219,7 @@ final class ReportingEngine {
                 $columns=['date'=>'Date','number'=>'Document','product_name'=>'Product','party_name'=>$purchase?'Supplier':'Customer','user_name'=>'User','quantity'=>'Quantity','item_discount'=>'Item discount','discount'=>'Document discount','net'=>'Net amount','tax'=>'Tax','gross'=>'Total'];$money=['item_discount','discount','net','tax','gross'];$numbers=['quantity'];
             }
             $this->warning('Header discount, tax and final totals are allocated across stored item values with cent-exact remainders. Product/group names reflect current master data.');
-            if(!$purchase)$this->warning('Void/cancelled sales are excluded. Original sales retain their sale date; recorded refunds are separate negative events in product/group/customer/user/daily/profit reports. Hourly reports show gross sales events, matching the Aronium hourly template.');
+            if(!$purchase)$this->warning('Void/cancelled sales are excluded. Refunds are recorded on the refund date. Hourly reports show gross sales.');
         }
         $totals=[];foreach(array_unique([...$money,...array_diff($numbers,['margin'])]) as $m){$totals[$m]=0;foreach($rows as $r){if(($r[$m]??null)===null){$totals[$m]=null;break;}$totals[$m]+=$r[$m];}}
         foreach($rows as &$r){$r=array_intersect_key($r,$columns);foreach($money as $m)if(isset($r[$m]))$r[$m]=rpDecimal((int)$r[$m]);}unset($r);foreach($money as $m)if(isset($totals[$m]))$totals[$m]=rpDecimal((int)$totals[$m]);
