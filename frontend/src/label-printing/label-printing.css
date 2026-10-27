@@ -13,3 +13,4 @@
 
 .label-printing-barcode-type{display:grid;gap:5px;color:var(--mg-muted,#667085);font-size:11px}
 
+.label-printing-image-preview{display:flex;align-items:center;gap:8px;margin-top:4px}.label-printing-image-preview img{width:54px;height:54px;object-fit:contain;border:1px solid var(--mg-border,#dce6ee);border-radius:6px;background:#fff}.label-printing-image-preview button{min-height:30px;padding:0 8px;border:1px solid var(--mg-border,#cfd9e3);border-radius:6px;background:var(--mg-surface,#fff);color:var(--mg-ink,#344054);cursor:pointer}
