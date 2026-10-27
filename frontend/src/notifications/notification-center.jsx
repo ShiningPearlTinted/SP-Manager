@@ -24,7 +24,7 @@ export default function NotificationCenter({base,headers,user,outletId,online}){
  const [items,setItems]=useState(()=>{try{return JSON.parse(localStorage.getItem(cacheKey)||'[]')}catch{return[]}});
  const [unread,setUnread]=useState(()=>items.filter(item=>!item.read_at).length);
  const [open,setOpen]=useState(false),[permission,setPermission]=useState(()=>('Notification'in window)?Notification.permission:'unsupported');
- const [available,setAvailable]=useState(false),[subscribed,setSubscribed]=useState(false),[busy,setBusy]=useState(false);
+ const [available,setAvailable]=useState(false),[subscribed,setSubscribed]=useState(false),[busy,setBusy]=useState(false),[inboxError,setInboxError]=useState('');
  const [soundOn,setSoundOn]=useState(()=>{try{return localStorage.getItem('sp_notification_sound')==='1'}catch{return false}});
  const [toast,setToast]=useState(null),seen=useRef(new Set(items.map(item=>String(item.id)))),buttonRef=useRef(null),panelRef=useRef(null);
  const request=useCallback(async(action,payload={},method='GET')=>{
@@ -50,9 +50,9 @@ export default function NotificationCenter({base,headers,user,outletId,online}){
      }
     }
    }else for(const item of next)seen.current.add(String(item.id));
-   setItems(next);setUnread(Number(result.unread)||0);
+   setItems(next);setUnread(Number(result.unread)||0);setInboxError('');
    try{localStorage.setItem(cacheKey,JSON.stringify(next))}catch{}
-  }catch(e){if(e?.status!==401)console.warn('Notification refresh failed:',e?.message||e)}
+  }catch(e){if(e?.status!==401){setInboxError('Notifications unavailable. Check API deployment and database migration.');console.warn('Notification refresh failed:',e?.message||e)}}
  },[online,request,permission,soundOn,user?.id,user?.username,outletId,cacheKey]);
  useEffect(()=>{if(!online)return;let active=true;request('config').then(result=>{if(active)setAvailable(!!result.enabled)}).catch(()=>{if(active)setAvailable(false)});return()=>{active=false}},[online,request]);
  useEffect(()=>{if(!online||!available||!('serviceWorker'in navigator)||!('PushManager'in window))return;let active=true;navigator.serviceWorker.ready.then(async registration=>{const sub=await registration.pushManager.getSubscription();if(!active)return;setSubscribed(!!sub);if(sub)await request('subscribe',{subscription:sub.toJSON(),device_label:navigator.userAgent.slice(0,180)},'POST')}).catch(()=>{});return()=>{active=false}},[online,available,request]);
@@ -85,12 +85,13 @@ export default function NotificationCenter({base,headers,user,outletId,online}){
   const url=new URL(window.location.href);url.hash='booking?reference='+encodeURIComponent(reference)+'&outlet='+encodeURIComponent(item.data?.outlet_id||outletId);
   window.location.assign(url.href);window.location.reload();
  };
- const statusText=!online?'Offline':!available?'Push not configured':permission==='denied'?'Permission blocked':subscribed?'Push enabled':'Push disabled';
+ const statusText=inboxError?'Inbox unavailable':!online?'Offline':!available?'Push not configured':permission==='denied'?'Permission blocked':subscribed?'Push enabled':'Push disabled';
  return <div className="spn-center">
   <button ref={buttonRef} type="button" className="spn-bell" aria-label={'Notifications'+(unread?', '+unread+' unread':'')} aria-expanded={open} onClick={()=>{setOpen(value=>!value);if(!open)refresh(true)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>{unread>0&&<span className="spn-count">{unread>99?'99+':unread}</span>}</button>
   {open&&<section className="spn-panel" ref={panelRef} aria-label="Notifications">
    <header className="spn-panel-head"><div><b>Notifications</b><small>{statusText}</small></div><button type="button" onClick={()=>setOpen(false)} aria-label="Close notifications">×</button></header>
    <div className="spn-panel-controls"><span>Browser push</span>{subscribed?<button type="button" disabled={busy} onClick={disable}>Disable</button>:<button type="button" disabled={busy||!online||!available||permission==='denied'} onClick={enable}>{busy?'Working…':'Enable'}</button>}<label><input type="checkbox" checked={soundOn} onChange={e=>{setSoundOn(e.target.checked);localStorage.setItem('sp_notification_sound',e.target.checked?'1':'0')}}/> Sound</label></div>
+   {inboxError&&<p className="spn-empty" role="status">{inboxError}</p>}
    <div className="spn-list-head"><span>{unread} unread</span>{unread>0&&<button type="button" onClick={markAll}>Mark all read</button>}</div>
    <div className="spn-list">{items.length?items.map(item=><button type="button" className={'spn-item'+(!item.read_at?' is-unread':'')} key={item.id} onClick={async()=>{await markRead(item);setOpen(false);openBooking(item)}}><span className="spn-item-dot"/><span><b>{item.title}</b><small>{item.body}</small><time>{new Date(item.created_at.replace(' ','T')+'+08:00').toLocaleString()}</time></span></button>):<p className="spn-empty">No notifications</p>}</div>
   </section>}
