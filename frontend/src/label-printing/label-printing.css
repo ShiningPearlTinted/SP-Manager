@@ -10,3 +10,6 @@
 
 .label-printing-preview-canvas{margin-inline:auto}
 
+
+.label-printing-barcode-type{display:grid;gap:5px;color:var(--mg-muted,#667085);font-size:11px}
+
