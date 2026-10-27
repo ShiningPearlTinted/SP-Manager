@@ -44,3 +44,19 @@
 .app[data-ui="management"] > main > header .header-status-online.is-open i{background:#16a34a}
 .app[data-ui="management"] > main > header .header-status-business.is-closed,
 .app[data-ui="management"] > main > header .header-status-online.is-closed{background:#f8fafc;color:#344054}
+
+/* Shared Dashboard header treatment for notifications on every non-POS page. */
+.app:not(:has(.ar-pos-shell)) > main > header .head-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:wrap!important}
+.app:not(:has(.ar-pos-shell)) > main > header .spn-bell{display:grid!important;place-items:center!important;flex:0 0 48px!important;width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:1px solid #d9e1e8!important;border-radius:50%!important;background:#fff!important;color:#28445e!important}
+.app:not(:has(.ar-pos-shell)) > main > header .spn-bell:hover{background:#f5f8fb!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .head-actions{flex-wrap:wrap!important;width:auto!important;justify-content:flex-end!important}
+@media(max-width:700px){
+ .app:not(:has(.ar-pos-shell)) > main > header{position:sticky!important;top:0!important;z-index:950!important;display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:8px 10px!important;width:100%!important;height:auto!important;min-height:72px!important;padding:10px 12px!important;box-sizing:border-box!important}
+ .app:not(:has(.ar-pos-shell)) > main > header > div:first-of-type{flex:1 1 auto!important;min-width:0!important}
+ .app:not(:has(.ar-pos-shell)) > main > header .head-actions{display:flex!important;flex:1 0 100%!important;width:100%!important;max-width:100%!important;justify-content:flex-start!important;align-items:center!important;flex-wrap:wrap!important;gap:6px!important;margin:0!important;position:static!important;transform:none!important}
+ .app:not(:has(.ar-pos-shell)) > main > header .spn-bell{flex:0 0 42px!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}
+ .app:not(:has(.ar-pos-shell)) > main > header .header-status-pill{height:32px!important;min-height:32px!important;padding:0 9px!important;font-size:11px!important;line-height:1!important}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header.spmb-app-header{position:sticky!important;top:0!important;z-index:950!important;height:auto!important;min-height:72px!important;padding:10px 12px!important;gap:8px 10px!important}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header.spmb-app-header .head-actions{position:static!important;display:flex!important;flex:1 0 100%!important;width:100%!important;max-width:100%!important;flex-wrap:wrap!important;gap:6px!important;justify-content:flex-start!important;margin:0!important;transform:none!important}
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header.spmb-app-header .header-status-pill{height:32px!important;min-height:32px!important;padding:0 9px!important;font-size:11px!important}
+}
