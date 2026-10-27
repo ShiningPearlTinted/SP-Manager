@@ -1,4 +1,4 @@
-const CACHE = "sp-manager-shell-v2";
+const CACHE = "sp-manager-shell-v3";
 const BASE = "/SP-Manager/";
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -38,4 +38,46 @@ self.addEventListener("fetch", event => {
       return response;
     })));
   }
+});
+
+self.addEventListener("push", event => {
+  event.waitUntil((async () => {
+    let payload = {};
+    try { payload = event.data ? event.data.json() : {}; } catch { payload = {body: "A new booking is waiting for your outlet."}; }
+    const title = String(payload.title || "SP-Manager");
+    const reference = /^[A-Za-z0-9-]{8,32}$/.test(String(payload.data?.reference || "")) ? String(payload.data.reference) : "";
+    const outlet = /^[1-9][0-9]{0,17}$/.test(String(payload.data?.outlet_id || "")) ? String(payload.data.outlet_id) : "";
+    const query = new URLSearchParams();
+    if (reference) query.set("reference", reference);
+    if (outlet) query.set("outlet", outlet);
+    const url = new URL(self.registration.scope);
+    if (reference) url.hash = "booking?" + query.toString();
+    await self.registration.showNotification(title, {
+      body: String(payload.body || "A new booking is waiting for your outlet."),
+      tag: String(payload.tag || (reference ? "sp-booking-" + reference : "sp-notification")),
+      data: {url: url.href}
+    });
+    const clients = await self.clients.matchAll({type: "window", includeUncontrolled: true});
+    for (const client of clients) client.postMessage({type: "SP_NOTIFICATION_RECEIVED"});
+  })());
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || self.registration.scope);
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({type: "window", includeUncontrolled: true});
+    for (const client of windows) {
+      if (new URL(client.url).origin !== target.origin) continue;
+      const navigated = await client.navigate(target.href);
+      return (navigated || client).focus();
+    }
+    return self.clients.openWindow(target.href);
+  })());
+});
+self.addEventListener("pushsubscriptionchange", event => {
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({type: "window", includeUncontrolled: true});
+    for (const client of clients) client.postMessage({type: "SP_PUSH_SUBSCRIPTION_CHANGE"});
+  })());
 });

@@ -142,6 +142,7 @@ function spTokenOutletFresh(PDO $pdo,int $outlet): bool {
 }
 
 function spPermissionForRequest(string $file, string $action, string $stateKey, string $method): string {
+    if ($file === 'notifications.php') return 'viewBookings';
     if ($file === 'hr.php') return match ($action) {
         'save-master'=>'manageHrSettings', 'save-employee'=>'manageHrEmployees',
         'transfer','temporary-assignment'=>'transferHrEmployees',
@@ -308,7 +309,7 @@ function spInstallCorsAndGuard(): void {
             $hasAssignment = (bool)$aq->fetchColumn();
         }
         if (!$hasAssignment && (int)($user['outlet_id'] ?? 0) === $outletId) $hasAssignment = true;
-        $globalManagement = ($user['role_name'] ?? '') === 'Administrator' && in_array($file, ['outlets.php','outlet-provision.php'], true);
+        $globalManagement = ($user['role_name'] ?? '') === 'Administrator' && in_array($file, ['outlets.php','outlet-provision.php','notifications.php'], true);
         if (!$hasAssignment && !$globalManagement) spApiRespond(['ok'=>false,'error'=>'This user is not assigned to the requested outlet.'], 403);
 
         if(strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'))==='POST'){$database=(string)$pdo->query('SELECT DATABASE()')->fetchColumn();$lock='spm:'.substr(hash('sha256',$database.'|outlet:'.$outletId),0,40);$l=$pdo->prepare('SELECT GET_LOCK(?,10)');$l->execute([$lock]);if((int)$l->fetchColumn()!==1)spApiRespond(['ok'=>false,'error'=>'Outlet database busy. Retry the same request.'],409);register_shutdown_function(static function()use($pdo,$lock){if($pdo->inTransaction())$pdo->rollBack();try{$pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$lock]);}catch(Throwable $e){}});}

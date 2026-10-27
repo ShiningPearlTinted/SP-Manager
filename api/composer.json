@@ -1,0 +1,16 @@
+{
+  "name": "sp-manager/api",
+  "description": "SP-Manager central API dependencies",
+  "type": "project",
+  "require": {
+    "php": ">=8.2",
+    "minishlink/web-push": "11.0.0"
+  },
+  "config": {
+    "sort-packages": true,
+    "vendor-dir": "notification-vendor",
+    "allow-plugins": {
+      "php-http/discovery": true
+    }
+  }
+}

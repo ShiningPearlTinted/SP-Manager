@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/security.php';
 require_once __DIR__.'/booking-lib.php';
 require_once __DIR__.'/booking-bridge-lib.php';
+require_once __DIR__.'/notification-lib.php';
 header('Cache-Control: no-store');
 $pdo=null;$locks=[];$response=[];$code=200;
 try{
@@ -34,7 +35,8 @@ try{
     else{$input=array_intersect_key($b,array_flip(['date','time','customer_name','phone','email','car_model','plate','notes']));$input['service_id']=$service['id'];$input['status']='pending';$row=bookingSave($pdo,$outlet,$input);$pdo->prepare("UPDATE sp_bookings SET source='website' WHERE id=? AND outlet_id=?")->execute([$row['id'],$outlet]);$row['source']='website';}
     $request=bookingText($b['request_key']??null,'Website request id',64,true);if(!preg_match('/^[A-Za-z0-9-]{20,64}$/D',$request))throw new BookingError('Invalid website request id.');
     $branch=bookingText($body['branch']??null,'Website branch',30,true);if(!preg_match('/^[a-z0-9-]+$/D',$branch))throw new BookingError('Invalid website branch.');
-    $bookingId=(int)$row['id'];$response=['ok'=>true,'booking'=>$row,'website'=>['package_id'=>(int)$package['id'],'request_key'=>$request,'branch'=>$branch]];
+    $bookingId=(int)$row['id'];spNotificationCreateWebsiteBooking($pdo,$outlet,(int)$row['id'],$site,$request,(string)$row['reference']);
+    $response=['ok'=>true,'booking'=>$row,'website'=>['package_id'=>(int)$package['id'],'request_key'=>$request,'branch'=>$branch]];
    }
    $pdo->prepare('INSERT INTO sp_booking_bridge_calls(call_key,site_hash,payload_hash,action_name,booking_id,response_json,created_at) VALUES(?,?,?,?,?,?,?)')->execute([$key,$site,$proof['payload_hash'],$action,$bookingId,json_encode($response,JSON_THROW_ON_ERROR),bookingNow()->format('Y-m-d H:i:s')]);
   }$pdo->commit();

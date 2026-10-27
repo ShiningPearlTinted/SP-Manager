@@ -1,0 +1,17 @@
+SP-Manager Booking Notifications Update
+Files: 14
+
+api/.htaccess
+api/booking-bridge.php
+api/composer.json
+api/dispatch-notifications.php
+api/notification-lib.php
+api/notifications.php
+api/security.php
+database/migrations/booking-notifications-v1.sql
+frontend/public/sw.js
+frontend/src/main.jsx
+frontend/src/notifications/notification-center.jsx
+frontend/src/notifications/notification-center.css
+NOTIFICATIONS-DEPLOYMENT.md
+UPDATE-MANIFEST.txt
