@@ -1,5 +1,5 @@
 .spn-center{position:relative;display:inline-flex;align-items:center;z-index:8000}
-.spn-bell{position:relative;width:38px;height:38px;display:grid;place-items:center;border:1px solid #dce4eb;border-radius:50%;background:#fff;color:#28445e}
+.spn-bell{position:relative;width:44px;height:44px;display:grid;place-items:center;border:1px solid #dce4eb;border-radius:50%;background:#fff;color:#28445e}
 .spn-bell:hover{background:#f5f8fb}
 .spn-bell svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .spn-count{position:absolute;right:-4px;top:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#b51f35;color:#fff;font-size:10px;font-weight:700;line-height:17px}
@@ -23,3 +23,24 @@
 .spn-toast>button:first-child{position:absolute;top:7px;right:9px;border:0;background:transparent;color:#748294;font-size:18px}
 .spn-toast .spn-toast-link{justify-self:start;margin-top:4px;border:0;background:transparent;color:#087da5;font-size:11px;font-weight:700}
 @media(max-width:650px){.spn-panel{right:-42px}.spn-toast{right:12px;top:90px}}
+/* Keep the notification control consistent with the Dashboard header. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .head-actions{align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .spn-bell{width:44px;height:44px}
+.ar-pos-notification-slot{display:flex;align-items:center;justify-content:center;flex:0 0 50px;min-width:50px;height:100%;margin-left:auto;position:relative;z-index:2147483646}
+.ar-pos-notification-slot:empty{display:none}
+.ar-topbar>.ar-pos-notification-slot:not(:empty)+.ar-menu-btn{margin-left:0}
+.ar-pos-notification-slot .spn-bell{width:42px;height:42px;border-color:#59616a;background:#303030;color:#f3f5f7}
+.ar-pos-notification-slot .spn-bell:hover{background:#3a424a}
+.ar-pos-notification-slot .spn-panel{position:fixed;top:66px;right:68px;z-index:2147483647}
+@media(max-width:700px){
+ .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > header .head-actions{width:100%;justify-content:flex-start;flex-wrap:wrap}
+ .ar-pos-notification-slot{position:fixed;top:4px;right:58px;width:50px;height:50px;z-index:2147483646;margin:0}
+ .ar-pos-notification-slot .spn-panel{top:62px;right:8px}
+}
+.app[data-ui="management"] > main > header .header-status-pill{height:34px;padding:0 12px;border-color:#d9e1e8;background:#fff;color:#344054;font-size:12px;font-weight:600;line-height:1}
+.app[data-ui="management"] > main > header .header-status-business.is-open,
+.app[data-ui="management"] > main > header .header-status-online.is-open{border-color:#cfe7d7;background:#f6fcf8;color:#176b3c}
+.app[data-ui="management"] > main > header .header-status-business.is-open i,
+.app[data-ui="management"] > main > header .header-status-online.is-open i{background:#16a34a}
+.app[data-ui="management"] > main > header .header-status-business.is-closed,
+.app[data-ui="management"] > main > header .header-status-online.is-closed{background:#f8fafc;color:#344054}
