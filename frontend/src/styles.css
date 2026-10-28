@@ -8318,3 +8318,142 @@ body:has(.customer-display-screen) #root{
  background:var(--mg-bg)!important;border-color:var(--mg-border);
 }
 }
+
+/* ===== management-design-system (premium) ===== */
+/* One palette, one card, one button family for every Management screen.
+   Scoped to data-ui="management": POS / Sales and Dashboard are never matched. */
+@media screen {
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) {
+ --mg-ink:#101828; --mg-ink-2:#344054; --mg-muted:#667085; --mg-bg:#f5f7fa; --mg-surface:#fff;
+ --mg-border:#e4e7ec; --mg-border-strong:#d0d5dd; --mg-hover:#f9fafb;
+ --mg-accent:#087ea4; --mg-accent-hover:#066b8c; --mg-accent-active:#055a76; --mg-accent-soft:#e7f4f9; --mg-accent-soft-ink:#05698a;
+ --mg-danger:#d92d20; --mg-danger-soft:#fef3f2; --mg-success:#079455;
+ --mg-shadow-xs:0 1px 2px rgba(16,24,40,.05);
+ --mg-shadow-md:0 6px 16px -4px rgba(16,24,40,.10),0 2px 4px -2px rgba(16,24,40,.05);
+ --mg-radius:8px; --mg-card-radius:12px;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-night {
+ --mg-ink-2:#cbd5e1; --mg-border-strong:#4b5d77; --mg-hover:#243247;
+ --mg-accent-hover:#0ea5e9; --mg-accent-active:#0284c7; --mg-accent-soft:rgba(56,189,248,.14); --mg-accent-soft-ink:#7dd3fc;
+ --mg-danger-soft:rgba(253,164,175,.12);
+ --mg-shadow-xs:0 1px 2px rgba(0,0,0,.3); --mg-shadow-md:0 6px 16px -4px rgba(0,0,0,.45);
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)).app-theme-high-contrast {
+ --mg-ink-2:#fff; --mg-border-strong:#fff; --mg-hover:#1a1a1a; --mg-accent-hover:#a5f3fc; --mg-accent-active:#67e8f9;
+ --mg-accent-soft:#002a33; --mg-accent-soft-ink:#6ee7ff; --mg-danger-soft:#330000;
+}
+
+/* Cards: same surface, border, radius and depth everywhere */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(
+ .panel,.card,.product-master-shell,.customer-topbar,.customer-list-panel,.customer-summary,.payment-types-top,
+ .promotion-toolbar,.promotion-list-panel,.label-printing-toolbar,.label-printing-table-wrap,.loyalty-topbar,
+ .outlet-table-card,.inventory-topbar,.inventory-shell,.document-toolbar,.settings-shell,.company-shell,
+ .spmb-empty,.spmb-table-wrap,.named-orders-toolbar,.named-orders-card,.pc-card,.hr-sidebar) {
+ background:var(--mg-surface);border:1px solid var(--mg-border);border-radius:var(--mg-card-radius);box-shadow:var(--mg-shadow-xs);
+}
+/* Cards nested inside cards stay flat */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.panel,.card,.settings-shell,.company-shell,.inventory-shell,.product-master-shell) :is(.panel,.card) {box-shadow:none;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.document-filter,.inventory-total) {border-color:var(--mg-border);border-radius:10px;}
+
+/* Management home tiles */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card {
+ background:var(--mg-surface);border:1px solid var(--mg-border);border-radius:var(--mg-card-radius);box-shadow:var(--mg-shadow-xs);
+ color:var(--mg-ink);font-weight:600;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card:hover {border-color:var(--mg-accent);box-shadow:var(--mg-shadow-md);transform:translateY(-1px);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .management-card svg {color:var(--mg-accent);}
+
+/* Buttons: shared shape */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) main button {font-family:inherit;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) main button:focus-visible {outline:2px solid var(--mg-accent);outline-offset:2px;}
+
+/* Primary: one teal for every Save / Add / Create action */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(
+ button.primary,.users-add,.settings-save,.company-save,.outlet-add-btn,.spmb-primary,
+ .product-editor-form > .form-actions > button:not(.secondary),.customer-summary-head > button:last-child,
+ .customer-modal-foot > button:last-child,.payment-type-modal-foot > button:last-child,.promotion-modal-foot > button:last-child,
+ .inventory-modal-foot > button:not(.secondary):not(:last-child),.panel.narrow > button:last-child,.settings-business > button:last-child) {
+ background:var(--mg-accent);border:1px solid var(--mg-accent);color:#fff;font-weight:600;border-radius:var(--mg-radius);
+ box-shadow:var(--mg-shadow-xs);transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(
+ button.primary,.users-add,.settings-save,.company-save,.outlet-add-btn,.spmb-primary,
+ .product-editor-form > .form-actions > button:not(.secondary),.customer-summary-head > button:last-child,
+ .customer-modal-foot > button:last-child,.payment-type-modal-foot > button:last-child,.promotion-modal-foot > button:last-child,
+ .inventory-modal-foot > button:not(.secondary):not(:last-child),.panel.narrow > button:last-child,.settings-business > button:last-child):hover:not(:disabled) {
+ background:var(--mg-accent-hover);border-color:var(--mg-accent-hover);color:#fff;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(
+ button.primary,.users-add,.settings-save,.company-save,.outlet-add-btn,.spmb-primary,
+ .product-editor-form > .form-actions > button:not(.secondary),.customer-summary-head > button:last-child,
+ .customer-modal-foot > button:last-child,.payment-type-modal-foot > button:last-child,.promotion-modal-foot > button:last-child,
+ .inventory-modal-foot > button:not(.secondary):not(:last-child),.panel.narrow > button:last-child,.settings-business > button:last-child):active:not(:disabled) {
+ background:var(--mg-accent-active);border-color:var(--mg-accent-active);
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(button.primary,.users-add,.settings-save,.company-save,.outlet-add-btn,.spmb-primary):disabled {opacity:.5;cursor:not-allowed;box-shadow:none;}
+
+/* Secondary: white with a quiet border */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(
+ button.secondary,.customer-modal-foot > button:not(:last-child),.payment-type-modal-foot > button:not(:last-child),
+ .promotion-modal-foot > button:not(:last-child),.outlet-modal-foot > button:not(.primary),.users-modal-actions > button:not(.settings-save),
+ .hr-form-actions > button:not(.primary),.label-printing-modal footer > button:not(.primary),.outlet-search > button,.outlet-refresh) {
+ background:var(--mg-surface);border:1px solid var(--mg-border-strong);color:var(--mg-ink-2);font-weight:600;border-radius:var(--mg-radius);
+ box-shadow:var(--mg-shadow-xs);transition:background .15s ease,border-color .15s ease;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(
+ button.secondary,.customer-modal-foot > button:not(:last-child),.payment-type-modal-foot > button:not(:last-child),
+ .promotion-modal-foot > button:not(:last-child),.outlet-modal-foot > button:not(.primary),.users-modal-actions > button:not(.settings-save),
+ .hr-form-actions > button:not(.primary),.label-printing-modal footer > button:not(.primary),.outlet-search > button,.outlet-refresh):hover:not(:disabled) {
+ background:var(--mg-hover);border-color:var(--mg-border-strong);color:var(--mg-ink);
+}
+
+/* Toolbar action buttons */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions) > button {
+ border-color:var(--mg-border);color:var(--mg-ink-2);box-shadow:var(--mg-shadow-xs);
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.purchase-actions,.payment-types-actions,.promotion-actions) > button:hover:not(:disabled) {
+ background:var(--mg-hover);border-color:var(--mg-border-strong);color:var(--mg-ink);
+}
+
+/* Destructive */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(button.danger,button.danger-text,button.delete) {color:var(--mg-danger);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(button.danger,button.danger-text,button.delete):hover:not(:disabled) {background:var(--mg-danger-soft);}
+
+/* Tabs and navigation: soft accent for the current item */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-editor-tabs,.customer-tabs,.company-tabs,.spmb-tabs,.pc-tabs) > button {
+ background:transparent;border:1px solid transparent;color:var(--mg-muted);font-weight:600;border-radius:var(--mg-radius);box-shadow:none;transition:background .15s ease,color .15s ease;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-editor-tabs,.customer-tabs,.company-tabs,.spmb-tabs,.pc-tabs) > button:hover {background:var(--mg-hover);color:var(--mg-ink);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(
+ :is(.product-editor-tabs,.customer-tabs,.company-tabs,.spmb-tabs,.pc-tabs) > button:is(.active,.selected,[aria-selected="true"]),
+ .settings-nav > button.active,.tree-item.selected,.hr-sidebar > button.primary) {
+ background:var(--mg-accent-soft);border-color:transparent;color:var(--mg-accent-soft-ink);font-weight:600;box-shadow:none;
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .hr-sidebar > button.primary,
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .hr-sidebar > button.primary:hover {background:var(--mg-accent-soft)!important;border-color:transparent!important;color:var(--mg-accent-soft-ink)!important;box-shadow:none!important;}
+
+/* Tables */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) main table th {
+ background:var(--mg-hover);color:var(--mg-muted);font-size:12px;font-weight:600;letter-spacing:.02em;border-bottom:1px solid var(--mg-border);
+}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) main table td {color:var(--mg-ink-2);border-color:var(--mg-border);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) main table tbody tr:hover > td {background:var(--mg-hover);}
+
+/* Booking used its own crimson; bring it onto the shared accent */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .spmb {--bk-accent:var(--mg-accent);--bk-text:var(--mg-ink);--bk-muted:var(--mg-muted);--bk-line:var(--mg-border);--bk-surface:var(--mg-surface);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .spmb-calendar-day.spmb-today {border-color:var(--mg-accent);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .spmb button.spmb-event {background:var(--mg-accent-soft);border-left-color:var(--mg-accent);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .spmb-dialog .spmb-dialog-close:focus-visible {outline-color:var(--mg-accent);}
+
+/* These three were pinned with !important in older rules (green Save, navy New order, 14px cards). */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.settings-save,.settings-actions .settings-save,.users-modal-actions .settings-save,.named-order-create .primary) {background:var(--mg-accent)!important;border-color:var(--mg-accent)!important;color:#fff!important;font-weight:600!important;box-shadow:var(--mg-shadow-xs)!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.settings-save,.settings-actions .settings-save,.users-modal-actions .settings-save,.named-order-create .primary):hover:not(:disabled) {background:var(--mg-accent-hover)!important;border-color:var(--mg-accent-hover)!important;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.named-orders-toolbar,.named-orders-card) {border-radius:var(--mg-card-radius)!important;}
+
+/* App alert/confirm dialog renders outside .app and is shared with POS; restyle it only while a Management page is open. */
+body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-dialog-btn {border-radius:8px;}
+body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-dialog-btn.primary {background:#087ea4;border-color:#087ea4;color:#fff;}
+body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-dialog-btn.primary:hover {background:#066b8c;border-color:#066b8c;}
+body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-dialog-btn.secondary {border-color:#d0d5dd;color:#344054;}
+body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-dialog-btn:focus {outline-color:rgba(8,126,164,.25);}
+}
