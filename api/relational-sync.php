@@ -460,13 +460,13 @@ function paymentTypeAppMap(array $r): array {
   ];
 }
 function paymentTypeList(PDO $pdo,int $masterOutletId,int $imageOutletId): array {
-  if(!tableExists($pdo,'payment_type_display_images'))throw new RuntimeException('Payment Type outlet image migration is required. Apply UPGRADE-1.0.51.sql.');
+  if(!tableExists($pdo,'payment_type_display_images'))throw new RuntimeException('Payment Type outlet image table is required. Import database/SCHEMA-CURRENT.sql.');
   $q=$pdo->prepare('SELECT p.*,CASE WHEN i.customer_display_image IS NOT NULL AND i.customer_display_image<>\'\' THEN 1 ELSE 0 END AS has_customer_display_image FROM payment_types p LEFT JOIN payment_type_display_images i ON i.payment_type_id=p.id AND i.outlet_id=? WHERE p.outlet_id=? ORDER BY p.sort_order ASC,p.id ASC');
   $q->execute([$imageOutletId,$masterOutletId]);
   return array_map('paymentTypeAppMap',$q->fetchAll());
 }
 function paymentTypeImageOperation(PDO $pdo,int $masterOutletId,int $imageOutletId,array $b):void {
-  if(!tableExists($pdo,'payment_type_display_images'))throw new RuntimeException('Payment Type outlet image migration is required. Apply UPGRADE-1.0.51.sql.');
+  if(!tableExists($pdo,'payment_type_display_images'))throw new RuntimeException('Payment Type outlet image table is required. Import database/SCHEMA-CURRENT.sql.');
   $id=(int)($b['id']??0);
   if($id<=0)throw new InvalidArgumentException('Payment type id is required.');
   $q=$pdo->prepare('SELECT id FROM payment_types WHERE id=? AND outlet_id=? LIMIT 1');

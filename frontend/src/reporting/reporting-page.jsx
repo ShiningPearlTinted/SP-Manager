@@ -1,6 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {downloadExcel,printReport} from './report-exports.js';
-import './reporting.css';
 
 function localDate(date=new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
 function Filter({label,value,onChange,items,disabled=false}) {return <label className="reporting-field"><span>{label}</span><select value={value} onChange={e=>onChange(e.target.value)} disabled={disabled}><option value="">{disabled?'Not applicable':'All'}</option>{items.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;}

@@ -16,7 +16,7 @@ function spNotificationSettings(): array {
 
 function spNotificationRequireSchema(PDO $pdo): void {
     foreach(['sp_notifications','sp_notification_recipients','sp_push_subscriptions','sp_notification_deliveries'] as $table) {
-        if(!spTableExists($pdo,$table)) throw new RuntimeException('Apply booking-notifications-v1.sql before enabling notifications.');
+        if(!spTableExists($pdo,$table)) throw new RuntimeException('Import database/SCHEMA-CURRENT.sql before enabling notifications.');
     }
 }
 
@@ -31,16 +31,22 @@ function spNotificationCanReceive(PDO $pdo,int $userId,int $outletId): bool {
     return is_array($permissions) && !empty($permissions['viewBookings']);
 }
 
-function spNotificationCreateWebsiteBooking(PDO $pdo,int $outletId,int $bookingId,string $siteHash,string $requestId,string $reference): void {
+function spNotificationCreateWebsiteBooking(PDO $pdo,int $outletId,int $bookingId,string $siteHash,string $requestId,string $reference): bool {
     if(!$pdo->inTransaction()) throw new LogicException('Notification event must share the booking transaction.');
     $pdo->exec('SAVEPOINT sp_booking_notification');
     try {
         spNotificationRequireSchema($pdo);
-        $eventKey=hash('sha256','website-booking|'.$siteHash.'|'.$requestId);
-        $data=['reference'=>$reference,'outlet_id'=>$outletId];
-        $insert=$pdo->prepare("INSERT IGNORE INTO sp_notifications(event_key,outlet_id,booking_id,event_type,title,body,data_json) VALUES(?,?,?,'booking.created','New booking received','A new booking is waiting for your outlet.',?)");
-        $insert->execute([$eventKey,$outletId,$bookingId,json_encode($data,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);
-        $q=$pdo->prepare('SELECT id FROM sp_notifications WHERE event_key=?');$q->execute([$eventKey]);$notificationId=(int)$q->fetchColumn();
+        // Serialize retries/recovery for this booking and reuse its existing event.
+        $lock=$pdo->prepare('SELECT id FROM sp_bookings WHERE id=? AND outlet_id=? FOR UPDATE');$lock->execute([$bookingId,$outletId]);
+        if(!$lock->fetchColumn()) throw new RuntimeException('Website booking was not found for notification.');
+        $q=$pdo->prepare("SELECT id FROM sp_notifications WHERE booking_id=? AND event_type='booking.created' LIMIT 1");$q->execute([$bookingId]);$notificationId=(int)$q->fetchColumn();
+        if($notificationId<=0){
+            $eventKey=hash('sha256','website-booking|'.$siteHash.'|'.$requestId);
+            $data=['reference'=>$reference,'outlet_id'=>$outletId];
+            $insert=$pdo->prepare("INSERT IGNORE INTO sp_notifications(event_key,outlet_id,booking_id,event_type,title,body,data_json) VALUES(?,?,?,'booking.created','New booking received','A new booking is waiting for your outlet.',?)");
+            $insert->execute([$eventKey,$outletId,$bookingId,json_encode($data,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);
+            $q=$pdo->prepare("SELECT id FROM sp_notifications WHERE booking_id=? AND event_type='booking.created' LIMIT 1");$q->execute([$bookingId]);$notificationId=(int)$q->fetchColumn();
+        }
         if($notificationId<=0) throw new RuntimeException('Notification event was not stored.');
         $q=$pdo->prepare("SELECT DISTINCT u.id FROM users u LEFT JOIN roles r ON r.id=u.role_id LEFT JOIN user_outlets uo ON uo.user_id=u.id AND uo.outlet_id=? AND uo.active=1 WHERE u.enabled=1 AND (uo.user_id IS NOT NULL OR u.outlet_id=? OR r.role_name='Administrator')");
         $q->execute([$outletId,$outletId]);
@@ -56,10 +62,22 @@ function spNotificationCreateWebsiteBooking(PDO $pdo,int $outletId,int $bookingI
             }
         }
         $pdo->exec('RELEASE SAVEPOINT sp_booking_notification');
+        return true;
     } catch(Throwable $e) {
         try {$pdo->exec('ROLLBACK TO SAVEPOINT sp_booking_notification');$pdo->exec('RELEASE SAVEPOINT sp_booking_notification');} catch(Throwable $ignored) {}
-        error_log('SP notification enqueue failed; booking remains committed: '.get_class($e));
+        // Keep the booking even when notification storage is unavailable, and retain the actionable cause in API logs.
+        error_log('SP notification enqueue failed; booking remains committed: '.$e->getMessage());
+        return false;
     }
+}
+
+function spNotificationRecoverRecentWebsiteBookings(PDO $pdo,int $outletId,string $siteHash='notification-recovery'): void {
+    // Catch up bookings whose first enqueue was missed during an API/migration outage.
+    $q=$pdo->prepare("SELECT b.id,b.reference FROM sp_bookings b WHERE b.outlet_id=? AND b.source='website' AND b.created_at>=DATE_SUB(CURRENT_TIMESTAMP,INTERVAL 7 DAY) AND NOT EXISTS (SELECT 1 FROM sp_notifications n WHERE n.booking_id=b.id AND n.event_type='booking.created') ORDER BY b.id DESC LIMIT 100");
+    $q->execute([$outletId]);$rows=$q->fetchAll();if(!$rows)return;
+    $started=false;
+    try{if(!$pdo->inTransaction()){$pdo->beginTransaction();$started=true;}foreach($rows as $row)spNotificationCreateWebsiteBooking($pdo,$outletId,(int)$row['id'],$siteHash,'booking-'.(int)$row['id'],(string)$row['reference']);if($started)$pdo->commit();}
+    catch(Throwable $e){if($started&&$pdo->inTransaction())$pdo->rollBack();error_log('SP notification recovery failed: '.$e->getMessage());}
 }
 
 function spNotificationEncrypt(string $plain): string {

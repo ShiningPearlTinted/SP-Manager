@@ -173,6 +173,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'documents.php' && $action==='record-payment') return (spReadRequestBody()['document_type']??'')==='quotation'?'manageQuotation':'manageInvoice';
     if ($file === 'documents.php') return in_array($action, ['list-quotations','save-quotation','delete-quotation','convert'], true) ? 'manageQuotation' : 'manageInvoice';
     if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete'], true) ? 'manageCustomers' : '';
+    if ($file === 'label-printing.php') return 'manageProducts';
     if ($file === 'products.php' && $action==='stock-adjust') return 'manageInventory';
     if ($file === 'products.php') return in_array($action, ['save','assign','unassign','delete','save-category','delete-category','save-group','delete-group'], true) ? 'manageProducts' : '';
     if ($file === 'sales-delete.php') return 'managePayments';

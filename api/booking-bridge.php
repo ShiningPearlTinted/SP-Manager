@@ -9,7 +9,7 @@ $pdo=null;$locks=[];$response=[];$code=200;
 try{
  $proof=$GLOBALS['spBookingBridge']??null;if(!is_array($proof))throw new BookingError('Bridge authentication required.',401);
  $body=$proof['body'];$site=$proof['site_hash'];$action=bookingText($body['action']??null,'Action',24,true);if(!in_array($action,['ping','sync','slots','create','import','statuses','email-settings'],true))throw new BookingError('Unsupported website bridge action.',404);
- $pdo=spApiDatabase();foreach(['sp_bookings','sp_booking_services','sp_booking_settings','sp_booking_events','sp_booking_website_services','sp_booking_bridge_calls'] as $table)if(!spTableExists($pdo,$table))throw new BookingError('Apply booking-v1.sql and booking-website-bridge.sql before connecting the website.',503);
+ $pdo=spApiDatabase();foreach(['sp_bookings','sp_booking_services','sp_booking_settings','sp_booking_events','sp_booking_website_services','sp_booking_bridge_calls'] as $table)if(!spTableExists($pdo,$table))throw new BookingError('Import database/SCHEMA-CURRENT.sql before connecting the website.',503);
  if($action==='ping'){$rows=$pdo->query('SELECT id,outlet_code,outlet_name FROM outlets WHERE active=1 ORDER BY outlet_name')->fetchAll();$response=['ok'=>true,'protocol'=>1,'outlets'=>$rows];}
  elseif($action==='email-settings'){$outlet=bookingBridgeOutlet($pdo,$body['outlet_id']??null);$response=['ok'=>true,...bookingEmailConfig($pdo,$outlet)];}
  elseif($action==='slots'){$outlet=bookingBridgeOutlet($pdo,$body['outlet_id']??null);$service=bookingBridgeMappedService($pdo,$site,$outlet,$body['package_id']??null);$response=['ok'=>true,'slots'=>bookingSlots($pdo,$outlet,$service,bookingDate($body['date']??null)->format('Y-m-d')),'duration_minutes'=>(int)bookingService($pdo,$outlet,$service)['duration_minutes']];}
@@ -25,7 +25,10 @@ try{
   $database=(string)$pdo->query('SELECT DATABASE()')->fetchColumn();foreach($outlets as $id){$lock='spm:'.substr(hash('sha256',$database.'|outlet:'.$id),0,40);$q=$pdo->prepare('SELECT GET_LOCK(?,10)');$q->execute([$lock]);if((int)$q->fetchColumn()!==1)throw new BookingError('Outlet is busy. Retry the same request.',409);$locks[]=$lock;}
   $pdo->beginTransaction();foreach($outlets as $id)spLockOutlet($pdo,$id);
   $key=hash('sha256',$site.'|'.$proof['request_id']);$q=$pdo->prepare('SELECT payload_hash,response_json FROM sp_booking_bridge_calls WHERE call_key=?');$q->execute([$key]);$prior=$q->fetch();
-  if($prior){if(!hash_equals($prior['payload_hash'],$proof['payload_hash']))throw new BookingError('Request id was reused with different booking data.',409);$response=json_decode($prior['response_json'],true,512,JSON_THROW_ON_ERROR);if(!empty($response['deleted_booking_id']))throw new BookingError('This booking was permanently deleted. Start a new booking request.',409);}
+  if($prior){if(!hash_equals($prior['payload_hash'],$proof['payload_hash']))throw new BookingError('Request id was reused with different booking data.',409);$response=json_decode($prior['response_json'],true,512,JSON_THROW_ON_ERROR);if(!empty($response['deleted_booking_id']))throw new BookingError('This booking was permanently deleted. Start a new booking request.',409);
+   // Retry notification enqueue for a booking committed before notification storage was available.
+   if(in_array($action,['create','import'],true)&&is_array($response['booking']??null)&&is_array($response['website']??null)){$cachedBooking=$response['booking'];$request=(string)($response['website']['request_key']??'');$bookingId=(int)($cachedBooking['id']??0);$reference=(string)($cachedBooking['reference']??'');if($bookingId>0&&$request!==''&&$reference!==''){$response['notification_queued']=spNotificationCreateWebsiteBooking($pdo,$outlets[0],$bookingId,$site,$request,$reference);$pdo->prepare('UPDATE sp_booking_bridge_calls SET response_json=? WHERE call_key=?')->execute([json_encode($response,JSON_THROW_ON_ERROR),$key]);}}
+  }
   else{
    $bookingId=null;
    if($action==='sync'){$packages=$body['packages']??null;if(!is_array($packages)||count($packages)>100)throw new BookingError('Invalid website package batch.');$count=0;foreach($outlets as $outlet)foreach($packages as $package){if(!is_array($package))throw new BookingError('Invalid package.');bookingBridgeService($pdo,$site,$outlet,$package);$count++;}$response=['ok'=>true,'synchronized'=>$count];}
@@ -35,8 +38,8 @@ try{
     else{$input=array_intersect_key($b,array_flip(['date','time','customer_name','phone','email','car_model','plate','notes']));$input['service_id']=$service['id'];$input['status']='pending';$row=bookingSave($pdo,$outlet,$input);$pdo->prepare("UPDATE sp_bookings SET source='website' WHERE id=? AND outlet_id=?")->execute([$row['id'],$outlet]);$row['source']='website';}
     $request=bookingText($b['request_key']??null,'Website request id',64,true);if(!preg_match('/^[A-Za-z0-9-]{20,64}$/D',$request))throw new BookingError('Invalid website request id.');
     $branch=bookingText($body['branch']??null,'Website branch',30,true);if(!preg_match('/^[a-z0-9-]+$/D',$branch))throw new BookingError('Invalid website branch.');
-    $bookingId=(int)$row['id'];spNotificationCreateWebsiteBooking($pdo,$outlet,(int)$row['id'],$site,$request,(string)$row['reference']);
-    $response=['ok'=>true,'booking'=>$row,'website'=>['package_id'=>(int)$package['id'],'request_key'=>$request,'branch'=>$branch]];
+    $bookingId=(int)$row['id'];$notificationQueued=spNotificationCreateWebsiteBooking($pdo,$outlet,$bookingId,$site,$request,(string)$row['reference']);
+    $response=['ok'=>true,'booking'=>$row,'website'=>['package_id'=>(int)$package['id'],'request_key'=>$request,'branch'=>$branch],'notification_queued'=>$notificationQueued];
    }
    $pdo->prepare('INSERT INTO sp_booking_bridge_calls(call_key,site_hash,payload_hash,action_name,booking_id,response_json,created_at) VALUES(?,?,?,?,?,?,?)')->execute([$key,$site,$proof['payload_hash'],$action,$bookingId,json_encode($response,JSON_THROW_ON_ERROR),bookingNow()->format('Y-m-d H:i:s')]);
   }$pdo->commit();

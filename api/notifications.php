@@ -17,6 +17,7 @@ try {
         spApiRespond(['ok'=>true,'enabled'=>$ready,'public_key'=>$ready?$cfg['public_key']:'','requirements'=>['php'=>$cfg['php_supported'],'extensions'=>$cfg['extensions_ready'],'encryption_key'=>$cfg['encryption_ready'],'vapid'=>$keysReady]],200);
     }
     if($method==='GET'&&$action==='list') {
+        spNotificationRecoverRecentWebsiteBookings($pdo,$outletId);
         $q=$pdo->prepare('SELECT COUNT(*) FROM sp_notification_recipients r JOIN sp_notifications n ON n.id=r.notification_id WHERE r.user_id=? AND n.outlet_id=? AND r.read_at IS NULL');$q->execute([$userId,$outletId]);$unread=(int)$q->fetchColumn();
         $q=$pdo->prepare('SELECT n.id,n.event_type,n.title,n.body,n.data_json,n.created_at,r.read_at FROM sp_notification_recipients r JOIN sp_notifications n ON n.id=r.notification_id WHERE r.user_id=? AND n.outlet_id=? ORDER BY n.id DESC LIMIT 30');$q->execute([$userId,$outletId]);$rows=[];
         foreach($q->fetchAll() as $row){$row['id']=(int)$row['id'];$row['data']=json_decode((string)$row['data_json'],true)?:[];unset($row['data_json']);$rows[]=$row;}
@@ -50,4 +51,4 @@ try {
     }
     spApiRespond(['ok'=>false,'error'=>'Unknown notification action.'],404);
 } catch(InvalidArgumentException $e){spApiRespond(['ok'=>false,'error'=>$e->getMessage()],400);}
-catch(Throwable $e){error_log('SP notifications API failed: '.get_class($e));spApiRespond(['ok'=>false,'error'=>'Notifications are not available. Check the notification migration and API configuration.'],503);}
+catch(Throwable $e){error_log('SP notifications API failed: '.$e->getMessage());spApiRespond(['ok'=>false,'error'=>'Notifications are not available. Check the notification migration and API configuration.'],503);}

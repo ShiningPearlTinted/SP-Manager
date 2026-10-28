@@ -29,7 +29,7 @@ function docPayments(PDO $p,string $type,int $id):array{
 }
 function paymentSummary(array $payments,float $total):array{$paid=0.0;foreach($payments as $x)$paid+=(float)($x['amount']??0);$paid=max(0,$paid);$balance=max(0,$total-$paid);$status=$paid<=0?'UNPAID':($balance<=0.00001?'PAID':'PARTIAL');return['paid'=>$paid,'balance'=>$balance,'status'=>$status];}
 function addDocPayment(PDO $p,string $type,int $id,int $out,?int $customerId,array $pay):void{
- if(!tab($p,'document_payments'))throw new RuntimeException('Deposit support is not installed. Import QUOTATION-INVOICE-DEPOSIT-MIGRATION-1.0.44.sql into the Central Database.');
+ if(!tab($p,'document_payments'))throw new RuntimeException('Deposit support is not installed. Import database/SCHEMA-CURRENT.sql into the Central Database.');
  $amount=spMoney($pay['amount']??0,'Payment');if($amount<=0)return;
  $table=$type==='quotation'?'quotations':'invoices';$q=$p->prepare('SELECT * FROM `'.$table.'` WHERE id=? AND outlet_id=? FOR UPDATE');$q->execute([$id,$out]);$doc=$q->fetch();if(!$doc)throw new RuntimeException('Document missing.');if($type==='quotation'&&strtoupper($doc['status'])==='CONVERTED')throw new RuntimeException('Record payment against the converted invoice.');
  $summary=paymentSummary(docPayments($p,$type,$id),(float)$doc['total']);if($amount>$summary['balance']+0.005)throw new InvalidArgumentException('Payment exceeds outstanding balance.');

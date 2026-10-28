@@ -1,5 +1,4 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import './notification-center.css';
 
 function decodeKey(value){
  const input=String(value||'').replace(/-/g,'+').replace(/_/g,'/');

@@ -1,7 +1,6 @@
 import {bookingEmailTarget} from './booking-link.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {STATUSES,statusLabel,localDate,shiftDate,calendarRange,calendarDays,bookingCalendarFile} from './booking-utils.js';
-import './booking.css';
 const money=v=>v===null||v===''?'On enquiry':Number(v).toLocaleString('en-MY',{style:'currency',currency:'MYR'});
 const can=(user,key)=>user?.role==='Administrator'||user?.permissions?.[key]===true;
 function Field({label,children}){return <label className="spmb-field"><span>{label}</span>{children}</label>;}

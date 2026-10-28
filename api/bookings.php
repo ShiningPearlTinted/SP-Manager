@@ -12,7 +12,7 @@ try{
  if(($method==='GET'&&!in_array($action,$read,true))||($method==='POST'&&!in_array($action,$write,true))||!in_array($method,['GET','POST'],true))throw new BookingError('Method not allowed.',405);
  $permission=in_array($action,['save-service','save-settings','email-settings','save-email-settings'],true)?'manageBookingSettings':($method==='POST'?'manageBookings':'viewBookings');bookingRequire($permission);
  $pdo=spApiDatabase();$outlet=(int)($_SERVER['SP_AUTH_OUTLET_ID']??0);if($outlet<=0)throw new BookingError('An assigned outlet is required.',403);
- foreach(['sp_bookings','sp_booking_services','sp_booking_settings','sp_booking_events'] as $table)if(!spTableExists($pdo,$table))throw new BookingError('Booking migration is required. Apply database/migrations/booking-v1.sql before using this module.',503);
+ foreach(['sp_bookings','sp_booking_services','sp_booking_settings','sp_booking_events'] as $table)if(!spTableExists($pdo,$table))throw new BookingError('Booking tables are required. Import database/SCHEMA-CURRENT.sql before using this module.',503);
  if($method==='GET'){
   if($action==='email-settings')spApiRespond(['ok'=>true,...bookingEmailConfig($pdo,$outlet)],200);
   if($action==='config'){

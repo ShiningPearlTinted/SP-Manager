@@ -5,7 +5,7 @@ import {createDisplayAutoOpen} from "./customer-display-auto.js";
 import React,{useCallback,useEffect,useMemo,useState}from"react";
 import{createRoot}from"react-dom/client";
 import"./styles.css";
-import"./management-ui.css";
+
 import PriceCheck from "./price-check.jsx";
 import HrModule from "./hr/hr-module.jsx";
 import {createHrRequest} from "./hr/hr-api.js";

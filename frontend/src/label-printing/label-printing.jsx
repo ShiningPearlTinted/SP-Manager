@@ -1,7 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createLabelPrintingRequest} from './label-printing-api.js';
-import './label-printing.css';
 const sizes=Array.from({length:63},(_,i)=>i+20);
 const emptyForm={id:0,code:'',name:'',price:'',barcode:'',description:'',image_data:'',display_barcode:false,label_width_mm:40};
 const basePrintOptions={showCode:true,showName:true,showPrice:true,showBarcode:false,nameSize:12,priceSize:16,codeSize:9,barcodeHeight:12,barcodeType:'CODE 128',rollPaper:true,labelWidth:40,labelHeight:30,marginTop:2,marginRight:0,marginBottom:0,marginLeft:0,copies:1,printerFont:'Arial'};

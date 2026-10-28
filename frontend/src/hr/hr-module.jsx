@@ -1,5 +1,4 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
-import './hr.css';
 import PayslipPanel from './payslip-panel.jsx';
 import OperationsPanel from './operations-panel.jsx';
 

@@ -64,7 +64,7 @@ function ptMap(array $r): array {
     ];
 }
 function ptList(PDO $pdo, int $masterOutletId, int $imageOutletId): array {
-    if (!ptTableExists($pdo, 'payment_type_display_images')) throw new RuntimeException('Payment Type outlet image migration is required. Apply UPGRADE-1.0.51.sql.');
+    if (!ptTableExists($pdo, 'payment_type_display_images')) throw new RuntimeException('Payment Type outlet image table is required. Import database/SCHEMA-CURRENT.sql.');
     $q = $pdo->prepare('SELECT * FROM payment_types WHERE outlet_id=? ORDER BY sort_order ASC,id ASC');
     $q->execute([$masterOutletId]);
     $rows = $q->fetchAll();
