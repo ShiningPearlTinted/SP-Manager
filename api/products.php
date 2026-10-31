@@ -413,9 +413,28 @@ try {
     if($id>0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE id=? LIMIT 1');$q->execute([$id]);$id=(int)($q->fetchColumn()?:0);}
     if($id<=0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? ORDER BY id ASC LIMIT 1');$q->execute([$name]);$id=(int)($q->fetchColumn()?:0);}
     if($id<=0) respond(['ok'=>true,'deleted'=>false,'id'=>0]);
-    $q=$pdo->prepare('SELECT COUNT(*) FROM product_groups WHERE parent_id=?');$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because it still has child groups.');
-    $colsNow=tableColumns($pdo,'products');if(isset($colsNow['group_id'])){$q=$pdo->prepare('SELECT COUNT(*) FROM products WHERE group_id=?');$q->execute([$id]);if((int)$q->fetchColumn()>0)throw new RuntimeException('Cannot delete group because products are still assigned to it.');}
-    $q=$pdo->prepare('DELETE FROM product_groups WHERE id=? LIMIT 1');$q->execute([$id]);respond(['ok'=>true,'deleted'=>$q->rowCount()>0,'id'=>$id]);
+    // The branch is the group plus every subgroup below it (cycle-safe). With "cascade" the whole
+    // branch is deleted in one step, like Aronium, but only when no product in any outlet uses it.
+    $branch=[$id];$queue=[$id];$seen=[$id=>true];$children=$pdo->prepare('SELECT id FROM product_groups WHERE parent_id=?');
+    while($queue){$children->execute([array_shift($queue)]);foreach($children->fetchAll(PDO::FETCH_COLUMN) as $child){$child=(int)$child;if(isset($seen[$child]))continue;$seen[$child]=true;$branch[]=$child;$queue[]=$child;}}
+    if(count($branch)>1&&empty($b['cascade']))throw new RuntimeException('Cannot delete group because it still has child groups.');
+    $colsNow=tableColumns($pdo,'products');
+    if(isset($colsNow['group_id'])){
+      $ph=implode(',',array_fill(0,count($branch),'?'));
+      $q=$pdo->prepare("SELECT COUNT(*) FROM products WHERE group_id IN ($ph)");$q->execute($branch);$total=(int)$q->fetchColumn();
+      if($total>0){
+        // Name the products and the outlets that still sell them: the tree only counts the current outlet.
+        $q=$pdo->prepare("SELECT p.product_name,g.group_name,(SELECT GROUP_CONCAT(o.outlet_code ORDER BY o.outlet_code SEPARATOR ', ') FROM product_outlets po JOIN outlets o ON o.id=po.outlet_id WHERE po.product_id=p.id AND po.active=1) AS outlets FROM products p JOIN product_groups g ON g.id=p.group_id WHERE p.group_id IN ($ph) ORDER BY p.product_name LIMIT 5");
+        $q->execute($branch);
+        $list=array_map(fn($r)=>'"'.$r['product_name'].'" in '.$r['group_name'].' ('.($r['outlets']?:'no active outlet').')',$q->fetchAll());
+        respond(['ok'=>false,'error'=>'Cannot delete group: '.$total.' product(s) are still assigned to it or its subgroups: '.implode('; ',$list).($total>count($list)?'; ...':'').'. Move or delete these products first.','products'=>$total],409);
+      }
+    }
+    $pdo->beginTransaction();
+    $delete=$pdo->prepare('DELETE FROM product_groups WHERE id=? LIMIT 1');$deleted=[];
+    foreach(array_reverse($branch) as $gid){$delete->execute([$gid]);if($delete->rowCount()>0)$deleted[]=$gid;}
+    $pdo->commit();
+    respond(['ok'=>true,'deleted'=>in_array($id,$deleted,true),'id'=>$id,'deleted_ids'=>$deleted]);
   }
 
   if($action==='delete' && $_SERVER['REQUEST_METHOD']==='POST'){
