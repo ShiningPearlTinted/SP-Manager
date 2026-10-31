@@ -175,7 +175,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete'], true) ? 'manageCustomers' : '';
     if ($file === 'label-printing.php') return 'manageProducts';
     if ($file === 'products.php' && $action==='stock-adjust') return 'manageInventory';
-    if ($file === 'products.php') return in_array($action, ['save','assign','unassign','delete','save-category','delete-category','save-group','delete-group'], true) ? 'manageProducts' : '';
+    if ($file === 'products.php') return in_array($action, ['save','assign','unassign','delete','save-category','delete-category','save-group','delete-group','list-inactive'], true) ? 'manageProducts' : '';
     if ($file === 'sales-delete.php') return 'managePayments';
     if ($file === 'promotions.php') return in_array($action, ['save','delete'], true) ? 'manageDiscount' : '';
     if ($file === 'relational-data.php') return match ($stateKey) {

@@ -8493,3 +8493,8 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell {height:max(560px,calc(100vh - 150px));display:flex;flex-direction:column;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > :is(.company-topbar,.company-tabs,.company-footer) {flex:0 0 auto;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > .company-body {flex:1 1 auto;min-height:0;overflow-y:auto;}
+
+/* Inactive products are listed in Product Master (not in POS) with muted text, like Aronium. */
+.app[data-ui="management"] main .product-master-table tbody tr.inactive-product td{color:#98a2b3!important}
+.app[data-ui="management"] main .product-master-table tbody tr.inactive-product td b{color:#667085!important;font-weight:500}
+.app-theme-night .product-master-table tbody tr.inactive-product td,.app-theme-night .product-master-table tbody tr.inactive-product td b{color:#7b8aa0}

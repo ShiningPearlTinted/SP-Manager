@@ -364,7 +364,9 @@ try {
     respond(['ok'=>true,'id'=>$id,'group_name'=>$name,'category_id'=>$categoryId,'parent_id'=>$parentId?:null]);
   }
 
-  if($action==='list' && $_SERVER['REQUEST_METHOD']==='GET'){
+  // "list" feeds POS and every module (active products only). "list-inactive" returns the outlet's
+  // inactive products so Product Master can show them with Active unchecked, like Aronium.
+  if(($action==='list'||$action==='list-inactive') && $_SERVER['REQUEST_METHOD']==='GET'){
     $outletCol=isset($columns['outlet_id']);
     $hasCategoryId=isset($columns['category_id']); $hasGroupId=isset($columns['group_id']);
     $select='p.*, po.id AS outlet_assignment_id, po.active AS outlet_active, po.selling_price AS outlet_selling_price, po.cost_price AS outlet_cost_price, po.stock_qty AS outlet_stock_qty, po.min_stock AS outlet_min_stock, po.preferred_quantity AS outlet_preferred_quantity, po.allow_price_change AS outlet_allow_price_change, po.last_purchase_price AS outlet_last_purchase_price, po.rank AS outlet_rank';
@@ -373,7 +375,7 @@ try {
     $sql='SELECT '.$select.' FROM `products` p JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=? AND po.active=1';
     if($hasCategoryId) $sql.=' LEFT JOIN product_categories c ON c.id=p.category_id';
     if($hasGroupId) $sql.=' LEFT JOIN product_groups g ON g.id=p.group_id';
-    $sql.=' WHERE p.active=1 ORDER BY p.id ASC';
+    $sql.=' WHERE p.active='.($action==='list-inactive'?'0':'1').' ORDER BY p.id ASC';
     $q=$pdo->prepare($sql);$q->execute([$outletId]);$rows=$q->fetchAll();
     hydrateOutletFields($pdo,$outletId,$rows); hydrateProductRelations($pdo,$rows);
     $device=trim((string)($_GET['device_id']??''));$signedDevice=(string)($_SERVER['SP_AUTH_DEVICE_ID']??'');if($device!==''&&$signedDevice!==''&&!hash_equals($signedDevice,$device))throw new RuntimeException('Terminal identity does not match this signed-in session.');$quotas=[];
