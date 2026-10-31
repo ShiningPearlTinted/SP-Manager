@@ -201,6 +201,20 @@ function tableExists(PDO $pdo, string $table): bool {
   static $cache=[]; if(isset($cache[$table])) return $cache[$table];
   try { tableColumns($pdo,$table); return $cache[$table]=true; } catch(Throwable $e) { return $cache[$table]=false; }
 }
+/** Rows in documents, stock and promotions that reference a product (these keep history alive). */
+function productHistoryCount(PDO $pdo, int $productId): int {
+  $total=0;
+  foreach(['sale_items','sale_refund_items','invoice_items','quotation_items','purchase_items','open_order_items','stock_movements','warranties','maintenance','promotions'] as $table){
+    if(!tableExists($pdo,$table)||!isset(tableColumns($pdo,$table)['product_id']))continue;
+    $q=$pdo->prepare("SELECT COUNT(*) FROM `$table` WHERE product_id=?");$q->execute([$productId]);$total+=(int)$q->fetchColumn();
+  }
+  return $total;
+}
+/** A deleted product that had history is archived: metadata_json {"archived":true}. */
+function productIsArchived(array $row): bool {
+  $meta=json_decode((string)($row['metadata_json']??''),true);
+  return is_array($meta)&&!empty($meta['archived']);
+}
 function hydrateProductRelations(PDO $pdo, array &$rows): void {
   if(!$rows) return;
   $ids=array_values(array_unique(array_filter(array_map(fn($r)=>(int)($r['id']??0),$rows))));
@@ -377,6 +391,7 @@ try {
     if($hasGroupId) $sql.=' LEFT JOIN product_groups g ON g.id=p.group_id';
     $sql.=' WHERE p.active='.($action==='list-inactive'?'0':'1').' ORDER BY p.id ASC';
     $q=$pdo->prepare($sql);$q->execute([$outletId]);$rows=$q->fetchAll();
+    if($action==='list-inactive')$rows=array_values(array_filter($rows,fn($r)=>!productIsArchived($r)));
     hydrateOutletFields($pdo,$outletId,$rows); hydrateProductRelations($pdo,$rows);
     $device=trim((string)($_GET['device_id']??''));$signedDevice=(string)($_SERVER['SP_AUTH_DEVICE_ID']??'');if($device!==''&&$signedDevice!==''&&!hash_equals($signedDevice,$device))throw new RuntimeException('Terminal identity does not match this signed-in session.');$quotas=[];
     if($device!==''&&spTableExists($pdo,'sp_offline_stock_quotas')){$q=$pdo->prepare("SELECT product_id,GREATEST(0,reserved_qty-consumed_qty) remaining FROM sp_offline_stock_quotas WHERE outlet_id=? AND device_id=?");$q->execute([$outletId,$device]);foreach($q->fetchAll() as $quota)$quotas[(string)$quota['product_id']]=(float)$quota['remaining'];}
@@ -423,12 +438,13 @@ try {
     $colsNow=tableColumns($pdo,'products');
     if(isset($colsNow['group_id'])){
       $ph=implode(',',array_fill(0,count($branch),'?'));
-      $q=$pdo->prepare("SELECT COUNT(*) FROM products WHERE group_id IN ($ph)");$q->execute($branch);$total=(int)$q->fetchColumn();
+      // Archived (deleted) products keep their history but do not hold a group: the FK sets their group to NULL.
+      // Name the remaining products and the outlets that still sell them: the tree only counts the current outlet.
+      $q=$pdo->prepare("SELECT p.product_name,p.metadata_json,g.group_name,(SELECT GROUP_CONCAT(o.outlet_code ORDER BY o.outlet_code SEPARATOR ', ') FROM product_outlets po JOIN outlets o ON o.id=po.outlet_id WHERE po.product_id=p.id AND po.active=1) AS outlets FROM products p JOIN product_groups g ON g.id=p.group_id WHERE p.group_id IN ($ph) ORDER BY p.product_name");
+      $q->execute($branch);
+      $blocking=array_values(array_filter($q->fetchAll(),fn($r)=>!productIsArchived($r)));$total=count($blocking);
       if($total>0){
-        // Name the products and the outlets that still sell them: the tree only counts the current outlet.
-        $q=$pdo->prepare("SELECT p.product_name,g.group_name,(SELECT GROUP_CONCAT(o.outlet_code ORDER BY o.outlet_code SEPARATOR ', ') FROM product_outlets po JOIN outlets o ON o.id=po.outlet_id WHERE po.product_id=p.id AND po.active=1) AS outlets FROM products p JOIN product_groups g ON g.id=p.group_id WHERE p.group_id IN ($ph) ORDER BY p.product_name LIMIT 5");
-        $q->execute($branch);
-        $list=array_map(fn($r)=>'"'.$r['product_name'].'" in '.$r['group_name'].' ('.($r['outlets']?:'no active outlet').')',$q->fetchAll());
+        $list=array_map(fn($r)=>'"'.$r['product_name'].'" in '.$r['group_name'].' ('.($r['outlets']?:'no active outlet').')',array_slice($blocking,0,5));
         respond(['ok'=>false,'error'=>'Cannot delete group: '.$total.' product(s) are still assigned to it or its subgroups: '.implode('; ',$list).($total>count($list)?'; ...':'').'. Move or delete these products first.','products'=>$total],409);
       }
     }
@@ -441,8 +457,26 @@ try {
 
   if($action==='delete' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody();$id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('Product id is required.');
-    $pdo->prepare('UPDATE products SET active=0,updated_at=NOW() WHERE id=? LIMIT 1')->execute([$id]);
-    respond(['ok'=>true,'id'=>$id,'deleted'=>true,'master_deactivated'=>true]);
+    $q=$pdo->prepare('SELECT id,metadata_json FROM products WHERE id=? LIMIT 1');$q->execute([$id]);$row=$q->fetch();
+    if(!$row)respond(['ok'=>true,'id'=>$id,'deleted'=>false]);
+    // Delete is a real delete, like Aronium. A product already used in documents, stock or
+    // promotions cannot be removed without breaking history, so it is archived instead:
+    // inactive and flagged, hidden from POS and Product Master, and it no longer blocks group deletes.
+    $used=productHistoryCount($pdo,$id);
+    $pdo->beginTransaction();
+    if($used>0){
+      $meta=json_decode((string)($row['metadata_json']??''),true);if(!is_array($meta))$meta=[];
+      $meta['archived']=true;$meta['archived_at']=gmdate('Y-m-d H:i:s');
+      $pdo->prepare('UPDATE products SET active=0,metadata_json=?,updated_at=NOW() WHERE id=? LIMIT 1')->execute([json_encode($meta,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),$id]);
+      $pdo->prepare('UPDATE product_outlets SET active=0,updated_at=NOW() WHERE product_id=?')->execute([$id]);
+      $mode='archived';
+    }else{
+      // Barcodes, images, outlet rows and prices cascade with the product.
+      $pdo->prepare('DELETE FROM products WHERE id=? LIMIT 1')->execute([$id]);
+      $mode='removed';
+    }
+    $pdo->commit();
+    respond(['ok'=>true,'id'=>$id,'deleted'=>true,'mode'=>$mode,'history_rows'=>$used]);
   }
 
   if($action==='stock-adjust'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=jsonBody();$product=is_array($b['product']??null)?$b['product']:[];$pid=(int)($product['dbId']??$product['id']??0);$rawQuantity=$product['stock']??null;if(!is_numeric($rawQuantity))throw new InvalidArgumentException('Numeric stock count required.');$quantity=round((float)$rawQuantity,3);$pdo->beginTransaction();spLockOutlet($pdo,$outletId);spSetInventory($pdo,$outletId,$pid,$quantity,array_key_exists('expected_stock',$b)?(float)$b['expected_stock']:null);$pdo->commit();respond(['ok'=>true,'id'=>$pid]);}
