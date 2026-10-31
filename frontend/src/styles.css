@@ -8498,3 +8498,25 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 .app[data-ui="management"] main .product-master-table tbody tr.inactive-product td{color:#98a2b3!important}
 .app[data-ui="management"] main .product-master-table tbody tr.inactive-product td b{color:#667085!important;font-weight:500}
 .app-theme-night .product-master-table tbody tr.inactive-product td,.app-theme-night .product-master-table tbody tr.inactive-product td b{color:#7b8aa0}
+
+/* ===== pos-category-tiles (Aronium style) ===== */
+/* Every POS menu and item has a picture: category, group, product and Back tiles share one shape,
+   the picture fills the tile and scales with the screen, text sits underneath. width:100% keeps a
+   tile inside its grid column (a min-height alone made tiles overlap on narrow screens). */
+:is(.ar-category-grid,.ar-grid-wrap) > :is(.ar-category-tile,.ar-product-tile),
+:is(.ar-category-grid,.ar-grid-wrap):has(> :is(.ar-category-tile,.ar-product-tile)) > .ar-back-tile{width:100%;min-width:0;height:auto;aspect-ratio:3/2;min-height:136px;box-sizing:border-box}
+:is(.ar-category-grid,.ar-grid-wrap) > :is(.ar-category-tile,.ar-product-tile){padding:6px 6px 9px;gap:4px;justify-content:flex-end}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile .ar-cat-icon,:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile.ar-group-tile .ar-cat-icon,
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image{flex:1 1 auto;width:100%;height:auto;min-height:0;margin:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile .ar-cat-icon img.group-tile-image,
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image img{width:auto;height:auto;max-width:92%;max-height:100%;object-fit:contain}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile .ar-cat-icon span{font-size:clamp(28px,3.4vw,46px)}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile strong{flex:none;font-size:11.5px;font-weight:600;line-height:1.2;margin:0;text-align:center}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile small{display:none}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body{flex:none;gap:1px}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body strong{min-height:0;font-size:11px;font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Names may wrap to two lines; reserve both so every picture in a row is the same size. */
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile strong,:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body strong{min-height:2.5em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;align-content:center}
+/* Product tiles show picture, name and price only; the item code is not displayed. */
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body small{display:none}
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body b{font-size:11px;line-height:1.2;margin-top:1px}

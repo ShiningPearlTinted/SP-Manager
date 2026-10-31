@@ -1505,13 +1505,20 @@ function POS({notificationCenter,setCart,updateLinePrice,posOrderMeta,setPosOrde
    if(e.key==="Escape"){restoreCustomerCart();setPaymentScreen(false);setSplitScreen(false);setDiscountScreen(false);setTransferScreen(false);setSavedScreen(false);setQuantityScreen(false);setPriceScreen(false);setPendingPriceProduct(null);setPendingPriceQuantity(1);setSelectedLineId(null);document.querySelector('.ar-search-input')?.focus()}
    if(!e.ctrlKey)return;const key=e.key.toUpperCase();const pt=paymentTypes.find(x=>x.enabled&&x.shortcutKey&&x.shortcutKey.toUpperCase()===key);if(pt){e.preventDefault();selectPayment(pt);setPaymentScreen(true)}
  };window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[cart,defaultPayment,payment,sale,saveOpenOrder,paymentTypes,changeQty,grand,selectPayment,restoreCustomerCart]);
- const rootCats=categories.length?categories:["Accessories","Car Detailing","Coating","Installation Service","PPF","Tint","Wrapping"];
+ // Like Aronium, only categories that hold at least one active product are shown, sorted by name.
+ // Root level ignores the last opened category: count every active product in the group and all its subgroups.
+ const branchHasActive=name=>{const branch=new Set();const walk=n=>{if(branch.has(n))return;branch.add(n);childrenOf(n).forEach(walk)};walk(name);return products.some(p=>p.active!==false&&branch.has(String(p.group||p.category||"")))};
+ const rootGroupHasActive=name=>allGroupNames.includes(name)&&!parentOf(name)&&branchHasActive(name);
+ const rootCats=()=>(categories.length?categories:["Accessories","Car Detailing","Coating","Installation Service","PPF","Tint","Wrapping"]).filter(name=>products.some(p=>p.active!==false&&String(p.category||p.group||"")===String(name))||rootGroupHasActive(String(name))).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:"base"}));
  const iconFor=name=>({"Accessories":"🧰","Car Detailing":"✨","Coating":"◈","Installation Service":"🛠","PPF":"◆","Tint":"◉","Wrapping":"◇","Windscreen":"▱","Glass":"◫","Security":"⬡","Protection":"✦"}[name]||"✦");
  // POS Product Group Navigation V1.1.23
  // IMPORTANT: Product Management stores the hierarchy in productGroups + productGroupMeta.
  // productGroups must be included here; using only groupMeta makes a root group such as
  // "Tinted Film" disappear from the POS navigation even though Product Management shows it.
- const categoryProducts=products.filter(p=>posCategory==="All Categories"||(p.category||p.group||"")===posCategory||(p.group||"")===posCategory);
+ // Inactive products never reach the POS screen (Aronium behaviour), even from an older cache.
+ // A product belongs to a category through its own category or through the root of its group tree.
+ const posRootGroupOf=name=>{let cur=String(name||"");const seen=new Set();while(cur&&groupMeta?.[cur]?.parent&&!seen.has(cur)){seen.add(cur);cur=String(groupMeta[cur].parent)}return cur};
+ const categoryProducts=products.filter(p=>p.active!==false).filter(p=>posCategory==="All Categories"||posRootGroupOf(p.group)===posCategory||(p.category||p.group||"")===posCategory||(p.group||"")===posCategory);
  const allGroupNames=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...categoryProducts.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{})])];
  const childrenOf=name=>allGroupNames.filter(g=>String(groupMeta?.[g]?.parent||"")===String(name));
  const parentOf=name=>String(groupMeta?.[name]?.parent||"");
@@ -1601,15 +1608,15 @@ function POS({notificationCenter,setCart,updateLinePrice,posOrderMeta,setPosOrde
    // the same name, enter that Main Group immediately instead of rendering a
    // duplicate one-tile screen. This is the original V1.1.16 navigation flow.
    const sameNameRoot=allGroupNames.find(g=>String(g)===categoryName&&!parentOf(g));
-   if(sameNameRoot&&groupHasItems(sameNameRoot)){
-     const children=childGroupNames(sameNameRoot);
+   if(sameNameRoot&&branchHasActive(sameNameRoot)){
+     const children=childrenOf(sameNameRoot).filter(branchHasActive);
      setGroup(sameNameRoot);
      setCatLevel(children.length?"group":"items");
    }else{
      setGroup("");
      setCatLevel("group");
    }
- }}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>(p.category||p.group)===String(name)).length} products</small></button>;
+ }}><div className="ar-cat-icon">{groupMeta?.[name]?.image?<img className="group-tile-image" src={groupMeta[name].image} alt=""/>:<span>{iconFor(name)}</span>}</div><strong>{name}</strong><small>{products.filter(p=>p.active!==false&&(p.category||p.group)===String(name)).length} products</small></button>;
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=async()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};try{await save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")}catch{setNoticeLocal("The transfer could not be completed because the database could not complete the request.")}};
  useEffect(()=>{
@@ -1692,7 +1699,7 @@ function POS({notificationCenter,setCart,updateLinePrice,posOrderMeta,setPosOrde
     {q&&<div className="ar-search-hint">{filtered.length} product(s) found</div>}
     {settings.general.layout==="Standard" ? <div className="ar-standard-list">{filtered.length?<div className="ar-standard-table">{filtered.map(p=><button type="button" key={p.id} className="ar-standard-product-button" onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><span><b>{p.name}</b><small>{p.code||"No code"}{p.barcode?" · "+p.barcode:""}</small></span><strong>{money(p.price)}</strong></button>)}</div>:<Empty text="No products found."/>}</div> : <>
     {q?<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Search results</strong></div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{filtered.length?filtered.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}{p.barcode?" · "+p.barcode:""}</small><b>{money(p.price)}</b></div></button>):<Empty text="No products found."/>}</div></>:null}
-    {!q&&catLevel==='root'&&<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Categories</strong></div><div className="ar-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{rootCats.map(categoryTile)}</div></>}
+    {!q&&catLevel==='root'&&<><div className="ar-breadcrumb"><span>Products</span><b>›</b><strong>Categories</strong></div><div className="ar-category-grid" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}>{rootCats().map(categoryTile)}</div></>}
     {catLevel==='group'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← {currentGroup?(parentGroup||posCategory):'Categories'}</button>{currentGroup&&<><b>›</b><strong>{currentGroup}</strong></>}</div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}><button type="button" className="ar-back-tile ar-back-primary" onClick={goBackGroup}><span>←</span><small>Back to {currentGroup?(parentGroup||posCategory):'Categories'}</small></button>{currentChildren.length?currentChildren.map(groupTile):(!currentGroup&&shown.length?shown.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}</small><b>{money(p.price)}</b></div></button>):<Empty text="No groups found in this category."/>)}</div></>}
     {catLevel==='items'&&<><div className="ar-breadcrumb"><button type="button" className="ar-back-link" onClick={goBackGroup}>← {parentGroup||posCategory}</button><b>›</b><strong>{currentGroup}</strong></div><div className="ar-grid-wrap" style={{gridTemplateColumns:`repeat(${Math.max(1,Number(settings.general.columns||5))},minmax(0,1fr))`}}><button type="button" className="ar-back-tile" onClick={goBackGroup}><span>←</span><small>Back to {parentGroup||posCategory}</small></button>{shown.map(p=><button type="button" className="ar-product-tile" key={p.id} onClick={e=>{e.preventDefault();e.stopPropagation();addPos(p)}}><span className="pos-stock-badge">{stockOnHandText(p)}</span><div className="ar-product-image"><img src={productImageSrc(p)} alt=""/></div><div className="product-card-body"><strong>{p.name}</strong><small>{p.code||'No code'}</small><b>{money(p.price)}</b></div></button>)}</div></>}
     </>}
