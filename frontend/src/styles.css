@@ -8457,3 +8457,32 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-dialog-btn.secondary {border-color:#d0d5dd;color:#344054;}
 body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-dialog-btn:focus {outline-color:rgba(8,126,164,.25);}
 }
+
+/* ===== products-group-tree ===== */
+/* Aronium-style tree: separate +/- expander, clicking the name only selects the group. */
+.product-tree .tree-row{display:flex;align-items:center;gap:2px;min-width:0}
+.product-tree .tree-row > .tree-item{flex:1 1 auto;min-width:0;grid-template-columns:1fr auto}
+.product-tree .tree-toggle,.product-tree .tree-toggle-spacer{flex:0 0 22px;width:22px;height:22px}
+.product-tree .tree-toggle{display:grid;place-items:center;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:#667085;font-size:15px;font-weight:600;line-height:1;cursor:pointer}
+.product-tree .tree-toggle:hover{background:#eef6fb;border-color:#d0d5dd;color:#101828}
+.product-tree .tree-toggle:focus-visible{outline:2px solid #087ea4;outline-offset:1px}
+.product-tree .tree-item .tree-label-with-image{min-width:0}
+.product-tree .tree-item .tree-label-with-image > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-theme-night .product-tree .tree-toggle{color:#a4b3c6}
+.app-theme-night .product-tree .tree-toggle:hover{background:#243247;border-color:#4b5d77;color:#e2e8f0}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.group-editor-actions > button:not(.secondary),.group-confirm-actions > .primary-button) {background:var(--mg-accent);border:1px solid var(--mg-accent);color:#fff;font-weight:600;border-radius:var(--mg-radius);box-shadow:var(--mg-shadow-xs);}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.group-editor-actions > button:not(.secondary),.group-confirm-actions > .primary-button):hover:not(:disabled) {background:var(--mg-accent-hover);border-color:var(--mg-accent-hover);}
+
+/* ===== tabbed-forms-fixed-size ===== */
+/* Tabbed forms keep one size on every tab: header, tab strip and actions stay put; only the tab content scrolls. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-modal {height:min(820px,calc(100vh - 48px));max-height:none;display:flex;flex-direction:column;overflow:hidden;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-modal > .ar-modal-head {flex:0 0 auto;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form {flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form > :is(.product-editor-tabs,.form-actions) {flex:0 0 auto;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-tab-content {flex:1 1 auto;min-height:0;overflow-y:auto;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-modal {height:min(820px,calc(100vh - 48px));max-height:none;display:flex;flex-direction:column;overflow:hidden;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-modal > :is(.customer-modal-head,.customer-tabs,.customer-modal-foot) {flex:0 0 auto;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-modal > .customer-form-body {flex:1 1 auto;min-height:0;overflow-y:auto;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell {height:max(560px,calc(100vh - 150px));display:flex;flex-direction:column;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > :is(.company-topbar,.company-tabs,.company-footer) {flex:0 0 auto;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > .company-body {flex:1 1 auto;min-height:0;overflow-y:auto;}
