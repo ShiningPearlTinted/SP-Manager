@@ -8459,17 +8459,24 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 }
 
 /* ===== products-group-tree ===== */
-/* Aronium-style tree: separate +/- expander, clicking the name only selects the group. */
-.product-tree .tree-row{display:flex;align-items:center;gap:2px;min-width:0}
-.product-tree .tree-row > .tree-item{flex:1 1 auto;min-width:0;grid-template-columns:1fr auto}
-.product-tree .tree-toggle,.product-tree .tree-toggle-spacer{flex:0 0 22px;width:22px;height:22px}
-.product-tree .tree-toggle{display:grid;place-items:center;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:#667085;font-size:15px;font-weight:600;line-height:1;cursor:pointer}
-.product-tree .tree-toggle:hover{background:#eef6fb;border-color:#d0d5dd;color:#101828}
+/* Aronium-style tree: [+/-] [folder] name ... count, one fixed row height, 20px indent per level. */
+.product-tree .tree-row{display:flex;align-items:center;gap:2px;min-width:0;margin:1px 0}
+.product-tree .tree-toggle,.product-tree .tree-toggle-spacer{flex:0 0 20px;width:20px;height:20px}
+.product-tree .tree-toggle{display:grid;place-items:center;padding:0;border:0;border-radius:5px;background:transparent;color:#475467;font-size:15px;font-weight:600;line-height:1;cursor:pointer}
+.product-tree .tree-toggle:hover{background:#eef2f6;color:#101828}
 .product-tree .tree-toggle:focus-visible{outline:2px solid #087ea4;outline-offset:1px}
-.product-tree .tree-item .tree-label-with-image{min-width:0}
-.product-tree .tree-item .tree-label-with-image > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.product-tree .tree-row > .tree-item{flex:1 1 auto;min-width:0;min-height:32px;height:32px;padding:0 8px;display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:center;border-radius:6px;font-size:13px;font-weight:500;line-height:1;box-shadow:none}
+.product-tree .tree-row > .tree-item.selected{font-weight:600}
+.product-tree .tree-folder{width:16px;height:16px;color:#667085;flex:none}
+.product-tree .tree-item.selected .tree-folder{color:#087ea4}
+.product-tree .tree-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.product-tree .tree-item em{font-style:normal;font-size:11px;font-weight:500;color:#98a2b3;font-variant-numeric:tabular-nums}
+/* Generic Management button rules force min-height:42px and width:100% with !important; the tree needs its own sizes. */
+.app[data-ui="management"] .product-master-shell > aside.product-tree .tree-row > button.tree-toggle{flex:0 0 20px!important;width:20px!important;min-width:20px!important;height:20px!important;min-height:20px!important;padding:0!important}
+.app[data-ui="management"] .product-master-shell > aside.product-tree .tree-row > button.tree-item{width:auto!important;min-height:32px!important;height:32px!important;padding:0 8px!important}
 .app-theme-night .product-tree .tree-toggle{color:#a4b3c6}
-.app-theme-night .product-tree .tree-toggle:hover{background:#243247;border-color:#4b5d77;color:#e2e8f0}
+.app-theme-night .product-tree .tree-toggle:hover{background:#243247;color:#e2e8f0}
+.app-theme-night .product-tree .tree-folder{color:#a4b3c6}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.group-editor-actions > button:not(.secondary),.group-confirm-actions > .primary-button) {background:var(--mg-accent);border:1px solid var(--mg-accent);color:#fff;font-weight:600;border-radius:var(--mg-radius);box-shadow:var(--mg-shadow-xs);}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.group-editor-actions > button:not(.secondary),.group-confirm-actions > .primary-button):hover:not(:disabled) {background:var(--mg-accent-hover);border-color:var(--mg-accent-hover);}
 
