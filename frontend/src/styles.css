@@ -8504,7 +8504,7 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
    the picture fills the tile and scales with the screen, text sits underneath. width:100% keeps a
    tile inside its grid column (a min-height alone made tiles overlap on narrow screens). */
 :is(.ar-category-grid,.ar-grid-wrap) > :is(.ar-category-tile,.ar-product-tile),
-:is(.ar-category-grid,.ar-grid-wrap):has(> :is(.ar-category-tile,.ar-product-tile)) > .ar-back-tile{width:100%;min-width:0;height:auto;aspect-ratio:3/2;min-height:136px;box-sizing:border-box}
+:is(.ar-category-grid,.ar-grid-wrap):has(> :is(.ar-category-tile,.ar-product-tile)) > .ar-back-tile{width:100%;min-width:0;height:auto;min-height:0;aspect-ratio:auto;box-sizing:border-box}
 :is(.ar-category-grid,.ar-grid-wrap) > :is(.ar-category-tile,.ar-product-tile){padding:6px 6px 9px;gap:4px;justify-content:flex-end}
 :is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile .ar-cat-icon,:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile.ar-group-tile .ar-cat-icon,
 :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image{flex:1 1 auto;width:100%;height:auto;min-height:0;margin:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -8520,3 +8520,17 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 /* Product tiles show picture, name and price only; the item code is not displayed. */
 :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body small{display:none}
 :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body b{font-size:11px;line-height:1.2;margin-top:1px}
+
+/* ===== pos-paging (Aronium style) ===== */
+/* The tile grid fills the space between breadcrumb and footer; rows x columns come from Settings and
+   extra tiles go to the next page, so the grid never scrolls. */
+.ar-product-panel > :is(.ar-category-grid,.ar-grid-wrap){flex:1 1 auto;min-height:0;overflow:hidden;align-content:stretch;align-items:stretch;padding-bottom:4px}
+.ar-page-footer .footer-home{display:grid;place-items:center;width:34px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:#c5ccd1;font-size:16px;cursor:pointer}
+.ar-page-footer .ar-pager{display:flex;align-items:center;gap:4px}
+.ar-page-footer .ar-pager-label{margin-right:8px;color:#c5ccd1;font-size:12px;white-space:nowrap}
+.ar-page-footer .ar-pager button{min-width:34px;height:28px;padding:0 8px;border:1px solid #3d4245;border-radius:6px;background:#25292c;color:#e6eaed;font-size:13px;cursor:pointer}
+.ar-page-footer :is(.footer-home,.ar-pager button):hover:not(:disabled){background:#33383c}
+.ar-page-footer .ar-pager button:disabled{opacity:.35;cursor:default}
+/* Keep the POS columns inside the screen: the row must not grow with its content, otherwise the tile grid cannot divide the panel height by the rows setting. */
+.ar-pos-shell .ar-main{grid-template-rows:minmax(0,1fr)}
+.ar-pos-shell .ar-main > .ar-product-panel{min-height:0;overflow:hidden}
