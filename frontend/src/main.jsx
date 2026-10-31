@@ -320,8 +320,13 @@ const OUTLET_CACHE_KEYS=new Set(["products","categories","productGroups","produc
 const cacheKey=k=>OUTLET_CACHE_KEYS.has(k)?`sp_outlet_${String(activeOutletId())}_${k}`:`sp_${k}`;
 
 const load=(k,d)=>{try{const scoped=localStorage.getItem(cacheKey(k));if(scoped!==null)return JSON.parse(scoped)??d;if(OUTLET_CACHE_KEYS.has(k))return d;return JSON.parse(localStorage.getItem("sp_"+k))??d}catch{return d}};
-const cacheSet=(k,v)=>localStorage.setItem(cacheKey(k),JSON.stringify(v));
-const cacheSetJSON=(k,serialized)=>localStorage.setItem(cacheKey(k),typeof serialized==="string"?serialized:JSON.stringify(serialized));
+const cacheSet=(k,v)=>writeCache(cacheKey(k),v);
+// Browser storage holds about 5 MB. A cache write must never break loading data from SP-Central:
+// when the full value does not fit, store it without large embedded images (the app keeps them in memory),
+// and if even that does not fit, drop the stale cache entry instead of throwing.
+const stripCachedImages=v=>Array.isArray(v)?v.map(stripCachedImages):v&&typeof v==="object"?Object.fromEntries(Object.entries(v).map(([key,val])=>[key,typeof val==="string"&&val.length>2048&&val.startsWith("data:image")?"":stripCachedImages(val)])):v;
+const writeCache=(key,serialized)=>{const text=typeof serialized==="string"?serialized:JSON.stringify(serialized);try{localStorage.setItem(key,text);return true}catch(e){}try{localStorage.setItem(key,JSON.stringify(stripCachedImages(JSON.parse(text))));return true}catch(e){}try{localStorage.removeItem(key)}catch(e){}console.warn("Browser cache is full; "+key+" is kept in memory only.");return false};
+const cacheSetJSON=(k,serialized)=>writeCache(cacheKey(k),serialized);
 const SQL_RELATIONAL_KEYS=new Set(["sales","purchases","orders","cashMovements","stockHistory","paymentTypes","promos","suppliers","zReports"]);
 const SQL_MASTER_KEYS=new Set(["customers","users","settings","company","businessDay","taxRate","customerDisplayTerminal","priceTagSettings","posSearchMode"]);
 const save=async(k,v)=>{
