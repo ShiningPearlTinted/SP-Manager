@@ -8571,3 +8571,25 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 .doc-picker-empty{margin:8px 2px;color:#98a2b3;font-size:12px}
 .app-theme-night .doc-product-picker > .doc-group-tree,.app-theme-night .doc-picker-list > button{background:var(--mg-surface,#1e293b);border-color:var(--mg-border,#37475e)}
 .app-theme-night .doc-picker-list > button b{color:var(--mg-ink,#e2e8f0)}
+
+/* ===== resizable document panels ===== */
+/* Products panel | splitter | document; drag the splitter (or use arrow keys) to change the width. */
+.document-editor-layout.doc-resizable{grid-template-columns:var(--doc-picker-w,340px) 10px minmax(0,1fr);column-gap:2px}
+.doc-splitter{position:relative;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;outline:none}
+.doc-splitter > span{display:block;border-radius:999px;background:#d0d5dd;transition:background .15s ease}
+.doc-splitter:hover > span,.doc-splitter:focus-visible > span,body.is-resizing-x .doc-splitter-v > span,body.is-resizing-y .doc-splitter-h > span{background:#087ea4}
+.doc-splitter-v{cursor:col-resize;align-self:stretch}
+.doc-splitter-v > span{width:4px;height:56px}
+.doc-splitter-h{cursor:row-resize;height:12px;flex:none;margin:-2px 0}
+.doc-splitter-h > span{width:56px;height:4px}
+body.is-resizing-x,body.is-resizing-x *{cursor:col-resize!important;user-select:none!important}
+body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:none!important}
+/* The tree takes the height chosen with its splitter; the product list uses the rest of the panel. */
+.doc-product-picker > .doc-group-tree{flex:none;max-height:none;min-height:0}
+/* Product rows grow with their text instead of the 42px fixed button height. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .document-products .doc-product-picker .doc-picker-list > button{flex:none!important;height:auto!important;min-height:44px!important;padding:8px 10px!important;align-items:center}
+.app[data-ui="management"] .doc-picker-list > button b{white-space:normal;word-break:break-word}
+@media (max-width:1050px){
+  .document-editor-layout.doc-resizable{grid-template-columns:minmax(0,1fr)}
+  .doc-splitter-v{display:none}
+}
