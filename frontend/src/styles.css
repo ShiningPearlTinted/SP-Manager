@@ -8759,3 +8759,5 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
  .ptx-paper-info,.ptx-count{display:none}
  .ptx-zoom{width:90px}
 }
+.ptx-menu-note{margin:4px 0 0;padding:7px 10px 5px;border-top:1px solid #e3e3e3;color:#6b7280;font-size:11px;line-height:1.35}
+.ptx-menu-note b{color:#1f2328;font-weight:600}
