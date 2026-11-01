@@ -44,8 +44,10 @@ export default function NotificationCenter({base,headers,user,outletId,online}){
      const id=String(item.id);
      if(seen.current.has(id)||item.read_at)continue;
      seen.current.add(id);
-     if(permission!=='granted'&&toastClaim((user?.id||user?.username)+'_'+outletId,id)){
-      setToast(item);if(soundOn)sound();window.setTimeout(()=>setToast(current=>current?.id===item.id?null:current),6500);
+     // Show the alert while SP-Manager is on screen even when browser push is enabled: push depends on the
+     // server dispatcher, and a cashier must not miss a booking. It stays until dismissed or opened.
+     if((permission!=='granted'||document.visibilityState==='visible')&&toastClaim((user?.id||user?.username)+'_'+outletId,id)){
+      setToast(item);if(soundOn)sound();
      }
     }
    }else for(const item of next)seen.current.add(String(item.id));
@@ -57,7 +59,7 @@ export default function NotificationCenter({base,headers,user,outletId,online}){
  useEffect(()=>{if(!online||!available||!('serviceWorker'in navigator)||!('PushManager'in window))return;let active=true;navigator.serviceWorker.ready.then(async registration=>{const sub=await registration.pushManager.getSubscription();if(!active)return;setSubscribed(!!sub);if(sub)await request('subscribe',{subscription:sub.toJSON(),device_label:navigator.userAgent.slice(0,180)},'POST')}).catch(()=>{});return()=>{active=false}},[online,available,request]);
  useEffect(()=>{if(!('serviceWorker'in navigator))return;const onMessage=async event=>{if(event.data?.type!=='SP_PUSH_SUBSCRIPTION_CHANGE')return;try{const registration=await navigator.serviceWorker.ready;const sub=await registration.pushManager.getSubscription();setSubscribed(!!sub);if(sub&&online)await request('subscribe',{subscription:sub.toJSON(),device_label:navigator.userAgent.slice(0,180)},'POST')}catch{setSubscribed(false)}};navigator.serviceWorker.addEventListener('message',onMessage);return()=>navigator.serviceWorker.removeEventListener('message',onMessage)},[online,request]);
  useEffect(()=>{refresh(true)},[cacheKey,online]);
- useEffect(()=>{if(!online)return;let active=true;const poll=()=>{if(active&&document.visibilityState==='visible')refresh(false)};const timer=window.setInterval(poll,20000);window.addEventListener('online',poll);return()=>{active=false;window.clearInterval(timer);window.removeEventListener('online',poll)}},[online,refresh]);
+ useEffect(()=>{if(!online)return;let active=true;const poll=()=>{if(active&&document.visibilityState==='visible')refresh(false)};const timer=window.setInterval(poll,20000);window.addEventListener('online',poll);document.addEventListener('visibilitychange',poll);return()=>{active=false;window.clearInterval(timer);window.removeEventListener('online',poll);document.removeEventListener('visibilitychange',poll)}},[online,refresh]);
  useEffect(()=>{const close=e=>{if(panelRef.current&&!panelRef.current.contains(e.target)&&!buttonRef.current?.contains(e.target))setOpen(false)};document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close)},[]);
  const enable=async()=>{
   if(!available||!('serviceWorker'in navigator)||!('PushManager'in window)||!('Notification'in window))return;
@@ -86,7 +88,7 @@ export default function NotificationCenter({base,headers,user,outletId,online}){
  };
  const statusText=inboxError?'Inbox unavailable':!online?'Offline':!available?'Push not configured':permission==='denied'?'Permission blocked':subscribed?'Push enabled':'Push disabled';
  return <div className="spn-center">
-  <button ref={buttonRef} type="button" className="spn-bell" aria-label={'Notifications'+(unread?', '+unread+' unread':'')} aria-expanded={open} onClick={()=>{setOpen(value=>!value);if(!open)refresh(true)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>{unread>0&&<span className="spn-count">{unread>99?'99+':unread}</span>}</button>
+  <button ref={buttonRef} type="button" className="spn-bell" aria-label={'Notifications'+(unread?', '+unread+' unread':inboxError?', unavailable':'')} title={inboxError||undefined} aria-expanded={open} onClick={()=>{setOpen(value=>!value);if(!open)refresh(true)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>{unread>0&&<span className="spn-count">{unread>99?'99+':unread}</span>}{!unread&&inboxError&&<span className="spn-count spn-warn">!</span>}</button>
   {open&&<section className="spn-panel" ref={panelRef} aria-label="Notifications">
    <header className="spn-panel-head"><div><b>Notifications</b><small>{statusText}</small></div><button type="button" onClick={()=>setOpen(false)} aria-label="Close notifications">×</button></header>
    <div className="spn-panel-controls"><span>Browser push</span>{subscribed?<button type="button" disabled={busy} onClick={disable}>Disable</button>:<button type="button" disabled={busy||!online||!available||permission==='denied'} onClick={enable}>{busy?'Working…':'Enable'}</button>}<label><input type="checkbox" checked={soundOn} onChange={e=>{setSoundOn(e.target.checked);localStorage.setItem('sp_notification_sound',e.target.checked?'1':'0')}}/> Sound</label></div>

@@ -8902,3 +8902,5 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .app .finance-page .fin-band th,.app .finance-page .fin-band td{height:auto!important;padding:5px 8px!important;font-size:12.5px!important}
 .app .finance-page .fin-reliefs td{padding:6px 14px!important}
 .fin-print-area{display:flex;flex-direction:column;gap:16px;min-width:0}
+/* Bell: inbox could not be loaded (for example the notification tables are missing). */
+.spn-count.spn-warn{background:#f59e0b!important;color:#111!important}
