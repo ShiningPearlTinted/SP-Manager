@@ -1832,177 +1832,250 @@ const barcodeTextForPreview=(value,type)=>{
 };
 const PRICE_TAGS_STORAGE_KEY="sp-manager-pos-price-tags-settings-v23-sp-manager-original-roll-controls";
 const loadPriceTagSetting=(key,fallback)=>{try{const saved=load("priceTagSettings",null);if(saved&&Object.prototype.hasOwnProperty.call(saved,key))return saved[key];const raw=localStorage.getItem(PRICE_TAGS_STORAGE_KEY);if(!raw)return fallback;const legacy=JSON.parse(raw);return Object.prototype.hasOwnProperty.call(legacy,key)?legacy[key]:fallback}catch(_){return fallback}};
+// Paper presets. "roll" = continuous roll (receipt printer, unlimited height); "label" = die-cut label stock, one label per page.
+const PRICE_TAG_PAPERS=[
+ {group:"Paper",items:[["A4",210,297],["A5",148,210],["A6",105,148],["Letter",215.9,279.4],["Legal",215.9,355.6]]},
+ {group:"Thermal receipt roll",items:[["Roll 58 mm",58,0,"roll"],["Roll 80 mm",80,0,"roll"]]},
+ {group:"Thermal label",items:[["Label 40 x 30 mm",40,30,"label"],["Label 50 x 30 mm",50,30,"label"],["Label 50 x 25 mm",50,25,"label"],["Label 60 x 40 mm",60,40,"label"],["Label 100 x 50 mm",100,50,"label"],["4 x 6 in",101.6,152.4,"label"]]}
+];
+const PRICE_TAG_BARCODES=["EAN13","EAN8","UPC A","UPC E0","UPC E1","CODE 39","CODE 128","CODE 93","Interleaved 2 of 5 (ITF)","CODABAR"];
+// Number field that lets the user clear and retype; the value is committed when it is a valid number.
+function PtNum({value,onChange,disabled,min=0,step="0.1",label}){
+ const[text,setText]=useState(String(value));
+ useEffect(()=>{setText(t=>Number(t)===Number(value)&&t!==""?t:String(value))},[value]);
+ return <input type="number" aria-label={label} value={disabled?String(value):text} min={min} step={step} disabled={disabled} onChange={e=>{setText(e.target.value);const n=Number(e.target.value);if(e.target.value!==""&&Number.isFinite(n)&&n>=min)onChange(n)}} onBlur={()=>setText(String(value))}/>;
+}
+function PtSwitch({checked,onChange,label}){return <button type="button" role="switch" aria-checked={checked} aria-label={label} className={"ptx-switch"+(checked?" on":"")} onClick={()=>onChange(!checked)}><i/></button>}
+const ptxIcon={
+ all:<svg viewBox="0 0 16 16"><path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5" stroke="currentColor" strokeWidth="1.6" fill="none"/></svg>,
+ barcode:<svg viewBox="0 0 16 16"><path d="M2 3v10M4 3v10M5.5 3v10M8 3v10M10 3v10M11.5 3v10M14 3v10" stroke="currentColor" strokeWidth="1.1"/></svg>,
+ tag:<svg viewBox="0 0 16 16"><path d="M1.5 2.5v5l7 7 6-6-7-7h-5z" fill="currentColor"/><circle cx="4.6" cy="5.1" r="1.2" fill="#1d6fb8"/></svg>,
+ search:<svg viewBox="0 0 16 16"><circle cx="6.8" cy="6.8" r="4.6" stroke="currentColor" strokeWidth="1.6" fill="none"/><path d="M10.3 10.3l4 4" stroke="currentColor" strokeWidth="1.8"/></svg>,
+ info:<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" fill="none"/><path d="M12 10.5v7M12 6.5v1.6" stroke="currentColor" strokeWidth="1.8"/></svg>,
+ print:<svg viewBox="0 0 16 16"><path d="M4 1.5h8v4H4z" fill="#fff" stroke="#555"/><rect x="1" y="5.5" width="14" height="6.5" rx="1" fill="#6b7280"/><path d="M4 9.5h8v5H4z" fill="#fff" stroke="#555"/></svg>,
+ save:<svg viewBox="0 0 16 16"><path d="M1.5 1.5h10l3 3v10h-13z" fill="#2563eb"/><path d="M4 1.5h6v4H4z" fill="#dbeafe"/><path d="M3.5 9h9v5.5h-9z" fill="#fff"/></svg>,
+ first:<svg viewBox="0 0 16 16"><path d="M3 3v10" stroke="currentColor" strokeWidth="1.6"/><path d="M13 3L5 8l8 5z" fill="currentColor"/></svg>,
+ prev:<svg viewBox="0 0 16 16"><path d="M11 3L4 8l7 5z" fill="currentColor"/></svg>,
+ next:<svg viewBox="0 0 16 16"><path d="M5 3l7 5-7 5z" fill="currentColor"/></svg>,
+ last:<svg viewBox="0 0 16 16"><path d="M13 3v10" stroke="currentColor" strokeWidth="1.6"/><path d="M3 3l8 5-8 5z" fill="currentColor"/></svg>,
+ fitWidth:<svg viewBox="0 0 16 16"><path d="M1 8h14M1 8l3-3M1 8l3 3M15 8l-3-3M15 8l-3 3" stroke="currentColor" strokeWidth="1.4" fill="none"/><path d="M6 2v3M10 2v3M6 11v3M10 11v3" stroke="currentColor" strokeWidth="1.4"/></svg>,
+ fitPage:<svg viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" stroke="currentColor" strokeWidth="1.4" fill="none"/><rect x="4" y="5" width="8" height="6" fill="currentColor"/></svg>,
+ actual:<svg viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9z" fill="currentColor"/></svg>,
+ page:<svg viewBox="0 0 16 16"><rect x="4" y="1.5" width="8" height="13" stroke="currentColor" strokeWidth="1.2" fill="none"/></svg>
+};
 
-function PriceTagsModal({products,groups,money,onClose,setNotice,settings,priceTagSettings}){
- const [paper,setPaper]=useState(()=>loadPriceTagSetting("paper","A4")),[roll,setRoll]=useState(()=>loadPriceTagSetting("roll",true)),[pageW,setPageW]=useState(()=>Math.max(1,Number(loadPriceTagSetting("pageW",210))||210)),[pageH,setPageH]=useState(()=>Math.max(1,Number(loadPriceTagSetting("pageH",297))||297)),[margins,setMargins]=useState(()=>loadPriceTagSetting("margins",{top:0,left:0,right:0,bottom:0})),[columns,setColumns]=useState(()=>Math.max(1,Number(loadPriceTagSetting("columns",2))||2)),[labelW,setLabelW]=useState(()=>Math.max(1,Number(loadPriceTagSetting("labelW",50))||50)),[labelH,setLabelH]=useState(()=>Math.max(1,Number(loadPriceTagSetting("labelH",35))||35)),[rowGap,setRowGap]=useState(()=>loadPriceTagSetting("rowGap",0)),[colGap,setColGap]=useState(()=>loadPriceTagSetting("colGap",0));
- const [showName,setShowName]=useState(()=>loadPriceTagSetting("showName",true)),[showPrice,setShowPrice]=useState(()=>loadPriceTagSetting("showPrice",true)),[showCode,setShowCode]=useState(()=>loadPriceTagSetting("showCode",true)),[showBarcode,setShowBarcode]=useState(()=>loadPriceTagSetting("showBarcode",true)),[taxInclusive,setTaxInclusive]=useState(()=>loadPriceTagSetting("taxInclusive",true)),[borders,setBorders]=useState(()=>loadPriceTagSetting("borders",true)),[barcodeType,setBarcodeType]=useState(()=>loadPriceTagSetting("barcodeType","EAN13")),[nameSize,setNameSize]=useState(()=>Math.max(6,Number(loadPriceTagSetting("nameSize",16))||16)),[priceSize,setPriceSize]=useState(()=>Math.max(6,Number(loadPriceTagSetting("priceSize",16))||16)),[barcodeHeight,setBarcodeHeight]=useState(()=>{const v=Number(loadPriceTagSetting("barcodeHeight",40));return Math.max(10,Math.min(80,v||40))}),[query,setQuery]=useState(()=>loadPriceTagSetting("query","")),[group,setGroup]=useState(()=>loadPriceTagSetting("group","All groups")),[selected,setSelected]=useState(()=>loadPriceTagSetting("selected",[])),[copies,setCopies]=useState(()=>loadPriceTagSetting("copies",1)),[printerLanguage,setPrinterLanguage]=useState(()=>loadPriceTagSetting("printerLanguage","TSPL")),[productMode,setProductMode]=useState(()=>loadPriceTagSetting("productMode","all")),[previewZoom,setPreviewZoom]=useState(1),[previewPage,setPreviewPage]=useState(1);
- const [priceTagsHydrated,setPriceTagsHydrated]=useState(false);
- useEffect(()=>{const x=priceTagSettings&&typeof priceTagSettings==="object"?priceTagSettings:{};if(Object.keys(x).length){if(x.paper!==undefined)setPaper(x.paper);if(x.roll!==undefined)setRoll(Boolean(x.roll));if(x.pageW!==undefined)setPageW(Math.max(1,Number(x.pageW)||210));if(x.pageH!==undefined)setPageH(Math.max(1,Number(x.pageH)||297));if(x.margins&&typeof x.margins==="object")setMargins(m=>({...m,...x.margins}));if(x.columns!==undefined)setColumns(Math.max(1,Number(x.columns)||2));if(x.labelW!==undefined)setLabelW(Math.max(1,Number(x.labelW)||50));if(x.labelH!==undefined)setLabelH(Math.max(1,Number(x.labelH)||35));if(x.rowGap!==undefined)setRowGap(Number(x.rowGap)||0);if(x.colGap!==undefined)setColGap(Number(x.colGap)||0);if(x.showName!==undefined)setShowName(Boolean(x.showName));if(x.showPrice!==undefined)setShowPrice(Boolean(x.showPrice));if(x.showCode!==undefined)setShowCode(Boolean(x.showCode));if(x.showBarcode!==undefined)setShowBarcode(Boolean(x.showBarcode));if(x.taxInclusive!==undefined)setTaxInclusive(Boolean(x.taxInclusive));if(x.borders!==undefined)setBorders(Boolean(x.borders));if(x.barcodeType!==undefined)setBarcodeType(x.barcodeType);if(x.nameSize!==undefined)setNameSize(Math.max(6,Number(x.nameSize)||16));if(x.priceSize!==undefined)setPriceSize(Math.max(6,Number(x.priceSize)||16));if(x.barcodeHeight!==undefined)setBarcodeHeight(Math.max(10,Math.min(80,Number(x.barcodeHeight)||40)));if(x.query!==undefined)setQuery(x.query);if(x.group!==undefined)setGroup(x.group);if(Array.isArray(x.selected))setSelected(x.selected);if(x.copies!==undefined)setCopies(Math.max(1,Number(x.copies)||1));if(x.printerLanguage!==undefined)setPrinterLanguage(x.printerLanguage);if(x.productMode!==undefined)setProductMode(x.productMode);}setPriceTagsHydrated(true);},[priceTagSettings]);
- useEffect(()=>{if(!priceTagsHydrated)return;const state={paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,query,group,selected,copies,printerLanguage,productMode};save("priceTagSettings",state);try{localStorage.setItem(PRICE_TAGS_STORAGE_KEY,JSON.stringify(state))}catch(_){ }},[priceTagsHydrated,paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,query,group,selected,copies,printerLanguage,productMode]);
- const candidates=useMemo(()=>products.filter(p=>{const q=String(query||"").trim().toLowerCase();const name=String(p.name||"").toLowerCase();const code=String(p.code||"").toLowerCase();const barcodes=[p.barcode,...(Array.isArray(p.barcodes)?p.barcodes:[])].filter(Boolean).map(String).join(" ").toLowerCase();const g=group==="All groups"||(p.group||p.category)===group;if(productMode==="selected"&&!selected.includes(p.id))return false;if(q){if(productMode==="barcode"&&!barcodes.includes(q))return false;if(productMode==="code"&&!code.includes(q))return false;if((productMode==="all"||productMode==="selected")&&!name.includes(q))return false}return g}),[products,query,group,productMode,selected]);
-const productModeLabel=productMode==="barcode"?"Barcode search":productMode==="code"?"Code search":productMode==="selected"?"Selected products":"All products";
- const productSearchPlaceholder=productMode==="barcode"?"Scan / enter barcode":productMode==="code"?"Enter product code":productMode==="selected"?"Search selected products":"Product name";
- const setProductModeAndQuery=(mode)=>{setProductMode(mode);setQuery("");if(mode==="all")setSelected([])};
- const toggleProduct=(id)=>setSelected(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
- const selectedProducts=selected.length?products.filter(p=>selected.includes(p.id)):candidates;
- const labels=selectedProducts.flatMap(p=>Array.from({length:Math.max(1,Number(copies)||1)},()=>p));
- const previewBarcodeHeight=Math.max(10,Number(barcodeHeight)||40);
- const effectiveLabelH=showBarcode?Math.max(Number(labelH)||35,previewBarcodeHeight+18):Math.max(1,Number(labelH)||35);
- const totalLabels=labels.length; const pageCols=roll?1:Math.max(1,Number(columns)||1);
- const availableH=Math.max(1,Number(pageH)-Number(margins.top)-Number(margins.bottom));
- const rowsPerPage=roll?Math.max(1,totalLabels):Math.max(1,Math.floor((availableH+Number(rowGap))/(Math.max(1,effectiveLabelH)+Number(rowGap))));
- const perPage=Math.max(1,rowsPerPage*pageCols); const pages=roll?1:Math.max(1,Math.ceil(totalLabels/perPage));
+function PriceTagsModal({products,money,onClose,setNotice,settings,priceTagSettings}){
+ const S=loadPriceTagSetting;
+ const [paper,setPaper]=useState(()=>S("paper","A4")),[roll,setRoll]=useState(()=>S("roll",true)),[pageW,setPageW]=useState(()=>Math.max(10,Number(S("pageW",210))||210)),[pageH,setPageH]=useState(()=>Math.max(10,Number(S("pageH",297))||297)),[margins,setMargins]=useState(()=>({top:0,left:0,right:0,bottom:0,...(S("margins",{})||{})})),[columns,setColumns]=useState(()=>Math.max(1,Number(S("columns",2))||2)),[labelW,setLabelW]=useState(()=>Math.max(5,Number(S("labelW",50))||50)),[labelH,setLabelH]=useState(()=>Math.max(5,Number(S("labelH",35))||35)),[rowGap,setRowGap]=useState(()=>Math.max(0,Number(S("rowGap",0))||0)),[colGap,setColGap]=useState(()=>Math.max(0,Number(S("colGap",0))||0));
+ const [showName,setShowName]=useState(()=>S("showName",true)),[showPrice,setShowPrice]=useState(()=>S("showPrice",true)),[showCode,setShowCode]=useState(()=>S("showCode",false)),[showBarcode,setShowBarcode]=useState(()=>S("showBarcode",true)),[taxInclusive,setTaxInclusive]=useState(()=>S("taxInclusive",true)),[borders,setBorders]=useState(()=>S("borders",false)),[barcodeType,setBarcodeType]=useState(()=>S("barcodeType","EAN13")),[nameSize,setNameSize]=useState(()=>Math.max(6,Number(S("nameSize",11))||11)),[priceSize,setPriceSize]=useState(()=>Math.max(6,Number(S("priceSize",23))||23)),[barcodeHeight,setBarcodeHeight]=useState(()=>Math.max(6,Math.min(60,Number(S("barcodeHeight",14))||14))),[selected,setSelected]=useState(()=>Array.isArray(S("selected",[]))?S("selected",[]):[]),[copies,setCopies]=useState(()=>Math.max(1,Number(S("copies",1))||1)),[printerLanguage,setPrinterLanguage]=useState(()=>S("printerLanguage","TSPL")),[productMode,setProductMode]=useState(()=>{const m=S("productMode","name");return["all","barcode","code","name"].includes(m)?m:"name"});
+ const [query,setQuery]=useState(""),[previewZoom,setPreviewZoom]=useState(1),[previewPage,setPreviewPage]=useState(1),[menu,setMenu]=useState(""),[hydrated,setHydrated]=useState(false);
+ const [panelW,setPanelW]=useStoredSize("sp_price_tags_panel_width",340,280,560);
+ const previewRef=React.useRef(null),searchRef=React.useRef(null);
+ // Settings saved on the server win over the browser copy once they arrive.
+ useEffect(()=>{const x=priceTagSettings&&typeof priceTagSettings==="object"?priceTagSettings:{};const num=(v,min,def)=>Math.max(min,Number(v)||def);if(Object.keys(x).length){if(x.paper!==undefined)setPaper(x.paper);if(x.roll!==undefined)setRoll(Boolean(x.roll));if(x.pageW!==undefined)setPageW(num(x.pageW,10,210));if(x.pageH!==undefined)setPageH(num(x.pageH,10,297));if(x.margins&&typeof x.margins==="object")setMargins(m=>({...m,...x.margins}));if(x.columns!==undefined)setColumns(num(x.columns,1,2));if(x.labelW!==undefined)setLabelW(num(x.labelW,5,50));if(x.labelH!==undefined)setLabelH(num(x.labelH,5,35));if(x.rowGap!==undefined)setRowGap(Math.max(0,Number(x.rowGap)||0));if(x.colGap!==undefined)setColGap(Math.max(0,Number(x.colGap)||0));if(x.showName!==undefined)setShowName(Boolean(x.showName));if(x.showPrice!==undefined)setShowPrice(Boolean(x.showPrice));if(x.showCode!==undefined)setShowCode(Boolean(x.showCode));if(x.showBarcode!==undefined)setShowBarcode(Boolean(x.showBarcode));if(x.taxInclusive!==undefined)setTaxInclusive(Boolean(x.taxInclusive));if(x.borders!==undefined)setBorders(Boolean(x.borders));if(x.barcodeType!==undefined)setBarcodeType(x.barcodeType);if(x.nameSize!==undefined)setNameSize(num(x.nameSize,6,11));if(x.priceSize!==undefined)setPriceSize(num(x.priceSize,6,23));if(x.barcodeHeight!==undefined)setBarcodeHeight(Math.max(6,Math.min(60,Number(x.barcodeHeight)||14)));if(Array.isArray(x.selected))setSelected(x.selected);if(x.copies!==undefined)setCopies(num(x.copies,1,1));if(x.printerLanguage!==undefined)setPrinterLanguage(x.printerLanguage);if(["all","barcode","code","name"].includes(x.productMode))setProductMode(x.productMode)}setHydrated(true)},[priceTagSettings]);
+ useEffect(()=>{if(!hydrated)return;const state={paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,selected,copies,printerLanguage,productMode};save("priceTagSettings",state);try{localStorage.setItem(PRICE_TAGS_STORAGE_KEY,JSON.stringify(state))}catch(_){}},[hydrated,paper,roll,pageW,pageH,margins,columns,labelW,labelH,rowGap,colGap,showName,showPrice,showCode,showBarcode,taxInclusive,borders,barcodeType,nameSize,priceSize,barcodeHeight,selected,copies,printerLanguage,productMode]);
+ useEffect(()=>{if(!menu)return;const close=()=>setMenu("");window.addEventListener("click",close);return()=>window.removeEventListener("click",close)},[menu]);
+
+ // ---- Products: search adds to the selection; with nothing selected every active product is printed.
+ const active=useMemo(()=>products.filter(p=>p.active!==false),[products]);
+ const byId=useMemo(()=>new Map(products.map(p=>[p.id,p])),[products]);
+ const barcodesOf=p=>[p.barcode,...(Array.isArray(p.barcodes)?p.barcodes:[])].filter(Boolean).map(String);
+ const text=query.trim().toLowerCase();
+ const matches=useMemo(()=>{if(!text)return[];return active.filter(p=>{const name=String(p.name||"").toLowerCase(),code=String(p.code||"").toLowerCase(),bc=barcodesOf(p).join(" ").toLowerCase();if(productMode==="barcode")return bc.includes(text);if(productMode==="code")return code.includes(text);if(productMode==="name")return name.includes(text);return name.includes(text)||code.includes(text)||bc.includes(text)}).slice(0,40)},[active,text,productMode]);
+ const addProduct=p=>{if(!p)return;setSelected(s=>s.includes(p.id)?s:[...s,p.id]);setQuery("");searchRef.current?.focus()};
+ const searchKey=e=>{if(e.key==="Escape"){setQuery("");return}if(e.key!=="Enter")return;e.preventDefault();const exact=active.find(p=>(productMode!=="name"&&(barcodesOf(p).some(b=>b.toLowerCase()===text)||String(p.code||"").toLowerCase()===text)));if(exact)return addProduct(exact);if(matches.length===1)return addProduct(matches[0]);if(matches.length)setNotice?.(`${matches.length} products match. Click one to add it.`);else setNotice?.("No product found.")};
+ const selectedProducts=useMemo(()=>selected.map(id=>byId.get(id)).filter(Boolean),[selected,byId]);
+ const sourceProducts=selectedProducts.length?selectedProducts:active;
+ const labels=useMemo(()=>sourceProducts.flatMap(p=>Array.from({length:Math.max(1,Number(copies)||1)},()=>p)),[sourceProducts,copies]);
+ const taxRateGlobal=Number(load("taxRate",0))||0;
+ const priceOf=p=>{const base=Number(p?.price)||0;if(!taxInclusive||p?.taxInclusive!==false)return base;let r=Number(p?.taxRate??taxRateGlobal)||0;if(r>1)r=r/100;return base*(1+r)};
+
+ // ---- Page geometry (millimetres).
+ const m={top:Math.max(0,Number(margins.top)||0),right:Math.max(0,Number(margins.right)||0),bottom:Math.max(0,Number(margins.bottom)||0),left:Math.max(0,Number(margins.left)||0)};
+ const contentW=Math.max(5,pageW-m.left-m.right);
+ const cols=roll?1:Math.max(1,Number(columns)||1);
+ const lw=roll?contentW:labelW, lh=labelH, rg=rowGap, cg=roll?0:colGap;
+ const rowsPerPage=Math.max(1,Math.floor((pageH-m.top-m.bottom+rg)/(lh+rg)));
+ const perPage=rowsPerPage*cols;
+ const pageChunks=useMemo(()=>{if(roll)return[labels];const out=[];for(let i=0;i<labels.length;i+=perPage)out.push(labels.slice(i,i+perPage));return out.length?out:[[]]},[labels,roll,perPage]);
+ const pages=pageChunks.length;
+ const rollH=Math.max(lh,m.top+m.bottom+labels.length*lh+Math.max(0,labels.length-1)*rg);
+ const sheetH=roll?rollH:pageH;
  useEffect(()=>{setPreviewPage(p=>Math.min(Math.max(1,p),pages))},[pages]);
- const escapeHtml=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
- const barcodeValue=p=>String(p?.barcode||p?.barcodes?.[0]||p?.code||"000000");
- const barcodeText=(value,type)=>type==="EAN13"?checksumEAN13(value):type==="EAN8"?checksumEAN8(value):type==="UPC A"?String(value||"").replace(/\D/g,"").slice(-12).padStart(12,"0"):String(value||"");
- const zplEsc=v=>String(v??"").replace(/[\^~\\]/g," ").replace(/\r?\n/g," ");
- const tsplEsc=v=>String(v??"").replace(/"/g,"'").replace(/\r?\n/g," ");
- const mmToDots=mm=>Math.max(1,Math.round(Number(mm||0)*8));
- const printerBarcodeData=(value,type)=>{const raw=String(value||"");if(type==="EAN13")return raw.replace(/\D/g,"").slice(0,12).padStart(12,"0");if(type==="EAN8")return raw.replace(/\D/g,"").slice(0,7).padStart(7,"0");if(type==="UPC A")return raw.replace(/\D/g,"").slice(-11).padStart(11,"0");return raw};
- const barcodeCommand=(lang,value,type,x,y,wMm,hMm)=>{
-   const h=Math.max(10,mmToDots(hMm));
-   const width=Math.max(1,Math.round(mmToDots(wMm)/95));
-   const data=printerBarcodeData(value,type);
-   if(lang==="ZPL"){
-     if(type==="EAN13")return `^FO${x},${y}^BY${width},2,${h}^BE${width},${h},Y,N^FD${data}^FS`;
-     if(type==="EAN8")return `^FO${x},${y}^BY${width},2,${h}^B8${width},${h},Y,N^FD${data}^FS`;
-     if(type==="UPC A")return `^FO${x},${y}^BY${width},2,${h}^BU${width},${h},Y,N^FD${data}^FS`;
-     if(type==="UPC E0"||type==="UPC E1")return `^FO${x},${y}^BY${width},2,${h}^B9${width},${h},Y,N^FD${data}^FS`;
-     if(type==="CODE 39")return `^FO${x},${y}^BY${width},2,${h}^B3N,N,${h},N,N^FD${zplEsc(data)}^FS`;
-     if(type==="CODE 93")return `^FO${x},${y}^BY${width},2,${h}^BAN,N,${h},N,N^FD${zplEsc(data)}^FS`;
-     if(type==="Interleaved 2 of 5 (ITF)")return `^FO${x},${y}^BY${width},2,${h}^B2N,${h},N,N^FD${String(data).replace(/\D/g,"")}^FS`;
-     if(type==="CODABAR")return `^FO${x},${y}^BY${width},2,${h}^BKN,${h},N,N^FD${zplEsc(data)}^FS`;
-     return `^FO${x},${y}^BY${width},2,${h}^BCN,${h},Y,N,N^FD${zplEsc(data)}^FS`;
-   }
-   const barType=type==="EAN13"?"EAN13":type==="EAN8"?"EAN8":type==="UPC A"?"UPCA":(type==="UPC E0"||type==="UPC E1")?"UPCE":type==="CODE 39"?"39":type==="CODE 93"?"93":type==="Interleaved 2 of 5 (ITF)"?"25":"CODA";
-   return `BARCODE ${x},${y},"${barType}",${h},1,0,2,4,"${tsplEsc(data)}"`;
+
+ // ---- One label renderer for both the preview and the printed document.
+ const esc=v=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+ const barcodeValue=p=>String(barcodesOf(p)[0]||p?.code||"000000");
+ const bcW=Math.max(15,Math.min(42,lw-(showCode?8:4)));
+ const digitMm=Math.min(3,Math.max(2,barcodeHeight*.2));
+ const barcodeHtml=p=>{
+  const value=barcodeValue(p),H=Math.max(6,Number(barcodeHeight)||14),vbH=Math.round(H*10),barsH=Math.round((H-digitMm)*10),guardH=Math.round((H-digitMm/2)*10);
+  const ean=barcodeType==="EAN13"||barcodeType==="EAN8"||barcodeType==="UPC A";
+  if(ean){
+   const ean8=barcodeType==="EAN8";
+   const d=ean8?checksumEAN8(value):checksumEAN13(barcodeType==="UPC A"?"0"+String(value).replace(/\D/g,"").slice(-11):value);
+   const bits=eanPattern(d,ean8?"EAN8":"EAN13");
+   const lead=ean8?2:7,U=bits.length+lead+2,guards=ean8?[[0,3],[31,36],[64,67]]:[[0,3],[45,50],[92,95]];
+   const isGuard=i=>guards.some(([a,b])=>i>=a&&i<b);
+   const bars=[...bits].map((b,i)=>b==="1"?`<rect x="${i+lead}" y="0" width="1.02" height="${isGuard(i)?guardH:barsH}"/>`:"").join("");
+   const digits=ean8?[...d].map((c,i)=>[c,lead+3+(i<4?i*7:5+i*7)+3.5]):[[d[0],3.2],...[...d.slice(1)].map((c,i)=>[c,lead+3+(i<6?i*7:5+i*7)+3.5])];
+   return `<div class="ptl-bcx" style="width:${bcW}mm;height:${H}mm"><svg viewBox="0 0 ${U} ${vbH}" preserveAspectRatio="none"><g fill="#000">${bars}</g></svg>${digits.map(([c,x])=>`<span class="ptl-dg" style="left:${(x/U*100).toFixed(3)}%;font-size:${digitMm}mm">${c}</span>`).join("")}</div>`;
+  }
+  const bits=barcodeBits(value,barcodeType)||"",n=Math.max(1,bits.length);
+  const bars=[...bits].map((b,i)=>b==="1"?`<rect x="${i}" y="0" width="1.02" height="${barsH}"/>`:"").join("");
+  return `<div class="ptl-bcx" style="width:${bcW}mm;height:${H}mm"><svg viewBox="0 0 ${n} ${vbH}" preserveAspectRatio="none"><g fill="#000">${bars}</g></svg><span class="ptl-tx" style="font-size:${digitMm}mm">${esc(barcodeTextForPreview(value,barcodeType))}</span></div>`;
  };
- const buildRaw=(lang)=>{
-   const paperWidth=Math.max(1,Number(pageW)||210), paperHeight=Math.max(1,Number(pageH)||297);
-   const lw=Math.max(1,Number(labelW)||50), lh=Math.max(1,Number(labelH)||35);
-   const leftM=Math.max(0,Number(margins.left)||0), rightM=Math.max(0,Number(margins.right)||0), topM=Math.max(0,Number(margins.top)||0), bottomM=Math.max(0,Number(margins.bottom)||0);
-   const cols=roll?1:Math.max(1,Number(columns)||1), rg=roll?0:Math.max(0,Number(rowGap)||0), cg=roll?0:Math.max(0,Number(colGap)||0);
-   const contentW=Math.max(1,paperWidth-leftM-rightM);
-   const rollH=Math.max(1,topM+bottomM+(labels.length?labels.length*lh+Math.max(0,labels.length-1)*rg:lh));
-   const chunks=roll?[labels]:Array.from({length:pages},(_,pi)=>labels.slice(pi*perPage,(pi+1)*perPage));
-   const out=[];
-   chunks.forEach(chunk=>{
-     const sheetH=roll?rollH:paperHeight;
-     if(lang==="ZPL") out.push(`^XA^PW${mmToDots(paperWidth)}^LL${mmToDots(sheetH)}^LH0,0`);
-     else out.push(`SIZE ${paperWidth.toFixed(2)} mm,${sheetH.toFixed(2)} mm\nGAP 0 mm,0\nCLS`);
-     chunk.forEach((p,idx)=>{
-       const col=roll?0:(idx%cols), row=roll?idx:Math.floor(idx/cols);
-       const cellX=roll?leftM+(contentW-lw)/2:leftM+col*(lw+cg);
-       const cellY=roll?topM+row*(lh+rg):topM+row*(lh+rg);
-       const baseX=mmToDots(cellX), baseY=mmToDots(cellY), labelWidthDots=mmToDots(lw);
-       const xName=mmToDots(5), nameY=0, priceY=mmToDots(7.5), effectiveBarcodeHeight=Math.max(10,Math.min(Number(barcodeHeight)||60,Math.max(10,lh-10))), barcodeY=Math.max(mmToDots(12.5),mmToDots(lh)-mmToDots(effectiveBarcodeHeight)-mmToDots(4)), barcodeW=Math.min(44,Math.max(20,lw-6));
-       if(borders&&lang==="ZPL")out.push(`^FO${baseX},${baseY}^GB${mmToDots(lw)},${mmToDots(lh)},2^FS`);
-       if(borders&&lang==="TSPL")out.push(`BOX ${baseX},${baseY},${baseX+mmToDots(lw)},${baseY+mmToDots(lh)},2`);
-       const value=barcodeValue(p); const name=String(p?.name||""); const price=money(p?.price||0);
-       const centeredBarcodeX=Math.max(0,Math.round((labelWidthDots-mmToDots(barcodeW))/2));
-       if(lang==="ZPL"){
-         if(showName)out.push(`^FO${baseX+mmToDots(xName)},${baseY+mmToDots(nameY)}^A0N,${Math.max(10,Number(nameSize)*8)},${Math.max(10,Number(nameSize)*8)}^FB${Math.max(1,labelWidthDots-mmToDots(xName)*2)},1,0,C,0^FD${zplEsc(name)}^FS`);
-         if(showPrice)out.push(`^FO${baseX+mmToDots(xName)},${baseY+mmToDots(priceY)}^A0N,${Math.max(10,Number(priceSize)*8)},${Math.max(10,Number(priceSize)*8)}^FB${Math.max(1,labelWidthDots-mmToDots(xName)*2)},1,0,C,0^FD${zplEsc(price)}^FS`);
-         if(showBarcode)out.push(barcodeCommand(lang,value,barcodeType,baseX+centeredBarcodeX,baseY+mmToDots(barcodeY),barcodeW,effectiveBarcodeHeight));
-         if(showCode)out.push(`^FO${baseX+Math.max(0,Math.round((labelWidthDots-mmToDots(30))/2))},${baseY+Math.min(mmToDots(lh)-20,mmToDots(barcodeY)+mmToDots(barcodeHeight)+8)}^A0N,64,64^FB${mmToDots(30)},1,0,C,0^FD${zplEsc(p?.code||"")}^FS`);
-       }else{
-         if(showName)out.push(`TEXT ${baseX+mmToDots(xName)},${baseY+mmToDots(nameY)},"3",0,${Math.max(1,Math.round(Number(nameSize)/10))},${Math.max(1,Math.round(Number(nameSize)/10))},2,"${tsplEsc(name)}"`);
-         if(showPrice)out.push(`TEXT ${baseX+mmToDots(xName)},${baseY+mmToDots(priceY)},"3",0,${Math.max(1,Math.round(Number(priceSize)/10))},${Math.max(1,Math.round(Number(priceSize)/10))},2,"${tsplEsc(price)}"`);
-         if(showBarcode){
-           const bx=baseX+centeredBarcodeX, by=baseY+mmToDots(barcodeY);
-           out.push(barcodeCommand(lang,value,barcodeType,bx,by,barcodeW,barcodeHeight));
-           const human=barcodeText(value,barcodeType), textW=mmToDots(Math.min(lw-4,44));
-           out.push(`^FO${baseX+Math.max(0,Math.round((labelWidthDots-textW)/2))},${by+mmToDots(barcodeHeight)+2}^A0N,22,22^FB${textW},1,0,C,0^FD${zplEsc(human)}^FS`);
-         }
-         if(showCode)out.push(`TEXT ${baseX+Math.max(0,Math.round((labelWidthDots-mmToDots(30))/2))},${baseY+Math.min(mmToDots(lh)-20,mmToDots(barcodeY)+mmToDots(barcodeHeight)+8)},"3",0,1,1,2,"${tsplEsc(p?.code||"")}"`);
-       }
-     });
-     if(lang==="ZPL") out.push(`^XZ`); else out.push(`PRINT 1,1`);
+ const labelHtml=p=>`<div class="ptl${borders?" ptl-border":""}" style="width:${lw}mm;height:${lh}mm">${showCode?`<div class="ptl-sku">SKU: ${esc(p.code||"")}</div>`:""}<div class="ptl-body"${showCode?' style="left:4mm"':""}>${showName?`<div class="ptl-name" style="font-size:${nameSize}px">${esc(p.name)}</div>`:""}${showPrice?`<div class="ptl-price" style="font-size:${priceSize}px">${esc(money(priceOf(p)).replace(/^RM\s+/,"RM"))}</div>`:""}${showBarcode?`<div class="ptl-bc">${barcodeHtml(p)}</div>`:""}</div></div>`;
+ const labelCss=`.ptp{background:#fff;color:#000;box-sizing:border-box;overflow:hidden;position:relative}.ptg{display:grid;justify-content:start;align-content:start}.ptl{position:relative;overflow:hidden;box-sizing:border-box;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}.ptl-border{box-shadow:inset 0 0 0 .25mm #000}.ptl-sku{position:absolute;left:0;top:0;bottom:0;width:4mm;writing-mode:vertical-rl;transform:rotate(180deg);display:flex;align-items:center;justify-content:center;font-size:8pt;white-space:nowrap;overflow:hidden}.ptl-body{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:1mm 1mm 0;box-sizing:border-box}.ptl-name{max-width:100%;text-align:center;line-height:1.08;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}.ptl-price{line-height:1.25;white-space:nowrap}.ptl-bc{margin-top:.6mm;display:flex;justify-content:center;min-height:0}.ptl-bcx{position:relative}.ptl-bcx svg{position:absolute;inset:0;width:100%;height:100%;display:block}.ptl-dg{position:absolute;bottom:0;transform:translateX(-50%);line-height:1;font-family:Arial,Helvetica,sans-serif}.ptl-tx{position:absolute;left:0;right:0;bottom:0;text-align:center;line-height:1;white-space:nowrap;font-family:Arial,Helvetica,sans-serif}`;
+ const pageHtml=(chunk,last)=>`<section class="ptp" style="width:${pageW}mm;height:${roll?rollH:pageH}mm;padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm${last?"":";break-after:page;page-break-after:always"}"><div class="ptg" style="grid-template-columns:repeat(${cols},${lw}mm);grid-auto-rows:${lh}mm;column-gap:${cg}mm;row-gap:${rg}mm">${chunk.map(labelHtml).join("")}</div></section>`;
+ const previewHtml=useMemo(()=>labels.length?pageHtml(pageChunks[Math.min(previewPage,pages)-1]||[],true):"",[labels,pageChunks,previewPage,pages,pageW,pageH,roll,rollH,m.top,m.right,m.bottom,m.left,cols,lw,lh,cg,rg,showName,showPrice,showCode,showBarcode,borders,barcodeType,nameSize,priceSize,barcodeHeight,taxInclusive]);
+ const printDocument=()=>`<!doctype html><html><head><meta charset="utf-8"><title>Price tags</title><style>@page{size:${pageW}mm ${sheetH}mm;margin:0}html,body{margin:0;padding:0;background:#fff}${labelCss}</style></head><body>${pageChunks.map((c,i)=>pageHtml(c,i===pageChunks.length-1)).join("")}</body></html>`;
+
+ // ---- Output: Windows printer (browser print dialog, also "Save as PDF") or raw TSPL/ZPL to a thermal label printer.
+ const printViaBrowser=()=>{setMenu("");if(!labels.length){setNotice?.("No products to print.");return}const f=document.createElement("iframe");f.setAttribute("aria-hidden","true");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";document.body.appendChild(f);const w=f.contentWindow;w.document.open();w.document.write(printDocument());w.document.close();const done=()=>setTimeout(()=>f.remove(),1000);w.addEventListener("afterprint",done);setTimeout(()=>{try{w.focus();w.print()}catch(e){setNotice?.("Print failed: "+e.message)}setTimeout(()=>f.isConnected&&f.remove(),120000)},350)};
+ const openPreviewWindow=()=>{const w=window.open("","_blank","width=1000,height=800");if(!w){setNotice?.("Please allow pop-ups to open the print preview.");return}w.document.open();w.document.write(printDocument().replace("<body>",'<body style="background:#525659;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px">'));w.document.close()};
+ const dots=mm=>Math.max(0,Math.round(Number(mm||0)*8));
+ const tsplEsc=v=>String(v??"").replace(/"/g,"'").replace(/[\r\n]+/g," ");
+ const zplEsc=v=>String(v??"").replace(/[\^~\\]/g," ").replace(/[\r\n]+/g," ");
+ const printerData=(value,type)=>{const raw=String(value||""),dg=raw.replace(/\D/g,"");if(type==="EAN13")return dg.slice(0,12).padStart(12,"0");if(type==="EAN8")return dg.slice(0,7).padStart(7,"0");if(type==="UPC A")return dg.slice(-11).padStart(11,"0");if(type==="UPC E0"||type==="UPC E1")return dg.slice(-6).padStart(6,"0");if(type==="Interleaved 2 of 5 (ITF)")return dg.length%2?"0"+dg:dg;return raw};
+ const moduleCount=(type,data)=>type==="EAN13"||type==="UPC A"?95:type==="EAN8"?67:type.startsWith("UPC E")?51:type==="CODE 39"?13*(data.length+2):type==="CODE 93"?9*(data.length+4):type==="Interleaved 2 of 5 (ITF)"?9*data.length+9:type==="CODABAR"?10*(data.length+2):11*(data.length+3)+2;
+ const buildRaw=lang=>{
+  const stock=!roll&&pageW<=120&&pageH<=160; // die-cut label stock: printer detects the gap between labels
+  const sheets=roll?labels.map(l=>[l]):pageChunks;
+  const sheetHmm=roll?lh:pageH, topM=roll?0:m.top;
+  const out=[];
+  sheets.forEach(chunk=>{
+   if(lang==="ZPL")out.push(`^XA^CI28^PW${dots(pageW)}^LL${dots(sheetHmm)}^LH0,0`);
+   else out.push(`SIZE ${pageW} mm,${sheetHmm} mm`,`GAP ${roll?rg:stock?2:0} mm,0 mm`,"DIRECTION 1","CODEPAGE UTF-8","CLS");
+   chunk.forEach((p,idx)=>{
+    const col=idx%cols,row=Math.floor(idx/cols);
+    const x0=m.left+col*(lw+cg),y0=topM+(roll?0:row*(lh+rg));
+    const bodyX=x0+(showCode?4:0),bodyW=lw-(showCode?4:0),cx=dots(bodyX+bodyW/2);
+    const nameMm=nameSize*.2646,priceMm=priceSize*.2646;
+    const nameLines=showName?Math.min(2,Math.max(1,Math.ceil(String(p.name||"").length*nameMm*.55/Math.max(5,bodyW-2)))):0;
+    let y=y0+1;
+    if(borders)out.push(lang==="ZPL"?`^FO${dots(x0)},${dots(y0)}^GB${dots(lw)},${dots(lh)},2^FS`:`BOX ${dots(x0)},${dots(y0)},${dots(x0+lw)},${dots(y0+lh)},2`);
+    if(showCode)out.push(lang==="ZPL"?`^FO${dots(x0+.5)},${dots(y0+1)}^A0B,${dots(2.6)},${dots(2.2)}^FB${dots(lh-2)},1,0,C,0^FDSKU: ${zplEsc(p.code||"")}^FS`:`TEXT ${dots(x0+.5)},${dots(y0+lh-1)},"0",270,7,7,"SKU: ${tsplEsc(p.code||"")}"`);
+    if(showName){const h=nameLines*nameMm*1.1;out.push(lang==="ZPL"?`^FO${dots(bodyX+1)},${dots(y)}^A0N,${dots(nameMm)},${dots(nameMm*.8)}^FB${dots(bodyW-2)},2,0,C,0^FD${zplEsc(p.name)}^FS`:`BLOCK ${dots(bodyX+1)},${dots(y)},${dots(bodyW-2)},${dots(h+.5)},"0",0,${Math.max(5,Math.round(nameSize*.75))},${Math.max(5,Math.round(nameSize*.75))},0,2,"${tsplEsc(p.name)}"`);y+=h}
+    const price=money(priceOf(p)).replace(/^RM\s+/,"RM");
+    if(showPrice){const h=priceMm*1.25;out.push(lang==="ZPL"?`^FO${dots(bodyX)},${dots(y+priceMm*.12)}^A0N,${dots(priceMm)},${dots(priceMm*.85)}^FB${dots(bodyW)},1,0,C,0^FD${zplEsc(price)}^FS`:`BLOCK ${dots(bodyX)},${dots(y+priceMm*.1)},${dots(bodyW)},${dots(h)},"0",0,${Math.round(priceSize*.75)},${Math.round(priceSize*.75)},0,2,"${tsplEsc(price)}"`);y+=h}
+    if(showBarcode){
+     const data=printerData(barcodeValue(p),barcodeType),mods=moduleCount(barcodeType,data);
+     const narrow=Math.max(1,Math.floor(dots(bcW)/mods)),wDots=mods*narrow,bx=Math.max(dots(x0),cx-Math.round(wDots/2)),by=dots(y+.6);
+     const h=Math.max(dots(4),dots(Math.min(barcodeHeight,y0+lh-y-.6)-digitMm-.5));
+     if(lang==="ZPL"){const cmd=barcodeType==="EAN13"?"^BEN":barcodeType==="EAN8"?"^B8N":barcodeType==="UPC A"?"^BUN":barcodeType.startsWith("UPC E")?"^B9N":barcodeType==="CODE 39"?"^B3N,N":barcodeType==="CODE 93"?"^BAN":barcodeType==="Interleaved 2 of 5 (ITF)"?"^B2N":barcodeType==="CODABAR"?"^BKN,N":"^BCN";out.push(`^FO${bx},${by}^BY${narrow},2,${h}${cmd},${h},Y,N^FD${zplEsc(data)}^FS`)}
+     else{const t=barcodeType==="EAN13"?"EAN13":barcodeType==="EAN8"?"EAN8":barcodeType==="UPC A"?"UPCA":barcodeType.startsWith("UPC E")?"UPCE":barcodeType==="CODE 39"?"39":barcodeType==="CODE 93"?"93":barcodeType==="Interleaved 2 of 5 (ITF)"?"25":barcodeType==="CODABAR"?"CODA":"128";out.push(`BARCODE ${bx},${by},"${t}",${h},1,0,${narrow},${narrow*2},"${tsplEsc(data)}"`)}
+    }
    });
-   return out.join("\n")+"\n";
+   out.push(lang==="ZPL"?"^XZ":"PRINT 1,1");
+  });
+  return out.join("\r\n")+"\r\n";
  };
- const reportCss=`@page{size:${pageW}mm ${roll?Math.max(100,effectiveLabelH*totalLabels):pageH}mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif}.pt-page{display:grid;align-content:start;grid-template-columns:${roll?`${Math.max(1,pageW-margins.left-margins.right)}mm`:Array(pageCols).fill(`${labelW}mm`).join(" ")};grid-auto-rows:${effectiveLabelH}mm;column-gap:${colGap}mm;row-gap:${rowGap}mm;page-break-after:always;break-after:page;overflow:visible}.pt-label{position:relative;overflow:visible;background:#fff;color:#111;height:${effectiveLabelH}mm;width:${labelW}mm;font-family:Arial,Helvetica,sans-serif}.pt-code{position:absolute;left:1mm;top:0;width:4mm;height:100%;display:flex;align-items:flex-end;justify-content:center;transform:rotate(-90deg);font:8pt Arial,sans-serif}.pt-name{position:absolute;left:0;right:0;top:0;height:7.5mm;text-align:center;padding:1mm 1mm;display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;font-weight:400;line-height:1.05;overflow:hidden}.pt-price{position:absolute;left:0;right:0;top:7.5mm;height:6mm;text-align:center;display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;font-weight:400;line-height:1}.pt-barcode{position:absolute;left:0;right:0;top:14mm;width:100%;display:flex;justify-content:center;align-items:flex-start;margin:0;padding:0;overflow:visible}.pt-barcode-stack{width:42mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;font-family:Arial,Helvetica,sans-serif;font-weight:400;line-height:1;overflow:visible}.pt-barcode-stack svg{display:block;width:42mm;height:${previewBarcodeHeight}mm;margin:0;overflow:visible}.pt-barcode-human{display:block;width:100%;margin-top:1px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:11px;font-weight:400;color:#111;white-space:nowrap;overflow:visible}.pt-empty{padding:20mm;text-align:center}`;
- const barcodeSvgMarkup=(value,type,height)=>{const h=Math.max(10,Number(height)||20);const label=escapeHtml(barcodeText(value,type));if(type==="EAN13"||type==="EAN8"){const d=type==="EAN13"?checksumEAN13(value):checksumEAN8(value),bits=eanPattern(d,type),w=type==="EAN13"?95:67,bw=w/bits.length;const bars=[...bits].map((b,i)=>b==="1"?`<rect x="${(i*bw).toFixed(3)}" y="0" width="${(bw+.01).toFixed(3)}" height="84"/>`:"").join("");return `<div class="pt-barcode-stack"><svg viewBox="0 0 ${w} 100" preserveAspectRatio="none" style="width:42mm;height:${h}mm"><g fill="#000">${bars}</g></svg><div class="pt-barcode-human">${label}</div></div>`}const bits=barcodeBits(value,type)||"";const bars=bits.split("").map((b,i)=>b==="1"?`<rect x="${i}" y="0" width="1" height="82"/>`:"").join("");return `<div class="pt-barcode-stack"><svg viewBox="0 0 ${Math.max(bits.length,1)} 100" preserveAspectRatio="none" style="width:42mm;height:${h}mm"><g fill="#000">${bars}</g></svg><div class="pt-barcode-human">${label}</div></div>`};
- const labelHtml=p=>{if(!p)return `<div class="pt-label"><div class="pt-empty">No products selected</div></div>`;const value=barcodeValue(p);return `<div class="pt-label" style="${borders?"border:1px solid #111;":""}">${showCode?`<div class="pt-code">SKU: ${escapeHtml(p.code||"")}</div>`:""}${showName?`<div class="pt-name" style="font-size:${nameSize}px">${escapeHtml(p.name)}</div>`:""}${showPrice?`<div class="pt-price" style="font-size:${priceSize}px">${escapeHtml(money(p.price))}</div>`:""}${showBarcode?`<div class="pt-barcode">${barcodeSvgMarkup(value,barcodeType,previewBarcodeHeight)}</div>`:""}</div>`};
- const labelReact=p=>{if(!p)return <div className="pt-label"><div className="pt-empty">No products selected</div></div>;const value=barcodeValue(p);return <div className="pt-label" style={borders?{border:"1px solid #888"}:{}}>{showCode&&<div className="pt-code">SKU: {p.code||""}</div>}{showName&&<div className="pt-name" style={{fontSize:`${nameSize}px`}}>{p.name}</div>}{showPrice&&<div className="pt-price" style={{fontSize:`${priceSize}px`}}>{money(p.price)}</div>}{showBarcode&&<div className="pt-barcode"><BarcodeGraphic value={value} type={barcodeType} height={previewBarcodeHeight}/></div>}</div>};
- const buildPrintDocument=()=>{const chunks=roll?[labels]:Array.from({length:pages},(_,pi)=>labels.slice(pi*perPage,(pi+1)*perPage));const pageSections=chunks.map(c=>`<section class="pt-page" style="width:${pageW}mm;height:${roll?Math.max(effectiveLabelH*totalLabels+Number(margins.top)+Number(margins.bottom)+Math.max(0,totalLabels-1)*Number(rowGap),100):pageH}mm;padding:${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;grid-template-columns:${roll?`${labelW}mm`:Array(pageCols).fill(`${labelW}mm`).join(" ")};grid-auto-rows:${effectiveLabelH}mm;column-gap:${colGap}mm;row-gap:${rowGap}mm;justify-content:center">${(c.length?c:[null]).map(labelHtml).join("")}</section>`).join("");return `<!doctype html><html><head><meta charset="utf-8"><title>Price Tags</title><style>${reportCss}</style></head><body>${pageSections}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),300));</script></body></html>`};
- const paperSizes={A4:[210,297],A5:[148,210],A6:[105,148],Letter:[215.9,279.4],Legal:[215.9,355.6],"4 x 6 in":[101.6,152.4]};
- const changePaper=value=>{setPaper(value);const size=paperSizes[value];if(size&&!roll){setPageW(size[0]);setPageH(size[1])}else if(size){setPageW(size[0]);setPageH(size[1])}};
- const toggleRoll=value=>{setRoll(value);if(value){setColumns(1);setRowGap(0);setColGap(0)}};
- const downloadRaw=lang=>{const text=buildRaw(lang);const blob=new Blob([text],{type:"text/plain;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`Price-Tags.${lang.toLowerCase()}`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);setNotice(`${lang} Price Tags generated successfully.`)};
- const printRaw=async()=>{const base=String(settings?.hardware?.agentUrl||"http://127.0.0.1:18765").replace(/\/$/,"");const printer=settings?.hardware?.printer||settings?.print?.printer||"";if(!printer){setNotice("Please select a printer in Settings first.");return}try{const r=await fetch(base+"/price-tags/raw",{method:"POST",headers:agentHeaders(),body:JSON.stringify({printer,language:printerLanguage,data:buildRaw(printerLanguage),copies:1})});if(!r.ok){const x=await r.json().catch(()=>({}));throw Error(x.error||`HTTP ${r.status}`)}setNotice(`${printerLanguage} Price Tags sent to printer successfully.`)}catch(e){setNotice(`Price Tags print failed: ${e.message}`)}};
- const previewPrint=()=>{const w=window.open("","_blank","width=1000,height=800");if(!w){setNotice("Please allow pop-ups to preview Price Tags.");return}w.document.open();w.document.write(buildPrintDocument());w.document.close()};
- return <div className="price-tags-overlay">
-  <div className="price-tags-shell" onMouseDown={e=>e.stopPropagation()}>
-   <div className="price-tags-titlebar">
-    <button type="button" className="price-tags-back" onClick={onClose} aria-label="Back to Products"><span aria-hidden="true">←</span><span>Price tags</span></button>
-    <button type="button" className="price-tags-close" onClick={onClose} aria-label="Close Price tags">×</button>
+ const downloadText=(text,name)=>{const blob=new Blob([text],{type:"text/plain;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+ const saveRaw=lang=>{setMenu("");if(!labels.length){setNotice?.("No products to print.");return}downloadText(buildRaw(lang),`Price-tags.${lang==="ZPL"?"zpl":"prn"}`);setNotice?.(`${lang} file saved.`)};
+ const labelPrinter=String(settings?.hardware?.labelPrinter||settings?.hardware?.printer||settings?.print?.printer||"");
+ const sendRaw=async lang=>{setMenu("");setPrinterLanguage(lang);if(!labels.length){setNotice?.("No products to print.");return}if(!labelPrinter){setNotice?.("Please select a printer in Settings first.");return}const base=String(settings?.hardware?.agentUrl||"http://127.0.0.1:18765").replace(/\/$/,"");try{const r=await fetch(base+"/price-tags/raw",{method:"POST",headers:agentHeaders(),body:JSON.stringify({printer:labelPrinter,language:lang,data:buildRaw(lang),copies:1})});if(!r.ok){const x=await r.json().catch(()=>({}));throw Error(x.error||`HTTP ${r.status}`)}setNotice?.(`${labels.length} price tags sent to ${labelPrinter} (${lang}).`)}catch(e){setNotice?.(`Price tags print failed: ${e.message}`)}};
+
+ // ---- Layout controls.
+ const presetOf=name=>{for(const g of PRICE_TAG_PAPERS)for(const it of g.items)if(it[0]===name)return it;return null};
+ const changePaper=name=>{setPaper(name);const it=presetOf(name);if(!it)return;const[,w,h,kind]=it;setPageW(w);if(kind==="roll"){setRoll(true);setMargins(x=>({...x,left:Math.min(x.left,2),right:Math.min(x.right,2)}))}else if(kind==="label"){setRoll(false);setPageH(h);setColumns(1);setLabelW(w);setLabelH(h);setRowGap(0);setColGap(0);setMargins({top:0,left:0,right:0,bottom:0})}else setPageH(h)};
+ const editPage=(setter,v)=>{setter(v);setPaper("Custom")};
+ const paperOptions=PRICE_TAG_PAPERS.flatMap(g=>g.items.map(i=>i[0]));
+ const mmToPx=96/25.4;
+ const fit=kind=>{const el=previewRef.current;if(!el)return;const w=(el.clientWidth-48)/(pageW*mmToPx),h=(el.clientHeight-48)/(sheetH*mmToPx);setPreviewZoom(Math.max(.25,Math.min(3,Number((kind==="page"&&!roll?Math.min(w,h):w).toFixed(2)))))};
+ const zoomBy=d=>setPreviewZoom(z=>Math.max(.25,Math.min(3,Number((z+d).toFixed(2)))));
+ const marginField=(key,label)=><PtNum label={`${label} margin`} value={m[key]} onChange={v=>setMargins(x=>({...x,[key]:v}))}/>;
+ const modes=[["all","Search all",ptxIcon.all],["barcode","Barcode",ptxIcon.barcode],["code","Code",<b key="c">123</b>],["name","Product name",ptxIcon.tag]];
+ const placeholder=productMode==="barcode"?"Scan or type barcode":productMode==="code"?"Product code":productMode==="name"?"Product name":"Name, code or barcode";
+
+ return <div className="price-tags-overlay ptx">
+  <div className="ptx-shell" onMouseDown={e=>e.stopPropagation()}>
+   <div className="ptx-titlebar">
+    <button type="button" className="ptx-back" onClick={onClose} aria-label="Back to Products"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M14 8H3M7.5 3.5L3 8l4.5 4.5" stroke="currentColor" strokeWidth="1.7" fill="none"/></svg><span>Price tags</span></button>
+    <button type="button" className="ptx-close" onClick={onClose} aria-label="Close Price tags"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.6"/></svg></button>
    </div>
-   <div className="price-tags-body">
-    <aside className="price-tags-settings SP-Manager reference-price-settings">
-     <section className="pt-ar-section">
+   <div className="ptx-body" style={{"--ptx-panel-w":panelW+"px"}}>
+    <div className="ptx-settings">
+     <section>
       <h3>Layout</h3>
-      <label>Paper size<select value={paper} onChange={e=>changePaper(e.target.value)}><option>A4</option><option>A5</option><option>A6</option><option>Letter</option><option>Legal</option><option>4 x 6 in</option></select></label>
-      <div className="pt-two pt-page-size"><label>Page width<input type="number" value={pageW} min="1" step="0.1" onChange={e=>setPageW(Math.max(1,Number(e.target.value)||1))}/></label><label className={roll?'pt-disabled':''}>Page height<input type="number" value={pageH} min="1" step="0.1" disabled={roll} onChange={e=>setPageH(Math.max(1,Number(e.target.value)||1))}/></label></div>
-      <label className="pt-roll-toggle"><span>Print on roll paper (unlimited height)</span><button type="button" role="switch" aria-checked={roll} className={`pt-switch ${roll?'on':''}`} onClick={()=>toggleRoll(!roll)}><i/></button></label>
-      <div className="pt-margins-block"><div className="pt-subtitle">Margins (in millimeters)</div><div className="pt-margin-grid">
-       <label className="m-top">Top<input type="number" value={margins.top} min="0" step="0.1" onChange={e=>setMargins(m=>({...m,top:Number(e.target.value)||0}))}/></label>
-       <label className="m-left">Left<input type="number" value={margins.left} min="0" step="0.1" onChange={e=>setMargins(m=>({...m,left:Number(e.target.value)||0}))}/></label>
-       <span className="m-center"> </span>
-       <label className="m-right">Right<input type="number" value={margins.right} min="0" step="0.1" onChange={e=>setMargins(m=>({...m,right:Number(e.target.value)||0}))}/></label>
-       <label className="m-bottom">Bottom<input type="number" value={margins.bottom} min="0" step="0.1" onChange={e=>setMargins(m=>({...m,bottom:Number(e.target.value)||0}))}/></label>
-      </div></div>
-      <label className={`pt-slider-row ${roll?'pt-disabled':''}`}>Columns ({columns})<input className="pt-range" type="range" min="1" max="6" step="1" value={columns} disabled={roll} onChange={e=>setColumns(Number(e.target.value))}/></label>
-      <div className="pt-two pt-label-size"><label className={roll?'pt-disabled':''}>Label width<input type="number" value={labelW} min="1" step="0.1" disabled={roll} onChange={e=>setLabelW(Math.max(1,Number(e.target.value)||1))}/></label><label>Label height<input type="number" value={labelH} min="1" step="0.1" onChange={e=>setLabelH(Math.max(1,Number(e.target.value)||1))}/></label></div>
-      <div className="pt-two"><label className={roll?'pt-disabled':''}>Row spacing<input type="number" value={rowGap} min="0" step="0.1" disabled={roll} onChange={e=>setRowGap(Math.max(0,Number(e.target.value)||0))}/></label><label className={roll?'pt-disabled':''}>Column spacing<input type="number" value={colGap} min="0" step="0.1" disabled={roll} onChange={e=>setColGap(Math.max(0,Number(e.target.value)||0))}/></label></div>
+      <label className="ptx-field">Paper size<select value={paperOptions.includes(paper)?paper:"Custom"} onChange={e=>changePaper(e.target.value)}>{PRICE_TAG_PAPERS.map(g=><optgroup key={g.group} label={g.group}>{g.items.map(i=><option key={i[0]} value={i[0]}>{i[0]}</option>)}</optgroup>)}<option value="Custom">Custom</option></select></label>
+      <div className="ptx-two"><label className="ptx-field">Page width<PtNum label="Page width" min={10} value={pageW} onChange={v=>editPage(setPageW,v)}/></label><label className={"ptx-field"+(roll?" off":"")}>Page height<PtNum label="Page height" min={10} value={pageH} disabled={roll} onChange={v=>editPage(setPageH,v)}/></label></div>
+      <div className="ptx-toggle-row"><PtSwitch checked={roll} onChange={v=>{setRoll(v);if(presetOf(paper)?.[3])setPaper("Custom")}} label="Print on roll paper"/><span>Print on roll paper (unlimited height)</span></div>
+      <div className="ptx-margins">
+       <div className="ptx-sub">Margins (in millimeters)</div>
+       <div className="ptx-margin-grid">
+        <label className="mt"><span>Top</span>{marginField("top","Top")}</label>
+        <label className="ml"><span>Left</span>{marginField("left","Left")}</label>
+        <span className="mc" aria-hidden="true">{ptxIcon.page}</span>
+        <label className="mr"><span>Right</span>{marginField("right","Right")}</label>
+        <label className="mb">{marginField("bottom","Bottom")}<span>Bottom</span></label>
+       </div>
+      </div>
+      <label className={"ptx-field ptx-slider"+(roll?" off":"")}>Columns ({cols})<input type="range" min="1" max="6" step="1" value={cols} disabled={roll} onChange={e=>setColumns(Number(e.target.value))}/></label>
+      <div className="ptx-two"><label className={"ptx-field"+(roll?" off":"")}>Label width<PtNum label="Label width" min={5} value={roll?Number(lw.toFixed(1)):labelW} disabled={roll} onChange={setLabelW}/></label><label className="ptx-field">Label height<PtNum label="Label height" min={5} value={labelH} onChange={setLabelH}/></label></div>
+      <div className="ptx-two"><label className="ptx-field">Row spacing<PtNum label="Row spacing" value={rowGap} onChange={setRowGap}/></label><label className={"ptx-field"+(roll?" off":"")}>Column spacing<PtNum label="Column spacing" value={roll?0:colGap} disabled={roll} onChange={setColGap}/></label></div>
      </section>
-     <section className="pt-ar-section">
+     <section>
       <h3>Display</h3>
-      <div className="pt-display-grid pt-display-ar">
-       <label className="pt-check"><input type="checkbox" checked={showName} onChange={e=>setShowName(e.target.checked)}/><span>Product name</span></label>
-       <label className="pt-check"><input type="checkbox" checked={showPrice} onChange={e=>setShowPrice(e.target.checked)}/><span>Price</span></label>
-       <label className="pt-check"><input type="checkbox" checked={showCode} onChange={e=>setShowCode(e.target.checked)}/><span>Code (SKU)</span></label>
-       <label className="pt-check"><input type="checkbox" checked={showBarcode} onChange={e=>setShowBarcode(e.target.checked)}/><span>Barcode</span></label>
-       <label className="pt-check"><input type="checkbox" checked={taxInclusive} onChange={e=>setTaxInclusive(e.target.checked)}/><span>Tax inclusive price</span></label>
-       <label className="pt-check"><input type="checkbox" checked={borders} onChange={e=>setBorders(e.target.checked)}/><span>Borders</span></label>
+      <div className="ptx-display">
+       {[["Product name",showName,setShowName],["Price",showPrice,setShowPrice],["Code (SKU)",showCode,setShowCode],["Barcode",showBarcode,setShowBarcode],["Tax inclusive price",taxInclusive,setTaxInclusive],["Borders",borders,setBorders]].map(([t,v,f])=><div className="ptx-toggle-row" key={t}><PtSwitch checked={v} onChange={f} label={t}/><span>{t}</span></div>)}
       </div>
-      <label>Barcode type<select value={barcodeType} onChange={e=>setBarcodeType(e.target.value)}><option>EAN13</option><option>EAN8</option><option>UPC A</option><option>UPC E0</option><option>UPC E1</option><option>CODE 39</option><option>CODE 128</option><option>CODE 93</option><option>Interleaved 2 of 5 (ITF)</option><option>CODABAR</option></select></label>
-      <label>Printer language<select value={printerLanguage} onChange={e=>setPrinterLanguage(e.target.value)}><option value="TSPL">TSPL (TSC / compatible)</option><option value="ZPL">ZPL (Zebra / compatible)</option></select></label>
-      <label className="pt-slider-row">Product name size ({nameSize}px)<input aria-label="Product name size" className="pt-range" type="range" min="6" max="48" step="1" value={nameSize} onChange={e=>setNameSize(Number(e.target.value))}/></label>
-      <label className="pt-slider-row">Price size ({priceSize}px)<input aria-label="Price size" className="pt-range" type="range" min="6" max="48" step="1" value={priceSize} onChange={e=>setPriceSize(Number(e.target.value))}/></label>
-      <label className="pt-slider-row">Barcode height ({barcodeHeight} mm)<input aria-label="Barcode height" className="pt-range" type="range" min="10" max="80" step="1" value={barcodeHeight} onChange={e=>setBarcodeHeight(Number(e.target.value))}/></label>
+      <label className="ptx-field">Barcode type<select value={barcodeType} onChange={e=>setBarcodeType(e.target.value)}>{PRICE_TAG_BARCODES.map(b=><option key={b}>{b}</option>)}</select></label>
+      <label className="ptx-field ptx-slider">Product name size<input type="range" min="6" max="40" step="1" value={nameSize} onChange={e=>setNameSize(Number(e.target.value))} title={nameSize+"px"}/></label>
+      <label className="ptx-field ptx-slider">Price size<input type="range" min="8" max="60" step="1" value={priceSize} onChange={e=>setPriceSize(Number(e.target.value))} title={priceSize+"px"}/></label>
+      <label className="ptx-field ptx-slider">Barcode height<input type="range" min="6" max="40" step="1" value={barcodeHeight} onChange={e=>setBarcodeHeight(Number(e.target.value))} title={barcodeHeight+" mm"}/></label>
      </section>
-     <section className="pt-ar-section pt-products-section">
+     <section className="ptx-products">
       <h3>Products</h3>
-      <div className="pt-products-ar-toolbar" role="toolbar" aria-label="Product selection">
-       <button title="All products" className={productMode==="all"?'active':''} onClick={()=>setProductModeAndQuery("all")}>✳</button>
-       <button title="Barcode search" className={productMode==="barcode"?'active':''} onClick={()=>setProductModeAndQuery("barcode")}>▥</button>
-       <button title="Code search" className={productMode==="code"?'active':''} onClick={()=>setProductModeAndQuery("code")}>123</button>
-       <button title="Selected products" className={productMode==="selected"?'active':''} onClick={()=>setProductModeAndQuery("selected")}>◆</button>
-       <input value={query} onChange={e=>setQuery(e.target.value)} placeholder={productSearchPlaceholder} aria-label={productModeLabel}/>
-       <button title="Search" className="pt-search-button">⌕</button>
+      <div className="ptx-search">
+       {modes.map(([k,t,icon])=><button type="button" key={k} title={t} aria-label={t} aria-pressed={productMode===k} className={productMode===k?"on":""} onClick={()=>{setProductMode(k);searchRef.current?.focus()}}>{icon}</button>)}
+       <input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={searchKey} placeholder={placeholder} aria-label="Find product to add"/>
+       <span className="ptx-search-icon" aria-hidden="true">{ptxIcon.search}</span>
+       {text&&<div className="ptx-results" role="listbox">{matches.map(p=><button type="button" role="option" key={p.id} onMouseDown={e=>e.preventDefault()} onClick={()=>addProduct(p)} className={selected.includes(p.id)?"in":""}><span><b>{p.name||"Unnamed product"}</b><small>{[p.code,barcodesOf(p)[0]].filter(Boolean).join(" · ")}</small></span><em>{money(p.price)}</em></button>)}{!matches.length&&<p>No products found</p>}</div>}
       </div>
-      <div className="pt-product-mode-pill"><span>{productModeLabel}</span><b>{candidates.length}</b></div>
-      <div className="pt-product-summary"><span className="pt-info-icon">i</span><span>{selected.length?`${selected.length} products selected`:'No products selected'}<small>{selected.length?'Selected products will be printed':'All products will be printed'}</small></span></div>
-      <div className="pt-product-results">{candidates.slice(0,60).map(p=><label className={`pt-product-result ${selected.includes(p.id)?'selected':''}`} key={p.id}><input type="checkbox" checked={selected.includes(p.id)} onChange={()=>toggleProduct(p.id)}/><span><b>{p.name||'Unnamed product'}</b><small>{p.code||'No code'}{p.barcode?` · ${p.barcode}`:''}</small></span></label>)}{!candidates.length&&<div className="pt-no-results">No products found</div>}</div>
-      <div className="pt-product-advanced"><select value={group} onChange={e=>setGroup(e.target.value)}><option>All groups</option>{groups.map(g=><option key={g}>{g}</option>)}</select><button onClick={()=>setSelected(candidates.map(p=>p.id))}>Select all</button><button onClick={()=>setSelected([])}>Clear</button></div>
+      {selectedProducts.length?<div className="ptx-selected">
+       <div className="ptx-selected-head"><span>{selectedProducts.length} {selectedProducts.length===1?"product":"products"} selected</span><button type="button" onClick={()=>setSelected([])}>Clear all</button></div>
+       <ul>{selectedProducts.map(p=><li key={p.id}><span><b>{p.name}</b><small>{[p.code,barcodesOf(p)[0]].filter(Boolean).join(" · ")}</small></span><button type="button" aria-label={`Remove ${p.name}`} onClick={()=>setSelected(s=>s.filter(id=>id!==p.id))}>×</button></li>)}</ul>
+      </div>:<div className="ptx-empty"><span aria-hidden="true">{ptxIcon.info}</span><p>No products selected<br/>All products will be printed</p></div>}
      </section>
-     <section className="pt-ar-section pt-copies-section"><label>Number of copies<div className="pt-stepper"><button onClick={()=>setCopies(Math.max(1,Number(copies)-1))}>−</button><input type="number" min="1" max="999" value={copies} onChange={e=>setCopies(Math.max(1,Number(e.target.value)||1))}/><button onClick={()=>setCopies(Math.min(999,Number(copies)+1))}>+</button></div></label></section>
-     <button type="button" className="pt-print-preview-button" onClick={previewPrint}>👁 Print preview</button>
-    </aside>
-    <main className="price-tags-preview-area">
-     <div className="pt-preview-toolbar SP-Manager reference-preview-toolbar">
-      <button className="pt-toolbar-primary" onClick={previewPrint}>👁 Print preview</button>
-      <button className="pt-toolbar-pdf" onClick={previewPrint}>📄 Save as PDF</button>
-      <span className="pt-toolbar-separator"/>
-      <button className="pt-nav-btn" disabled={previewPage<=1} onClick={()=>setPreviewPage(1)}>|◀</button><button className="pt-nav-btn" disabled={previewPage<=1} onClick={()=>setPreviewPage(p=>Math.max(1,p-1))}>◀</button>
-      <span className="pt-page-counter"><input value={previewPage} onChange={e=>{const n=Math.min(pages,Math.max(1,Number(e.target.value)||1));setPreviewPage(n)}}/> of {pages}</span>
-      <button className="pt-nav-btn" disabled={previewPage>=pages} onClick={()=>setPreviewPage(p=>Math.min(pages,p+1))}>▶</button><button className="pt-nav-btn" disabled={previewPage>=pages} onClick={()=>setPreviewPage(pages)}>▶|</button>
-      <span className="pt-toolbar-spacer"/><button className="pt-nav-btn" title="Zoom out" onClick={()=>setPreviewZoom(z=>Math.max(.5,Number((z-.1).toFixed(2))))}>−</button><span className="pt-zoom-label">{Math.round(previewZoom*100)}%</span><input className="pt-zoom-range" aria-label="Preview zoom" type="range" min="50" max="200" step="10" value={Math.round(previewZoom*100)} onChange={e=>setPreviewZoom(Number(e.target.value)/100)}/><button className="pt-nav-btn" title="Zoom in" onClick={()=>setPreviewZoom(z=>Math.min(2,Number((z+.1).toFixed(2))))}>+</button><button className="pt-nav-btn" title="Reset zoom" onClick={()=>setPreviewZoom(1)}>Fit</button>
+     <section className="ptx-copies">
+      <label className="ptx-field">Number of copies<div className="ptx-stepper"><button type="button" aria-label="Fewer copies" onClick={()=>setCopies(c=>Math.max(1,c-1))}>−</button><PtNum label="Number of copies" min={1} step="1" value={copies} onChange={v=>setCopies(Math.min(999,Math.max(1,Math.round(v))))}/><button type="button" aria-label="More copies" onClick={()=>setCopies(c=>Math.min(999,c+1))}>+</button></div></label>
+      <button type="button" className="ptx-preview-btn" onClick={openPreviewWindow}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10H3z" stroke="currentColor" strokeWidth="1.3" fill="none"/><circle cx="7.5" cy="8.5" r="2.4" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M9.3 10.3l2.2 2.2" stroke="currentColor" strokeWidth="1.4"/></svg>Print preview</button>
+     </section>
+    </div>
+    <div className="ptx-splitter" role="separator" aria-orientation="vertical" aria-label="Resize settings panel" aria-valuenow={panelW} tabIndex={0} title="Drag to resize. Double-click to reset." onPointerDown={e=>startPanelResize(e,"x",panelW,setPanelW)} onDoubleClick={()=>setPanelW(null)} onKeyDown={e=>splitterKeys(e,"x",panelW,setPanelW)}><span/></div>
+    <div className="ptx-viewer">
+     <div className="ptx-toolbar">
+      <div className="ptx-menu-wrap"><button type="button" className="ptx-tool" onClick={printViaBrowser} title="Print with a Windows printer (A4, receipt roll or label driver)">{ptxIcon.print}<span>Print</span></button><button type="button" className="ptx-tool ptx-caret" aria-label="More print options" aria-expanded={menu==="print"} onClick={e=>{e.stopPropagation();setMenu(menu==="print"?"":"print")}}>▾</button>
+       {menu==="print"&&<div className="ptx-menu" role="menu"><button type="button" role="menuitem" onClick={printViaBrowser}>Print (Windows printer)<small>A4, receipt roll 58/80 mm or label printer driver</small></button><button type="button" role="menuitem" onClick={()=>sendRaw("TSPL")}>Send to label printer · TSPL<small>TSC, Xprinter and compatible{labelPrinter?` — ${labelPrinter}`:""}</small></button><button type="button" role="menuitem" onClick={()=>sendRaw("ZPL")}>Send to label printer · ZPL<small>Zebra and compatible{labelPrinter?` — ${labelPrinter}`:""}</small></button></div>}
+      </div>
+      <div className="ptx-menu-wrap"><button type="button" className="ptx-tool" aria-expanded={menu==="save"} onClick={e=>{e.stopPropagation();setMenu(menu==="save"?"":"save")}}>{ptxIcon.save}<span>Save</span><i className="ptx-caret-i">▾</i></button>
+       {menu==="save"&&<div className="ptx-menu" role="menu"><button type="button" role="menuitem" onClick={printViaBrowser}>PDF<small>Choose “Save as PDF” in the print dialog</small></button><button type="button" role="menuitem" onClick={()=>saveRaw("TSPL")}>TSPL file (.prn)</button><button type="button" role="menuitem" onClick={()=>saveRaw("ZPL")}>ZPL file (.zpl)</button></div>}
+      </div>
+      <span className="ptx-sep"/>
+      <button type="button" className="ptx-nav" aria-label="First page" disabled={previewPage<=1} onClick={()=>setPreviewPage(1)}>{ptxIcon.first}</button>
+      <button type="button" className="ptx-nav" aria-label="Previous page" disabled={previewPage<=1} onClick={()=>setPreviewPage(p=>Math.max(1,p-1))}>{ptxIcon.prev}</button>
+      <span className="ptx-page"><input aria-label="Page" value={previewPage} onChange={e=>setPreviewPage(Math.min(pages,Math.max(1,Number(e.target.value)||1)))}/> of {pages}</span>
+      <button type="button" className="ptx-nav" aria-label="Next page" disabled={previewPage>=pages} onClick={()=>setPreviewPage(p=>Math.min(pages,p+1))}>{ptxIcon.next}</button>
+      <button type="button" className="ptx-nav" aria-label="Last page" disabled={previewPage>=pages} onClick={()=>setPreviewPage(pages)}>{ptxIcon.last}</button>
+      <span className="ptx-count">{labels.length} {labels.length===1?"label":"labels"}</span>
      </div>
-     <div className="pt-native-preview">{(() => {const chunk=roll?labels:labels.slice((previewPage-1)*perPage,previewPage*perPage);return <section className="pt-page" style={{width:`${pageW}mm`,height:`${roll?Math.max(effectiveLabelH*totalLabels+Number(margins.top)+Number(margins.bottom)+Math.max(0,totalLabels-1)*Number(rowGap),100):pageH}mm`,padding:`${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`,gridTemplateColumns:roll?`${labelW}mm`:`repeat(${pageCols},${labelW}mm)`,gridAutoRows:`${effectiveLabelH}mm`,columnGap:`${colGap}mm`,rowGap:`${rowGap}mm`,justifyContent:'center',zoom:previewZoom}}>{(chunk.length?chunk:[null]).map((p,j)=><div key={j} className="pt-label" style={{border:borders?"1px solid #888":"0"}}>{labelReact(p)}</div>)}</section>})()}</div>
-    </main>
+     <div className="ptx-canvas" ref={previewRef}>
+      <style>{labelCss}</style>
+      {labels.length?<div className="ptx-paper" style={{zoom:previewZoom}} dangerouslySetInnerHTML={{__html:previewHtml}}/>:<div className="ptx-none">No products to print</div>}
+     </div>
+     <div className="ptx-statusbar">
+      <span className="ptx-paper-info">{roll?`Roll ${pageW} mm`:`${pageW} × ${pageH} mm`} · label {Number(lw.toFixed(1))} × {lh} mm</span>
+      <span className="ptx-grow"/>
+      <button type="button" className="ptx-nav" title="Fit width" aria-label="Fit width" onClick={()=>fit("width")}>{ptxIcon.fitWidth}</button>
+      <button type="button" className="ptx-nav" title="Whole page" aria-label="Whole page" onClick={()=>fit("page")}>{ptxIcon.fitPage}</button>
+      <button type="button" className="ptx-nav" title="Actual size" aria-label="Actual size" onClick={()=>setPreviewZoom(1)}>{ptxIcon.actual}</button>
+      <span className="ptx-zoom-label">{Math.round(previewZoom*100)}%</span>
+      <button type="button" className="ptx-zoom-btn" aria-label="Zoom out" onClick={()=>zoomBy(-.1)}>−</button>
+      <input className="ptx-zoom" type="range" min="25" max="300" step="5" value={Math.round(previewZoom*100)} aria-label="Zoom" onChange={e=>setPreviewZoom(Number(e.target.value)/100)}/>
+      <button type="button" className="ptx-zoom-btn" aria-label="Zoom in" onClick={()=>zoomBy(.1)}>+</button>
+     </div>
+    </div>
    </div>
   </div>
  </div>;
