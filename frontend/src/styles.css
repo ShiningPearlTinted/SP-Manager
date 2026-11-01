@@ -8534,3 +8534,17 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 /* Keep the POS columns inside the screen: the row must not grow with its content, otherwise the tile grid cannot divide the panel height by the rows setting. */
 .ar-pos-shell .ar-main{grid-template-rows:minmax(0,1fr)}
 .ar-pos-shell .ar-main > .ar-product-panel{min-height:0;overflow:hidden}
+
+/* ===== pos-phone ===== */
+@media (max-width:700px){
+  /* Older phone rules pin tiles to 84-108px; with paging the rows split the panel instead, so tiles never overlap. */
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > :is(.ar-category-tile,.ar-product-tile,.ar-back-tile){height:auto!important;min-height:0!important;padding:4px 4px 6px!important;gap:2px!important}
+  .ar-pos-shell .ar-product-panel > :is(.ar-category-grid,.ar-grid-wrap){overflow:hidden!important;gap:4px!important}
+  /* The bell sat over the scrolling action buttons: pin it to the right edge and end the button strip before it. */
+  .ar-pos-shell .ar-topbar{margin-right:56px!important;width:auto!important}
+  .ar-pos-shell .ar-pos-notification-slot{right:4px!important;left:auto!important}
+  .ar-pos-shell .ar-page-footer .ar-pager button{min-width:38px;height:32px}
+  /* Older phone rules lock the product picture box to 46x38px; let it fill the tile like group tiles. */
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image{flex:1 1 auto!important;width:100%!important;height:auto!important;min-height:0!important}
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image img{max-width:92%!important;max-height:100%!important;width:auto!important;height:auto!important}
+}

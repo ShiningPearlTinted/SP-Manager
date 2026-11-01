@@ -1426,6 +1426,11 @@ function POS({notificationCenter,setCart,updateLinePrice,posOrderMeta,setPosOrde
  const[catLevel,setCatLevel]=useState("root");
  const[group,setGroup]=useState("");
  const[posPage,setPosPage]=useState(0);
+ // Phones (<=700px) use a fixed 2x3 grid (3x2 in landscape) instead of the desktop rows/columns setting.
+ const posPhoneQuery="(max-width:700px)",posPhoneLandscapeQuery="(max-width:700px) and (orientation:landscape)";
+ const readPosScreen=()=>({phone:window.matchMedia(posPhoneQuery).matches,landscape:window.matchMedia(posPhoneLandscapeQuery).matches});
+ const[posScreen,setPosScreen]=useState(readPosScreen);
+ useEffect(()=>{const update=()=>setPosScreen(readPosScreen());const lists=[window.matchMedia(posPhoneQuery),window.matchMedia(posPhoneLandscapeQuery)];lists.forEach(m=>m.addEventListener?m.addEventListener("change",update):m.addListener(update));return()=>lists.forEach(m=>m.removeEventListener?m.removeEventListener("change",update):m.removeListener(update))},[]);
  useEffect(()=>{setPosPage(0)},[q,catLevel,group,posCategory]);
  const[showCustomer,setShowCustomer]=useState(false);
  const[customerSearch,setCustomerSearch]=useState("");
@@ -1564,7 +1569,7 @@ function POS({notificationCenter,setCart,updateLinePrice,posOrderMeta,setPosOrde
  };
  // Aronium paging: one page holds rows x columns tiles (Settings > General > Number of rows / columns);
  // the Back tile takes the first slot. Tiles fill the panel, so their size follows the rows/columns setting.
- const posRows=Math.max(1,Number(settings.general.rows||5)),posCols=Math.max(1,Number(settings.general.columns||5));
+ const posRows=posScreen.phone?(posScreen.landscape?2:3):Math.max(1,Number(settings.general.rows||5)),posCols=posScreen.phone?(posScreen.landscape?3:2):Math.max(1,Number(settings.general.columns||5));
  const posGridStyle={gridTemplateColumns:`repeat(${posCols},minmax(0,1fr))`,gridTemplateRows:`repeat(${posRows},minmax(0,1fr))`};
  const posViewItems=q?filtered:catLevel==="root"?rootCats():catLevel==="group"?(currentChildren.length?currentChildren:(!currentGroup&&shown.length?shown:[])):catLevel==="items"?shown:[];
  const posPageSize=Math.max(1,posRows*posCols-(!q&&catLevel!=="root"?1:0));
