@@ -56,8 +56,8 @@ function normalizeAssignedOutlets(PDO $pdo,array $u,int $fallbackOutletId):array
 }
 function assignedOutletRows(PDO $pdo,int $userId):array{
  ensureUserOutletsTable($pdo);
- $q=$pdo->prepare('SELECT uo.outlet_id AS id,o.outlet_code,o.outlet_name,uo.is_default,uo.active FROM user_outlets uo JOIN outlets o ON o.id=uo.outlet_id WHERE uo.user_id=? AND uo.active=1 ORDER BY uo.is_default DESC,o.outlet_name ASC');$q->execute([$userId]);
- $rows=[];foreach($q->fetchAll() as $r)$rows[]=['id'=>(int)$r['id'],'outlet_code'=>$r['outlet_code'],'outlet_name'=>$r['outlet_name'],'is_default'=>(int)$r['is_default']===1,'active'=>(int)$r['active']===1];
+ $q=$pdo->prepare('SELECT uo.outlet_id AS id,o.outlet_code,o.outlet_name,o.address,uo.is_default,uo.active FROM user_outlets uo JOIN outlets o ON o.id=uo.outlet_id WHERE uo.user_id=? AND uo.active=1 ORDER BY uo.is_default DESC,o.outlet_name ASC');$q->execute([$userId]);
+ $rows=[];foreach($q->fetchAll() as $r)$rows[]=['id'=>(int)$r['id'],'outlet_code'=>$r['outlet_code'],'outlet_name'=>$r['outlet_name'],'address'=>(string)($r['address']??''),'is_default'=>(int)$r['is_default']===1,'active'=>(int)$r['active']===1];
  if(!$rows){$q=$pdo->prepare('SELECT id,outlet_code,outlet_name,active FROM outlets WHERE id=(SELECT outlet_id FROM users WHERE id=?) LIMIT 1');$q->execute([$userId]);$r=$q->fetch();if($r)$rows[]=['id'=>(int)$r['id'],'outlet_code'=>$r['outlet_code'],'outlet_name'=>$r['outlet_name'],'is_default'=>true,'active'=>(int)$r['active']===1];}
  return$rows;
 }

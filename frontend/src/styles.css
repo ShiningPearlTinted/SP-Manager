@@ -8919,3 +8919,16 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .users-reset-actions{display:flex;justify-content:flex-end;padding:12px 22px 18px}
 .users-reset-actions .primary{height:40px;padding:0 20px;border:1px solid #087ea4;border-radius:8px;background:#087ea4;color:#fff;font:inherit;font-weight:600;cursor:pointer}
 .login-card .login-change-cancel{height:auto!important;background:transparent!important;color:#9fb1c4!important;box-shadow:none!important;border:0!important}
+
+/* ===== POS: notification bell behind the side menu, current outlet ===== */
+/* The bell is fixed above everything; while the side menu is open it would sit on the menu title. */
+.ar-pos-shell:has(.ar-menu-panel) .ar-pos-notification-slot .spn-bell,
+.ar-pos-shell:has(.ar-menu-panel) .ar-pos-notification-slot .spn-panel{visibility:hidden}
+.ar-menu-outlet{display:flex;align-items:center;gap:10px;margin:0 12px 6px;padding:10px 12px;border:1px solid #4b5157;border-radius:8px;background:#26292c}
+.ar-menu-outlet b{display:block;color:#f3f5f7;font-size:13px;line-height:1.2}
+.ar-menu-outlet small{display:block;color:#9aa3ab;font-size:11px;line-height:1.3;margin-top:2px}
+.ar-outlet-code{flex:none;padding:4px 8px;border-radius:6px;background:#087ea4;color:#fff;font-size:12px;font-weight:800;letter-spacing:.03em}
+.ar-footer-outlet{display:inline-flex;align-items:center;gap:6px;max-width:40vw;margin-left:8px;padding:3px 9px;border:1px solid #4b5157;border-radius:999px;background:#26292c;color:#d9dee3;font-size:11.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ar-footer-outlet b{color:#fff;font-weight:800;letter-spacing:.03em}
+.ar-footer-outlet span{overflow:hidden;text-overflow:ellipsis}
+.ar-footer-outlet b+span::before{content:"·";margin-right:6px;color:#7d868e}
