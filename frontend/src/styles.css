@@ -8593,3 +8593,16 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
   .document-editor-layout.doc-resizable{grid-template-columns:minmax(0,1fr)}
   .doc-splitter-v{display:none}
 }
+
+/* ===== resizable Products page ===== */
+/* Side by side: group tree | vertical splitter | product list. */
+.app[data-ui="management"] .product-master-shell.pm-resizable{grid-template-columns:var(--pm-tree-w,285px) 10px minmax(0,1fr)}
+.product-master-shell.pm-resizable > .pm-splitter-v{background:#f8fafc;border-left:1px solid #e4e7ec;border-right:1px solid #e4e7ec}
+.product-master-shell.pm-resizable > .pm-splitter-h{display:none}
+/* Stacked (narrow screens): tree on top with a horizontal splitter to set its height. */
+@media (max-width:760px){
+  .app[data-ui="management"] .product-master-shell.pm-resizable{grid-template-columns:minmax(0,1fr)}
+  .product-master-shell.pm-resizable > .pm-splitter-v{display:none}
+  .product-master-shell.pm-resizable > .pm-splitter-h{display:flex;height:14px;margin:0;background:#f8fafc;border-top:1px solid #e4e7ec;border-bottom:1px solid #e4e7ec}
+  .app[data-ui="management"] .product-master-shell.pm-resizable > aside.product-tree{height:var(--pm-tree-h,260px)!important;max-height:none!important;overflow:auto!important}
+}
