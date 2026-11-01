@@ -1894,7 +1894,9 @@ function PriceTagsModal({products,money,onClose,setNotice,settings,priceTagSetti
  const m={top:Math.max(0,Number(margins.top)||0),right:Math.max(0,Number(margins.right)||0),bottom:Math.max(0,Number(margins.bottom)||0),left:Math.max(0,Number(margins.left)||0)};
  const contentW=Math.max(5,pageW-m.left-m.right);
  const cols=roll?1:Math.max(1,Number(columns)||1);
- const lw=roll?contentW:labelW, lh=labelH, rg=rowGap, cg=roll?0:colGap;
+ const cg=roll?0:colGap;
+ // A label never extends past the margins: margins shrink it instead of pushing it off the paper.
+ const lw=roll?contentW:Math.max(5,Math.min(labelW,(contentW-(cols-1)*cg)/cols)), lh=labelH, rg=rowGap;
  const rowsPerPage=Math.max(1,Math.floor((pageH-m.top-m.bottom+rg)/(lh+rg)));
  const perPage=rowsPerPage*cols;
  const pageChunks=useMemo(()=>{if(roll)return[labels];const out=[];for(let i=0;i<labels.length;i+=perPage)out.push(labels.slice(i,i+perPage));return out.length?out:[[]]},[labels,roll,perPage]);
