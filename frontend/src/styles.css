@@ -8606,3 +8606,17 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
   .product-master-shell.pm-resizable > .pm-splitter-h{display:flex;height:14px;margin:0;background:#f8fafc;border-top:1px solid #e4e7ec;border-bottom:1px solid #e4e7ec}
   .app[data-ui="management"] .product-master-shell.pm-resizable > aside.product-tree{height:var(--pm-tree-h,260px)!important;max-height:none!important;overflow:auto!important}
 }
+
+/* ===== resizable POS order panel ===== */
+/* The splitter sits on the order panel's edge facing the products: right (order on the left), left
+   (order on the right) or top (stacked). The size itself is set inline on .ar-main by the POS component. */
+.ar-pos-shell .ar-order-panel{position:relative}
+.ar-pos-shell .ar-order-panel > .pos-splitter{position:absolute;z-index:6;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;outline:none;background:transparent;margin:0;padding:0}
+.ar-pos-shell .ar-order-panel > .pos-splitter > span{display:block;border-radius:999px;background:#5b6166;opacity:.75;transition:background .15s ease,opacity .15s ease}
+.ar-pos-shell .ar-order-panel > .pos-splitter:hover > span,.ar-pos-shell .ar-order-panel > .pos-splitter:focus-visible > span,body.is-resizing-x .ar-order-panel > .pos-splitter > span,body.is-resizing-y .ar-order-panel > .pos-splitter > span{background:#087ea4;opacity:1}
+.ar-pos-shell .ar-order-panel > .pos-splitter-x,.ar-pos-shell .ar-order-panel > .pos-splitter-xr{top:0;bottom:0;width:10px;cursor:col-resize}
+.ar-pos-shell .ar-order-panel > .pos-splitter-x{right:0}
+.ar-pos-shell .ar-order-panel > .pos-splitter-xr{left:0}
+.ar-pos-shell .ar-order-panel > .pos-splitter-x > span,.ar-pos-shell .ar-order-panel > .pos-splitter-xr > span{width:4px;height:56px}
+.ar-pos-shell .ar-order-panel > .pos-splitter-y{top:0;left:0;right:0;height:12px;cursor:row-resize}
+.ar-pos-shell .ar-order-panel > .pos-splitter-y > span{width:56px;height:4px}
