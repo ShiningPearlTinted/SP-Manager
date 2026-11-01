@@ -156,7 +156,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     // Keep terminal pairing and display configuration restricted to managers.
     if ($file === 'customer-display.php' && $action === 'state' && $method === 'POST') return 'managePayments';
     if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? 'accessPriceCheck' : 'manageProducts';
-    if ($file === 'users.php') return $action==='logout'?'':'manageUsers';
+    if ($file === 'users.php') return in_array($action, ['logout','change-password'], true) ? '' : 'manageUsers';
     if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
     if ($file === 'payment-types.php') return 'managePayments';
     if ($file === 'email.php') return 'managePayments';
@@ -210,6 +210,16 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     return '';
 }
 
+// Lets the boundary use users columns added by a migration without failing before it is run.
+function spUsersColumnExists(PDO $pdo, string $column): bool {
+    static $known = [];
+    if (!array_key_exists($column, $known)) {
+        $q = $pdo->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='users' AND column_name=?");
+        $q->execute([$column]);
+        $known[$column] = (int)$q->fetchColumn() > 0;
+    }
+    return $known[$column];
+}
 function spIsPublicHealth(string $file, string $action): bool {
     return $file === 'version.php'
         || ($file === 'offline.php' && $action === 'health')
@@ -318,6 +328,11 @@ function spInstallCorsAndGuard(): void {
         // Check after the shared writer lock so a queued old write cannot follow a reset.
         if($file!=='database-reset.php'&&!spTokenOutletFresh($pdo,$outletId))spApiRespond(['ok'=>false,'error'=>'This outlet was reset. Sign in again before continuing.'],401);
         if($file==='database-reset.php'&&($user['role_name']??'')!=='Administrator')spApiRespond(['ok'=>false,'error'=>'Only an Administrator may reset an outlet.'],403);
+        if (spUsersColumnExists($pdo, 'must_change_password') && !($file === 'users.php' && in_array($action, ['change-password','logout'], true))) {
+            $mq = $pdo->prepare('SELECT must_change_password FROM users WHERE id=?');
+            $mq->execute([$userId]);
+            if ((int)$mq->fetchColumn() === 1) spApiRespond(['ok'=>false,'error'=>'Change your temporary password before continuing.','code'=>'PASSWORD_CHANGE_REQUIRED'], 403);
+        }
         $permission = spPermissionForRequest($file, $action, trim((string)($_GET['state_key'] ?? $body['state_key'] ?? '')), strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
         $permissions = json_decode((string)($user['permissions_json'] ?? ''), true);
         $isAdmin = ($user['role_name'] ?? '') === 'Administrator';

@@ -1421,6 +1421,7 @@ CREATE TABLE `users` (
   `name` varchar(150) NOT NULL,
   `username` varchar(100) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
+  `must_change_password` tinyint(1) NOT NULL DEFAULT 0,
   `role_id` bigint(20) UNSIGNED DEFAULT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   `permissions_json` longtext DEFAULT NULL,

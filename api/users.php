@@ -108,6 +108,41 @@ try{
  if($action==='save-batch'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$arr=$b['users']??[];if(!is_array($arr))throw new InvalidArgumentException('users must be an array.');$pdo->beginTransaction();spLockOutlet($pdo,$outletId);$saved=[];foreach($arr as $u)if(is_array($u))$saved[]=normalizeUser($pdo,$u,$outletId);$pdo->commit();out(['ok'=>true,'count'=>count($saved),'users'=>$saved]);}
  if($action==='logout'&&$_SERVER['REQUEST_METHOD']==='POST'){$pdo->prepare('UPDATE users SET session_version=session_version+1 WHERE id=?')->execute([(int)$_SERVER['SP_AUTH_USER_ID']]);out(['ok'=>true]);}
  if($action==='delete'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('User id required.');$pdo->beginTransaction();spLockOutlet($pdo,$outletId);spValidateUserChange($pdo,$id,['role'=>'Cashier','enabled'=>false],$outletId);$pdo->prepare('UPDATE users SET enabled=0,session_version=session_version+1 WHERE id=?')->execute([$id]);spAudit($pdo,'USER_DISABLE','users',$id);$pdo->commit();out(['ok'=>true,'deleted'=>1]);}
- if($action==='auth'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$username=strtolower(trim((string)($b['username']??'')));$password=(string)($b['password']??'');spThrottleLogin($pdo,$username);$q=$pdo->prepare('SELECT DISTINCT u.*,r.role_name FROM users u LEFT JOIN roles r ON r.id=u.role_id WHERE LOWER(u.username)=? LIMIT 1');$q->execute([$username]);$r=$q->fetch();if(!$r||!(int)$r['enabled']||!password_verify($password,(string)$r['password_hash']))out(['ok'=>false,'error'=>'Invalid username or password.'],401);$pdo->prepare('DELETE FROM sp_login_attempts WHERE bucket_key=?')->execute([hash('sha256',strtolower($username).'|'.($_SERVER['REMOTE_ADDR']??'unknown'))]);$per=json_decode((string)($r['permissions_json']??''),true);if(($r['role_name']??'')==='Administrator')$per=array_fill_keys(array_keys($permissionLabels),true);$pdo->prepare('UPDATE users SET last_login_at=NOW() WHERE id=?')->execute([(int)$r['id']]);$assigned=assignedOutletRows($pdo,(int)$r['id']);$ids=array_map(fn($x)=>(int)$x['id'],$assigned);$def=$r['outlet_id']?(int)$r['outlet_id']:($ids[0]??$outletId);foreach($assigned as $ao){if(!empty($ao['is_default'])){$def=(int)$ao['id'];break;}}out(['ok'=>true,'api_token'=>spIssueApiToken((int)$r['id'],trim((string)($b['device_id']??''))),'expires_in'=>7200,'user'=>['id'=>(int)$r['id'],'dbId'=>(int)$r['id'],'name'=>$r['name'],'username'=>$r['username'],'role'=>$r['role_name']?:'Cashier','enabled'=>true,'permissions'=>is_array($per)?$per:[],'outlets'=>$assigned,'outlet_ids'=>$ids,'default_outlet_id'=>$def]]);}
+ if($action==='auth'&&$_SERVER['REQUEST_METHOD']==='POST'){$b=body();$username=strtolower(trim((string)($b['username']??'')));$password=(string)($b['password']??'');spThrottleLogin($pdo,$username);$q=$pdo->prepare('SELECT DISTINCT u.*,r.role_name FROM users u LEFT JOIN roles r ON r.id=u.role_id WHERE LOWER(u.username)=? LIMIT 1');$q->execute([$username]);$r=$q->fetch();if(!$r||!(int)$r['enabled']||!password_verify($password,(string)$r['password_hash']))out(['ok'=>false,'error'=>'Invalid username or password.'],401);$pdo->prepare('DELETE FROM sp_login_attempts WHERE bucket_key=?')->execute([hash('sha256',strtolower($username).'|'.($_SERVER['REMOTE_ADDR']??'unknown'))]);if(password_needs_rehash((string)$r['password_hash'],PASSWORD_DEFAULT))$pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($password,PASSWORD_DEFAULT),(int)$r['id']]);$mustChange=!empty($r['must_change_password']);$per=json_decode((string)($r['permissions_json']??''),true);if(($r['role_name']??'')==='Administrator')$per=array_fill_keys(array_keys($permissionLabels),true);$pdo->prepare('UPDATE users SET last_login_at=NOW() WHERE id=?')->execute([(int)$r['id']]);$assigned=assignedOutletRows($pdo,(int)$r['id']);$ids=array_map(fn($x)=>(int)$x['id'],$assigned);$def=$r['outlet_id']?(int)$r['outlet_id']:($ids[0]??$outletId);foreach($assigned as $ao){if(!empty($ao['is_default'])){$def=(int)$ao['id'];break;}}out(['ok'=>true,'api_token'=>spIssueApiToken((int)$r['id'],trim((string)($b['device_id']??''))),'expires_in'=>7200,'must_change_password'=>$mustChange,'user'=>['id'=>(int)$r['id'],'must_change_password'=>$mustChange,'dbId'=>(int)$r['id'],'name'=>$r['name'],'username'=>$r['username'],'role'=>$r['role_name']?:'Cashier','enabled'=>true,'permissions'=>is_array($per)?$per:[],'outlets'=>$assigned,'outlet_ids'=>$ids,'default_outlet_id'=>$def]]);}
+ // Administrator-only reset: sets a random temporary password that is shown to the Administrator once.
+ // The user must choose a new password at the next sign-in, and existing sessions of that user end.
+ if($action==='reset-password'&&$_SERVER['REQUEST_METHOD']==='POST'){
+  if(!columnExists($pdo,'users','must_change_password'))throw new RuntimeException('Run database/migrations/staff-password-reset-v1.sql before resetting passwords.');
+  if((string)($GLOBALS['spActor']['role_name']??'')!=='Administrator')out(['ok'=>false,'error'=>'Only an Administrator can reset passwords.'],403);
+  $b=body();$id=(int)($b['id']??0);$actorId=(int)($_SERVER['SP_AUTH_USER_ID']??0);
+  if($id<=0)throw new InvalidArgumentException('User id required.');
+  if($id===$actorId)out(['ok'=>false,'error'=>'Use Change password to change your own password.'],403);
+  $pdo->beginTransaction();spLockOutlet($pdo,$outletId);
+  $q=$pdo->prepare('SELECT id,username,enabled FROM users WHERE id=? FOR UPDATE');$q->execute([$id]);$target=$q->fetch();
+  if(!$target)throw new InvalidArgumentException('User was not found.');
+  $temporary='Tint-'.str_pad((string)random_int(0,999999),6,'0',STR_PAD_LEFT);
+  $pdo->prepare('UPDATE users SET password_hash=?,must_change_password=1,session_version=session_version+1 WHERE id=?')->execute([password_hash($temporary,PASSWORD_DEFAULT),$id]);
+  spAudit($pdo,'USER_PASSWORD_RESET','users',$id,null,['username'=>(string)$target['username']]);
+  $pdo->commit();
+  out(['ok'=>true,'user'=>['id'=>$id,'username'=>(string)$target['username']],'temporary_password'=>$temporary]);
+ }
+ // Any signed-in user may change their own password; required after an Administrator reset.
+ if($action==='change-password'&&$_SERVER['REQUEST_METHOD']==='POST'){
+  $b=body();$userId=(int)($_SERVER['SP_AUTH_USER_ID']??0);$current=(string)($b['current_password']??'');$next=(string)($b['new_password']??'');
+  if($userId<=0)out(['ok'=>false,'error'=>'A valid signed-in session is required.'],401);
+  $q=$pdo->prepare('SELECT id,username,password_hash FROM users WHERE id=? AND enabled=1 LIMIT 1');$q->execute([$userId]);$r=$q->fetch();
+  if(!$r)out(['ok'=>false,'error'=>'A valid signed-in session is required.'],401);
+  spThrottleLogin($pdo,'password-change:'.strtolower((string)$r['username']));
+  if(!password_verify($current,(string)$r['password_hash']))out(['ok'=>false,'error'=>'Current password is incorrect.'],400);
+  if(strlen($next)<12)throw new InvalidArgumentException('Use a new password of at least 12 characters.');
+  if(strlen($next)>200)throw new InvalidArgumentException('The new password is too long.');
+  if(hash_equals($current,$next))throw new InvalidArgumentException('Choose a password that is different from the current one.');
+  $pdo->prepare('DELETE FROM sp_login_attempts WHERE bucket_key=?')->execute([hash('sha256','password-change:'.strtolower((string)$r['username']).'|'.($_SERVER['REMOTE_ADDR']??'unknown'))]);
+  $sets='password_hash=?,session_version=session_version+1'.(columnExists($pdo,'users','must_change_password')?',must_change_password=0':'');
+  $pdo->prepare('UPDATE users SET '.$sets.' WHERE id=?')->execute([password_hash($next,PASSWORD_DEFAULT),$userId]);
+  spAudit($pdo,'USER_PASSWORD_CHANGE','users',$userId);
+  // Other sessions end; this device continues with a fresh token.
+  out(['ok'=>true,'api_token'=>spIssueApiToken($userId,trim((string)($b['device_id']??''))),'expires_in'=>7200]);
+ }
  throw new InvalidArgumentException('Unknown action.');
 }catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();out(['ok'=>false,'error'=>$e->getMessage()],500);}

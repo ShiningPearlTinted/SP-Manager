@@ -8904,3 +8904,18 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .fin-print-area{display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Bell: inbox could not be loaded (for example the notification tables are missing). */
 .spn-count.spn-warn{background:#f59e0b!important;color:#111!important}
+
+/* ===== Staff password reset ===== */
+.login-change-note{margin:-4px 0 14px;color:#9fb1c4;font-size:13px;line-height:1.45;text-align:center}
+.login-change-cancel{width:100%;margin-top:10px;padding:10px;border:0;background:transparent;color:#9fb1c4;font:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
+.login-change-cancel:disabled{opacity:.5;cursor:default}
+.users-reset-modal{width:min(480px,calc(100vw - 32px))}
+.users-reset-body{padding:18px 22px 6px;color:var(--mg-ink,#172033);font-size:14px;line-height:1.5}
+.users-reset-body p{margin:0 0 12px}
+.users-reset-code{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px;padding:12px 14px;border:1px dashed #087ea4;border-radius:10px;background:#eef7fa}
+.users-reset-code code{font:700 22px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.06em;color:#0b5d78;user-select:all}
+.users-reset-code button{height:36px;padding:0 14px;border:1px solid #087ea4;border-radius:8px;background:#fff;color:#087ea4;font:inherit;font-weight:600;cursor:pointer}
+.users-reset-note{color:var(--mg-muted,#64748b);font-size:12.5px}
+.users-reset-actions{display:flex;justify-content:flex-end;padding:12px 22px 18px}
+.users-reset-actions .primary{height:40px;padding:0 20px;border:1px solid #087ea4;border-radius:8px;background:#087ea4;color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.login-card .login-change-cancel{height:auto!important;background:transparent!important;color:#9fb1c4!important;box-shadow:none!important;border:0!important}

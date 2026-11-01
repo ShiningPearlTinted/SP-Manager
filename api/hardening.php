@@ -149,8 +149,8 @@ function spValidateUserChange(PDO $pdo, int $target, array $input, int $outlet):
     }
 }
 function spThrottleLogin(PDO $pdo,string $username):void {
- $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');$now=time();$buckets=[[hash('sha256',strtolower($username).'|'.$ip),10],[hash('sha256','ip:'.$ip),100]];
- foreach($buckets as [$key,$limit]){$pdo->prepare('INSERT INTO sp_login_attempts(bucket_key,window_start,attempts) VALUES(?,?,1) ON DUPLICATE KEY UPDATE attempts=IF(window_start<? ,1,attempts+1),window_start=IF(window_start<? ,VALUES(window_start),window_start)')->execute([$key,$now,$now-900,$now-900]);$q=$pdo->prepare('SELECT attempts FROM sp_login_attempts WHERE bucket_key=?');$q->execute([$key]);if((int)$q->fetchColumn()>$limit)spApiRespond(['ok'=>false,'error'=>'Too many sign-in attempts. Try again in 15 minutes.'],429);}
+ $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');$now=time();$buckets=[[hash('sha256',strtolower($username).'|'.$ip),5],[hash('sha256','ip:'.$ip),100]];
+ foreach($buckets as [$key,$limit]){$pdo->prepare('INSERT INTO sp_login_attempts(bucket_key,window_start,attempts) VALUES(?,?,1) ON DUPLICATE KEY UPDATE attempts=IF(window_start<? ,1,attempts+1),window_start=IF(window_start<? OR attempts>=?,VALUES(window_start),window_start)')->execute([$key,$now,$now-900,$now-900,$limit]);$q=$pdo->prepare('SELECT attempts FROM sp_login_attempts WHERE bucket_key=?');$q->execute([$key]);if((int)$q->fetchColumn()>$limit)spApiRespond(['ok'=>false,'error'=>'Too many sign-in attempts. Try again in 15 minutes.'],429);}
 }
 function spSaleTransition(PDO $pdo,int $outlet,int $id,array $old,array $sale): void {
     $before=strtoupper((string)($old['status']??'COMPLETED'));$after=strtoupper((string)($sale['status']??'COMPLETED'));if($before===$after)return;

@@ -51,3 +51,13 @@ Notifications always appear in the in-app bell. Browser push additionally needs:
 Only users assigned to the outlet with `viewBookings` (and Administrators) receive notifications. Payloads contain no customer details. iOS needs the app installed to the Home Screen.
 
 Reports module details: see `REPORTING-README.md`.
+
+## Changelog
+
+### Staff password security (2026-11)
+- Administrators can reset another user's password from **Users & Permissions > Reset password**. A random temporary password (`Tint-` + 6 digits) is shown once; it is stored only as a hash, the user is signed out on all devices and must choose a new password (12+ characters) at the next sign-in. Administrators cannot reset their own password this way.
+- While a temporary password is active the API only allows changing it or signing out (`PASSWORD_CHANGE_REQUIRED`).
+- New endpoint `users.php?action=change-password` for the signed-in user; it ends other sessions and returns a fresh token.
+- Password hashes are upgraded automatically on sign-in (`password_needs_rehash`).
+- Sign-in lockout tightened: 5 failed attempts per username + IP within 15 minutes lock that pair for 15 minutes (HTTP 429). The per-IP limit is unchanged.
+- Migration: `database/migrations/staff-password-reset-v1.sql` (adds `users.must_change_password`). Run it before deploying the API.
