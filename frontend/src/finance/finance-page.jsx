@@ -47,6 +47,21 @@ const RELIEFS=[
  {id:'socso',label:'Caruman PERKESO',limit:250},
  {id:'tourism',label:'Penginapan berdaftar dan tempat tarikan pelancong',limit:1000},
 ];
+const PRINT_CSS=`*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#111;font:10.5px/1.4 Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rep-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:8px;margin-bottom:12px;border-bottom:2px solid #087ea4}
+.rep-head h1{margin:0;font-size:16px}.rep-head .co{color:#555;font-size:10px}.rep-head h2{margin:0;font-size:14px;color:#087ea4;text-align:right}.rep-head p{margin:2px 0 0;text-align:right;color:#444}
+.rep-foot{margin-top:14px;padding-top:6px;border-top:1px solid #ccc;color:#777;font-size:9px;display:flex;justify-content:space-between}
+.fin-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.fin-kpi{border:1px solid #d6dde3;border-radius:6px;padding:7px 9px}.fin-kpi span{display:block;color:#555;font-size:9.5px}.fin-kpi b{display:block;font-size:13px;margin:2px 0}.fin-kpi small{color:#777;font-size:8.5px}
+.fin-card{border:1px solid #d6dde3;border-radius:6px;margin-bottom:12px;break-inside:auto;overflow:hidden}.fin-card-head{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #e3e8ec;background:#f6f8fa}.fin-card-head h3{margin:0;font-size:12px}.fin-card-head small{display:block;color:#666;font-size:9px}
+table{width:100%;border-collapse:collapse;font-size:inherit;font-variant-numeric:tabular-nums}th,td{padding:4px 8px;text-align:right;border-bottom:1px solid #eef1f3;white-space:nowrap}th{background:#f6f8fa;color:#555;font-size:9.5px}th:first-child,td:first-child{text-align:left;white-space:normal}
+tr{break-inside:avoid}.fin-head-row td{color:#087ea4;font-weight:700;font-size:9.5px;padding-top:9px;border-bottom:0}.fin-sub-row td{font-weight:700;border-bottom:0}.fin-empty-sub td{color:#999;font-weight:400}.fin-line td:first-child{padding-left:20px}
+.fin-total td{font-weight:700;border-top:1px solid #c9d2da;background:#fafbfc}.fin-grand td{font-weight:800;background:#eef7fa;color:#0b5d78}.fin-final td{background:#087ea4;color:#fff;font-weight:800}
+.fin-margin{display:block;font-size:8.5px;font-weight:400;opacity:.8}.neg{color:#b42318}.pos{color:#0f7a43}.fin-final td.neg{color:#ffd6d6}
+.fin-wide th,.fin-wide td{padding:3px 4px;font-size:8.3px}.fin-wide td:first-child{min-width:120px}
+.fin-notes{color:#555;font-size:9px}.fin-notes p{margin:0 0 4px}
+.fin-tax-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fin-form-rows{padding:4px 10px 8px}.fin-kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #dde3e8}.fin-kv.strong{font-weight:700}.fin-kv.final{margin-top:4px;padding:6px 8px;border:0;border-radius:4px;background:#087ea4;color:#fff}
+.fin-band{margin:6px 0}.fin-band td,.fin-band th{padding:3px 6px;font-size:9.5px}.fin-relief-total{color:#087ea4;font-size:12px}.fin-fixed{color:#666}
+.fin-save-bar{margin-top:6px;color:#666;font-size:9px;font-style:italic}.fin-save-bar p{margin:0}`;
 const DEFAULT_TAX={entity:'individual',zakatRate:2.5,zakatPaidExtra:0,reliefs:{}};
 
 function buildStatement(cur,cats,months){
@@ -66,7 +81,7 @@ function buildStatement(cur,cats,months){
  return{posSales,invSales,otherSales,refunds,sales,cogsPos,cogsInv,direct,costOfSales,gross,admin,selling,financial,opex,operating,misc,miscTotal,net,purchases:pick(cur?.purchases),zakatPaid:sum(byGroup('zakat').map(r=>r.value)),excluded:byGroup('excluded')};
 }
 
-export default function FinancePage({base,headers,setNotice}){
+export default function FinancePage({base,headers,setNotice,company}){
  const request=useMemo(()=>createFinanceRequest({base,headers}),[base,headers]);
  const now=new Date();
  const [tab,setTab]=useState('pl'),[view,setView]=useState('monthly'),[year,setYear]=useState(now.getFullYear()),[month,setMonth]=useState(now.getMonth());
@@ -148,6 +163,24 @@ export default function FinancePage({base,headers,setNotice}){
  const zakatRebate=individual?Math.min(zakatPaid,taxCalc.tax):0;
  const taxPayable=Math.max(0,taxCalc.tax-zakatRebate);
  const afterAll=profit-Math.max(zakatDue,zakatPaid)-taxPayable;
+ const printRef=React.useRef(null);
+ const reportTitle=tab==='tax'?'Tax & Zakat Estimation':view==='monthly'?'Statement of Profit & Loss (Monthly)':view==='yearly'?'Statement of Profit & Loss (Yearly)':'Summary Statement of Profit & Loss';
+ const reportPeriod=tab==='tax'?`For the year ended 31 December ${year} · Year of Assessment ${year}`:view==='monthly'?`For the month of ${MONTHS[month]} ${year}`:view==='yearly'?`For the year ended 31 December ${year}, compared with ${year-1}`:`January – December ${year}`;
+ const printReport=()=>{const src=printRef.current;if(!src){say('Nothing to print yet.');return}
+  const node=src.cloneNode(true);const fields=[...src.querySelectorAll('input,select')];
+  node.querySelectorAll('input,select').forEach((el,i)=>{const orig=fields[i];const span=document.createElement('span');span.className='fin-print-value';span.textContent=orig?.tagName==='SELECT'?(orig.options[orig.selectedIndex]?.text||''):(orig?.value||'—');el.replaceWith(span)});
+  node.querySelectorAll('.fin-reliefs tbody tr').forEach(tr=>{if(tr.lastElementChild?.textContent.trim()==='0.00')tr.remove()});
+  node.querySelectorAll('.fin-save-bar button').forEach(b=>b.remove());
+  node.querySelectorAll('button').forEach(b=>b.replaceWith(document.createTextNode(b.textContent)));
+  const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const landscape=tab==='pl'&&view==='summary';
+  const co=company||{};const address=[co.plotIdentification,co.streetName,[co.postalCode,co.district].filter(Boolean).join(' '),co.state].filter(Boolean).join(', ');const coLine=[address,co.phoneNumber||co.phone,co.email,co.taxNumber?'Tax No: '+co.taxNumber:''].filter(Boolean).map(esc).join(' · ');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(reportTitle)} ${year}</title><style>@page{size:A4 ${landscape?'landscape':'portrait'};margin:12mm}${PRINT_CSS}</style></head><body><header class="rep-head"><div><h1>${esc(co.name||co.companyName||'')}</h1>${coLine?`<div class="co">${coLine}</div>`:''}</div><div><h2>${esc(reportTitle)}</h2><p>${esc(reportPeriod)} · RM</p></div></header>${node.innerHTML}<footer class="rep-foot"><span>Printed ${esc(new Date().toLocaleString('en-MY'))}</span><span>SP-Manager · Finance</span></footer></body></html>`;
+  const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';document.body.appendChild(f);
+  const w=f.contentWindow;w.document.open();w.document.write(html);w.document.close();
+  w.addEventListener('afterprint',()=>setTimeout(()=>f.remove(),500));
+  setTimeout(()=>{try{w.focus();w.print()}catch(e){say('Print failed: '+e.message)}setTimeout(()=>f.isConnected&&f.remove(),120000)},300);
+ };
  const saveTax=async()=>{try{await request('save-tax-settings',{year,settings:tax},true);setTaxDirty(false);say('Tax & Zakat settings saved.')}catch(e){say(e.message||'Settings could not be saved.')}};
 
  return <section className="finance-page management-page">
@@ -159,13 +192,14 @@ export default function FinancePage({base,headers,setNotice}){
     {tab==='entries'&&<select aria-label="Month" value={entryMonth} onChange={e=>setEntryMonth(Number(e.target.value))}><option value={0}>All months</option>{MONTHS.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select>}
     <select aria-label="Year" value={year} onChange={e=>setYear(Number(e.target.value))}>{years.map(y=><option key={y}>{y}</option>)}</select>
     <button type="button" className="fin-btn" onClick={()=>{loadSummary();if(tab==='entries')loadEntries()}} disabled={loading}>↻ Refresh</button>
+    {tab!=='entries'&&<button type="button" className="fin-btn primary" onClick={printReport} disabled={!summary} title="Print or save as PDF">🖨 Print / PDF</button>}
     {tab==='entries'&&<button type="button" className="fin-btn primary" onClick={()=>openForm(null)} disabled={!ready}>＋ Add entry</button>}
    </div>
   </div>
   {error&&<div className="fin-alert" role="alert">{error}</div>}
   {!ready&&<div className="fin-alert warn">Finance tables are not installed yet. Run <b>database/migrations/finance-v1.sql</b> in phpMyAdmin to record income &amp; expenses and save Tax &amp; Zakat settings. Sales, cost of goods sold and payroll are already shown.</div>}
 
-  {tab==='pl'&&(loading&&!summary?<div className="fin-empty">Loading…</div>:summary&&<>
+  {tab==='pl'&&(loading&&!summary?<div className="fin-empty">Loading…</div>:summary&&<div className="fin-print-area" ref={printRef}>
    {view==='monthly'&&<><Kpis st={stMonth} label={`${MONTHS[month]} ${year}`}/><div className="fin-card"><div className="fin-card-head"><div><h3>Statement of Profit &amp; Loss</h3><small>For the month of {MONTHS[month]} {year} · RM</small></div></div><StatementTable columns={[{title:`${SHORT[month]} ${year}`,st:stMonth},{title:`Year to date`,st:stYtd}]}/></div></>}
    {view==='yearly'&&<><Kpis st={stYear} label={`Year ${year}`}/><div className="fin-card"><div className="fin-card-head"><div><h3>Statement of Profit &amp; Loss</h3><small>For the year ended 31 Dec {year} · compared with {year-1} · RM</small></div></div><StatementTable columns={[{title:String(year),st:stYear},{title:String(year-1),st:stPrevYear}]} change/></div></>}
    {view==='summary'&&<div className="fin-card"><div className="fin-card-head"><div><h3>Summary Statement of Profit &amp; Loss</h3><small>January – December {year} · RM</small></div></div><StatementTable columns={[...stMonths.map((st,i)=>({title:SHORT[i],st})),{title:'Total',st:stYear}]}/></div>}
@@ -174,7 +208,7 @@ export default function FinancePage({base,headers,setNotice}){
     {(view==='monthly'?stMonth:stYear).purchases>0&&<p>Stock purchased in this period: <b>{money((view==='monthly'?stMonth:stYear).purchases)}</b>. It is not deducted here because it becomes cost of goods sold when the items are sold.</p>}
     {(view==='monthly'?stMonth:stYear).excluded.length>0&&<p>Not in Profit &amp; Loss: {(view==='monthly'?stMonth:stYear).excluded.map(r=>`${r.label} ${money(r.value)}`).join(' · ')}.</p>}
    </div>
-  </>)}
+  </div>)}
 
   {tab==='entries'&&<div className="fin-card">
    <div className="fin-card-head"><div><h3>Income &amp; Expenses</h3><small>{entryMonth?MONTHS[entryMonth-1]+' ':''}{year} · rent, bills, marketing, other income, zakat paid and similar items</small></div><div className="fin-entry-totals"><span>In <b className="pos">{money(totalIn)}</b></span><span>Out <b className="neg">{money(totalOut)}</b></span></div></div>
@@ -183,7 +217,7 @@ export default function FinancePage({base,headers,setNotice}){
    </tbody></table></div>
   </div>}
 
-  {tab==='tax'&&summary&&<>
+  {tab==='tax'&&summary&&<div className="fin-print-area" ref={printRef}>
    <div className="fin-kpis">{[['Profit before tax & zakat',profit],['Zakat',Math.max(zakatDue,zakatPaid)],['Tax payable',taxPayable],['Profit after tax & zakat',afterAll]].map(([t,v])=><div className={'fin-kpi'+(t.startsWith('Profit after')?(v>=0?' good':' bad'):'')} key={t}><span>{t}</span><b>{money(v)}</b><small>Year {year}</small></div>)}</div>
    <div className="fin-tax-grid">
     <div className="fin-card">
@@ -216,7 +250,7 @@ export default function FinancePage({base,headers,setNotice}){
     <div className="fin-table-wrap"><table className="fin-table fin-reliefs"><thead><tr><th>Relief</th><th>Limit (RM)</th><th>Claim</th><th>Allowed (RM)</th></tr></thead><tbody>{reliefRows.map(r=><tr key={r.id}><td>{r.label}</td><td>{r.count?`${rm(r.rate)} each`:rm(r.limit)}</td><td>{r.fixed?<span className="fin-fixed">Automatic</span>:<input type="number" min="0" step={r.count?'1':'0.01'} aria-label={r.label} placeholder={r.count?'No. of children':'0.00'} value={tax.reliefs?.[r.id]??''} onChange={e=>setRelief(r.id,e.target.value)}/>}</td><td>{rm(r.value)}</td></tr>)}</tbody></table></div>
    </div>}
    <div className="fin-save-bar"><p>Estimate only, based on the rates in this page. Confirm the final figures with LHDN e-Filing, your zakat authority or your tax agent.</p><button type="button" className="fin-btn primary" onClick={saveTax} disabled={!ready||!taxDirty}>{taxDirty?'Save settings':'Saved'}</button></div>
-  </>}
+  </div>}
 
   {form&&<div className="ar-modal-backdrop" onMouseDown={()=>{if(!saving)setForm(null)}}><div className="ar-modal fin-entry-modal" role="dialog" aria-modal="true" aria-labelledby="fin-entry-title" onMouseDown={e=>e.stopPropagation()}><div className="ar-modal-head"><div><small>FINANCE</small><h3 id="fin-entry-title">{form.id?'Edit Entry':'New Entry'}</h3></div><button type="button" aria-label="Close" onClick={()=>setForm(null)} disabled={saving}>×</button></div>
    <form onSubmit={saveEntry} className="fin-entry-form">

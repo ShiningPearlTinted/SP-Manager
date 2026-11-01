@@ -8901,3 +8901,4 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .app .finance-page .fin-final td:last-child{background:#087ea4!important}
 .app .finance-page .fin-band th,.app .finance-page .fin-band td{height:auto!important;padding:5px 8px!important;font-size:12.5px!important}
 .app .finance-page .fin-reliefs td{padding:6px 14px!important}
+.fin-print-area{display:flex;flex-direction:column;gap:16px;min-width:0}
