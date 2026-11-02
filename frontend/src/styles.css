@@ -8948,8 +8948,6 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .app .dr .dr-tool:disabled{color:#a8b3c0!important;cursor:default}
 .app .dr .dr-tool.danger:not(:disabled){color:#b42318!important}
 .app .dr .dr-tool.danger:hover:not(:disabled){background:#fff5f5!important;border-color:#f3c2c2!important}
-.dr-add{display:flex;align-items:center;gap:6px;padding-right:4px}
-.app .dr .dr-add select{height:36px;min-width:170px;padding:0 10px;border:1px solid var(--mg-border,#cfd9e3);border-radius:8px;background:var(--mg-surface,#fff);font:inherit;font-size:13px}
 .dr-sep{width:1px;margin:6px 4px;background:var(--mg-border,#e2e8f0)}
 .dr-filters{display:flex;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--mg-border,#e2e8f0);border-radius:12px;background:var(--mg-surface,#fff)}
 .dr-filter-grid{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.35fr);gap:8px 18px}
@@ -9011,3 +9009,23 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr .purchase-items-table td .smallbtn{height:28px!important;min-height:0!important;padding:0 10px!important;font-size:12px!important;box-shadow:none!important}
 @media (max-width:760px){.app .dr .purchase-summary{flex-wrap:wrap;justify-content:flex-start}.app .dr .purchase-discount{flex:1 1 100%;min-width:0;max-width:100%}}
 .app .dr .purchase-product-picker{display:flex;flex-direction:column;gap:8px;padding:12px 14px}.app .dr .purchase-product-picker>h3{margin:0}
+/* The product picker keeps a fixed height and scrolls inside, like Quotation and Invoice. */
+.app .dr .purchase-builder{align-items:start}
+.app .dr .purchase-product-picker{height:calc(100vh - 120px);min-height:620px;max-height:none;overflow:hidden}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr .purchase-product-picker .doc-picker-list > button{flex:none!important;height:auto!important;min-height:44px!important;padding:8px 10px!important;align-items:center}
+@media (max-width:900px){.app .dr .purchase-product-picker{height:auto;min-height:0;max-height:560px}}
+
+/* ===== Documents: Select document type (Add) ===== */
+.dr-type-backdrop{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:16px;background:rgba(15,23,42,.42)}
+.dr-type-dialog{width:min(520px,100%);display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:14px;background:var(--mg-surface,#fff);color:var(--mg-ink,#172033);box-shadow:0 24px 60px rgba(15,23,42,.28);font-size:13px}
+.dr-type-dialog h3{margin:0;font-size:16px;font-weight:700}
+.dr-type-lists{display:grid;grid-template-columns:150px minmax(0,1fr);min-height:260px;border:1px solid var(--mg-border,#e2e8f0);border-radius:10px;overflow:hidden}
+.dr-type-groups{border-right:1px solid var(--mg-border,#e2e8f0);background:var(--mg-soft,#f8fafc)}
+.dr-type-items{overflow:auto}
+.dr-type-backdrop .dr-type-lists button{display:block;width:100%;height:auto!important;min-height:0!important;margin:0;padding:10px 12px!important;border:0!important;border-radius:0!important;background:none!important;color:inherit!important;font:500 13px/1.2 inherit!important;text-align:left;box-shadow:none!important;cursor:pointer}
+.dr-type-backdrop .dr-type-lists button:hover{background:#eef7fa!important}
+.dr-type-backdrop .dr-type-lists button.active{background:#087ea4!important;color:#fff!important;font-weight:600!important}
+.dr-type-actions{display:flex;justify-content:flex-end;gap:8px}
+.dr-type-backdrop .dr-type-actions button{min-width:96px;height:38px!important;min-height:0!important;padding:0 16px!important;border-radius:8px!important;font:600 13px/1 inherit!important}
+@media (max-width:520px){.dr-type-lists{grid-template-columns:120px minmax(0,1fr)}}
+.dr-type-backdrop .dr-type-actions .dr-type-ok{border:1px solid #087ea4!important;background:#087ea4!important;color:#fff!important}.dr-type-backdrop .dr-type-actions .dr-type-ok:hover{background:#066b8c!important}
