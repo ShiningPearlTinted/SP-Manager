@@ -132,10 +132,13 @@ try{
   $newStatus=strtolower((string)pick($sale,['status'],'COMPLETED'));$newActive=!in_array($newStatus,['void','voided','refund','refunded','cancelled','canceled'],true)&&empty($sale['voided'])&&empty($sale['refunded']);
   if($newActive){
     $offline=!empty($_SERVER['SP_AUTH_OFFLINE']);$device=(string)($_SERVER['SP_AUTH_DEVICE_ID']??'');if($offline&&$device==='')throw new RuntimeException('Offline terminal identity is missing.');
+    // Like the POS, an online sale may take stock below zero unless Settings > Order > Prevent negative inventory is on.
+    // Offline terminals are always limited to their own reserved quota.
+    $preventNegative=!empty(spOutletSettings($pdo,$outletId)['order']['preventNegativeInventory']);
     foreach($newQty as $pid=>$qty){$qty=(float)$qty;if($qty<=0)continue;
       $reserved=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(0,q.reserved_qty-q.consumed_qty)),0) FROM sp_offline_stock_quotas q JOIN sp_offline_devices d ON d.device_id=q.device_id WHERE q.outlet_id=? AND q.product_id=? AND d.status='ACTIVE' AND d.expires_at>NOW()");$reserved->execute([$outletId,(int)$pid]);$held=(float)$reserved->fetchColumn();
       $quota=$pdo->prepare("SELECT q.reserved_qty,q.consumed_qty FROM sp_offline_stock_quotas q JOIN sp_offline_devices d ON d.device_id=q.device_id WHERE q.device_id=? AND q.outlet_id=? AND q.product_id=? AND d.user_id=? AND d.status='ACTIVE' AND d.expires_at>NOW() FOR UPDATE");$quota->execute([$device,$outletId,(int)$pid,(int)($_SERVER['SP_AUTH_USER_ID']??0)]);$own=$device!==''?$quota->fetch():null;$ownAvailable=$own?max(0,(float)$own['reserved_qty']-(float)$own['consumed_qty']):0.0;$physical=currentStock($pdo,$outletId,(int)$pid);$available=max(0,$physical-$held)+$ownAvailable;
-      if($qty>$available+1e-9)throw new RuntimeException('Insufficient unreserved stock. Some stock is allocated to offline POS terminals.');
+      if($preventNegative&&$qty>$available+1e-9)throw new RuntimeException($held>0?'Insufficient unreserved stock. Some stock is allocated to offline POS terminals.':'Insufficient stock for one or more items. Settings > Order > Prevent negative inventory is on.');
       if($offline&&$qty>$ownAvailable+1e-9)throw new RuntimeException('This terminal has insufficient offline stock quota for one or more items.');
       if($own&&$qty>0){$take=min($qty,$ownAvailable);if($take>0)$pdo->prepare('UPDATE sp_offline_stock_quotas SET consumed_qty=consumed_qty+? WHERE device_id=? AND outlet_id=? AND product_id=?')->execute([$take,$device,$outletId,(int)$pid]);}
     }
