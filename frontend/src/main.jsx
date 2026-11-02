@@ -722,7 +722,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
   }catch(e){if(!e?.definitiveRejection&&activeOfflineGrant&&activeOfflineExpiry>Date.now()&&(e?.name==="TypeError"||navigator.onLine===false)){try{await offlineStore.enqueueSale(sale);try{localStorage.removeItem(pendingKey)}catch{};syncedSale={...sale,offlinePending:true};const offlineSales=ns.map(x=>String(x.id)===String(sale.id)?syncedSale:x);cacheSetJSON("sales",JSON.stringify(offlineSales));setSales(offlineSales);setOfflinePendingCount(await offlineStore.pendingCount());}catch(queueError){setNotice(queueError?.message||"Offline stock quota is insufficient for this sale.");return false;}}else{
     if(e?.definitiveRejection){try{localStorage.removeItem(pendingKey)}catch{}}
     console.error("Sale database sync failed:", e);
-    setNotice("Sale could not be completed because the database could not complete the request.");
+    setNotice("Sale could not be completed: "+professionalDatabaseError(e,"the database could not complete the request. Please try again."));
     return false;
   }}
   // A committed sale must remain a success even if a post-save cache refresh

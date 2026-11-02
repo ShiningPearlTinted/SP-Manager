@@ -8933,3 +8933,8 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .ar-pos-shell .ar-menu-panel .ar-menu-outlet b{font-size:13.5px;line-height:1.3}
 .ar-pos-shell .ar-menu-panel .ar-outlet-code{padding:5px 9px}
 .ar-pos-shell .ar-menu-panel>button{min-height:48px!important;padding:16px 18px!important;line-height:1.3!important}
+/* The bell also stays out of the way on the payment screen and POS dialogs (its alerts still show). */
+.ar-pos-shell:has(.ar-payment-screen) .ar-pos-notification-slot .spn-bell,
+.ar-pos-shell:has(.ar-payment-screen) .ar-pos-notification-slot .spn-panel,
+.ar-pos-shell:has(.ar-modal-backdrop) .ar-pos-notification-slot .spn-bell,
+.ar-pos-shell:has(.ar-modal-backdrop) .ar-pos-notification-slot .spn-panel{visibility:hidden}
