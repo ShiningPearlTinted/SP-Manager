@@ -9029,3 +9029,27 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .dr-type-backdrop .dr-type-actions button{min-width:96px;height:38px!important;min-height:0!important;padding:0 16px!important;border-radius:8px!important;font:600 13px/1 inherit!important}
 @media (max-width:520px){.dr-type-lists{grid-template-columns:120px minmax(0,1fr)}}
 .dr-type-backdrop .dr-type-actions .dr-type-ok{border:1px solid #087ea4!important;background:#087ea4!important;color:#fff!important}.dr-type-backdrop .dr-type-actions .dr-type-ok:hover{background:#066b8c!important}
+
+/* ===== Products (same look as the Documents register) ===== */
+.product-dr.dr{display:flex;flex-direction:column;gap:12px}
+.product-dr .product-dr-toolbar{gap:2px}
+.app .dr.product-dr .dr-tool{min-width:58px;padding:6px 5px!important;font-size:11.5px!important}
+.app .dr.product-dr .product-master-shell{gap:0;border:1px solid var(--mg-border,#e2e8f0);border-radius:12px;background:var(--mg-surface,#fff);box-shadow:none;overflow:hidden}
+.app .dr.product-dr .product-tree{border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--mg-surface,#fff)!important}
+.app .dr.product-dr .product-tree .tree-title{font-size:14.5px;font-weight:700}
+.app .dr.product-dr .product-master-main{border:0!important;border-radius:0!important;box-shadow:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-toolbar2{padding:10px 14px!important;border-bottom:1px solid var(--mg-border,#eef2f6)}
+.app .dr.product-dr .product-master-toolbar2 b{font-size:14.5px}
+.app .dr.product-dr .product-master-toolbar2 span{font-size:12px;color:var(--mg-muted,#64748b)}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-list-actions input{height:34px!important;min-height:0!important;font-size:12.5px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-list-actions button{height:34px!important;min-height:0!important;padding:0 12px!important;font-size:12.5px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table{font-size:12.5px}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table th{position:sticky;top:0;z-index:1;height:auto!important;padding:8px 10px!important;background:var(--mg-soft,#f8fafc)!important;color:var(--mg-muted,#526579)!important;font-size:11.5px!important;font-weight:700;white-space:nowrap}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table td{height:auto!important;padding:7px 10px!important;font-size:12.5px!important;vertical-align:middle}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table td b{font-size:12.5px!important;font-weight:600}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table td small{display:none}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table tbody tr{cursor:pointer}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table tbody tr:hover td{background:#f7fbfd}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table tbody tr.selected-product td{background:#e6f3f8!important}
+@media (max-width:760px){.product-dr .product-dr-toolbar{justify-content:center}.app .dr.product-dr .dr-tool{min-width:64px}}
+@media (max-width:760px){.product-dr .product-dr-toolbar .dr-sep{display:none}}
