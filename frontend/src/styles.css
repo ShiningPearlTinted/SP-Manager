@@ -9150,3 +9150,46 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
   /* Booking cards: the shared table td{height:48px} clipped wrapped names over the next line. */
   .app[data-ui="management"]:not(:has(.price-tags-overlay)) .spmb .spmb-table-wrap td{height:auto!important;min-height:0!important}
 }
+
+/* ============================================================
+   MANAGEMENT GLOBAL STANDARD (based on the Products screen)
+   Applies to Management pages and their forms only:
+   .app[data-ui="management"] — POS, Dashboard and Login are not matched.
+   - Same page padding on every page.
+   - Every page toolbar looks like the Products toolbar:
+     one white card, borderless tools, icon above label.
+   - Tables: first/last column keep a 14px gap from the card edge.
+   - Forms (modals): same corner radius and inner padding.
+   ============================================================ */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > section:is(.named-orders-page,.outlet-management-page,.refund-void-page,.pc-page){padding:24px 28px 40px!important}
+
+/* Toolbar card (list pages; editor toolbars with a back link keep their own buttons). */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-topbar,.customer-topbar,.promotion-toolbar,.payment-types-top,.document-toolbar:not(:has(.linkish))){display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:0!important;min-height:0!important;padding:8px 10px!important;margin:0 0 12px!important;background:#fff!important;border:1px solid #e4e7ec!important;border-radius:12px!important;box-shadow:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-topbar,.customer-topbar,.promotion-toolbar,.payment-types-top,.document-toolbar:not(:has(.linkish))) > div:first-child:not([class]){display:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions,.document-toolbar:not(:has(.linkish)) .document-toolbar-actions){display:flex!important;flex-wrap:wrap!important;justify-content:flex-start!important;align-items:stretch!important;gap:2px!important;width:100%!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;grid-template-columns:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions,.document-toolbar:not(:has(.linkish)) .document-toolbar-actions) > button{flex:0 0 auto!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;width:auto!important;min-width:64px!important;height:auto!important;min-height:58px!important;margin:0!important;padding:6px 10px!important;background:transparent!important;border:1px solid transparent!important;border-radius:9px!important;box-shadow:none!important;color:#101828!important;font-size:14px!important;font-weight:500!important;line-height:1.2!important;white-space:nowrap!important;transform:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions,.document-toolbar:not(:has(.linkish)) .document-toolbar-actions) > button:hover:not(:disabled){background:#f2f4f7!important;border-color:#e4e7ec!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions,.document-toolbar:not(:has(.linkish)) .document-toolbar-actions) > button:disabled{color:#98a2b3!important;opacity:1!important;cursor:not-allowed!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions,.document-toolbar:not(:has(.linkish)) .document-toolbar-actions) > button svg{width:20px!important;height:20px!important;flex:0 0 auto!important;margin:0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions) > button::before{width:20px!important;height:20px!important;flex:0 0 20px!important;margin:0!important}
+
+/* Tables: text never touches the card edge. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) main table :is(th,td):first-child{padding-left:14px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) main table :is(th,td):last-child{padding-right:14px!important}
+
+/* Forms (modals): one radius and inner spacing, matching New Product. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-modal,.promotion-modal,.outlet-modal,.payment-type-modal,.users-modal){border-radius:16px!important;overflow:hidden}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-form-body,.payment-type-form,.outlet-form-grid,.users-form-grid,.promotion-form-top){padding:20px 24px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.user-outlet-section,.permission-grid,.promotion-schedule){padding-left:24px!important;padding-right:24px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form{padding:20px 24px!important}
+
+@media (max-width:700px){
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > section:is(.named-orders-page,.outlet-management-page,.refund-void-page,.pc-page){padding:12px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-topbar,.customer-topbar,.promotion-toolbar,.payment-types-top,.document-toolbar:not(:has(.linkish))){padding:4px!important;margin-bottom:10px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions,.document-toolbar:not(:has(.linkish)) .document-toolbar-actions){flex-wrap:nowrap!important;overflow-x:auto!important;padding:2px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.inventory-actions,.customer-actions,.promotion-actions,.payment-types-actions,.document-toolbar:not(:has(.linkish)) .document-toolbar-actions) > button{flex:0 0 auto!important;min-width:64px!important;min-height:54px!important;padding:6px 8px!important;font-size:11px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) main table :is(th,td):first-child{padding-left:12px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) main table :is(th,td):last-child{padding-right:12px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-form-body,.payment-type-form,.outlet-form-grid,.users-form-grid,.promotion-form-top,.product-editor-form){padding:14px 16px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.user-outlet-section,.permission-grid,.promotion-schedule){padding-left:16px!important;padding-right:16px!important}
+}
