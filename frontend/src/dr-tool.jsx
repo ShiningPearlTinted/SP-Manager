@@ -15,8 +15,15 @@ export const DR_ICONS={
  count:"M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01",
  quick:"M13 2 4 14h7l-1 8 9-12h-7z",
  convert:"M4 7h13l-3-3M20 17H7l3 3",
- back:"M15 18l-6-6 6-6"
+ back:"M15 18l-6-6 6-6",
+ mail:"M4 6h16v12H4zM4 7l8 6 8-6",
+ view:"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
 };
+
+// Compact icon + label button for actions inside table rows.
+export function RowAction({icon,label,danger,className="",...props}){
+ return <button type="button" className={"row-action"+(danger?" danger":"")+(className?" "+className:"")} title={label} {...props}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={DR_ICONS[icon]||DR_ICONS.add}/></svg><span>{label}</span></button>;
+}
 
 // Products-style toolbar button: icon above label, borderless.
 export function DrTool({icon,label,danger,className="",...props}){

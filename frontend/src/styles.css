@@ -9188,3 +9188,48 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
   .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-form-body,.payment-type-form,.outlet-form-grid,.users-form-grid,.promotion-form-top,.product-editor-form){padding:14px 16px!important}
   .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.user-outlet-section,.permission-grid,.promotion-schedule){padding-left:16px!important;padding-right:16px!important}
 }
+
+/* ============================================================
+   PAYMENTS — RECEIPT LIST TIDY-UP
+   - Search icon sits inside the field, text starts after it.
+   - Row actions (<RowAction>, dr-tool.jsx): compact icon + label buttons
+     on one line; rows stay one height.
+   ============================================================ */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel{padding:20px 22px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel .payments-toolbar{margin:0 0 16px!important;padding:0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel .payments-tabs-spacer{display:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel .payments-search-wrap{width:min(460px,100%)!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel .payments-search-wrap input{height:40px!important;padding:0 40px 0 40px!important;border:1px solid #e4e7ec!important;border-radius:10px!important;font-size:14px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel .payments-search-icon{left:14px!important;top:50%!important;transform:translateY(-50%)!important;font-size:18px!important;color:#98a2b3!important}
+
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table td{height:auto!important;padding-top:12px!important;padding-bottom:12px!important;vertical-align:middle!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table td:is(:nth-child(1),:nth-child(2),:nth-child(4),:nth-child(7),:nth-child(8)){white-space:nowrap!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table td:nth-child(4){font-variant-numeric:tabular-nums}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table .payment-customer-cell{flex-direction:row!important;align-items:center!important;min-width:220px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table .payment-customer-cell b{line-height:1.3}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table .payment-receipt-actions{display:flex!important;flex-wrap:nowrap!important;gap:4px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table table{min-width:0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table :is(td,th){padding-left:10px!important;padding-right:10px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table :is(td,th):first-child{padding-left:14px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table :is(td,th):last-child{padding-right:14px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table .payment-customer-cell{min-width:170px!important}
+
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) button.row-action.row-action{display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:6px!important;width:auto!important;min-width:0!important;height:32px!important;min-height:32px!important;margin:0!important;padding:0 10px!important;border:1px solid #e4e7ec!important;border-radius:8px!important;background:#fff!important;box-shadow:none!important;color:#344054!important;font:500 13px/1 "Segoe UI",system-ui,-apple-system,sans-serif!important;white-space:nowrap!important;transform:none!important;cursor:pointer}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) button.row-action.row-action svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) button.row-action.row-action:hover:not(:disabled){background:#f2f4f7!important;border-color:#d0d5dd!important;color:#101828!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) button.row-action.row-action.view-customer-button{color:#087ea4!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) button.row-action.row-action.danger{color:#b42318!important;border-color:#fecdca!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) button.row-action.row-action.danger:hover:not(:disabled){background:#fef3f2!important;border-color:#fda29b!important;color:#912018!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table button.row-action.row-action{padding:0 8px!important;gap:5px!important}
+
+/* Laptop widths: receipt buttons become icon-only (tooltip keeps the label) so the table fits without scrolling. */
+@media (max-width:1500px){
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table .payment-receipt-actions button.row-action.row-action{width:32px!important;padding:0!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table .payment-receipt-actions button.row-action.row-action span{display:none!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-table .payment-customer-cell{min-width:160px!important}
+}
+
+@media (max-width:700px){
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel{padding:14px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel .payments-search-wrap{width:100%!important}
+}
