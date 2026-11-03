@@ -1,4 +1,4 @@
-const CACHE = "sp-manager-shell-v3";
+const CACHE = "sp-manager-shell-v4";
 const BASE = "/SP-Manager/";
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -32,7 +32,15 @@ self.addEventListener("fetch", event => {
     }).catch(async () => (await caches.match(BASE)) || (await caches.match(`${BASE}index.html`)) || Response.error()));
     return;
   }
-  if (/\.(?:js|css|svg|png|webp|ico|woff2?)$/i.test(url.pathname)) {
+  // JS/CSS: network first so a new deploy is used at once; cache is the offline fallback.
+  if (/\.(?:js|css)$/i.test(url.pathname)) {
+    event.respondWith(fetch(request).then(response => {
+      if (response.ok) caches.open(CACHE).then(cache => cache.put(request, response.clone()));
+      return response;
+    }).catch(async () => (await caches.match(request)) || Response.error()));
+    return;
+  }
+  if (/\.(?:svg|png|webp|ico|woff2?)$/i.test(url.pathname)) {
     event.respondWith(caches.match(request).then(cached => cached || fetch(request).then(response => {
       if (response.ok) caches.open(CACHE).then(cache => cache.put(request, response.clone()));
       return response;
