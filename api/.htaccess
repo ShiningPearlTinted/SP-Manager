@@ -1,0 +1,6 @@
+Options -Indexes
+# Only named endpoints are reachable over HTTP. Config, secrets, shared libraries,
+# CLI tools and data files are read by PHP from disk only.
+<FilesMatch "^(config(?:\.example)?|booking-bridge-key(?:\.example)?|booking-bridge-auth|db|common|security|hardening|receipt-pdf|invoice-pdf|backup-cli|restore-backup-cli|bootstrap-admin|dispatch-notifications|[a-z-]+-lib)\.php$|\.(sql|json|gz|enc|log|md)$">
+Require all denied
+</FilesMatch>
