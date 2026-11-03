@@ -8491,8 +8491,9 @@ body:has(.app[data-ui="management"]:not(:has(.price-tags-overlay))) .sp-action-d
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-modal > :is(.customer-modal-head,.customer-tabs,.customer-modal-foot) {flex:0 0 auto;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-modal > .customer-form-body {flex:1 1 auto;min-height:0;overflow-y:auto;}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell {height:max(560px,calc(100vh - 150px));display:flex;flex-direction:column;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > :is(.company-topbar,.company-tabs,.company-footer) {flex:0 0 auto;}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > .company-body {flex:1 1 auto;min-height:0;overflow-y:auto;}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > :is(.company-topbar,.company-tabs,.company-footer,.company-message) {flex:0 0 auto;}
+/* Reset database renders .database-reset (not .company-body) inside the fixed-height shell, so it needs the same scroll. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .company-shell > :is(.company-body,.database-reset) {flex:1 1 auto;min-height:0;overflow-y:auto;}
 
 /* Inactive products are listed in Product Master (not in POS) with muted text, like Aronium. */
 .app[data-ui="management"] main .product-master-table tbody tr.inactive-product td{color:#98a2b3!important}
@@ -8605,6 +8606,23 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
   .product-master-shell.pm-resizable > .pm-splitter-v{display:none}
   .product-master-shell.pm-resizable > .pm-splitter-h{display:flex;height:14px;margin:0;background:#f8fafc;border-top:1px solid #e4e7ec;border-bottom:1px solid #e4e7ec}
   .app[data-ui="management"] .product-master-shell.pm-resizable > aside.product-tree{height:var(--pm-tree-h,260px)!important;max-height:none!important;overflow:auto!important}
+}
+
+/* ===== Products / Inventory: panel fits the window, list scrolls inside ===== */
+/* The shells only had min-height, so long product lists stretched the whole page.
+   Desktop only; stacked phone layout keeps page scrolling. */
+@media (min-width:761px){
+  /* Page min-height assumed a 78px header (actual 96px), adding a stray page scroll under the panel. */
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) > main > section:is(.product-master-modern,.inventory-modern){min-height:0!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-master-shell,.inventory-shell){min-height:0!important;grid-template-rows:minmax(0,1fr)!important;overflow:hidden!important}
+  /* Height = window minus header, toolbar (and Inventory summary cards) and bottom page padding. */
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-master-shell{height:max(460px,calc(100vh - 325px))!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .inventory-shell{height:max(420px,calc(100vh - 368px))!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-master-shell > aside.product-tree,.inventory-shell > aside.inventory-tree){height:auto!important;max-height:none!important;min-height:0!important;overflow-y:auto!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-master-main,.inventory-main){display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;overflow:hidden!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-master-main,.inventory-main) > :not(.product-table-wrap,.inventory-table-wrap){flex:0 0 auto!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-table-wrap,.inventory-table-wrap){flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow:auto!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-table-wrap,.inventory-table-wrap) thead th{position:sticky!important;top:0!important;z-index:3!important}
 }
 
 /* ===== resizable POS order panel ===== */
