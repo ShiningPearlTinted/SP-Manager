@@ -346,7 +346,22 @@ function spInstallCorsAndGuard(): void {
             spApiRespond(['ok'=>false,'error'=>'Only an Administrator may restore a database backup.'], 403);
         }
     } catch (Throwable $e) {
-        error_log('SP boundary: '.$e->getMessage());spApiRespond(['ok'=>false,'error'=>'API configuration or migration is incomplete.'], 503);
+        // Say what actually failed (and log it under a reference) instead of one generic message.
+        $reference = bin2hex(random_bytes(4));
+        error_log('SP boundary ['.$reference.'] '.get_class($e).': '.$e->getMessage());
+        $code = $e instanceof PDOException ? (int)($e->errorInfo[1] ?? 0) : 0;
+        if ($code === 0 && $e instanceof PDOException && preg_match('/SQLSTATE\[[^\]]+\]\s*\[(\d+)\]/', $e->getMessage(), $m)) $code = (int)$m[1];
+        $reason = match (true) {
+            in_array($code, [1040, 1203, 1226], true) => 'The database connection limit was reached. Wait a minute, then press Retry.',
+            in_array($code, [2002, 2006, 2013], true) => 'The database server could not be reached. Press Retry in a moment.',
+            in_array($code, [1044, 1045], true) => 'The database login in config.php was rejected.',
+            in_array($code, [1054, 1146], true) => 'A database migration is missing ('.(preg_match("/'([^']+)'/", $e->getMessage(), $m) ? $m[1] : 'table or column').').',
+            $e->getMessage() === 'Database configuration is incomplete.' => 'Database configuration is incomplete in config.php.',
+            default => 'API configuration or migration is incomplete.',
+        };
+        $payload = ['ok'=>false, 'error'=>$reason.' (Ref '.$reference.')', 'reference'=>$reference];
+        if ((($GLOBALS['spActor']['role_name'] ?? '') === 'Administrator')) $payload['detail'] = substr(get_class($e).': '.$e->getMessage(), 0, 300);
+        spApiRespond($payload, 503);
     }
 }
 
