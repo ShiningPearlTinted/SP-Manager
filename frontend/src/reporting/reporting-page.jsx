@@ -25,7 +25,7 @@ export default function ReportingPage({canView,apiBase,headers,outlet}) {
   useEffect(()=>{
     let active=true;generation.current++;setLoading(true);setError('');setResult(null);setSelected('');
     if(!canView){setLoading(false);return;}
-    Promise.all([request('report-catalog'),request('report-options')]).then(([c,o])=>{if(active){setCatalog(c.reports);setOptions(o.options);}}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});
+    Promise.all([request('report-catalog'),request('report-options')]).then(([c,o])=>{if(active){setCatalog(Array.isArray(c?.reports)?c.reports:[]);setOptions(o?.options||{customers:[],suppliers:[],users:[],products:[],groups:[],terminals:[]});}}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;generation.current++;};
   },[outlet,canView]);
   const grouped=useMemo(()=>{

@@ -9251,3 +9251,58 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
   .app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel{padding:14px!important}
   .app[data-ui="management"]:not(:has(.price-tags-overlay)) .payments-history-panel .payments-search-wrap{width:100%!important}
 }
+/* ============================================================
+   Forms: same edges everywhere. Content and buttons keep 24px from the card edge
+   (16px on phones), white body, footer with a divider, Cancel before the main action.
+   ============================================================ */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .ar-modal.product-editor-modal{background:var(--mg-surface,#fff)!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .ar-modal.label-editor-modal{height:auto!important;max-height:calc(100vh - 48px)!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form{padding:0!important;gap:0!important;background:var(--mg-surface,#fff)}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form > .product-editor-tabs{margin:0!important;padding:12px 24px!important;border-bottom:1px solid var(--mg-border,#e2e8f0)!important;background:var(--mg-surface,#fff)!important;position:static}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form > .product-editor-tab-content{padding:20px 24px!important;background:var(--mg-surface,#fff)!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-tab-content .editor-section{padding:0 0 20px!important;margin:0 0 20px!important;background:none!important;border-radius:0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-tab-content .editor-section:last-child{padding-bottom:0!important;margin-bottom:0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-tab-content .editor-section > h4{margin:0 0 14px!important;font-size:15px!important;font-weight:700!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-editor-form,.fin-entry-form) > .form-actions{margin:0!important;padding:14px 24px!important;border-top:1px solid var(--mg-border,#e2e8f0)!important;background:var(--mg-surface,#fff)!important;display:flex!important;justify-content:flex-end!important;gap:10px!important;position:static!important;box-shadow:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-editor-form,.fin-entry-form) > .form-actions > .secondary{order:-1}
+
+/* Finance entry: footer spans the card, close button visible like the other forms. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-form{padding:20px 24px 0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-form > .form-actions{margin:6px -24px 0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-modal .ar-modal-head > button{display:inline-grid;place-items:center;width:36px!important;height:36px!important;min-height:0!important;padding:0!important;border:1px solid var(--mg-border,#e2e8f0)!important;border-radius:8px!important;background:var(--mg-soft,#f8fafc)!important;color:#475467!important;font-size:18px!important;line-height:1!important;opacity:1!important}
+
+/* Promotion: the product picker / items panel keeps the same 24px side margin as the fields above. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-builder{margin:0 24px 20px!important;border:1px solid var(--mg-border,#e2e8f0)!important;border-radius:12px!important;overflow:hidden}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-picker-head{padding:12px 14px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-products{padding:8px 14px 14px!important}
+
+/* Booking dialog: title lines up with the fields. */
+.app .spmb-dialog.spmb > header{padding:0 0 14px!important;margin:0 0 18px!important;border-bottom:1px solid var(--mg-border,#e2e8f0)}
+.app .spmb-dialog.spmb > header h2{font-size:16px!important;font-weight:700!important}
+
+/* One primary colour for form actions. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .inventory-modal-foot > button:not(.secondary){background:var(--mg-accent,#087ea4)!important;border-color:var(--mg-accent,#087ea4)!important;color:#fff!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .inventory-modal-foot > .secondary{order:-1}
+
+/* Modal titles: one size; header items centred. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.group-editor-modal,.outlet-modal) :is(.modal-head,.outlet-modal-head){align-items:center!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.group-editor-modal .modal-head,.outlet-modal-head) h3{font-size:16px!important;margin:0!important}
+
+/* Tab rows scroll sideways without showing a scrollbar. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.customer-tabs,.product-editor-tabs){scrollbar-width:none}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.customer-tabs,.product-editor-tabs)::-webkit-scrollbar{display:none}
+
+@media (max-width:700px){
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form > .product-editor-tabs{padding:10px 16px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .product-editor-form > .product-editor-tab-content{padding:16px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.product-editor-form,.fin-entry-form) > .form-actions{padding:12px 16px!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-form{padding:16px 16px 0!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-form > .form-actions{margin:6px -16px 0!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-builder{margin:0 16px 16px!important}
+}
+/* Section headings inside forms: one size. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-modal,.users-modal,.promotion-modal,.payment-type-modal,.outlet-modal) h4{font-size:15px!important;font-weight:700!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .group-editor-modal .modal-head > button{font-size:18px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-category-tabs{flex:0 0 auto!important;height:auto!important;gap:6px!important;padding:2px 14px 10px!important;scrollbar-width:none}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-category-tabs::-webkit-scrollbar{display:none}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-category-tabs > button{flex:0 0 auto!important;height:30px!important;min-height:0!important;padding:0 12px!important;border-radius:999px!important;font-size:12.5px!important;white-space:nowrap!important}
