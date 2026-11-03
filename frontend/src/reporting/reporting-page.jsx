@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {downloadExcel,printReport} from './report-exports.js';
+import {DateInput} from "../dr-tool.jsx";
 
 function localDate(date=new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
 function Filter({label,value,onChange,items,disabled=false}) {return <label className="reporting-field"><span>{label}</span><select value={value} onChange={e=>onChange(e.target.value)} disabled={disabled}><option value="">{disabled?'Not applicable':'All'}</option>{items.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;}
@@ -75,7 +76,7 @@ export default function ReportingPage({canView,apiBase,headers,outlet}) {
         <Filter label="Product" value={filters.product} onChange={value=>change('product',value)} items={options.products} disabled={!applies('product')}/>
         <Filter label="Product group" value={filters.group} onChange={value=>change('group',value)} items={options.groups} disabled={!applies('group')}/>
         <label className="reporting-check"><input type="checkbox" checked={filters.include_subgroups==='1'} onChange={e=>change('include_subgroups',e.target.checked?'1':'0')} disabled={!applies('group')}/>Include subgroups</label>
-        <div className="reporting-date-range"><label className="reporting-field"><span>From</span><input type="date" required value={filters.start} max={filters.end} disabled={!definition?.period} onChange={e=>change('start',e.target.value)}/></label><label className="reporting-field"><span>To</span><input type="date" required min={filters.start} value={filters.end} disabled={!definition?.period} onChange={e=>change('end',e.target.value)}/></label></div>
+        <div className="reporting-date-range"><label className="reporting-field"><span>From</span><DateInput required value={filters.start} max={filters.end} disabled={!definition?.period} onChange={e=>change('start',e.target.value)}/></label><label className="reporting-field"><span>To</span><DateInput required min={filters.start} value={filters.end} disabled={!definition?.period} onChange={e=>change('end',e.target.value)}/></label></div>
         <div className="reporting-actions"><button className="primary" type="submit" disabled={!definition||busy}>{busy?'Loading…':'⌕ Show report'}</button><button type="button" disabled={!ready||exporting} onClick={()=>exportFile('print')}>▤ Print</button><button type="button" disabled={!ready||exporting} onClick={()=>exportFile('excel')}>▦ Excel</button><button type="button" disabled={!ready||exporting} onClick={()=>exportFile('pdf')}>↓ PDF</button></div>
         {exporting&&<p role="status">Preparing export…</p>}
       </form>

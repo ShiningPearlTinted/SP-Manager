@@ -9269,12 +9269,9 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 /* Finance entry: footer spans the card, close button visible like the other forms. */
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-form{padding:20px 24px 0!important}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-form > .form-actions{margin:6px -24px 0!important}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .fin-entry-modal .ar-modal-head > button{display:inline-grid;place-items:center;width:36px!important;height:36px!important;min-height:0!important;padding:0!important;border:1px solid var(--mg-border,#e2e8f0)!important;border-radius:8px!important;background:var(--mg-soft,#f8fafc)!important;color:#475467!important;font-size:18px!important;line-height:1!important;opacity:1!important}
 
 /* Promotion: the product picker / items panel keeps the same 24px side margin as the fields above. */
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-builder{margin:0 24px 20px!important;border:1px solid var(--mg-border,#e2e8f0)!important;border-radius:12px!important;overflow:hidden}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-picker-head{padding:12px 14px!important}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-products{padding:8px 14px 14px!important}
 
 /* Booking dialog: title lines up with the fields. */
 .app .spmb-dialog.spmb > header{padding:0 0 14px!important;margin:0 0 18px!important;border-bottom:1px solid var(--mg-border,#e2e8f0)}
@@ -9303,6 +9300,40 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 /* Section headings inside forms: one size. */
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.customer-modal,.users-modal,.promotion-modal,.payment-type-modal,.outlet-modal) h4{font-size:15px!important;font-weight:700!important}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .group-editor-modal .modal-head > button{font-size:18px!important}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-category-tabs{flex:0 0 auto!important;height:auto!important;gap:6px!important;padding:2px 14px 10px!important;scrollbar-width:none}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-category-tabs::-webkit-scrollbar{display:none}
-.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-category-tabs > button{flex:0 0 auto!important;height:30px!important;min-height:0!important;padding:0 12px!important;border-radius:999px!important;font-size:12.5px!important;white-space:nowrap!important}
+
+/* Promotion uses the shared group-tree picker; chosen products stay highlighted. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-product-picker{display:flex!important;flex-direction:column!important;gap:8px!important;min-height:0;padding:12px 14px 14px!important;max-height:460px;overflow:hidden}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-product-picker > h4{margin:0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-product-picker .doc-product-picker{flex:1 1 auto;min-height:0}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .doc-picker-list > button{flex:none!important;height:auto!important;min-height:44px!important;padding:8px 10px!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .doc-picker-list > button.chosen{border-color:var(--mg-accent,#087ea4)!important;background:#e6f3f8!important;box-shadow:inset 3px 0 0 var(--mg-accent,#087ea4)}
+
+/* Close (×) buttons: one look in every Management form. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.ar-modal-head,.modal-head,.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head,.hr-dialog-head) > button:last-child,
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.spmb-dialog-close,.outlet-modal-close,.customer-view-close,.pc-dialog header > button:last-child),
+.sp-action-dialog-backdrop[data-ui="management"] .sp-messagebox-close{
+  display:inline-grid!important;place-items:center!important;flex:0 0 auto!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:0!important;padding:0!important;margin:0!important;
+  border:1px solid var(--mg-border,#e2e8f0)!important;border-radius:8px!important;background:var(--mg-soft,#f8fafc)!important;color:#475467!important;
+  font:400 18px/1 "Segoe UI",system-ui,sans-serif!important;box-shadow:none!important;opacity:1!important;cursor:pointer}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.ar-modal-head,.modal-head,.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head,.hr-dialog-head) > button:last-child:hover,
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.spmb-dialog-close,.outlet-modal-close,.customer-view-close,.pc-dialog header > button:last-child):hover{background:#eef2f6!important;color:#172033!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.ar-modal-head,.modal-head,.customer-modal-head,.users-modal-head,.outlet-modal-head,.inventory-modal-head,.promotion-modal-head,.payment-type-modal-head,.hr-dialog-head,.pc-dialog header){align-items:center!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .spmb-dialog-close svg{width:16px;height:16px}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-builder{flex:0 0 auto!important;height:470px!important;min-height:0!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-product-picker{height:100%!important;max-height:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-product-picker .doc-group-tree{max-height:45%!important}
+@media (max-width:760px){
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-builder{height:auto!important}
+  .app[data-ui="management"]:not(:has(.price-tags-overlay)) .promotion-modal .promotion-product-picker{height:440px!important}
+}
+
+/* Date fields: dd/mm/yyyy text box with a calendar button (see DateInput). */
+.sp-date{position:relative;display:flex;align-items:center;width:100%;min-width:0;flex:1 1 auto}
+.sp-date > input[type="text"]{width:100%!important;min-width:0!important;padding-right:38px!important;font-variant-numeric:tabular-nums}
+.sp-date > .sp-date-btn{position:absolute!important;right:4px!important;top:50%!important;transform:translateY(-50%);display:inline-grid!important;place-items:center!important;width:30px!important;height:28px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:6px!important;background:transparent!important;color:#475467!important;box-shadow:none!important;cursor:pointer}
+.sp-date > .sp-date-btn:hover:not(:disabled){background:#eef2f6!important;color:#087ea4!important}
+.sp-date > .sp-date-btn:disabled{opacity:.45;cursor:default}
+.sp-date > .sp-date-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sp-date > .sp-date-native{position:absolute!important;left:0!important;bottom:0!important;width:100%!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;opacity:0!important;pointer-events:none!important}
+.sp-date.invalid > input[type="text"]{border-color:#d92d20!important;box-shadow:0 0 0 3px rgba(217,45,32,.12)!important}
+.app-theme-night .sp-date > .sp-date-btn{color:#cbd5e1!important}

@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createFinanceRequest} from './finance-api.js';
+import {DateInput,showDate} from "../dr-tool.jsx";
 
 // Finance follows the CmPro workbook: Profit & Loss (monthly, yearly and a 12-month summary) and Tax & Zakat.
 // Sales, cost of goods sold, payslips and staff claims come from SP-Manager; everything else is an
@@ -143,7 +144,7 @@ export default function FinancePage({base,headers,setNotice,company}){
  const catOptions=dir=>Object.entries(GROUP_LABEL).map(([g,label])=>({g,label,items:catalog.filter(c=>c.direction===dir&&c.group===g)})).filter(x=>x.items.length);
  const openForm=row=>{setForm(row?{...row,amount:String(row.amount)}:{id:0,entry_date:new Date().toISOString().slice(0,10),direction:'OUT',category:'',details:'',amount:''})};
  const saveEntry=async e=>{e.preventDefault();if(!form.category){say('Select a category.');return}setSaving(true);try{await request('save-entry',{...form,amount:Number(form.amount)},true);setForm(null);say('Entry saved.');await Promise.all([loadEntries(),loadSummary()])}catch(err){say(err.message||'Entry could not be saved.')}finally{setSaving(false)}};
- const deleteEntry=async row=>{if(!window.confirm(`Delete ${row.category} ${money(row.amount)} on ${row.entry_date}?`))return;try{await request('delete-entry',{id:row.id},true);await Promise.all([loadEntries(),loadSummary()]);say('Entry deleted.')}catch(err){say(err.message||'Entry could not be deleted.')}};
+ const deleteEntry=async row=>{if(!window.confirm(`Delete ${row.category} ${money(row.amount)} on ${showDate(row.entry_date)}?`))return;try{await request('delete-entry',{id:row.id},true);await Promise.all([loadEntries(),loadSummary()]);say('Entry deleted.')}catch(err){say(err.message||'Entry could not be deleted.')}};
  const totalIn=sum(entries.filter(r=>r.direction==='IN').map(r=>r.amount)),totalOut=sum(entries.filter(r=>r.direction==='OUT').map(r=>r.amount));
 
  // ---- Tax & Zakat
@@ -213,7 +214,7 @@ export default function FinancePage({base,headers,setNotice,company}){
   {tab==='entries'&&<div className="fin-card">
    <div className="fin-card-head"><div><h3>Income &amp; Expenses</h3><small>{entryMonth?MONTHS[entryMonth-1]+' ':''}{year} · rent, bills, marketing, other income, zakat paid and similar items</small></div><div className="fin-entry-totals"><span>In <b className="pos">{money(totalIn)}</b></span><span>Out <b className="neg">{money(totalOut)}</b></span></div></div>
    <div className="fin-table-wrap"><table className="fin-table fin-entries"><thead><tr><th>Date</th><th>Category</th><th>Group</th><th>Details</th><th>In (RM)</th><th>Out (RM)</th><th></th></tr></thead><tbody>
-    {entries.length?entries.map(r=><tr key={r.id}><td>{r.entry_date}</td><td>{r.category}</td><td><span className={'fin-tag g-'+(cats[r.category]?.group||'')}>{GROUP_LABEL[cats[r.category]?.group]||'—'}</span></td><td>{r.details||'—'}</td><td className="pos">{r.direction==='IN'?rm(r.amount):''}</td><td className="neg">{r.direction==='OUT'?rm(r.amount):''}</td><td className="fin-actions"><button type="button" onClick={()=>openForm(r)}>Edit</button><button type="button" className="danger" onClick={()=>deleteEntry(r)}>Delete</button></td></tr>):<tr><td colSpan="7" className="fin-empty">No entries for this period.</td></tr>}
+    {entries.length?entries.map(r=><tr key={r.id}><td>{showDate(r.entry_date)}</td><td>{r.category}</td><td><span className={'fin-tag g-'+(cats[r.category]?.group||'')}>{GROUP_LABEL[cats[r.category]?.group]||'—'}</span></td><td>{r.details||'—'}</td><td className="pos">{r.direction==='IN'?rm(r.amount):''}</td><td className="neg">{r.direction==='OUT'?rm(r.amount):''}</td><td className="fin-actions"><button type="button" onClick={()=>openForm(r)}>Edit</button><button type="button" className="danger" onClick={()=>deleteEntry(r)}>Delete</button></td></tr>):<tr><td colSpan="7" className="fin-empty">No entries for this period.</td></tr>}
    </tbody></table></div>
   </div>}
 
@@ -256,7 +257,7 @@ export default function FinancePage({base,headers,setNotice,company}){
    <form onSubmit={saveEntry} className="fin-entry-form">
     <div className="fin-dir" role="group" aria-label="Type">{[['OUT','Expense / cash out'],['IN','Income / cash in']].map(([k,l])=><button key={k} type="button" className={form.direction===k?'active '+k.toLowerCase():''} onClick={()=>setForm({...form,direction:k,category:cats[form.category]?.direction===k?form.category:''})}>{l}</button>)}</div>
     <div className="editor-grid">
-     <label>Date*<input type="date" required value={form.entry_date} onChange={e=>setForm({...form,entry_date:e.target.value})}/></label>
+     <label>Date*<DateInput required value={form.entry_date} onChange={e=>setForm({...form,entry_date:e.target.value})}/></label>
      <label>Amount (RM)*<input type="number" required min="0.01" step="0.01" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label>
      <label className="full">Category*<select required value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option value="">Select category</option>{catOptions(form.direction).map(g=><optgroup key={g.g} label={g.label}>{g.items.map(c=><option key={c.name} value={c.name}>{c.name}</option>)}</optgroup>)}</select>{form.category&&<small className="fin-hint">Shown under: {GROUP_LABEL[cats[form.category]?.group]}</small>}</label>
      <label className="full">Details<input maxLength="255" value={form.details||''} onChange={e=>setForm({...form,details:e.target.value})} placeholder="Optional, e.g. TNB bill March"/></label>

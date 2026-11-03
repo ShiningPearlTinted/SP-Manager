@@ -1,4 +1,4 @@
-import React from "react";
+import React,{useEffect,useRef,useState} from "react";
 
 // Toolbar icons shared by every Management page (same set as the Products toolbar).
 export const DR_ICONS={
@@ -29,3 +29,27 @@ export function RowAction({icon,label,danger,className="",...props}){
 export function DrTool({icon,label,danger,className="",...props}){
  return <button type="button" className={"dr-tool"+(danger?" danger":"")+(className?" "+className:"")} title={label} {...props}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={DR_ICONS[icon]||DR_ICONS.add}/></svg><span>{label}</span></button>;
 }
+
+// Date field that always shows dd/mm/yyyy (native date inputs follow the computer's locale, e.g. mm/dd/yyyy).
+// The value stays yyyy-mm-dd (or yyyy-mm-ddThh:mm for type="datetime-local"), so callers keep using e.target.value.
+const pad2=n=>String(n).padStart(2,"0");
+export const isoToDmy=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(v||""));if(!m)return "";return `${m[3]}/${m[2]}/${m[1]}`+(m[4]?` ${m[4]}:${m[5]}`:"")};
+const dmyToIso=(text,withTime)=>{const m=/^\s*(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?\s*$/.exec(text);if(!m)return null;const d=+m[1],mo=+m[2],y=+m[3];const dt=new Date(y,mo-1,d);if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;let iso=`${y}-${pad2(mo)}-${pad2(d)}`;if(withTime){const h=+(m[4]??0),mi=+(m[5]??0);if(h>23||mi>59)return null;iso+=`T${pad2(h)}:${pad2(mi)}`}return iso};
+export function DateInput({value,onChange,name,type="date",min,max,required,disabled,className="",id,style,step,...rest}){
+ const withTime=type==="datetime-local";
+ const[text,setText]=useState(()=>isoToDmy(value));
+ const[bad,setBad]=useState(false);
+ const picker=useRef(null);
+ useEffect(()=>{setText(isoToDmy(value));setBad(false)},[value]);
+ const emit=v=>onChange?.({target:{value:v,name,type},currentTarget:{value:v,name,type}});
+ const commit=()=>{const t=text.trim();if(!t){setBad(false);if(value)emit("");return}const iso=dmyToIso(t,withTime);if(!iso||(min&&iso<String(min))||(max&&iso>String(max))){setBad(true);return}setBad(false);if(iso!==value)emit(iso);else setText(isoToDmy(iso))};
+ const open=()=>{const p=picker.current;if(!p||disabled)return;try{p.showPicker()}catch{p.focus();p.click()}};
+ return <span className={"sp-date"+(bad?" invalid":"")+(disabled?" disabled":"")} style={style}>
+  <input {...rest} id={id} name={name} className={className} type="text" inputMode="numeric" autoComplete="off" placeholder={withTime?"dd/mm/yyyy hh:mm":"dd/mm/yyyy"} value={text} required={required} disabled={disabled} aria-invalid={bad||undefined} title={bad?"Use dd/mm/yyyy":undefined} onChange={e=>setText(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit()}}/>
+  <button type="button" className="sp-date-btn" tabIndex={-1} aria-label="Open calendar" disabled={disabled} onClick={open}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/></svg></button>
+  <input ref={picker} className="sp-date-native" type={withTime?"datetime-local":"date"} tabIndex={-1} aria-hidden="true" value={value||""} min={min} max={max} disabled={disabled} onChange={e=>emit(e.target.value)}/>
+ </span>;
+}
+
+// Show a stored date (yyyy-mm-dd or yyyy-mm-dd hh:mm[:ss]) as dd/mm/yyyy [hh:mm]; anything else is returned unchanged.
+export const showDate=v=>/^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(String(v??""))?isoToDmy(v):v;
