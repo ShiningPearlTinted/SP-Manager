@@ -421,12 +421,15 @@ function findPaymentTypeDbId(PDO $pdo, int $outletId, array $pay): int {
   return 0;
 }
 
-function findProductDbId(PDO $pdo, int $outletId, array $item): int {
+// $allowInactiveIds: product ids already stored on the document being re-synced.
+// History must stay saveable after a product is deactivated (e.g. by Reset database);
+// new lines still require an active product.
+function findProductDbId(PDO $pdo, int $outletId, array $item, array $allowInactiveIds = []): int {
   if(!tableExists($pdo,'products')) return 0;
   $schema=cols($pdo,'products');
   $activeSql=isset($schema['active'])?' AND COALESCE(active,1)=1':'';
   $candidate=(int)pick($item,['productDbId','product_id','productId','id'],0);
-  if($candidate>0){$q=$pdo->prepare('SELECT id FROM products WHERE id=?'.$activeSql.' LIMIT 1');$q->execute([$candidate]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
+  if($candidate>0){$candidateSql=in_array($candidate,$allowInactiveIds,true)?'':$activeSql;$q=$pdo->prepare('SELECT id FROM products WHERE id=?'.$candidateSql.' LIMIT 1');$q->execute([$candidate]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}
   $code=trim((string)pick($item,['productCode','code','sku'],''));
   if($code!==''){foreach(['product_code','sku','code'] as $field){if(!isset($schema[$field]))continue;$q=$pdo->prepare('SELECT id FROM products WHERE `'.$field.'`=?'.$activeSql.' ORDER BY id ASC LIMIT 1');$q->execute([$code]);$id=(int)($q->fetchColumn()?:0);if($id)return$id;}}
   $barcode=trim((string)pick($item,['barcode'],''));
@@ -868,8 +871,8 @@ try {
       }
     }
     if ($stateKey === 'purchases' && tableExists($pdo,'purchase_items')) {
-      $oldQty=purchaseItemsByProduct($pdo,$dbId);$newQty=[];$newCost=[];
-      foreach(($item['items']??[]) as $it){if(!is_array($it))continue;$pid=findProductDbId($pdo,$outletId,$it);if($pid<=0)throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));$qty=(float)pick($it,['qty','quantity'],0);$newQty[$pid]=($newQty[$pid]??0)+$qty;$newCost[$pid]=(float)pick($it,['cost','price','costPrice','cost_price'],0);}
+      $oldQty=purchaseItemsByProduct($pdo,$dbId);$newQty=[];$newCost=[];$purchaseStoredIds=array_map('intval',array_keys($oldQty));
+      foreach(($item['items']??[]) as $it){if(!is_array($it))continue;$pid=findProductDbId($pdo,$outletId,$it,$purchaseStoredIds);if($pid<=0)throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));$qty=(float)pick($it,['qty','quantity'],0);$newQty[$pid]=($newQty[$pid]??0)+$qty;$newCost[$pid]=(float)pick($it,['cost','price','costPrice','cost_price'],0);}
       foreach(array_unique(array_merge(array_keys($oldQty),array_keys($newQty))) as $pid){$delta=(float)($newQty[$pid]??0)-(float)($oldQty[$pid]??0);$cost=(float)($newCost[$pid]??0);if(abs($delta)>0.0000001){$stockExtra=['referenceId'=>$dbId];if(array_key_exists($pid,$newCost)){$stockExtra['cost']=$cost;$stockExtra['lastPurchasePrice']=$cost;}adjustProductStock($pdo,$outletId,(int)$pid,$delta,'Purchase',trim((string)pick($item,['no','number','purchaseNo'],'')),(string)pick($item,['createdBy','created_by','userId'],'SP-Manager'),$stockExtra);}}
     }
 
@@ -899,7 +902,7 @@ try {
       $cs = cols($pdo, 'purchase_items');
       foreach (($item['items'] ?? []) as $it) {
         if (!is_array($it)) continue;
-        $qty=spQuantity(pick($it,['qty','quantity'],0)); $cost=spMoney(pick($it,['cost','price','costPrice','cost_price','unit_cost'],0),'Purchase cost'); $productDbId=findProductDbId($pdo,$outletId,$it); if($productDbId<=0) throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));
+        $qty=spQuantity(pick($it,['qty','quantity'],0)); $cost=spMoney(pick($it,['cost','price','costPrice','cost_price','unit_cost'],0),'Purchase cost'); $productDbId=findProductDbId($pdo,$outletId,$it,$purchaseStoredIds??[]); if($productDbId<=0) throw new RuntimeException('Purchase item product was not found in database: '.(string)pick($it,['productName','name','productCode','code','productId'],''));
         $child=['purchase_id'=>$dbId,'product_id'=>$productDbId,'product_name'=>pick($it,['productName','name'],''),'quantity'=>$qty,'qty'=>$qty,'cost_price'=>$cost,'cost'=>$cost,'unit_price'=>$cost,'unit_cost'=>$cost,'tax_rate'=>pick($it,['taxRate','tax_rate'],0),'discount'=>pick($it,['discount'],0),'total'=>$qty*$cost,'line_total'=>$qty*$cost,'data_json'=>json_encode($it,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)];
         insertChild($pdo, 'purchase_items', $cs, ['purchase_id'=>['purchase_id'],'product_id'=>['productDbId','product_id','productId','id'],'product_name'=>['product_name','productName','name'],'quantity'=>['quantity','qty'],'qty'=>['qty','quantity'],'unit_cost'=>['unit_cost','cost_price','cost','price','unit_price'],'cost_price'=>['cost_price','cost','price','unit_price','unit_cost'],'cost'=>['cost','cost_price','price','unit_price','unit_cost'],'unit_price'=>['unit_price','cost','cost_price','price','unit_cost'],'tax_rate'=>['tax_rate','taxRate','tax'],'tax'=>['tax','taxRate','tax_amount'],'tax_amount'=>['tax_amount','tax','taxRate'],'discount'=>['discount','discount_amount'],'discount_amount'=>['discount_amount','discount'],'total'=>['total','line_total'],'line_total'=>['line_total','total'],'subtotal'=>['subtotal','line_subtotal'],'data_json'=>['data_json']], $child, $outletId);
         $childCount++;
