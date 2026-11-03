@@ -9053,3 +9053,57 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .dr.product-dr .product-master-table tbody tr.selected-product td{background:#e6f3f8!important}
 @media (max-width:760px){.product-dr .product-dr-toolbar{justify-content:center}.app .dr.product-dr .dr-tool{min-width:64px}}
 @media (max-width:760px){.product-dr .product-dr-toolbar .dr-sep{display:none}}
+
+/* ============================================================
+   POS PAYMENT SCREEN — MOBILE PHONE FIX
+   MOBILE PHONE ONLY (max-width:700px) — UI/LAYOUT ONLY
+   Desktop rules above use !important (e.g. 230px/520px/360px grid),
+   which overrode the earlier phone rules. These win on phones only.
+   Layout: header strip / payment types strip / scrollable main / numpad.
+   ============================================================ */
+@media (max-width:700px){
+  .ar-payment-screen{position:fixed!important;inset:0!important;width:100vw!important;height:var(--sp-pos-viewport-h,100dvh)!important;max-height:100dvh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:80}
+
+  .ar-payment-screen .ar-payment-header{flex:0 0 auto!important;height:auto!important;min-height:0!important;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;padding:6px 8px!important;overflow:hidden!important}
+  .ar-payment-screen .ar-payment-header>div:first-child{flex:0 0 auto!important;min-width:0!important;font-size:14px!important;line-height:1.15!important}
+  .ar-payment-screen .ar-payment-header small{font-size:10px!important}
+  .ar-payment-screen .payment-screen-actions{flex:1 1 auto!important;min-width:0!important;height:auto!important;display:flex!important;flex-wrap:nowrap!important;gap:6px!important;padding:0!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .ar-payment-screen .payment-screen-actions::-webkit-scrollbar{display:none}
+  .ar-payment-screen .payment-screen-actions>button{flex:0 0 auto!important;min-width:0!important;min-height:0!important;height:38px!important;margin:0!important;padding:0 11px!important;font-size:12px!important;white-space:nowrap!important}
+
+  .ar-payment-screen .ar-payment-body{flex:1 1 auto!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto minmax(0,1fr) auto!important;min-width:0!important;min-height:0!important;width:100%!important;height:auto!important;overflow:hidden!important}
+
+  /* Payment types: one horizontal, swipeable strip. */
+  .ar-payment-screen aside.payment-type-column{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important;min-width:0!important;width:auto!important;height:auto!important;max-height:none!important;padding:6px 8px!important;border-right:0!important;border-bottom:1px solid #3d4348!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .ar-payment-screen aside.payment-type-column::-webkit-scrollbar{display:none}
+  .ar-payment-screen aside.payment-type-column h3{display:none!important}
+  .ar-payment-screen .payment-type-column .payment-type-buttons{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;grid-template-rows:none!important;gap:6px!important;flex:0 0 auto!important}
+  .ar-payment-screen .payment-type-column button{flex:0 0 auto!important;width:auto!important;min-width:72px!important;height:40px!important;margin:0!important;padding:0 12px!important;font-size:13px!important;text-align:center!important;white-space:nowrap!important}
+  .ar-payment-screen .payment-type-column button.chosen{box-shadow:inset 0 -3px #19a9ed!important}
+  .ar-payment-screen .payment-type-column .split-button{margin:0!important}
+
+  /* Main: full width, scrolls if needed, complete button stays reachable. */
+  .ar-payment-screen main.payment-main{display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;width:auto!important;max-width:none!important;height:auto!important;margin:0!important;padding:10px 12px!important;gap:0!important;overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+  .ar-payment-screen .payment-main .payment-total-line{display:flex!important;align-items:baseline!important;justify-content:space-between!important;gap:10px!important;width:100%!important;max-width:none!important;margin:0!important;font-size:14px!important}
+  .ar-payment-screen .payment-main .payment-total-line b{font-size:28px!important;line-height:1.1!important;white-space:nowrap!important}
+  .ar-payment-screen .payment-main .paid-entry{display:flex!important;align-items:center!important;gap:10px!important;width:100%!important;max-width:none!important;margin:10px 0 0!important;font-size:14px!important}
+  .ar-payment-screen main.payment-main .paid-entry input{flex:1 1 auto!important;width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:8px 12px!important;font-size:24px!important;box-sizing:border-box!important}
+  .ar-payment-screen .payment-main .paid-entry span{display:none!important}
+  .ar-payment-screen .payment-main .payment-rule-line{display:flex!important;justify-content:space-between!important;gap:8px!important;width:100%!important;max-width:none!important;padding:8px 0!important;font-size:12px!important}
+  .ar-payment-screen .payment-main .change-display{display:flex!important;align-items:baseline!important;justify-content:space-between!important;gap:10px!important;width:100%!important;max-width:none!important;margin:4px 0 8px!important;padding:10px 14px!important;box-sizing:border-box!important}
+  .ar-payment-screen .payment-main .change-display span{font-size:14px!important}
+  .ar-payment-screen .payment-main .change-display b{font-size:28px!important;line-height:1.1!important;white-space:nowrap!important}
+  .ar-payment-screen .payment-main .payment-items-preview{width:100%!important;max-width:none!important;max-height:18dvh!important;overflow:auto!important;flex:0 0 auto!important}
+  .ar-payment-screen .payment-main .payment-items-preview div{display:flex!important;justify-content:space-between!important;gap:10px!important;padding:6px 8px!important;font-size:12px!important}
+  .ar-payment-screen .payment-main .payment-items-preview div span{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  .ar-payment-screen .payment-main .payment-items-preview div b{flex:0 0 auto!important;white-space:nowrap!important}
+  .ar-payment-screen .payment-main .payment-complete.ar-green{position:sticky!important;bottom:0!important;align-self:stretch!important;width:100%!important;min-height:48px!important;margin:auto 0 0!important;padding:12px!important;font-size:15px!important;z-index:2}
+
+  /* Numpad: compact 4x4 pad pinned at the bottom. */
+  .ar-payment-screen .payment-numpad{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important;min-width:0!important;min-height:0!important;width:auto!important;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))!important;border-left:0!important;border-top:1px solid #3d4348!important;align-content:start!important}
+  .ar-payment-screen .payment-numpad button{width:100%!important;min-width:0!important;height:42px!important;min-height:0!important;font-size:18px!important;touch-action:manipulation}
+}
+@media (max-width:700px) and (max-height:640px){
+  .ar-payment-screen .payment-numpad button{height:36px!important;font-size:16px!important}
+  .ar-payment-screen .payment-main .payment-items-preview{max-height:12dvh!important}
+}
