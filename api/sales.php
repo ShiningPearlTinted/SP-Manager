@@ -122,15 +122,21 @@ try{
   $customerId=resolveCustomer($pdo,$outletId,$sale);// Walk-in is customer id 1 in the POS and has no database row, so it is saved with no customer.
   if(!empty($sale['customerId'])&&(int)$sale['customerId']!==1&&$customerId<=0)throw new InvalidArgumentException('Customer is not available in this outlet.');$sale['customerId']=$customerId?:null;
   $sale['payments']=$sale['payments']??[];foreach($sale['items'] as &$it){$it['productDbId']=resolveProduct($pdo,$outletId,$it);}unset($it);foreach($sale['payments'] as &$pay){$pay['paymentTypeDbId']=resolvePaymentType($pdo,$outletId,$pay);}unset($pay);
-  $sale=spNormalizeSale($pdo,$outletId,$sale);spAssertOpenDay($pdo,$outletId,$sale['date']??null);
   // A sale from a quotation converts it in this transaction, so a failed sale leaves the quotation open.
-  $quotationId=(int)($sale['quotationId']??0);$quotationRow=null;
+  // Deposit lines come from document_payments, never from the browser; the browser's figure only has to agree with them.
+  $quotationId=(int)($sale['quotationId']??0);$quotationRow=null;$clientDeposit=0.0;$salePayments=[];
+  foreach((array)$sale['payments'] as $pay){if(is_array($pay)&&!empty($pay['isDeposit'])){$clientDeposit+=(float)($pay['amount']??0);continue;}$salePayments[]=$pay;}
   if($quotationId>0){
     $q=$pdo->prepare('SELECT * FROM quotations WHERE id=? AND outlet_id=? FOR UPDATE');$q->execute([$quotationId,$outletId]);$quotationRow=$q->fetch();if(!$quotationRow)throw new InvalidArgumentException('Quotation not found.');
     $quotationStatus=strtoupper((string)$quotationRow['status']);if($quotationStatus==='CONVERTED')throw new RuntimeException('This quotation has already been converted.');if($quotationStatus==='REJECTED')throw new RuntimeException('Rejected quotation cannot be converted.');
     $q=$pdo->prepare('SELECT id FROM invoices WHERE outlet_id=? AND quotation_id=? LIMIT 1');$q->execute([$outletId,$quotationId]);if($q->fetchColumn())throw new RuntimeException('This quotation has already been converted.');
-    if(tableExists($pdo,'document_payments')){$q=$pdo->prepare('SELECT COALESCE(SUM(amount),0) FROM document_payments WHERE quotation_id=? AND outlet_id=?');$q->execute([$quotationId,$outletId]);if((float)$q->fetchColumn()>0)throw new RuntimeException('This quotation has a deposit. Convert it to an invoice so the deposit carries forward.');}
-  }
+    $depositLines=[];$deposit=0.0;
+    if(tableExists($pdo,'document_payments')){$q=$pdo->prepare('SELECT payment_type_id,payment_type_name,amount,paid_at FROM document_payments WHERE quotation_id=? AND outlet_id=? ORDER BY paid_at,id');$q->execute([$quotationId,$outletId]);foreach($q->fetchAll() as $d){$amount=(float)$d['amount'];if($amount<=0)continue;$deposit+=$amount;$depositLines[]=['paymentTypeId'=>(int)$d['payment_type_id'],'paymentTypeDbId'=>(int)$d['payment_type_id'],'payment'=>(string)$d['payment_type_name'],'amount'=>$amount,'tendered'=>$amount,'change'=>0,'referenceNo'=>'Deposit '.$quotationRow['quotation_no'],'paidAt'=>$d['paid_at'],'isDeposit'=>true];}}
+    if(abs($deposit-$clientDeposit)>0.005)throw new RuntimeException('The deposit on this quotation has changed. Convert it again from Quotation.');
+    if($depositLines)$salePayments=[...$depositLines,...array_values(array_filter($salePayments,fn($x)=>!is_array($x)||(float)($x['amount']??0)>0))];
+  }elseif($clientDeposit>0)throw new InvalidArgumentException('A deposit can only be applied from a quotation.');
+  $sale['payments']=$salePayments;
+  $sale=spNormalizeSale($pdo,$outletId,$sale);spAssertOpenDay($pdo,$outletId,$sale['date']??null);
   $ss=cols($pdo,'sales');$map=['outlet_id'=>['outlet_id'],'sale_no'=>['no','saleNo','invoiceNo','invoice_number'],'sale_date'=>['date','saleDate'],'customer_id'=>['customerId','customer_id'],'order_name'=>['orderName','name'],'service_type'=>['serviceType'],'subtotal'=>['subtotal'],'discount'=>['discount'],'tax'=>['tax'],'total'=>['total'],'payment_status'=>['paymentStatus'],'status'=>['status'],'created_by'=>['createdBy','created_by','userId'],'notes'=>['internalNote','note','notes']];
   $row=writeRow($ss,$map,[...$sale,'no'=>$saleNo,'saleNo'=>$saleNo,'invoiceNo'=>$saleNo],$outletId);if(isset($ss['payment_status'])&&!isset($row['payment_status']))$row['payment_status']=!empty($sale['paid'])?'PAID':'UNPAID';if(isset($ss['status'])&&!isset($row['status']))$row['status']='COMPLETED';
   // Capture old stock before replacing children when updating an existing sale.
