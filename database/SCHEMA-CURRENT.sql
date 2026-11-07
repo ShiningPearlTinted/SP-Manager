@@ -953,7 +953,7 @@ CREATE TABLE `quotations` (
 CREATE TABLE `quotation_items` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `quotation_id` bigint(20) UNSIGNED NOT NULL,
-  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` bigint(20) UNSIGNED DEFAULT NULL,
   `product_name` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `quantity` decimal(15,3) NOT NULL,

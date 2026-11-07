@@ -9449,3 +9449,10 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 /* WhatsApp / share document on the receipt dialog */
 .receipt-choice-grid button.receipt-whatsapp svg{display:block;width:30px;height:30px;margin:0 auto;color:#25d366}
 .receipt-choice-grid button.receipt-whatsapp:disabled{cursor:wait;opacity:.7}
+
+/* Manual items on Quotation and Invoice */
+.document-items-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.document-items-head h3{margin:0}
+.document-items-head button{padding:7px 12px;border:1px solid #cfd9e5;border-radius:8px;background:#fff;color:#0f6f8f;font-size:13px;font-weight:600;cursor:pointer}
+.document-items-head button:hover{background:#f1f7fa}
+.document-manual-item{display:grid;gap:5px;min-width:190px}

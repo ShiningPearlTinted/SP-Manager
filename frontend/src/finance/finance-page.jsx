@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useState} from 'react';
+import {localDate} from "../booking/booking-utils.js";
 import {createFinanceRequest} from './finance-api.js';
 import {DateInput,showDate} from "../dr-tool.jsx";
 
@@ -142,7 +143,7 @@ export default function FinancePage({base,headers,setNotice,company}){
 
  // ---- Income & Expenses
  const catOptions=dir=>Object.entries(GROUP_LABEL).map(([g,label])=>({g,label,items:catalog.filter(c=>c.direction===dir&&c.group===g)})).filter(x=>x.items.length);
- const openForm=row=>{setForm(row?{...row,amount:String(row.amount)}:{id:0,entry_date:new Date().toISOString().slice(0,10),direction:'OUT',category:'',details:'',amount:''})};
+ const openForm=row=>{setForm(row?{...row,amount:String(row.amount)}:{id:0,entry_date:localDate(),direction:'OUT',category:'',details:'',amount:''})};
  const saveEntry=async e=>{e.preventDefault();if(!form.category){say('Select a category.');return}setSaving(true);try{await request('save-entry',{...form,amount:Number(form.amount)},true);setForm(null);say('Entry saved.');await Promise.all([loadEntries(),loadSummary()])}catch(err){say(err.message||'Entry could not be saved.')}finally{setSaving(false)}};
  const deleteEntry=async row=>{if(!window.confirm(`Delete ${row.category} ${money(row.amount)} on ${showDate(row.entry_date)}?`))return;try{await request('delete-entry',{id:row.id},true);await Promise.all([loadEntries(),loadSummary()]);say('Entry deleted.')}catch(err){say(err.message||'Entry could not be deleted.')}};
  const totalIn=sum(entries.filter(r=>r.direction==='IN').map(r=>r.amount)),totalOut=sum(entries.filter(r=>r.direction==='OUT').map(r=>r.amount));
