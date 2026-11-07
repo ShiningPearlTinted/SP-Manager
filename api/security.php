@@ -165,7 +165,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? 'accessPriceCheck' : 'manageProducts';
     if ($file === 'users.php') return in_array($action, ['logout','change-password'], true) ? '' : 'manageUsers';
     if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
-    if ($file === 'email.php') return 'managePayments';
+    if ($file === 'email.php') return $action === 'sale-pdf' ? 'accessPosSales' : 'managePayments';
     if ($file === 'document-counter.php')return match(strtolower((string)(spReadRequestBody()['document_type']??$_GET['document_type']??''))){'purchase'=>'managePurchases','quotation'=>'manageQuotation','customer'=>'manageCustomers',default=>'managePayments'};
     if ($file === 'outlets.php' || $file === 'outlet-provision.php') return 'accessOutletManagement';
     if ($file === 'reports.php') return 'manageReports';

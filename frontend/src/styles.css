@@ -9445,3 +9445,7 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .ar-payment-screen .payment-deposit b{white-space:nowrap}
 .ar-payment-screen .payment-deposit .payment-balance{padding-top:4px;border-top:1px solid rgba(255,255,255,.14)}
 .ar-payment-screen .payment-deposit .payment-balance b{font-size:28px;line-height:1.1;color:#4ade80}
+
+/* WhatsApp / share document on the receipt dialog */
+.receipt-choice-grid button.receipt-whatsapp svg{display:block;width:30px;height:30px;margin:0 auto;color:#25d366}
+.receipt-choice-grid button.receipt-whatsapp:disabled{cursor:wait;opacity:.7}
