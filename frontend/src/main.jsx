@@ -427,6 +427,8 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[offlinePendingCount,setOfflinePendingCount]=useState(0);
  useEffect(()=>{const expired=()=>{setSignedIn(false);setDbOnline(false)};window.addEventListener("sp-api-session-expired",expired);return()=>window.removeEventListener("sp-api-session-expired",expired)},[]);
  const[page,setPage]=useState(()=>bookingEmailTarget()?"Booking":"POS / Sales");
+ // A booking link opens Booking once. Booking has read it by now, so a later reload starts at POS as usual.
+ useEffect(()=>{if(signedIn&&bookingEmailTarget())window.history.replaceState(null,"",window.location.pathname+window.location.search)},[signedIn]);
  const[customerDraft,setCustomerDraft]=useState(null);
  const[posMenu,setPosMenu]=useState(false);
  const[showEndOfDay,setShowEndOfDay]=useState(false);
