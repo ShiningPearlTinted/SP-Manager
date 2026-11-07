@@ -140,6 +140,7 @@ CREATE TABLE `customers` (
   `phone` varchar(80) DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
   `vehicle_number` varchar(80) DEFAULT NULL,
+  `car_brand` varchar(100) DEFAULT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   `is_customer` tinyint(1) NOT NULL DEFAULT 1,
   `is_supplier` tinyint(1) NOT NULL DEFAULT 0,

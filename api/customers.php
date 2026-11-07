@@ -60,6 +60,15 @@ function customer_payload(array $c, int $outletId): array {
   ];
 }
 
+function customers_has_car_brand(PDO $pdo): bool {
+  static $has = null;
+  if ($has === null) {
+    $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='customers' AND column_name='car_brand'");
+    $q->execute(); $has=(int)$q->fetchColumn() > 0;
+  }
+  return $has;
+}
+
 function supplier_address(array $p): ?string {
   $parts=[];
   foreach (['building_number','street_name','additional_street_name','district','postal_code','city','state','country'] as $k) {
@@ -104,6 +113,12 @@ function sync_supplier_role(PDO $pdo, int $customerId, int $outletId, array $p):
 function save_one(PDO $pdo, array $c, int $outletId): int {
   $p = customer_payload($c,$outletId);
   if ($p['name'] === '') throw new InvalidArgumentException('Customer name is required.');
+  // Saves keep working before the migration runs, and a request without the field leaves the stored brand alone.
+  if ((array_key_exists('carBrand',$c) || array_key_exists('car_brand',$c)) && customers_has_car_brand($pdo)) {
+    $brand=trim((string)($c['carBrand'] ?? $c['car_brand'] ?? ''));
+    if (mb_strlen($brand) > 100) throw new InvalidArgumentException('Car brand must be 100 characters or fewer.');
+    $p['car_brand']=$brand !== '' ? $brand : null;
+  }
   $id = isset($c['dbId']) && ctype_digit((string)$c['dbId']) ? (int)$c['dbId'] : 0;
   if (!$id && isset($c['id']) && ctype_digit((string)$c['id'])) $id = (int)$c['id'];
   $existing = 0;
