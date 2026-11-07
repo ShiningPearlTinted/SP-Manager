@@ -172,7 +172,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'documents.php' && $action==='list-register') return 'manageDocuments';
     if ($file === 'documents.php' && $action==='record-payment') return (spReadRequestBody()['document_type']??'')==='quotation'?'manageQuotation':'manageInvoice';
     if ($file === 'documents.php') return in_array($action, ['list-quotations','save-quotation','delete-quotation','convert'], true) ? 'manageQuotation' : 'manageInvoice';
-    if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete'], true) ? 'manageCustomers' : '';
+    if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete','register-link'], true) ? 'manageCustomers' : '';
     if ($file === 'label-printing.php') return 'manageProducts';
     if ($file === 'finance.php') return 'manageReports';
     if ($file === 'products.php' && $action==='stock-adjust') return 'manageInventory';
@@ -257,6 +257,9 @@ function spInstallCorsAndGuard(): void {
         spBookingBridgeGuard();
         return;
     }
+
+    // The outlet QR registration page has no session: customer-register.php checks its own signed link and rate limit.
+    if ($file === 'customer-register.php') return;
 
     // The customer-facing display is a read-only capability URL. Its HMAC key is
     // issued only when an authenticated manager saves the terminal pairing.

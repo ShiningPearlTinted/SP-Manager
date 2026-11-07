@@ -69,6 +69,53 @@ function customers_has_car_brand(PDO $pdo): bool {
   return $has;
 }
 
+function authorized_outlets(PDO $pdo, int $outletId): array {
+  $ids=[$outletId];
+  $q=$pdo->prepare('SELECT outlet_id FROM user_outlets WHERE user_id=? AND active=1');
+  $q->execute([(int)($_SERVER['SP_AUTH_USER_ID'] ?? 0)]);
+  foreach($q->fetchAll(PDO::FETCH_COLUMN) as $id)$ids[]=(int)$id;
+  return array_values(array_unique($ids));
+}
+function table_exists(PDO $pdo, string $table): bool {
+  $q=$pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
+  $q->execute([$table]); return (int)$q->fetchColumn() > 0;
+}
+function visit_details(PDO $pdo, int $id, int $outletId): array {
+  $q=$pdo->prepare('SELECT id FROM customers WHERE id=? AND (outlet_id=? OR outlet_id IS NULL) LIMIT 1');
+  $q->execute([$id,$outletId]);
+  if(!$q->fetchColumn()) throw new InvalidArgumentException('Customer not found in this outlet.');
+  $outlets=authorized_outlets($pdo,$outletId);
+  $summary=spCustomerVisitTotals($pdo,$outlets)[$id] ?? ['visits'=>0,'last_visit'=>null,'ids'=>[$id]];
+  $ids=array_map('intval',$summary['ids']); $marks=implode(',',array_fill(0,count($ids),'?'));
+  $vehicles=[];
+  $add=function(?string $plate,?string $brand,?string $model=null) use (&$vehicles): void {
+    $key=spNormalizePlate($plate); if($key==='')return;
+    if(!isset($vehicles[$key]))$vehicles[$key]=['plate'=>trim((string)$plate),'brand'=>trim((string)$brand),'model'=>trim((string)$model)];
+    elseif($vehicles[$key]['brand']==='')$vehicles[$key]['brand']=trim((string)$brand);
+  };
+  $q=$pdo->prepare('SELECT * FROM customers WHERE id IN ('.$marks.') ORDER BY id=? DESC,id');
+  $q->execute([...$ids,$id]);
+  foreach($q->fetchAll() as $row)$add($row['vehicle_number']??null,$row['car_brand']??null);
+  if(table_exists($pdo,'customer_vehicles')){
+    $q=$pdo->prepare('SELECT vehicle_number,make,model FROM customer_vehicles WHERE active=1 AND customer_id IN ('.$marks.') ORDER BY id');
+    $q->execute($ids);
+    foreach($q->fetchAll() as $row)$add($row['vehicle_number'],$row['make'],$row['model']);
+  }
+  // The history is transaction data, so it follows the sales history permission.
+  $history=null;
+  if(spHasPermission('viewSalesHistory')){
+    $outletMarks=implode(',',array_fill(0,count($outlets),'?'));
+    $q=$pdo->prepare('SELECT s.id,s.sale_no,s.sale_date,s.total,s.service_type,o.outlet_name FROM sales s LEFT JOIN outlets o ON o.id=s.outlet_id WHERE s.customer_id IN ('.$marks.') AND s.outlet_id IN ('.$outletMarks.') AND '.preg_replace('/\b(status|payment_status|total)\b/','s.$1',spCompletedSaleSql()).' ORDER BY s.sale_date DESC,s.id DESC LIMIT 50');
+    $q->execute([...$ids,...$outlets]); $history=$q->fetchAll();
+  }
+  $registrations=[];
+  if(table_exists($pdo,'customer_notes')){
+    $q=$pdo->prepare("SELECT note_text,created_at FROM customer_notes WHERE customer_id=? AND note_type='QR_REGISTRATION' ORDER BY id DESC LIMIT 5");
+    $q->execute([$id]); $registrations=$q->fetchAll();
+  }
+  return ['ok'=>true,'total_visits'=>(int)$summary['visits'],'last_visit_at'=>$summary['last_visit'],'vehicles'=>array_values($vehicles),'history'=>$history,'registrations'=>$registrations];
+}
+
 function supplier_address(array $p): ?string {
   $parts=[];
   foreach (['building_number','street_name','additional_street_name','district','postal_code','city','state','country'] as $k) {
@@ -156,7 +203,16 @@ try {
   if($action==='list' && $_SERVER['REQUEST_METHOD']==='GET'){
     $q=$pdo->prepare('SELECT * FROM customers WHERE outlet_id=? OR outlet_id IS NULL ORDER BY id ASC');
     $q->execute([$outletId]); $rows=$q->fetchAll();
+    $totals=spCustomerVisitTotals($pdo,authorized_outlets($pdo,$outletId));
+    foreach($rows as &$row){$total=$totals[(int)$row['id']] ?? null;$row['total_visits']=$total['visits'] ?? 0;$row['last_visit_at']=$total['last_visit'] ?? null;}
+    unset($row);
     echo json_encode(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'customers'=>$rows],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); exit;
+  }
+  if($action==='visit-details' && $_SERVER['REQUEST_METHOD']==='GET'){
+    echo json_encode(visit_details($pdo,(int)($_GET['id'] ?? 0),$outletId),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); exit;
+  }
+  if($action==='register-link' && $_SERVER['REQUEST_METHOD']==='GET'){
+    echo json_encode(['ok'=>true,'outlet_id'=>$outletId,'key'=>spCustomerRegisterKey($outletId)]); exit;
   }
   if($action==='save' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=body_json(); $c=is_array($b['customer']??null)?$b['customer']:[];

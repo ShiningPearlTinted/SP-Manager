@@ -148,6 +148,43 @@ function spValidateUserChange(PDO $pdo, int $target, array $input, int $outlet):
         $q=$pdo->prepare("SELECT id FROM users WHERE enabled=1 AND role_id=? AND id<>? FOR UPDATE");$q->execute([(int)$old['role_id'],$target]);if(!$q->fetch())throw new RuntimeException('At least one enabled Administrator must remain.');
     }
 }
+// Customer matching and visit counts, shared by customers.php and the public QR registration page.
+function spNormalizePhone(?string $value): string {
+    $digits=preg_replace('/\D+/','',(string)$value)??'';
+    if(str_starts_with($digits,'0060'))$digits=substr($digits,2);
+    if(str_starts_with($digits,'60')&&strlen($digits)>=11)$digits='0'.substr($digits,2);
+    return strlen($digits)>=9&&strlen($digits)<=15?$digits:'';
+}
+function spNormalizePlate(?string $value): string {
+    return preg_replace('/[^A-Z0-9]+/','',strtoupper((string)$value))??'';
+}
+// A visit is one completed, paid sale. Void, refund, cancelled, draft and unpaid sales never count.
+function spCompletedSaleSql(): string {
+    return "UPPER(TRIM(COALESCE(status,''))) IN ('COMPLETED','COMPLETE') AND (UPPER(TRIM(COALESCE(payment_status,'')))='PAID' OR (TRIM(COALESCE(payment_status,''))='' AND total>0))";
+}
+// Customer rows belong to one outlet, so the same phone in another outlet is the same person there.
+// Every sale is counted once, under its own customer_id, and only from the given outlets.
+function spCustomerVisitTotals(PDO $pdo,array $outlets): array {
+    $outlets=array_values(array_unique(array_filter(array_map('intval',$outlets))));if(!$outlets)return[];
+    $marks=implode(',',array_fill(0,count($outlets),'?'));
+    $q=$pdo->prepare('SELECT id,outlet_id,phone FROM customers WHERE outlet_id IN ('.$marks.') OR outlet_id IS NULL');$q->execute($outlets);$customers=$q->fetchAll();
+    $q=$pdo->prepare('SELECT customer_id,COUNT(*) visits,MAX(sale_date) last_visit FROM sales WHERE outlet_id IN ('.$marks.') AND customer_id IS NOT NULL AND '.spCompletedSaleSql().' GROUP BY customer_id');$q->execute($outlets);
+    $sales=[];foreach($q->fetchAll() as $row)$sales[(int)$row['customer_id']]=$row;
+    $byPhone=[];foreach($customers as $row){$phone=spNormalizePhone($row['phone']??'');if($phone!=='')$byPhone[$phone][]=$row;}
+    $totals=[];
+    foreach($customers as $row){
+        $id=(int)$row['id'];$ids=[$id];$phone=spNormalizePhone($row['phone']??'');
+        if($phone!==''&&$row['outlet_id']!==null)foreach($byPhone[$phone] as $peer)if($peer['outlet_id']!==null&&(int)$peer['outlet_id']!==(int)$row['outlet_id'])$ids[]=(int)$peer['id'];
+        $visits=0;$last=null;
+        foreach($ids as $linked)if(isset($sales[$linked])){$visits+=(int)$sales[$linked]['visits'];$when=(string)$sales[$linked]['last_visit'];if($last===null||$when>$last)$last=$when;}
+        $totals[$id]=['visits'=>$visits,'last_visit'=>$last,'ids'=>$ids];
+    }
+    return $totals;
+}
+function spCustomerRegisterKey(int $outlet): string {
+    return substr(hash_hmac('sha256','customer-register:'.$outlet,spAuthSecret()),0,32);
+}
+
 function spThrottleLogin(PDO $pdo,string $username):void {
  $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');$now=time();$buckets=[[hash('sha256',strtolower($username).'|'.$ip),5],[hash('sha256','ip:'.$ip),100]];
  foreach($buckets as [$key,$limit]){$pdo->prepare('INSERT INTO sp_login_attempts(bucket_key,window_start,attempts) VALUES(?,?,1) ON DUPLICATE KEY UPDATE attempts=IF(window_start<? ,1,attempts+1),window_start=IF(window_start<? OR attempts>=?,VALUES(window_start),window_start)')->execute([$key,$now,$now-900,$now-900,$limit]);$q=$pdo->prepare('SELECT attempts FROM sp_login_attempts WHERE bucket_key=?');$q->execute([$key]);if((int)$q->fetchColumn()>$limit)spApiRespond(['ok'=>false,'error'=>'Too many sign-in attempts. Try again in 15 minutes.'],429);}

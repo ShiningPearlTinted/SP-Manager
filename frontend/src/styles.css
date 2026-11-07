@@ -9337,3 +9337,31 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .sp-date > .sp-date-native{position:absolute!important;left:0!important;bottom:0!important;width:100%!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;opacity:0!important;pointer-events:none!important}
 .sp-date.invalid > input[type="text"]{border-color:#d92d20!important;box-shadow:0 0 0 3px rgba(217,45,32,.12)!important}
 .app-theme-night .sp-date > .sp-date-btn{color:#cbd5e1!important}
+
+/* Customers: visit count, details panel and QR register. */
+.customer-table .customer-visits-col{text-align:center;white-space:nowrap}
+.customer-visit-info{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+.customer-visit-info section{padding-top:12px;border-top:1px solid var(--mg-border,#e2e8f0)}
+.customer-visit-info h4{margin:0 0 8px;font-size:13.5px;font-weight:700}
+.customer-visit-info h4 span{color:var(--mg-muted,#64748b);font-weight:600}
+.customer-visit-info dl{display:grid;grid-template-columns:70px minmax(0,1fr);gap:4px 8px;margin:0;font-size:12.5px}
+.customer-visit-info dt{color:var(--mg-muted,#64748b)}
+.customer-visit-info dd{margin:0;overflow-wrap:anywhere}
+.customer-visit-info p{margin:0;color:var(--mg-muted,#64748b);font-size:12.5px}
+.customer-visit-info ul{display:flex;flex-direction:column;gap:6px;max-height:240px;margin:0;padding:0;overflow:auto;list-style:none}
+.customer-visit-info li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 8px;padding:7px 9px;border:1px solid var(--mg-border,#e2e8f0);border-radius:8px;font-size:12.5px}
+.customer-visit-info li b{font-weight:600;overflow-wrap:anywhere}
+.customer-visit-info li small{grid-column:1;color:var(--mg-muted,#64748b);font-size:11.5px}
+.customer-visit-info li em{grid-column:2;grid-row:1/span 2;align-self:center;font-style:normal;font-weight:600;white-space:nowrap}
+.customer-visit-info li span{grid-column:1/-1;overflow-wrap:anywhere}
+.customer-qr-modal{width:min(420px,calc(100vw - 32px))!important;height:auto!important}
+.customer-qr-body{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 24px;text-align:center;font-size:13px}
+.customer-qr-body p{margin:0;color:var(--mg-muted,#64748b)}
+.customer-qr-body input{width:100%;font-size:12px!important}
+.customer-qr-code{width:240px;max-width:100%;padding:0;background:#fff}
+.customer-qr-code svg{display:block;width:100%;height:auto}
+.customer-qr-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--mg-border,#e2e8f0)}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-table th.customer-visits-col{width:64px;min-width:64px;white-space:normal;line-height:1.2}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-visit-info{padding:0 18px 18px}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-visit-info h4{margin:0 0 8px!important;padding:0!important;font-size:13.5px!important;font-weight:700!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-qr-foot > button:not(.secondary){background:var(--mg-accent,#087ea4)!important;border-color:var(--mg-accent,#087ea4)!important;color:#fff!important}
