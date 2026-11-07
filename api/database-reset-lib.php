@@ -3,7 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/database-backup-lib.php';
 
 function spResetSelection(array $input): array {
-    $out=[];foreach(['products','customers','documents'] as $key){if(!isset($input[$key])||!is_bool($input[$key]))throw new InvalidArgumentException('Select Products, Customers or Documents.');$out[$key]=$input[$key];}
+    $out=[];foreach(['products','customers','documents','hr','finance'] as $key){$value=$input[$key]??false;if(!is_bool($value))throw new InvalidArgumentException('Select Products, Customers, Documents, HR Management or Finance.');$out[$key]=$value;}
     if(!in_array(true,$out,true))throw new InvalidArgumentException('Select at least one entity.');return $out;
 }
 /** Every deletion is explicit. Incoming references are checked even for SET NULL / CASCADE. */
@@ -17,10 +17,20 @@ function spResetPlan(PDO $pdo,array $snapshot,int $outlet,array $selected): arra
         if(!isset($tables[$table])||!in_array('outlet_id',$tables[$table]['columns'],true)||!in_array('id',$tables[$table]['columns'],true))throw new RuntimeException('Reset schema is incomplete: '.$table);
         foreach($tables[$table]['rows'] as $row)if((int)($row['outlet_id']??0)===$outlet)$delete[$table][(int)$row['id']]=$row;
     }
+    // HR and Finance tables may be missing on an older database, so an absent table is skipped.
+    $hrTables=['hr_attendance','hr_claims','hr_documents','hr_leave_requests','hr_overtime','hr_payslips','hr_salary_advances','hr_shifts'];
+    $optional=array_merge($selected['hr']?$hrTables:[],$selected['finance']?['sp_finance_entries']:[]);
+    foreach($optional as $table)if(isset($tables[$table]))foreach($tables[$table]['rows'] as $row)if((int)($row['outlet_id']??0)===$outlet)$delete[$table][(int)$row['id']]=$row;
+    // Employees belong to their primary outlet; salary and outlet history follow them through employee_id.
+    if($selected['hr']&&isset($tables['hr_employees']))foreach($tables['hr_employees']['rows'] as $row)if((int)($row['primary_outlet_id']??0)===$outlet)$delete['hr_employees'][(int)$row['id']]=$row;
+    if($selected['finance']&&isset($tables['sp_finance_tax_settings']))foreach($tables['sp_finance_tax_settings']['rows'] as $row)if((int)($row['outlet_id']??0)===$outlet)$delete['sp_finance_tax_settings'][(int)$row['tax_year']]=$row;
     $allowedChildren=['sale_items','sale_payments','sale_status_history','sale_refund_items','purchase_items','invoice_items','quotation_items','open_order_items','pos_order_context','maintenance_records','warranty_claims','loyalty_transactions','customer_notes','customer_vehicles'];
     if($selected['documents'])$allowedChildren=array_merge($allowedChildren,$roots);
+    // hr_employees is deliberately not a child: an employee of another outlet is never deleted through a reference.
+    if($selected['hr'])$allowedChildren=array_merge($allowedChildren,$hrTables,['hr_outlet_history','hr_payslip_salary_advances','hr_salary_history']);
     // Known application references are checked in addition to physical foreign keys.
     $parents=['sale_id'=>'sales','original_sale_id'=>'sales','sale_item_id'=>'sale_items','refund_id'=>'sale_refunds','purchase_id'=>'purchases','invoice_id'=>'invoices','quotation_id'=>'quotations','open_order_id'=>'open_orders','maintenance_id'=>'maintenance','warranty_id'=>'warranties','customer_id'=>'customers','supplier_id'=>'suppliers','loyalty_account_id'=>'loyalty_accounts','register_session_id'=>'register_sessions'];
+    if(isset($tables['hr_employees']))$parents+=['employee_id'=>'hr_employees','reporting_manager_id'=>'hr_employees','payslip_id'=>'hr_payslips','salary_advance_id'=>'hr_salary_advances','salary_history_id'=>'hr_salary_history'];
     $edges=[];
     foreach($tables as $table=>$data)foreach($data['columns'] as $col)if(isset($parents[$col]))$edges[$table.'|'.$col.'|'.$parents[$col]]=[$table,$col,$parents[$col],'id'];
     foreach($pdo->query("SELECT TABLE_NAME,COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL")->fetchAll() as $fk){
@@ -89,7 +99,11 @@ function spResetPlan(PDO $pdo,array $snapshot,int $outlet,array $selected): arra
 }
 function spResetApply(PDO $pdo,array $plan,int $outlet): void {
     if(!$pdo->inTransaction()||$plan['blockers'])throw new RuntimeException('Reset plan is blocked.');
-    foreach($plan['order'] as $table)foreach(array_chunk(array_keys($plan['delete'][$table]),500) as $ids){$q=$pdo->prepare('DELETE FROM '.spBackupIdent($table).' WHERE id IN ('.implode(',',array_fill(0,count($ids),'?')).')');$q->execute($ids);}
+    // A manager and their reports can be deleted together, so clear the self-reference first.
+    foreach(array_chunk(array_keys($plan['delete']['hr_employees']??[]),500) as $ids)$pdo->prepare('UPDATE hr_employees SET reporting_manager_id=NULL WHERE id IN ('.implode(',',array_fill(0,count($ids),'?')).')')->execute($ids);
+    foreach($plan['order'] as $table)foreach(array_chunk(array_keys($plan['delete'][$table]),500) as $ids){$marks=implode(',',array_fill(0,count($ids),'?'));
+        if($table==='sp_finance_tax_settings'){$pdo->prepare('DELETE FROM sp_finance_tax_settings WHERE outlet_id=? AND tax_year IN ('.$marks.')')->execute([$outlet,...$ids]);continue;}
+        $q=$pdo->prepare('DELETE FROM '.spBackupIdent($table).' WHERE id IN ('.$marks.')');$q->execute($ids);}
     foreach($plan['updates'] as $table=>$rows)foreach($rows as $entry){$values=$entry['values'];$set=implode(',',array_map(fn($c)=>spBackupIdent($c).'=?',array_keys($values)));$params=array_values($values);
         if($table==='sp_document_counters'){$where='outlet_id=? AND doc_type=?';$params[]=$outlet;$params[]=$entry['before']['doc_type'];}else{$where='id=?';$params[]=$entry['before']['id'];}
         $pdo->prepare('UPDATE '.spBackupIdent($table).' SET '.$set.' WHERE '.$where)->execute($params);

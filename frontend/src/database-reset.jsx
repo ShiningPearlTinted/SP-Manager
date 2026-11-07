@@ -1,7 +1,7 @@
 import React, {useRef, useState} from 'react';
 
 export default function DatabaseReset({request, onComplete}) {
- const [selection,setSelection]=useState({products:false,customers:false,documents:false});
+ const [selection,setSelection]=useState({products:false,customers:false,documents:false,hr:false,finance:false});
  const [preview,setPreview]=useState(null),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState(null);
  const pending=useRef(null);
@@ -22,6 +22,8 @@ export default function DatabaseReset({request, onComplete}) {
    <label className="reset-option"><input type="checkbox" checked={selection.products} onChange={e=>choose('products',e.target.checked)}/><span><strong>Products</strong><small>Deactivate outlet product assignments, zero outlet stock, and remove outlet prices, promotions, discounts, taxes and open orders. Shared product masters remain.</small></span></label>
    <label className="reset-option"><input type="checkbox" checked={selection.customers} onChange={e=>choose('customers',e.target.checked)}/><span><strong>Customers / suppliers</strong><small>Delete outlet-owned records and associated vehicles, notes and loyalty accounts. Shared customers remain. Retained document references block reset.</small></span></label>
    <label className="reset-option"><input type="checkbox" checked={selection.documents} onChange={e=>choose('documents',e.target.checked)}/><span><strong>Documents</strong><small>Delete outlet sales, purchases, invoices, quotations, orders, payments, refunds, warranties, maintenance and daily reports. Zero outlet stock and reset document counters and business day.</small></span></label>
+   <label className="reset-option"><input type="checkbox" checked={selection.hr} onChange={e=>choose('hr',e.target.checked)}/><span><strong>HR Management</strong><small>Delete this outlet's employees, attendance, shifts, leave, overtime, claims, payslips, salary history, salary advances and HR documents. Departments, positions and user logins remain. Employee records used by another outlet block reset.</small></span></label>
+   <label className="reset-option"><input type="checkbox" checked={selection.finance} onChange={e=>choose('finance',e.target.checked)}/><span><strong>Finance</strong><small>Delete this outlet's income and expense entries and Tax & Zakat settings. Sales figures in Finance follow Documents.</small></span></label>
    <button type="button" disabled={!Object.values(selection).some(Boolean)} onClick={inspect}>{busy?'Checking…':'Preview reset'}</button>
   </fieldset>
   {error&&<div className="reset-warning" role="alert">{error}</div>}
