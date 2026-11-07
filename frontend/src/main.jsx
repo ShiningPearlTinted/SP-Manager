@@ -1715,8 +1715,9 @@ function POS({notificationCenter,setCart,updateLinePrice,posOrderMeta,setPosOrde
  const[receiptSharing,setReceiptSharing]=useState(false);
  const receiptCustomer=lastSale&&!isWalkInCustomer(customers,Number(lastSale.customerId))?customers.find(x=>String(x.id)===String(lastSale.customerId))||null:null;
  const receiptWhatsapp=whatsappNumber(receiptCustomer?.phone);
- const shareReceiptPdf=async sale=>{
+ const whatsappReceipt=async sale=>{
   if(!sale?.dbId||sale.offlinePending){await showActionMessage("Share Document","This sale has not reached the database yet. Use Save as PDF for now.");return}
+  const text=receiptWhatsappText(sale,receiptCustomer?.name,company?.name||"Shining Pearl Tinted");
   setReceiptSharing(true);
   try{
    const response=await fetch(centralSalesApi().replace(/sales\.php$/,"email.php")+"?action=sale-pdf",{method:"POST",headers:apiHeaders({"Content-Type":"application/json"}),body:JSON.stringify({outlet_id:activeOutletId(),sale_id:sale.dbId})});
@@ -1724,16 +1725,26 @@ function POS({notificationCenter,setCart,updateLinePrice,posOrderMeta,setPosOrde
    if(!response.ok||!data?.ok||!data.pdf)throw new Error(data?.error||"The invoice PDF could not be created.");
    const bytes=Uint8Array.from(atob(data.pdf),c=>c.charCodeAt(0));
    const file=new File([bytes],data.filename||`Invoice-${sale.no}.pdf`,{type:"application/pdf"});
-   if(navigator.canShare?.({files:[file]})){
-    try{await navigator.share({files:[file],title:`Invoice ${sale.no}`});return}
-    catch(e){if(e?.name==="AbortError")return}
+   const title=`Invoice ${sale.no}`;
+   const shareData=navigator.canShare?.({files:[file],text,title})?{files:[file],text,title}:navigator.canShare?.({files:[file],title})?{files:[file],title}:null;
+   if(shareData){
+    try{await navigator.share(shareData);return}
+    catch(e){
+     if(e?.name==="AbortError")return;
+     // Preparing the PDF can use up the browser's permission for this click; pressing OK grants it again.
+     if(e?.name==="NotAllowedError"){
+      await showActionMessage("Share Document","The PDF is ready. Press OK to open the share menu.");
+      try{await navigator.share(shareData);return}
+      catch(retryError){if(retryError?.name==="AbortError")return}
+     }
+    }
    }
    const url=URL.createObjectURL(file);const link=document.createElement("a");link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
-   await showActionMessage("Share Document",`This device cannot open the share menu, so ${file.name} was downloaded. Attach it in WhatsApp.`);
+   await showActionMessage("Share Document",`${file.name} was downloaded. Press OK to open WhatsApp${receiptWhatsapp?"":", choose the customer"} and attach the PDF.`);
+   window.open(`https://wa.me/${receiptWhatsapp}?text=${encodeURIComponent(text)}`,"_blank","noopener");
   }catch(e){await showActionMessage("Share Document",e?.message||"The invoice PDF could not be created.")}
   finally{setReceiptSharing(false)}
  };
- const whatsappReceipt=sale=>{if(!receiptWhatsapp){shareReceiptPdf(sale);return}window.open(`https://wa.me/${receiptWhatsapp}?text=${encodeURIComponent(receiptWhatsappText(sale,receiptCustomer?.name,company?.name||"Shining Pearl Tinted"))}`,"_blank","noopener")};
  const finishPayment=async()=>{
    let runtimePaymentTypes=Array.isArray(paymentTypes)?paymentTypes:[];
    try{const fresh=await centralRelationalRead("paymentTypes");if(Array.isArray(fresh)&&fresh.length)runtimePaymentTypes=fresh;}catch{}
