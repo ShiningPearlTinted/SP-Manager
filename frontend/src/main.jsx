@@ -354,6 +354,7 @@ const OUTLET_CACHE_KEYS=new Set(["products","categories","productGroups","produc
 const cacheKey=k=>OUTLET_CACHE_KEYS.has(k)?`sp_outlet_${String(activeOutletId())}_${k}`:`sp_${k}`;
 
 const load=(k,d)=>{try{const scoped=localStorage.getItem(cacheKey(k));if(scoped!==null)return JSON.parse(scoped)??d;if(OUTLET_CACHE_KEYS.has(k))return d;return JSON.parse(localStorage.getItem("sp_"+k))??d}catch{return d}};
+const POS_DRAFT_PREFIX="sp_pos_draft_";const POS_DRAFT_MAX_AGE=24*60*60*1000;
 const cacheSet=(k,v)=>writeCache(cacheKey(k),v);
 // Browser storage holds about 5 MB. A cache write must never break loading data from SP-Central:
 // when the full value does not fit, store it without large embedded images (the app keeps them in memory),
@@ -477,6 +478,15 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[lastSale,setLastSale]=useState(null);
  const[showCashInOutModal,setShowCashInOutModal]=useState(false);
  const[posOrderMeta,setPosOrderMeta]=useState({name:"",comment:"",serviceType:"Dine In",table:""});
+ // The sale in progress lives in memory, so keep a copy per outlet and user to survive a reload or browser crash.
+ const posDraftKey=signedIn&&activeUser?`${POS_DRAFT_PREFIX}${activeOutletId()}_${activeUser.id||activeUser.username||"user"}`:"";
+ const[posDraftLoaded,setPosDraftLoaded]=useState("");
+ useEffect(()=>{if(!posDraftKey||posDraftLoaded===posDraftKey)return;let draft=null;try{draft=JSON.parse(localStorage.getItem(posDraftKey)||"null")}catch{}
+  const usable=Array.isArray(draft?.cart)&&draft.cart.length&&Date.now()-Number(draft.savedAt||0)<POS_DRAFT_MAX_AGE;
+  if(draft&&!usable){try{localStorage.removeItem(posDraftKey)}catch{}}
+  setCart(usable?draft.cart:[]);setDiscount(usable?Number(draft.discount)||0:0);setDiscountFixed(usable?Number(draft.discountFixed)||0:0);setCustomer(usable&&draft.customer!=null&&(!customers.length||customers.some(c=>c.id===draft.customer))?draft.customer:1);setPosOrderMeta(usable&&draft.meta?draft.meta:{name:"",comment:"",serviceType:"Dine In",table:""});
+  setPosDraftLoaded(posDraftKey)},[posDraftKey]);
+ useEffect(()=>{if(!posDraftKey||posDraftLoaded!==posDraftKey)return;try{if(cart.length)localStorage.setItem(posDraftKey,JSON.stringify(stripCachedImages({savedAt:Date.now(),cart,customer,discount,discountFixed,meta:posOrderMeta})));else localStorage.removeItem(posDraftKey)}catch(e){console.warn("POS draft could not be saved",e?.message||e)}},[posDraftKey,posDraftLoaded,cart,customer,discount,discountFixed,posOrderMeta]);
  const[customerDisplayTerminal,setCustomerDisplayTerminal]=useState(()=>deepMerge(CUSTOMER_DISPLAY_DEFAULTS,load("customerDisplayTerminal",{})));
  const[priceTagSettings,setPriceTagSettings]=useState(()=>load("priceTagSettings",{}));
  const publishCustomerDisplay=useCallback(async(state)=>{const t=deepMerge(CUSTOMER_DISPLAY_DEFAULTS,customerDisplayTerminal||{});if(t.enabled===false||!t.displayId)return;let lastError=null;for(let attempt=0;attempt<3;attempt++){try{await customerDisplayRequest("/customer-display.php?action=state",{method:"POST",body:JSON.stringify({display_code:t.displayId,terminal_id:t.terminalId,terminal_name:t.terminalName,terminal_type:t.terminalType,outlet_id:activeOutletId()||t.outletId,state})});return true}catch(e){lastError=e;if(attempt<2)await new Promise(r=>setTimeout(r,350));}}console.warn("Customer Display update failed",lastError?.message||lastError);setNotice("Customer Display update failed: "+String(lastError?.message||lastError||"Unknown error"));return false},[customerDisplayTerminal]);
@@ -718,7 +728,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
   if(freshLowStockItems.length){try{sessionStorage.setItem("sp_low_stock_notified",JSON.stringify([...new Set([...notifiedIds,...freshLowStockItems.map(x=>x.product.id)])]))}catch{};setLowStockAlert(freshLowStockItems.map(x=>x.product))}
   let syncedSale=sale;
   try{
-   if(sessionStorage.getItem("sp_auth_mode")==="offline"){if(!activeOfflineGrant||activeOfflineExpiry<=Date.now())throw new Error("Offline access expired. Connect to the database and sign in again.");await offlineStore.enqueueSale(sale);try{localStorage.removeItem(pendingKey)}catch{};syncedSale={...sale,offlinePending:true};const offlineSales=ns.map(x=>String(x.id)===String(sale.id)?syncedSale:x);cacheSetJSON("sales",JSON.stringify(offlineSales));setSales(offlineSales);setOfflinePendingCount(await offlineStore.pendingCount());}
+   if(sessionStorage.getItem("sp_auth_mode")==="offline"){if(!activeOfflineGrant||activeOfflineExpiry<=Date.now())throw new Error("Offline access expired. Connect to the database and sign in again.");await offlineStore.enqueueSale(sale);try{localStorage.removeItem(pendingKey);localStorage.removeItem(posDraftKey)}catch{};syncedSale={...sale,offlinePending:true};const offlineSales=ns.map(x=>String(x.id)===String(sale.id)?syncedSale:x);cacheSetJSON("sales",JSON.stringify(offlineSales));setSales(offlineSales);setOfflinePendingCount(await offlineStore.pendingCount());}
    else {
    // Force the current outlet catalog/payment types to be current before committing a sale.
    // This prevents a stale SP01 product/payment ID from being submitted after switching to SP02.
@@ -744,7 +754,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
    }
    localStorage.setItem(pendingKey,JSON.stringify(sale));
    const syncResult=await centralSalesSave(sale);
-   try{localStorage.removeItem(pendingKey);}catch{}
+   try{localStorage.removeItem(pendingKey);localStorage.removeItem(posDraftKey);}catch{}
    if(syncResult?.sale_no){
      syncedSale={...(syncResult.sale||sale),no:String(syncResult.sale_no),invoiceNo:String(syncResult.sale_no),dbId:Number(syncResult.sale_id)||null,orderNumber:sale.orderNumber||""};
    }
@@ -752,7 +762,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
    try{cacheSetJSON("sales",JSON.stringify(finalSales));}catch(cacheError){console.warn("Sale committed; browser cache unavailable",cacheError);} 
    setSales(finalSales);
    }
-  }catch(e){if(!e?.definitiveRejection&&activeOfflineGrant&&activeOfflineExpiry>Date.now()&&(e?.name==="TypeError"||navigator.onLine===false)){try{await offlineStore.enqueueSale(sale);try{localStorage.removeItem(pendingKey)}catch{};syncedSale={...sale,offlinePending:true};const offlineSales=ns.map(x=>String(x.id)===String(sale.id)?syncedSale:x);cacheSetJSON("sales",JSON.stringify(offlineSales));setSales(offlineSales);setOfflinePendingCount(await offlineStore.pendingCount());}catch(queueError){setNotice(queueError?.message||"Offline stock quota is insufficient for this sale.");return false;}}else{
+  }catch(e){if(!e?.definitiveRejection&&activeOfflineGrant&&activeOfflineExpiry>Date.now()&&(e?.name==="TypeError"||navigator.onLine===false)){try{await offlineStore.enqueueSale(sale);try{localStorage.removeItem(pendingKey);localStorage.removeItem(posDraftKey)}catch{};syncedSale={...sale,offlinePending:true};const offlineSales=ns.map(x=>String(x.id)===String(sale.id)?syncedSale:x);cacheSetJSON("sales",JSON.stringify(offlineSales));setSales(offlineSales);setOfflinePendingCount(await offlineStore.pendingCount());}catch(queueError){setNotice(queueError?.message||"Offline stock quota is insufficient for this sale.");return false;}}else{
     if(e?.definitiveRejection){try{localStorage.removeItem(pendingKey)}catch{}}
     console.error("Sale database sync failed:", e);
     setNotice("Sale could not be completed: "+professionalDatabaseError(e,"the database could not complete the request. Please try again."));
@@ -1217,6 +1227,7 @@ function MyCompany({company,setCompany,activeUser}){
   const prefix=`sp_outlet_${String(receipt.outlet_id)}_`;
   for(const key of Object.keys(localStorage))if(key.startsWith(prefix))localStorage.removeItem(key);
   sessionStorage.setItem("sp_last_reset_receipt",JSON.stringify(receipt));
+  Object.keys(localStorage).filter(k=>k.startsWith(POS_DRAFT_PREFIX)).forEach(k=>localStorage.removeItem(k));
   await showActionMessage("Outlet reset completed",`Verified backup: ${receipt.backup_file}. Sign in again before continuing.`);
   sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.location.reload();
  };
