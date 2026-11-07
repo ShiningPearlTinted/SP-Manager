@@ -9365,3 +9365,14 @@ body.is-resizing-y,body.is-resizing-y *{cursor:row-resize!important;user-select:
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-visit-info{padding:0 18px 18px}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-visit-info h4{margin:0 0 8px!important;padding:0!important;font-size:13.5px!important;font-weight:700!important}
 .app[data-ui="management"]:not(:has(.price-tags-overlay)) .customer-qr-foot > button:not(.secondary){background:var(--mg-accent,#087ea4)!important;border-color:var(--mg-accent,#087ea4)!important;color:#fff!important}
+
+/* POS customer picker: Refresh sits beside Add customer. */
+.ar-pos-shell .customer-modal-tools{display:flex!important;align-items:stretch;gap:8px}
+.ar-pos-shell .customer-modal-tools > input{flex:1 1 auto;min-width:0}
+.ar-pos-shell .customer-modal-tools > button{flex:0 0 auto;white-space:nowrap}
+.ar-pos-shell .customer-modal-tools > .customer-refresh{background:transparent!important;border:1px solid rgba(255,255,255,.22)!important;color:#e5e7eb!important}
+.ar-pos-shell .customer-modal-tools > .customer-refresh:hover:not(:disabled){border-color:#19a9ed!important;color:#fff!important}
+.ar-pos-shell .customer-modal-tools > .customer-refresh:disabled{opacity:.6;cursor:default}
+.ar-pos-shell .customer-refresh-error{margin:0 16px 8px;padding:8px 10px;border:1px solid rgba(239,68,68,.5);border-radius:8px;color:#fca5a5;font-size:12.5px}
+@media (max-width:520px){.ar-pos-shell .customer-modal-tools{flex-wrap:wrap}.ar-pos-shell .customer-modal-tools > input{flex-basis:100%}.ar-pos-shell .customer-modal-tools > button{flex:1 1 0}}
+.ar-pos-shell .ar-modal:has(> .customer-modal-tools){width:min(620px,calc(100vw - 24px))!important;max-width:none!important}

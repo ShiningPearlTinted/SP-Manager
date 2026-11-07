@@ -157,6 +157,15 @@ CREATE TABLE `customers` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `sp_car_models` (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `brand` varchar(100) NOT NULL,
+  `model` varchar(150) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_sp_car_models` (`brand`,`model`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE `customer_displays` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `outlet_id` bigint(20) UNSIGNED NOT NULL,

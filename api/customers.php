@@ -91,7 +91,7 @@ function visit_details(PDO $pdo, int $id, int $outletId): array {
   $add=function(?string $plate,?string $brand,?string $model=null) use (&$vehicles): void {
     $key=spNormalizePlate($plate); if($key==='')return;
     if(!isset($vehicles[$key]))$vehicles[$key]=['plate'=>trim((string)$plate),'brand'=>trim((string)$brand),'model'=>trim((string)$model)];
-    elseif($vehicles[$key]['brand']==='')$vehicles[$key]['brand']=trim((string)$brand);
+    else{if($vehicles[$key]['brand']==='')$vehicles[$key]['brand']=trim((string)$brand);if($vehicles[$key]['model']===''&&stripos($vehicles[$key]['brand'],trim((string)$model))===false)$vehicles[$key]['model']=trim((string)$model);}
   };
   $q=$pdo->prepare('SELECT * FROM customers WHERE id IN ('.$marks.') ORDER BY id=? DESC,id');
   $q->execute([...$ids,$id]);
