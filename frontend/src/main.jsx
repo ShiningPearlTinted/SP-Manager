@@ -404,21 +404,32 @@ function CustomerDisplay(){
  const fmt=n=>`${state.currency||"RM"} ${Number(n||0).toFixed(2)}`;
  const displayImage=state.state==="PAYMENT"&&state.paymentImageData?state.paymentImageData:state.imageData;
  const idle=state.state==="IDLE"||!state.items?.length;
- return <div className="customer-display-screen cd-customer-display-v9">
-   <div className="customer-display-brand"><div className="customer-display-brand-name">{state.companyName||"Shining Pearl Tinted"}</div></div>
-   <main className="customer-display-main">
-    <section className="customer-display-media">{displayImage?<img src={displayImage} alt={state.state==="PAYMENT"?"Payment image":"Promotion"}/>:<div className="customer-display-placeholder"><b>SHINING PEARL</b><span>Premium Automotive Care</span></div>}</section>
-    <section className="customer-display-order">
-      <div className="cd-order-glow"/>
-      {idle?<div className="customer-display-idle"><div className={"customer-display-idle-logo "+(idleLogo?"has-company-logo":"")}>{idleLogo?<img src={idleLogo} alt="Company logo"/>:<span>SP</span>}</div><h1>Welcome</h1><p>Thank you for visiting Shining Pearl Tinted</p><small>{error||"Ready for your order"}</small></div>:
-      <><div className="customer-display-order-head"><div><span>{state.state==="PAYMENT"?"PAYMENT":"YOUR ORDER"}</span><h1>{state.state==="PAYMENT"?"Payment Summary":"Shopping Cart"}</h1></div></div>
-      <div className="cd-v9-table-head"><span>PRODUCT</span><span>QTY</span><span>AMOUNT</span></div><div className="cd-v9-items">{(state.items||[]).map((item,i)=>{const qty=Number(item.qty||item.quantity||0);const unit=Number(item.price??item.unitPrice??0);const amount=Number(item.total??item.amount??item.lineTotal??(unit*qty));return <div className="cd-v9-row" key={item.lineId||item.id||i}><div className="cd-v9-product"><b>{item.name||"Product"}</b><small>{item.code||item.sku||""}</small></div><strong className="cd-v9-qty">{qty}</strong><strong className="cd-v9-amount">{fmt(amount)}</strong></div>})}</div>
-      <div className="customer-display-totals"><div><span>Subtotal</span><b>{fmt(state.subtotal)}</b></div>{Number(state.discount)>0&&<div><span>Discount</span><b>-{fmt(state.discount)}</b></div>}{Number(state.tax)>0&&<div><span>Tax</span><b>{fmt(state.tax)}</b></div>}<div className="grand"><span>TOTAL</span><b>{fmt(state.total)}</b></div></div>
-      {state.state==="PAYMENT"&&<div className="customer-display-payment"><div><span>Payment</span><b>{fmt(state.paymentAmount)}</b></div><div><span>Change</span><b>{fmt(state.change)}</b></div></div>}
-      </>}
-    </section>
-   </main>
-   <footer className="customer-display-footer"><span>{state.displayName||displayCode||terminalCode||"Customer Display"}</span><span>{new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span></footer>
+ const itemsRef=React.useRef(null);
+ useEffect(()=>{const list=itemsRef.current;if(list)list.scrollTop=list.scrollHeight},[state]);
+ const payment=state.state==="PAYMENT"&&!idle;
+ const companyName=state.companyName||"Shining Pearl Tinted";
+ const itemCount=(state.items||[]).reduce((sum,item)=>sum+Number(item.qty||item.quantity||0),0);
+ return <div className="cdx" data-mode={payment?"payment":idle?"idle":"order"} data-media={displayImage?"yes":"no"}>
+   <div className="cdx-top">
+    <div className="cdx-brand">{idleLogo&&<img src={idleLogo} alt=""/>}<span>{companyName}</span></div>
+    <div className="cdx-status">{!connected&&<span className="cdx-offline" title={error}>Reconnecting…</span>}<span>{new Date().toLocaleTimeString("en-MY",{hour:"2-digit",minute:"2-digit"})}</span></div>
+   </div>
+   <div className="cdx-main">
+    {displayImage&&<div className="cdx-media"><div className="cdx-media-card"><img src={displayImage} alt={payment?"Scan to pay":"Promotion"}/></div></div>}
+    {idle?<div className="cdx-welcome"><div className="cdx-welcome-logo">{idleLogo?<img src={idleLogo} alt={companyName}/>:<span>SP</span>}</div><h1>Welcome</h1><p>{companyName}</p></div>:
+    <div className="cdx-order">
+     <div className="cdx-order-head"><h1>{payment?"Payment":"Your Order"}</h1><span>{itemCount} {itemCount===1?"item":"items"}</span></div>
+     <div className="cdx-items" ref={itemsRef}>{(state.items||[]).map((item,i)=>{const qty=Number(item.qty||item.quantity||0);const unit=Number(item.price??item.unitPrice??0);const amount=Number(item.total??item.amount??item.lineTotal??(unit*qty));return <div className="cdx-item" key={item.lineId||item.id||i}><div className="cdx-item-name"><b>{item.name||"Product"}</b><small>{qty} × {fmt(unit)}</small></div><strong>{fmt(amount)}</strong></div>})}</div>
+     <div className="cdx-totals">
+      {(Number(state.discount)>0||Number(state.tax)>0)&&<div className="cdx-line"><span>Subtotal</span><b>{fmt(state.subtotal)}</b></div>}
+      {Number(state.discount)>0&&<div className="cdx-line"><span>Discount</span><b>-{fmt(state.discount)}</b></div>}
+      {Number(state.tax)>0&&<div className="cdx-line"><span>Tax</span><b>{fmt(state.tax)}</b></div>}
+      <div className="cdx-grand"><span>Total</span><b>{fmt(state.total)}</b></div>
+      {payment&&Number(state.paymentAmount)>0&&Number(state.paymentAmount)!==Number(state.total)&&<div className="cdx-line cdx-paid"><span>Received</span><b>{fmt(state.paymentAmount)}</b></div>}
+      {payment&&Number(state.change)>0&&<div className="cdx-line cdx-change"><span>Change</span><b>{fmt(state.change)}</b></div>}
+     </div>
+    </div>}
+   </div>
  </div>;
 }
 

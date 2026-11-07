@@ -11,17 +11,6 @@ START TRANSACTION;
 
 -- Tables
 
-CREATE TABLE `api_keys` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `outlet_id` bigint(20) UNSIGNED DEFAULT NULL,
-  `key_name` varchar(100) NOT NULL,
-  `key_hash` varchar(255) NOT NULL,
-  `active` tinyint(1) NOT NULL DEFAULT 1,
-  `last_used_at` datetime DEFAULT NULL,
-  `expires_at` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE `app_settings` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `setting_group` varchar(100) NOT NULL,
@@ -72,17 +61,6 @@ CREATE TABLE `car_batteries` (
   `price_option5` decimal(12,2) NOT NULL DEFAULT 0.00,
   `revision` int(10) UNSIGNED NOT NULL DEFAULT 1,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE `car_models` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `make` varchar(120) NOT NULL,
-  `model` varchar(150) NOT NULL,
-  `variant` varchar(150) DEFAULT NULL,
-  `year_from` int(11) DEFAULT NULL,
-  `year_to` int(11) DEFAULT NULL,
-  `active` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `cash_movements` (
@@ -182,20 +160,6 @@ CREATE TABLE `customer_displays` (
   `image_data` longtext DEFAULT NULL,
   `last_connected` datetime DEFAULT NULL,
   `display_code` varchar(80) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE `customer_display_promotions` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `outlet_id` bigint(20) UNSIGNED NOT NULL,
-  `display_id` varchar(80) DEFAULT NULL,
-  `title` varchar(255) DEFAULT NULL,
-  `image_url` text DEFAULT NULL,
-  `video_url` text DEFAULT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT 0,
-  `active` tinyint(1) NOT NULL DEFAULT 1,
-  `start_at` datetime DEFAULT NULL,
-  `end_at` datetime DEFAULT NULL,
-  `metadata_json` longtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `customer_display_sessions` (
@@ -1414,17 +1378,6 @@ CREATE TABLE `terminals` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `terminal_sessions` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `terminal_id` bigint(20) UNSIGNED NOT NULL,
-  `session_token_hash` varchar(255) DEFAULT NULL,
-  `connected_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `last_seen_at` datetime DEFAULT NULL,
-  `disconnected_at` datetime DEFAULT NULL,
-  `status` varchar(30) NOT NULL DEFAULT 'CONNECTED',
-  `metadata_json` longtext DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE `users` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `outlet_id` bigint(20) UNSIGNED DEFAULT NULL,
@@ -1478,11 +1431,6 @@ CREATE TABLE `warranty_claims` (
 
 -- Indexes
 
-ALTER TABLE `api_keys`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_api_key` (`key_hash`),
-  ADD KEY `fk_api_key_outlet` (`outlet_id`);
-
 ALTER TABLE `app_settings`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_app_setting` (`setting_group`,`setting_key`);
@@ -1498,10 +1446,6 @@ ALTER TABLE `backup_records`
 ALTER TABLE `car_batteries`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_battery_outlet_car` (`outlet_id`,`car_brand`,`model`);
-
-ALTER TABLE `car_models`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_car_model` (`make`,`model`,`variant`);
 
 ALTER TABLE `cash_movements`
   ADD PRIMARY KEY (`id`),
@@ -1522,10 +1466,6 @@ ALTER TABLE `customer_displays`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_display_id` (`display_id`),
   ADD KEY `fk_displays_outlet` (`outlet_id`);
-
-ALTER TABLE `customer_display_promotions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_cd_promo_outlet` (`outlet_id`);
 
 ALTER TABLE `customer_display_sessions`
   ADD PRIMARY KEY (`id`),
@@ -2000,10 +1940,6 @@ ALTER TABLE `terminals`
   ADD UNIQUE KEY `uq_terminal_id` (`terminal_id`),
   ADD KEY `fk_terminals_outlet` (`outlet_id`);
 
-ALTER TABLE `terminal_sessions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_terminal_session_terminal` (`terminal_id`);
-
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_users_username` (`username`),
@@ -2027,9 +1963,6 @@ ALTER TABLE `warranty_claims`
 
 -- AUTO_INCREMENT
 
-ALTER TABLE `api_keys`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-
 ALTER TABLE `app_settings`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
@@ -2042,9 +1975,6 @@ ALTER TABLE `backup_records`
 ALTER TABLE `car_batteries`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
-ALTER TABLE `car_models`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-
 ALTER TABLE `cash_movements`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
@@ -2055,9 +1985,6 @@ ALTER TABLE `customers`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `customer_displays`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `customer_display_promotions`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `customer_display_sessions`
@@ -2297,9 +2224,6 @@ ALTER TABLE `tax_rates`
 ALTER TABLE `terminals`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
-ALTER TABLE `terminal_sessions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-
 ALTER TABLE `users`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
@@ -2310,9 +2234,6 @@ ALTER TABLE `warranty_claims`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 -- Foreign keys
-
-ALTER TABLE `api_keys`
-  ADD CONSTRAINT `fk_api_key_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `audit_logs`
   ADD CONSTRAINT `fk_audit_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`id`) ON DELETE SET NULL;
@@ -2331,9 +2252,6 @@ ALTER TABLE `customers`
 
 ALTER TABLE `customer_displays`
   ADD CONSTRAINT `fk_displays_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `customer_display_promotions`
-  ADD CONSTRAINT `fk_cd_promo_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `customer_notes`
   ADD CONSTRAINT `fk_customer_notes_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE;
@@ -2643,9 +2561,6 @@ ALTER TABLE `tax_rates`
 
 ALTER TABLE `terminals`
   ADD CONSTRAINT `fk_terminals_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `terminal_sessions`
-  ADD CONSTRAINT `fk_terminal_session_terminal` FOREIGN KEY (`terminal_id`) REFERENCES `terminals` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `users`
   ADD CONSTRAINT `fk_users_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`id`) ON DELETE CASCADE,
