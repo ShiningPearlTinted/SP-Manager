@@ -15,6 +15,13 @@ function spApiRespond(array $payload, int $status): never {
     exit;
 }
 
+// Messages written for the user pass through; database and PHP errors are logged, never sent to the browser.
+function spSafeErrorMessage(Throwable $e): string {
+    if ($e instanceof Exception && !($e instanceof PDOException)) return $e->getMessage();
+    error_log('SP API error: '.get_class($e).': '.$e->getMessage());
+    return 'The database could not complete the request. Please try again.';
+}
+
 function spApiDatabase(): PDO {
     static $pdo = null;
     if ($pdo instanceof PDO) return $pdo;
@@ -158,7 +165,6 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? 'accessPriceCheck' : 'manageProducts';
     if ($file === 'users.php') return in_array($action, ['logout','change-password'], true) ? '' : 'manageUsers';
     if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
-    if ($file === 'payment-types.php') return 'managePayments';
     if ($file === 'email.php') return 'managePayments';
     if ($file === 'document-counter.php')return match(strtolower((string)(spReadRequestBody()['document_type']??$_GET['document_type']??''))){'purchase'=>'managePurchases','quotation'=>'manageQuotation','customer'=>'manageCustomers',default=>'managePayments'};
     if ($file === 'outlets.php' || $file === 'outlet-provision.php') return 'accessOutletManagement';

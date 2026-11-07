@@ -47,4 +47,4 @@ try{
  if($action==='health'){echo json_encode(['ok'=>true,'api_version'=>'V10','service'=>'SP-Manager loyalty API','outlet_id'=>$oid]);exit;}
  if($action==='sync'||$action==='summary'){$pdo->beginTransaction();$rows=sync($pdo,$oid);$pdo->commit();echo json_encode(['ok'=>true,'api_version'=>'V10','outlet_id'=>$oid,'count'=>count($rows),'customers'=>$rows],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;}
  throw new InvalidArgumentException('Unknown loyalty action.');
-}catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V10','error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}
+}catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V10','error'=>spSafeErrorMessage($e)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}

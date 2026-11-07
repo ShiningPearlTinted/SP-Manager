@@ -237,5 +237,5 @@ try {
   throw new InvalidArgumentException('Unknown action.');
 } catch(Throwable $e) {
   if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();
-  http_response_code(500); echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES);
+  http_response_code(500); echo json_encode(['ok'=>false,'error'=>spSafeErrorMessage($e)],JSON_UNESCAPED_SLASHES);
 }

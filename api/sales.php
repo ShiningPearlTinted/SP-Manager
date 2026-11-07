@@ -148,4 +148,4 @@ try{
   if($customerId>0)refreshLoyalty($pdo,$outletId,$customerId);
   $response=['ok'=>true,'api_version'=>'V11','sale_id'=>$dbId,'sale_no'=>$saleNo,'outlet_id'=>$outletId,'sale'=>[...$sale,'dbId'=>$dbId,'no'=>$saleNo,'invoiceNo'=>$saleNo],'revision'=>spAdvanceStateRevision($pdo,$outletId,'sales')];spAudit($pdo,'SALE_SAVE','sales',$dbId,$oldRow??null,$row);spRequestComplete($pdo,$requestKey,$response);$pdo->commit();
   echo json_encode($response,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-}catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V11','error'=>$e->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}
+}catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();http_response_code(500);echo json_encode(['ok'=>false,'api_version'=>'V11','error'=>spSafeErrorMessage($e)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}

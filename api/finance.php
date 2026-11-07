@@ -216,5 +216,5 @@ try {
 } catch (Throwable $e) {
     if ($pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
     error_log('finance.php: '.$e->getMessage());
-    spApiRespond(['ok' => false, 'error' => $e instanceof RuntimeException ? $e->getMessage() : 'Finance request failed.'], 500);
+    spApiRespond(['ok' => false, 'error' => $e instanceof RuntimeException ? spSafeErrorMessage($e) : 'Finance request failed.'], 500);
 }

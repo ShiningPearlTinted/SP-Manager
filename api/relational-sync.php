@@ -936,5 +936,5 @@ try {
 } catch (Throwable $e) {
   if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
   http_response_code(500);
-  echo json_encode(['ok'=>false,'api_version'=>'V10','state_key'=>$stateKey ?? null,'error'=>$e->getMessage()], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  echo json_encode(['ok'=>false,'api_version'=>'V10','state_key'=>$stateKey ?? null,'error'=>spSafeErrorMessage($e)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
