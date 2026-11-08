@@ -16,6 +16,7 @@ export const DR_ICONS={
  quick:"M13 2 4 14h7l-1 8 9-12h-7z",
  convert:"M4 7h13l-3-3M20 17H7l3 3",
  back:"M15 18l-6-6 6-6",
+ save:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
  mail:"M4 6h16v12H4zM4 7l8 6 8-6",
  view:"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
  qr:"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2M14 18h2v2M18 18h2v2h-2"

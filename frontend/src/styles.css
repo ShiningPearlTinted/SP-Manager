@@ -9456,3 +9456,10 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .document-items-head button{padding:7px 12px;border:1px solid #cfd9e5;border-radius:8px;background:#fff;color:#0f6f8f;font-size:13px;font-weight:600;cursor:pointer}
 .document-items-head button:hover{background:#f1f7fa}
 .document-manual-item{display:grid;gap:5px;min-width:190px}
+
+/* Quotation / Invoice editor: same toolbar and field sizes as Documents */
+.document-editor .document-editor-title{align-self:center;margin-left:auto;padding:0 8px;color:var(--mg-muted,#64748b);font-size:13px;font-weight:600;white-space:nowrap}
+.document-editor .document-editor-fields{margin-bottom:12px}
+.document-editor .document-editor-fields .dr-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1200px){.document-editor .document-editor-fields .dr-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){.document-editor .document-editor-fields .dr-filter-grid{grid-template-columns:minmax(0,1fr)}.document-editor .document-editor-title{display:none}}
