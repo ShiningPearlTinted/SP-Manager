@@ -47,7 +47,7 @@ function customer_payload(array $c, int $outletId): array {
     'phone'=>trim((string)($c['phone'] ?? '')) ?: null,
     'email'=>trim((string)($c['email'] ?? '')) ?: null,
     'vehicle_number'=>trim((string)($c['vehicleNumber'] ?? $c['vehicle_number'] ?? '')) ?: null,
-    'enabled'=>!empty($c['enabled']) ? 1 : 0,
+    'enabled'=>array_key_exists('enabled',$c) ? (!empty($c['enabled']) ? 1 : 0) : 1,
     'is_customer'=>($c['isCustomer'] ?? $c['is_customer'] ?? true) ? 1 : 0,
     'is_supplier'=>!empty($c['isSupplier'] ?? $c['is_supplier'] ?? false) ? 1 : 0,
     'tax_exempt'=>!empty($c['taxExempt'] ?? $c['tax_exempt'] ?? false) ? 1 : 0,

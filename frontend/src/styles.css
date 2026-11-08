@@ -9463,3 +9463,7 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .document-editor .document-editor-fields .dr-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:1200px){.document-editor .document-editor-fields .dr-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:760px){.document-editor .document-editor-fields .dr-filter-grid{grid-template-columns:minmax(0,1fr)}.document-editor .document-editor-title{display:none}}
+
+/* POS Add customer: required and optional labels */
+.customer-add-form .required-mark{color:#ef4444;font-weight:800}
+.customer-add-form .optional-mark{color:#94a3b8;font-weight:500}
