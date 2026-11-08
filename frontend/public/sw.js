@@ -1,5 +1,5 @@
-const CACHE = "sp-manager-shell-v4";
-const BASE = "/SP-Manager/";
+const CACHE = "sp-manager-shell-v5";
+const BASE = new URL(self.registration.scope).pathname;
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);

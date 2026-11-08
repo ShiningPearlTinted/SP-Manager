@@ -2,7 +2,7 @@ let workbookLoader;
 export async function downloadExcel(report) {
   if(!window.XLSX){
     workbookLoader??=new Promise((resolve,reject)=>{
-      const script=document.createElement('script');script.src=(import.meta.env.BASE_URL||'/SP-Manager/')+'vendor/xlsx.full.min.js';
+      const script=document.createElement('script');script.src=(import.meta.env.BASE_URL||'/')+'vendor/xlsx.full.min.js';
       script.onload=()=>window.XLSX?resolve():reject(new Error('Excel library did not load.'));
       script.onerror=()=>{script.remove();workbookLoader=null;reject(new Error('Excel library could not be loaded.'));};
       document.head.appendChild(script);

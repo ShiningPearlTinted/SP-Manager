@@ -91,7 +91,7 @@ function bookingSave(PDO $pdo,int $outlet,array $b):array{
 
 
 function bookingEmailDefaults():array{
- return ['customer'=>['subject'=>'{{event_title}} | {{booking_reference}}','body'=>'{{default_content}}'],'shop'=>['subject'=>'{{event_title}} — {{branch_name}} | {{booking_reference}}','body'=>'{{default_content}}'],'attach_calendar'=>false,'manager_url'=>'https://shiningpearltinted.github.io/SP-Manager/'];
+ return ['customer'=>['subject'=>'{{event_title}} | {{booking_reference}}','body'=>'{{default_content}}'],'shop'=>['subject'=>'{{event_title}} — {{branch_name}} | {{booking_reference}}','body'=>'{{default_content}}'],'attach_calendar'=>false,'manager_url'=>'https://apps.shiningpearltinted.com/'];
 }
 function bookingEmailClean(string $html):string{
  if(strlen($html)>50000)throw new BookingError('Email template must be under 50,000 bytes.');

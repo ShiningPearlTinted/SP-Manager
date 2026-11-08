@@ -3,7 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins:[react()],
-  base:"/SP-Manager/",
+  // Hostinger (apps.shiningpearltinted.com) serves the app at the root; the GitHub Pages workflow sets SP_BASE=/SP-Manager/.
+  base:process.env.SP_BASE||"/",
   build:{
     rollupOptions:{input:{main:"./index.html",customerDisplay:"./customer-display/index.html"}},
     emptyOutDir:true,

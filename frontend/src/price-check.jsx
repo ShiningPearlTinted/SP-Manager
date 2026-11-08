@@ -6,7 +6,7 @@ let excelLoading;
 function loadExcel(){
  if(window.XLSX)return Promise.resolve(window.XLSX);
  if(!excelLoading)excelLoading=new Promise((resolve,reject)=>{
-  const script=document.createElement('script');script.src=(import.meta.env.BASE_URL||'/SP-Manager/')+'vendor/xlsx.full.min.js';
+  const script=document.createElement('script');script.src=(import.meta.env.BASE_URL||'/')+'vendor/xlsx.full.min.js';
   script.onload=()=>window.XLSX?resolve(window.XLSX):reject(Error('Excel library could not load.'));
   script.onerror=()=>{script.remove();excelLoading=null;reject(Error('Excel library could not load. Check the vendor folder.'));};document.head.appendChild(script);
  });return excelLoading;
