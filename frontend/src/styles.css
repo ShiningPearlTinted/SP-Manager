@@ -9474,3 +9474,9 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 
 /* Payment screen: hide the floating notification bell so it does not sit on the Customer button */
 .app:has(.ar-payment-screen) :is(.ar-pos-notification-slot,.spn-center){display:none!important}
+
+/* F9 Save sale: unsaved item count and locked (saved) lines */
+.ar-pos-shell .ar-action{position:relative}
+.ar-unsaved-badge{position:absolute;top:4px;right:6px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#dc2626;color:#fff;font:700 12px/20px "Segoe UI",system-ui,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px #2b2b2b}
+.ar-item-saved{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;color:#22c55e}
+.ar-item-saved svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
