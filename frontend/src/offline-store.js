@@ -81,7 +81,9 @@ export async function getSnapshot() { return (await read("snapshot")) || {}; }
 export async function setQuota(quota) { await write("quota", quota || {}); }
 export async function getQuota() { return (await read("quota")) || {}; }
 
-export async function enqueueSale(sale) {
+// enforceQuota mirrors Settings > Order > Prevent negative inventory. When it is off, an offline sale may take
+// the terminal's reserved stock below zero, exactly as an online sale may take outlet stock below zero.
+export async function enqueueSale(sale, { enforceQuota = true } = {}) {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
@@ -102,7 +104,7 @@ export async function enqueueSale(sale) {
         requested[id] = (requested[id] || 0) + Math.max(0, Number(line.qty || 0));
       }
       for (const [id, qty] of Object.entries(requested)) {
-        if (Number(quota[id] || 0) + 1e-9 < qty) { failure = "Offline stock quota exceeded for one or more products."; tx.abort(); return; }
+        if (enforceQuota && Number(quota[id] || 0) + 1e-9 < qty) { failure = "Offline stock quota exceeded for one or more products. Settings > Order > Prevent negative inventory is on."; tx.abort(); return; }
       }
       for (const [id, qty] of Object.entries(requested)) quota[id] = Number(quota[id] || 0) - qty;
       queue.push({ id: sale.id, sale, status: "pending", createdAt: new Date().toISOString() });
