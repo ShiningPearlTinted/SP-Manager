@@ -1039,6 +1039,7 @@ CREATE TABLE `sale_items` (
   `line_total` decimal(15,2) NOT NULL DEFAULT 0.00,
   `warranty_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `warranty_years` int(11) NOT NULL DEFAULT 0,
+  `warranty_unit` varchar(10) NOT NULL DEFAULT 'YEAR',
   `maintenance_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `maintenance_count` int(11) NOT NULL DEFAULT 0,
   `cost_snapshot` decimal(15,2) DEFAULT NULL

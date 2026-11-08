@@ -9467,3 +9467,7 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 /* POS Add customer: required and optional labels */
 .customer-add-form .required-mark{color:#ef4444;font-weight:800}
 .customer-add-form .optional-mark{color:#94a3b8;font-weight:500}
+
+/* Product warranty: number and Years / Months side by side */
+.warranty-period{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:8px}
+.warranty-period select{min-width:0}
