@@ -9480,3 +9480,13 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .ar-unsaved-badge{position:absolute;top:4px;right:6px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#dc2626;color:#fff;font:700 12px/20px "Segoe UI",system-ui,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px #2b2b2b}
 .ar-item-saved{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;color:#22c55e}
 .ar-item-saved svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* POS discount: selected item or whole sale */
+.discount-scope{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.discount-scope button{display:grid;gap:3px;padding:10px 12px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.discount-scope button b{font-size:14px}
+.discount-scope button small{color:#9aa3b2;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.discount-scope button.chosen{border-color:#38bdf8;background:rgba(56,189,248,.12)}
+.discount-scope button:disabled{opacity:.45;cursor:not-allowed}
+.ar-line-discount{display:block;color:#f59e0b!important}
+.ar-order-item strong s{display:block;color:#9aa3b2;font-weight:500;font-size:.85em}
