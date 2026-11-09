@@ -2748,7 +2748,7 @@ function DocumentsModule({mode,products,customers,company,settings,activeUser,se
 }
 
 // The database keeps document times in UTC without a zone ("2026-11-09 16:53:51"); read them as UTC and filter by the Malaysia business day.
-const registerUtcDate=v=>{const t=String(v||"");return /^d{4}-d{2}-d{2}[ T]d{2}:d{2}(:d{2})?$/.test(t)?t.replace(" ","T")+"Z":t};
+const registerUtcDate=v=>{const t=String(v||"");return /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(t)?t.replace(" ","T")+"Z":t};
 const registerLocalDay=v=>{const d=new Date(v||"");return Number.isNaN(d.getTime())?String(v||"").slice(0,10):localDate(d)};
 function DocumentsRegister({activeUser,customers,products,setPage,setNotice,company={},settings={},suppliers=[]}){
  const [rows,setRows]=useState([]),[selected,setSelected]=useState(null),[addType,setAddType]=useState("100 - Purchase"),[addGroup,setAddGroup]=useState("Expenses"),[addOpen,setAddOpen]=useState(false),[productFilter,setProductFilter]=useState("All products"),[customerFilter,setCustomerFilter]=useState("All customers"),[userFilter,setUserFilter]=useState("All users"),[typeFilter,setTypeFilter]=useState("All document types"),[registerFilter,setRegisterFilter]=useState("All cash registers"),[paidFilter,setPaidFilter]=useState("All transactions"),[number,setNumber]=useState(""),[external,setExternal]=useState(""),[from,setFrom]=useState(localDate()),[to,setTo]=useState(localDate()),[applied,setApplied]=useState(null),[busy,setBusy]=useState(false);
