@@ -6676,3 +6676,19 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .hardware-remote-test{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .hardware-remote-test select{min-width:0;flex:1 1 160px}
 .hardware-remote-default{display:grid;gap:4px;max-width:560px}
+
+/* Remote printing: tidier cards and printer rows */
+.hardware-remote h3{margin:20px 0 8px;font-size:14px;font-weight:700;letter-spacing:.01em}
+.hardware-remote-agents{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+.hardware-remote-agent{gap:8px;padding:14px 16px;background:var(--panel,#fff)}
+.hardware-remote-printers{gap:0;border-top:1px solid var(--line,#eef0f3)}
+.hardware-remote-printers li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line,#eef0f3);flex-wrap:nowrap}
+.hardware-remote-printers li>span:first-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:500}
+.hardware-remote-sizes{margin-left:0}
+.hardware-remote-paper-note{margin:6px 0 0}
+.hardware-paper{margin-top:18px}
+.hardware-paper h2,.hardware-remote h2{font-size:18px}
+.hardware-paper-sizes{flex-wrap:wrap;min-width:0}
+.hardware-paper-size{min-width:0;flex:0 1 auto;padding:8px 12px}
+.hardware-paper .settings-grid{align-items:start}
+.hardware-paper-size{display:inline-flex;gap:8px;align-items:center;padding:8px 14px;flex:0 0 auto}
