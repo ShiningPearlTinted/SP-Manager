@@ -6626,3 +6626,36 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .sp-paper-options button b{font-size:18px}
 .sp-paper-options button small{color:#6b7280;font-size:12px}
 .sp-paper-options button.chosen{border-color:#2563eb;background:rgba(37,99,235,.08);box-shadow:0 0 0 2px rgba(37,99,235,.18)}
+
+/* Remote printing (Settings > Hardware) */
+.hardware-remote{margin-top:22px;padding-top:18px;border-top:1px solid var(--line,#e5e7eb)}
+.hardware-remote h2{margin:0}
+.hardware-remote h3{margin:18px 0 8px;font-size:15px}
+.hardware-remote-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hardware-remote-error{padding:10px 12px;border:1px solid #fca5a5;border-radius:10px;background:#fef2f2;color:#991b1b}
+.hardware-remote-pair{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.hardware-remote-pair>*:first-child{flex:1 1 240px}
+.hardware-remote-code{display:grid;gap:4px;margin-top:12px;padding:14px 16px;border:1px dashed #2563eb;border-radius:12px;background:rgba(37,99,235,.05)}
+.hardware-remote-code strong{font:700 28px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.12em;color:#1d4ed8}
+.hardware-remote-code small{color:#6b7280}
+.hardware-remote-code button{justify-self:start;margin-top:4px}
+.hardware-remote-agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.hardware-remote-agent{display:grid;gap:6px;padding:12px 14px;border:1px solid var(--line,#e5e7eb);border-radius:12px}
+.hardware-remote-agent-head{display:flex;justify-content:space-between;gap:8px}
+.hardware-remote-agent-head small{display:block;color:#6b7280;font-size:12px}
+.hardware-remote-agent button{justify-self:start}
+.hardware-remote-state{font-size:12px;font-weight:700;white-space:nowrap}
+.hardware-remote-state.ok{color:#16a34a}.hardware-remote-state.off{color:#9ca3af}
+.hardware-remote-printers{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.hardware-remote-printers li{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px}
+.hardware-remote-printers em{color:#6b7280;font-style:normal;font-size:12px}
+.hardware-remote-sizes{display:inline-flex;gap:4px;margin-left:auto}
+.hardware-remote-sizes i{padding:1px 6px;border-radius:6px;background:#eef2ff;color:#3730a3;font-style:normal;font-size:11px;font-weight:700}
+.hardware-remote-sizes i.none{background:#f3f4f6;color:#6b7280;font-weight:500}
+.hardware-remote-history{overflow-x:auto}
+.hardware-remote-history table{width:100%;border-collapse:collapse;font-size:13px}
+.hardware-remote-history th,.hardware-remote-history td{padding:7px 8px;border-bottom:1px solid var(--line,#e5e7eb);text-align:left;vertical-align:top}
+.hardware-remote-history td small{display:block;color:#6b7280;font-size:11px}
+.print-job-status{font-weight:700;font-size:12px}
+.print-job-status.printed{color:#16a34a}.print-job-status.failed,.print-job-status.expired{color:#dc2626}.print-job-status.queued,.print-job-status.printing{color:#2563eb}.print-job-status.cancelled{color:#6b7280}
+.print-job-error{color:#b91c1c!important}

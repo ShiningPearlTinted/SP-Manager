@@ -180,6 +180,8 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'documents.php') return in_array($action, ['list-quotations','save-quotation','delete-quotation','convert'], true) ? 'manageQuotation' : 'manageInvoice';
     if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete','register-link'], true) ? 'manageCustomers' : '';
     if ($file === 'label-printing.php') return 'manageProducts';
+    // Remote Printing: registering/removing print PCs and the history are settings; sending a job only needs a signed-in user.
+    if ($file === 'print-jobs.php') return in_array($action, ['create-job','job','agents','cancel-job'], true) ? '' : 'manageSettings';
     if ($file === 'finance.php') return 'manageReports';
     if ($file === 'products.php' && $action==='stock-adjust') return 'manageInventory';
     if ($file === 'products.php') return in_array($action, ['save','assign','unassign','delete','save-category','delete-category','save-group','delete-group','list-inactive'], true) ? 'manageProducts' : '';
@@ -267,6 +269,9 @@ function spInstallCorsAndGuard(): void {
     // The outlet QR registration page has no session: customer-register.php checks its own signed link and rate limit.
     if ($file === 'customer-register.php') return;
 
+    // Print PCs have no user session: print-agent.php checks its own pairing code / agent token.
+    if ($file === 'print-agent.php') return;
+
     // The customer-facing display is a read-only capability URL. Its HMAC key is
     // issued only when an authenticated manager saves the terminal pairing.
     if ($file === 'customer-display.php' && $action === 'state' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
@@ -316,7 +321,7 @@ function spInstallCorsAndGuard(): void {
             $outletId = $candidateOutletId;
         }
         if ($outletId <= 0) $outletId = spResolveOutlet($pdo, $defaultOutlet);
-        if($offline&&(int)($requestClaims['outlet']??0)!==$outletId)spApiRespond(['ok'=>false,'error'=>'Offline access is limited to its registered outlet.'],403);
+        if($offline&&(int)($claims['outlet']??0)!==$outletId)spApiRespond(['ok'=>false,'error'=>'Offline access is limited to its registered outlet.'],403);
         if ($outletId <= 0) spApiRespond(['ok'=>false,'error'=>'An active outlet is required.'], 403);
         $_SERVER['SP_AUTH_OUTLET_ID'] = (string)$outletId;
         // Normalize legacy handlers to the outlet that was authenticated above.
