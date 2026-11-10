@@ -14,9 +14,5 @@
   "LICENSE": {
     "url": "https://raw.githubusercontent.com/PHPMailer/PHPMailer/v7.1.1/LICENSE",
     "sha256": "a1a33180d02960ab1c5de36cf20b1a2f0fe9888d83826ad263da5db52f1b183b"
-  },
-  "composer.json": {
-    "url": "https://raw.githubusercontent.com/PHPMailer/PHPMailer/v7.1.1/composer.json",
-    "sha256": "0d29d0a9c86be376433530333bee758ba563e7267347300c181299f5a1d920a4"
   }
 }

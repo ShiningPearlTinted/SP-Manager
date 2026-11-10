@@ -199,7 +199,7 @@ export default function FinancePage({base,headers,setNotice,company}){
    </div>
   </div>
   {error&&<div className="fin-alert" role="alert">{error}</div>}
-  {!ready&&<div className="fin-alert warn">Finance tables are not installed yet. Run <b>database/migrations/finance-v1.sql</b> in phpMyAdmin to record income &amp; expenses and save Tax &amp; Zakat settings. Sales, cost of goods sold and payroll are already shown.</div>}
+  {!ready&&<div className="fin-alert warn">Finance tables are not installed yet. Run the Finance tables section of <b>database/SCHEMA-CURRENT.sql</b> in phpMyAdmin to record income &amp; expenses and save Tax &amp; Zakat settings. Sales, cost of goods sold and payroll are already shown.</div>}
 
   {tab==='pl'&&(loading&&!summary?<div className="fin-empty">Loading…</div>:summary&&<div className="fin-print-area" ref={printRef}>
    {view==='monthly'&&<><Kpis st={stMonth} label={`${MONTHS[month]} ${year}`}/><div className="fin-card"><div className="fin-card-head"><div><h3>Statement of Profit &amp; Loss</h3><small>For the month of {MONTHS[month]} {year} · RM</small></div></div><StatementTable columns={[{title:`${SHORT[month]} ${year}`,st:stMonth},{title:`Year to date`,st:stYtd}]}/></div></>}

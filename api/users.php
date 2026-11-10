@@ -112,7 +112,7 @@ try{
  // Administrator-only reset: sets a random temporary password that is shown to the Administrator once.
  // The user must choose a new password at the next sign-in, and existing sessions of that user end.
  if($action==='reset-password'&&$_SERVER['REQUEST_METHOD']==='POST'){
-  if(!columnExists($pdo,'users','must_change_password'))throw new RuntimeException('Run database/migrations/staff-password-reset-v1.sql before resetting passwords.');
+  if(!columnExists($pdo,'users','must_change_password'))throw new RuntimeException('Add users.must_change_password (see database/SCHEMA-CURRENT.sql) before resetting passwords.');
   if((string)($GLOBALS['spActor']['role_name']??'')!=='Administrator')out(['ok'=>false,'error'=>'Only an Administrator can reset passwords.'],403);
   $b=body();$id=(int)($b['id']??0);$actorId=(int)($_SERVER['SP_AUTH_USER_ID']??0);
   if($id<=0)throw new InvalidArgumentException('User id required.');

@@ -154,7 +154,7 @@ try {
     }
 
     if ($method !== 'POST') spApiRespond(['ok' => false, 'error' => 'Method not allowed.'], 405);
-    if (!$ready) throw new RuntimeException('Run database/migrations/finance-v1.sql before saving Finance data.');
+    if (!$ready) throw new RuntimeException('Install the Finance tables from database/SCHEMA-CURRENT.sql before saving Finance data.');
     $body = spReadRequestBody();
     $action = strtolower(trim((string)($body['action'] ?? '')));
     $user = (int)($_SERVER['SP_AUTH_USER_ID'] ?? 0);
