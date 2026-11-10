@@ -6659,3 +6659,20 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .print-job-status{font-weight:700;font-size:12px}
 .print-job-status.printed{color:#16a34a}.print-job-status.failed,.print-job-status.expired{color:#dc2626}.print-job-status.queued,.print-job-status.printing{color:#2563eb}.print-job-status.cancelled{color:#6b7280}
 .print-job-error{color:#b91c1c!important}
+
+/* Remote printing: print dialog destination, toasts, This PC card */
+.sp-print-dest{display:grid;gap:4px;padding:0 20px 10px;font-size:13px}
+.sp-print-dest span{font-weight:600}
+.sp-print-dest select{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font:inherit}
+.sp-print-hint{display:block;min-height:16px;padding:4px 20px 0;color:#6b7280;font-size:12px}
+.sp-paper-options button:disabled{opacity:.4;cursor:not-allowed}
+.sp-toast-host{position:fixed;right:16px;bottom:16px;z-index:100000;display:grid;gap:8px;max-width:min(380px,calc(100vw - 32px))}
+.sp-toast{padding:11px 14px;border-radius:10px;background:#111827;color:#fff;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:opacity .35s,transform .35s}
+.sp-toast.ok{background:#166534}.sp-toast.error{background:#991b1b}
+.sp-toast.out{opacity:0;transform:translateY(8px)}
+.hardware-remote-thispc{margin-bottom:6px}
+.hardware-remote-agent.this-pc{max-width:560px}
+.hardware-remote-toggle{display:flex;align-items:center;gap:8px;font-size:13px}
+.hardware-remote-test{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hardware-remote-test select{min-width:0;flex:1 1 160px}
+.hardware-remote-default{display:grid;gap:4px;max-width:560px}

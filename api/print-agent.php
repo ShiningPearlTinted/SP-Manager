@@ -73,6 +73,14 @@ try{
         if(!$q->rowCount())spApiRespond(['ok'=>false,'error'=>'This job is not being printed by this PC.'],409);
         spApiRespond(['ok'=>true],200);
     }
+    if($action==='unpair'){
+        // The PC removes itself (Unpair on that PC). Its queued jobs are cancelled.
+        $pdo->beginTransaction();
+        $pdo->prepare("UPDATE sp_print_agents SET status='REVOKED',token_hash=NULL WHERE id=?")->execute([$agentId]);
+        $pdo->prepare("UPDATE sp_print_jobs SET status='CANCELLED',error_message='The print PC was unpaired.',content_html=NULL,completed_at=NOW() WHERE agent_id=? AND status IN ('QUEUED','PRINTING')")->execute([$agentId]);
+        $pdo->commit();
+        spApiRespond(['ok'=>true],200);
+    }
     spApiRespond(['ok'=>false,'error'=>'Unknown print agent request.'],400);
 }catch(Throwable $e){
     if(isset($pdo)&&$pdo instanceof PDO&&$pdo->inTransaction())$pdo->rollBack();
