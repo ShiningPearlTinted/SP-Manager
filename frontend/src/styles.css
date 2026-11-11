@@ -6692,3 +6692,5 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .hardware-paper-size{min-width:0;flex:0 1 auto;padding:8px 12px}
 .hardware-paper .settings-grid{align-items:start}
 .hardware-paper-size{display:inline-flex;gap:8px;align-items:center;padding:8px 14px;flex:0 0 auto}
+/* Label printing: roll preview shows the labels one below the other, like the real roll */
+.ptx-paper.ptx-roll{display:flex;flex-direction:column;gap:3mm}
