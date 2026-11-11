@@ -96,6 +96,20 @@ try{
         if(!$q->rowCount())spApiRespond(['ok'=>false,'error'=>'Only a queued job can be cancelled.'],409);
         spApiRespond(['ok'=>true],200);
     }
+    // Print history clean-up (Settings permission). Jobs still queued or printing are never removed.
+    if($action==='delete-job'){
+        $id=(int)($body['job_id']??0);
+        $q=$pdo->prepare("DELETE FROM sp_print_jobs WHERE id=? AND outlet_id=? AND status NOT IN ('QUEUED','PRINTING')");$q->execute([$id,$outlet]);
+        if(!$q->rowCount())spApiRespond(['ok'=>false,'error'=>'This job is still queued or printing, or it was already removed.'],409);
+        spAudit($pdo,'PRINT_JOB_DELETE','sp_print_jobs',$id,null,null);
+        spApiRespond(['ok'=>true,'deleted'=>1],200);
+    }
+    if($action==='clear-history'){
+        $q=$pdo->prepare("DELETE FROM sp_print_jobs WHERE outlet_id=? AND status NOT IN ('QUEUED','PRINTING')");$q->execute([$outlet]);
+        $n=$q->rowCount();
+        spAudit($pdo,'PRINT_HISTORY_CLEAR','sp_print_jobs',null,null,['deleted'=>$n]);
+        spApiRespond(['ok'=>true,'deleted'=>$n],200);
+    }
     spApiRespond(['ok'=>false,'error'=>'Unknown remote printing request.'],400);
 }catch(Throwable $e){
     if(isset($pdo)&&$pdo instanceof PDO&&$pdo->inTransaction())$pdo->rollBack();

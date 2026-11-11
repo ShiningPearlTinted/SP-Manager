@@ -6694,3 +6694,6 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .hardware-paper-size{display:inline-flex;gap:8px;align-items:center;padding:8px 14px;flex:0 0 auto}
 /* Label printing: roll preview shows the labels one below the other, like the real roll */
 .ptx-paper.ptx-roll{display:flex;flex-direction:column;gap:3mm}
+.hardware-remote-history-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hardware-remote-history-head h3{margin:20px 0 8px}
+.hardware-remote-del{width:28px;height:28px;padding:0;border-radius:8px;line-height:1;font-size:16px;color:#b91c1c}
