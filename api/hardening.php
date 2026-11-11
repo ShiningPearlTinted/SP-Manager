@@ -92,10 +92,12 @@ function spNormalizeSale(PDO $pdo,int $outlet,array $sale): array {
         if($discount>$base)throw new InvalidArgumentException('Item discount exceeds its value.');
         if($discount>0 && !spHasPermission('manageDiscount'))throw new RuntimeException('Discount permission is required.');
         if($discount>0||$tax>0)throw new InvalidArgumentException('POS item tax/discount must be expressed in checked cart totals.');$line=$base;$subtotal+=$base;
-        $normalized[]=[...$item,'id'=>$pid,'productDbId'=>$pid,'productId'=>$pid,'product_id'=>$pid,'qty'=>$qty,'quantity'=>$qty,'price'=>$price,'discount'=>$discount,'tax'=>$tax,'lineTotal'=>$line,'total'=>$line,'costSnapshot'=>(float)$p['cost_price']];
+        $lineDiscount=round(max(0,min($base,(float)($item['lineDiscount']??0))),2);$normalized[]=[...$item,'lineDiscount'=>$lineDiscount,'id'=>$pid,'productDbId'=>$pid,'productId'=>$pid,'product_id'=>$pid,'qty'=>$qty,'quantity'=>$qty,'price'=>$price,'discount'=>$discount,'tax'=>$tax,'lineTotal'=>$line,'total'=>$line,'costSnapshot'=>(float)$p['cost_price']];
     }
     $discount=spMoney($sale['discount']??0,'Cart discount');$tax=spMoney($sale['tax']??0,'Cart tax');
     $itemTotal=array_sum(array_column($normalized,'lineTotal'));if($discount>$itemTotal)throw new InvalidArgumentException('Cart discount exceeds its value.');
+    // Per-item discounts only explain how the cart discount is split for the invoice; they must fit inside it.
+    if(array_sum(array_column($normalized,'lineDiscount'))>$discount+0.005)throw new InvalidArgumentException('Item discounts exceed the cart discount.');
     $q=$pdo->prepare("SELECT setting_value FROM outlet_settings WHERE outlet_id=? AND setting_group='SP-MANAGER' AND setting_key='taxRate' LIMIT 1");$q->execute([$outlet]);$rate=(float)(json_decode((string)$q->fetchColumn(),true)??0);
     if($rate<0||$rate>100)throw new RuntimeException('Configured tax rate is invalid.');
     $inclusive=!empty($settings['products']['taxInclusive']);

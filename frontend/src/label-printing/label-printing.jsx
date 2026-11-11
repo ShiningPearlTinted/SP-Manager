@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createPortal} from 'react-dom';
-import {createLabelPrintingRequest} from './label-printing-api.js';
+import {createLabelPrintingRequest} from '../module-api.js';
 const sizes=Array.from({length:63},(_,i)=>i+20);
 const emptyForm={id:0,code:'',name:'',price:'',barcode:'',description:'',image_data:'',display_barcode:false,label_width_mm:40};
 // A saved label in the shape the Price tags screen prints; labels saved without "Display barcode" print no barcode.

@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {localDate} from "../booking/booking-utils.js";
-import {createFinanceRequest} from './finance-api.js';
+import {createFinanceRequest} from '../module-api.js';
 import {DateInput,showDate} from "../dr-tool.jsx";
 
 // Finance follows the CmPro workbook: Profit & Loss (monthly, yearly and a 12-month summary) and Tax & Zakat.

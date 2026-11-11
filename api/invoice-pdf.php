@@ -5,6 +5,12 @@ function spInvoiceOutletCompany(array $company,array $outlet):array {
  $company['outlet_address']=trim((string)($outlet['address']??''));
  return $company;
 }
+/** One long address line becomes two, split at the comma nearest the middle (same rule as the printed invoice). */
+function spInvoiceAddressLines(string $address):array {
+ $lines=array_values(array_filter(array_map('trim',explode("\n",str_replace(["\r\n","\r"],"\n",$address))),fn($l)=>$l!==''));
+ if(count($lines)===1&&strlen($lines[0])>40&&str_contains($lines[0],',')){$t=$lines[0];$mid=strlen($t)/2;$best=-1;for($i=0;$i<strlen($t);$i++)if($t[$i]===','&&($best<0||abs($i-$mid)<abs($best-$mid)))$best=$i;$lines=[trim(substr($t,0,$best+1)),trim(substr($t,$best+1))];}
+ $out=[];foreach($lines as $l)foreach(explode("\n",wordwrap($l,65,"\n",true)) as $w)$out[]=$w;return $out;
+}
 /** A4 PDF invoice, using authoritative DB records; no remote resources fetched. */
 function spReceiptPdf(array $company,array $sale,array $customer,array $items,float $paid,array $payments=[],string $timezone='Asia/Kuala_Lumpur'):string {
  $logoPath=__DIR__.'/assets/invoice-logo.jpg';$logo=is_file($logoPath)?file_get_contents($logoPath):null;$logoInfo=$logo?getimagesizefromstring($logo):null;
@@ -23,7 +29,7 @@ function spReceiptPdf(array $company,array $sale,array $customer,array $items,fl
   if($logoInfo){$w=90;$h=min(55,$w*$logoInfo[1]/$logoInfo[0]);$stream.="q $w 0 0 $h 477 ".(842-42-$h)." cm /Logo Do Q\n";}
   $text(24,62,(string)($company['company_name']??'SP-Manager'),8,true);$y=74;
   $outletAddress=trim((string)($company['outlet_address']??''));
-  $addressLines=$outletAddress!==''?explode("\n",wordwrap(str_replace(["\r\n","\r"],"\n",$outletAddress),65,"\n",true)):[trim(($company['building_number']??'').' '.($company['street_name']??'')),(string)($company['additional_street_name']??''),trim(($company['postal_code']??'').' '.($company['city']??'')),(string)($company['state']??'')];
+  $addressLines=$outletAddress!==''?spInvoiceAddressLines($outletAddress):[trim(($company['building_number']??'').' '.($company['street_name']??'')),(string)($company['additional_street_name']??''),trim(($company['postal_code']??'').' '.($company['city']??'')),(string)($company['state']??'')];
   if(count($addressLines)>12)throw new InvalidArgumentException('Outlet invoice address is too long.');
   foreach($addressLines as $a)if(trim($a)!==''){$text(24,$y,$a);$y+=11;}
   foreach(['phone_number'=>'Phone: ','email'=>'Email: '] as $key=>$label)if(!empty($company[$key])){$text(24,$y,$label.$company[$key]);$y+=11;}
@@ -38,10 +44,11 @@ function spReceiptPdf(array $company,array $sale,array $customer,array $items,fl
  $y=$table($header());
  foreach($items as $n=>$item){$details=explode("\n",wordwrap((string)$item['product_name'],47,"\n",true));if(!empty($item['warranty_enabled']))$details[]=(strtoupper(substr((string)($item['warranty_unit']??''),0,1))==='M'?'Warranty '.max(1,(int)$item['warranty_years']).' Month'.(max(1,(int)$item['warranty_years'])===1?'':'s'):'Warranty '.max(1,(int)$item['warranty_years']).' Year');if(!empty($item['maintenance_enabled']))$details[]='Free Maintenance '.(int)$item['maintenance_count'].' x';$height=max(24,count($details)*11+9);if($height>430)throw new InvalidArgumentException('Invoice item description is too long.');if($y+$height>735){$finish();$y=$table($header(true));}
   $rect(24,$y,547,$height);foreach(array_slice($xs,1,-1) as $x)$line($x,$y,$x,$y+$height);$text(28,$y+12,(string)($n+1),7.5);foreach($details as $i=>$d)$text(54,$y+12+$i*11,$d,7.5);
-  $text(335,$y+12,rtrim(rtrim(number_format((float)$item['quantity'],3,'.',''),'0'),'.'),7.5,false,true);$text(411,$y+12,number_format((float)$item['unit_price'],2),7.5,false,true);$text(476,$y+12,$money($item['discount']??0),7.5,false,true);$text(567,$y+12,$money($item['line_total']),7.5,false,true);$y+=$height;
+  $text(335,$y+12,rtrim(rtrim(number_format((float)$item['quantity'],3,'.',''),'0'),'.'),7.5,false,true);$text(411,$y+12,number_format((float)$item['unit_price'],2),7.5,false,true);$lineDisc=(float)($item['discount']??0)>0?(float)$item['discount']:(float)($item['line_discount']??0);$lineShown=(float)($item['discount']??0)>0?(float)$item['line_total']:(float)$item['line_total']-(float)($item['line_discount']??0);$text(476,$y+12,($lineDisc>0?'-':'').$money($lineDisc),7.5,false,true);$text(567,$y+12,$money($lineShown),7.5,false,true);$y+=$height;
  }
  if($y+110+count($payments)*13>748){$finish();$y=$header(true);}$y+=17;
- foreach(['discount'=>'Discount','tax'=>'Tax'] as $key=>$label)if(!empty($sale[$key])){$text(390,$y,$label);$text(567,$y,$money($sale[$key]),8,false,true);$y+=13;}
+ if(!empty($sale['discount'])||!empty($sale['tax'])){$gross=0.0;foreach($items as $it)$gross+=(float)$it['quantity']*(float)$it['unit_price'];$text(390,$y,'Subtotal');$text(567,$y,$money($gross),8,false,true);$y+=13;}
+ foreach(['discount'=>'Discount','tax'=>'Tax'] as $key=>$label)if(!empty($sale[$key])){$text(390,$y,$label);$text(567,$y,($key==='discount'?'-':'').$money($sale[$key]),8,false,true);$y+=13;}
  $rect(390,$y-9,181,19);$text(395,$y+3,'Total',8,true);$text(567,$y+3,$money($sale['total']),8,true,true);$y+=29;$text(390,$y,'Payment breakdown:',8,true);$y+=15;
  foreach($payments as $payment){if($y>720){$finish();$y=$header(true);$text(390,$y,'Payment breakdown (continued):',8,true);$y+=15;}$text(390,$y,'Payment ('.substr((string)($payment['payment_type_name']??'Payment'),0,22).')',8);$text(567,$y,$money($payment['amount']),8,false,true);$y+=13;}
  if($y>715){$finish();$y=$header(true);}$text(390,$y,'Paid amount:',8);$text(567,$y,$money($paid),8,false,true);$y+=13;$text(390,$y,'Amount due:',8);$text(567,$y,$money(max(0,(float)$sale['total']-$paid)),8,false,true);$finish();

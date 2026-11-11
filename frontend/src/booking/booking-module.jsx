@@ -1,4 +1,4 @@
-import {bookingEmailTarget} from './booking-link.js';
+import {bookingEmailTarget} from '../module-api.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {STATUSES,statusLabel,localDate,shiftDate,calendarRange,calendarDays,bookingCalendarFile} from './booking-utils.js';
 import {DateInput,showDate} from "../dr-tool.jsx";

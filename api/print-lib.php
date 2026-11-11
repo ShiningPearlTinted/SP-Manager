@@ -15,7 +15,7 @@ const SP_PRINT_MAX_COPIES=10;
 const SP_PRINT_MAX_HTML_BYTES=4194304;   // 4 MB, enough for an invoice with an embedded logo
 
 function spPrintRequireTables(PDO $pdo): void {
-    foreach(['sp_print_agents','sp_print_jobs'] as $t) if(!spTableExists($pdo,$t)) throw new RuntimeException('Run database/migrations/remote-printing-v1.sql before using Remote Printing.');
+    foreach(['sp_print_agents','sp_print_jobs'] as $t) if(!spTableExists($pdo,$t)) throw new RuntimeException('Install the Remote Printing tables (see the Remote Printing section of database/SCHEMA-CURRENT.sql) before using Remote Printing.');
 }
 
 // Expire, fail and prune old jobs. Cheap: indexed updates on one outlet (or one agent).

@@ -1035,6 +1035,7 @@ CREATE TABLE `sale_items` (
   `quantity` decimal(15,3) NOT NULL,
   `unit_price` decimal(15,2) NOT NULL,
   `discount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `line_discount` decimal(15,2) NOT NULL DEFAULT 0.00,
   `tax` decimal(15,2) NOT NULL DEFAULT 0.00,
   `line_total` decimal(15,2) NOT NULL DEFAULT 0.00,
   `warranty_enabled` tinyint(1) NOT NULL DEFAULT 0,
@@ -2681,7 +2682,7 @@ SET u.permissions_json=JSON_SET(
 );
 
 -- ---------------------------------------------------------------------------
--- Remote Printing (also in database/migrations/remote-printing-v1.sql for the live database)
+-- Remote Printing (already applied to the live database)
 -- ---------------------------------------------------------------------------
 -- SP-Manager Remote Printing (Phase 2): registered print PCs and the print job queue.
 -- Back up the database first. Safe to run more than once; no existing table or record is changed.
