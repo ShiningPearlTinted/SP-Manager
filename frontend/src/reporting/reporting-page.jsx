@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {downloadExcel,printReport} from './report-exports.js';
-import {DateInput} from "../dr-tool.jsx";
+import {ListSearch,DateInput} from "../dr-tool.jsx";
 
 function localDate(date=new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
 function Filter({label,value,onChange,items,disabled=false}) {return <label className="reporting-field"><span>{label}</span><select value={value} onChange={e=>onChange(e.target.value)} disabled={disabled}><option value="">{disabled?'Not applicable':'All'}</option>{items.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;}
@@ -58,7 +58,7 @@ export default function ReportingPage({canView,apiBase,headers,outlet}) {
     {error&&<div className="reporting-error" role="alert">{error}<button type="button" onClick={()=>setError('')} aria-label="Dismiss error">×</button></div>}
     {loading?<p role="status">Loading report catalogue…</p>:<div className="reporting-layout">
       <div className="reporting-main">
-        {!result?<div className="reporting-catalog"><div className="reporting-catalog-head"><h2>Select report</h2><label><span className="reporting-sr">Search reports</span><input type="search" placeholder="Search reports" value={search} onChange={e=>setSearch(e.target.value)}/></label></div>
+        {!result?<div className="reporting-catalog"><div className="reporting-catalog-head"><h2>Select report</h2><label><span className="reporting-sr">Search reports</span><ListSearch value={search} onChange={v=>(e=>setSearch(e.target.value))({target:{value:v}})} placeholder={"Search reports"}/></label></div>
           <nav aria-label="Report catalogue" className="reporting-report-list">{Object.entries(grouped).map(([category,reports])=><div key={category} className="reporting-category"><h3>{category}</h3>{reports.map(report=><button type="button" key={report.id} aria-pressed={selected===report.id} className={'reporting-report-option'+(selected===report.id?' is-selected':'')} onClick={()=>choose(report.id)}><span aria-hidden="true">▤</span><span>{report.title}</span>{selected===report.id&&<span aria-hidden="true">✓</span>}</button>)}</div>)}{!Object.keys(grouped).length&&<p>No reports match your search.</p>}</nav>
         </div>:<div className="reporting-preview"><div className="reporting-preview-actions"><button onClick={()=>{generation.current++;setBusy(false);setResult(null);}}>← Report list</button><span>{result.row_count} rows · Page {page} of {pages}</span></div>
           <div className="reporting-paper"><div className="reporting-paper-header"><strong>{result.company.company_name}</strong><h2>{result.report.category} · {result.report.title}</h2><p>{result.outlet.outlet_code} · {result.outlet.outlet_name}</p><p>{result.report.period?result.period.start+' — '+result.period.end:'Current stock snapshot'}</p>{result.applied_filter_labels.length>0&&<p>{result.applied_filter_labels.join(' · ')}</p>}<small>Generated {new Date(result.generated_at).toLocaleString('en-MY')}</small></div>

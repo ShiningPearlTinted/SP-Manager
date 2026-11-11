@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {emptyBattery,validateBattery,parseBatterySheet,resolveBatteryImport,batteryWorkbook} from './price-check-excel.js';
-import {PagedRows,DrTool} from "./dr-tool.jsx";
+import {ListSearch,PagedRows,DrTool} from "./dr-tool.jsx";
 
 let excelLoading;
 function loadExcel(){
@@ -55,7 +55,7 @@ export default function PriceCheck({request,loadProducts,canManage,outlet}){
  const chosen=batteries.find(r=>String(r.id)===String(selected));
  return <section className="pc-page"><div className="dr-toolbar dr page-dr-toolbar" role="toolbar" aria-label="Price Check"><DrTool icon="refresh" label="Refresh" disabled={loading||busy} onClick={()=>{setNotice('');refresh();}}/></div>
   <div className="pc-tabs" role="tablist" aria-label="Price check type">{['Product','Car Battery'].map(t=><button role="tab" key={t} id={'pc-tab-'+t.replace(' ','-')} aria-controls="pc-results" aria-selected={tab===t} disabled={busy} onClick={()=>{if(t===tab)return;setTab(t);setBrand('');setSearch('');setError('');setNotice('');setReady(false);setSelected(null);}}>{t}</button>)}</div>
-  <div className="pc-controls"><label className="pc-search">Search<input aria-label="Search Price Check" value={search} onChange={e=>setSearch(e.target.value)} placeholder={tab==='Product'?'Product name, code or barcode':'Car brand, model or battery size'}/></label>
+  <div className="pc-controls"><div className="pc-search"><ListSearch value={search} onChange={setSearch} placeholder={tab==='Product'?'Product name, code or barcode':'Car brand, model or battery size'}/></div>
    {tab==='Car Battery'&&<label>Car brand<select aria-label="Car brand filter" value={brand} onChange={e=>setBrand(e.target.value)}><option value="">All brands</option>{[...new Set(batteries.map(r=>r.car_brand))].sort().map(b=><option key={b}>{b}</option>)}</select></label>}
   </div>
   {tab==='Car Battery'&&<div className="pc-actions"><button className="primary" disabled={!canManage||!ready||busy||loading} onClick={()=>{setFormError('');setDraft(emptyBattery());}}>+ Add</button><button disabled={!canManage||!chosen||busy||loading||!ready} onClick={()=>{setFormError('');setDraft({...chosen});}}>Edit</button><button disabled={!canManage||!chosen||busy||loading||!ready} onClick={()=>{setFormError('');setRemove(chosen);}}>Delete</button><button disabled={!canManage||!ready||busy||loading} onClick={()=>fileInput.current?.click()}>Import Excel</button><button disabled={!ready||busy||loading} onClick={exportExcel}>Export Excel</button><input hidden ref={fileInput} type="file" accept=".xlsx" onChange={importFile}/>{!canManage&&<span>Manage Products permission is required to change battery records.</span>}</div>}

@@ -1,7 +1,7 @@
 import {bookingEmailTarget} from '../module-api.js';
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {STATUSES,statusLabel,localDate,shiftDate,calendarRange,calendarDays,bookingCalendarFile} from './booking-utils.js';
-import {DateInput,showDate} from "../dr-tool.jsx";
+import {ListSearch,DateInput,showDate} from "../dr-tool.jsx";
 const money=v=>v===null||v===''?'On enquiry':Number(v).toLocaleString('en-MY',{style:'currency',currency:'MYR'});
 const can=(user,key)=>user?.role==='Administrator'||user?.permissions?.[key]===true;
 function Field({label,children}){return <label className="spmb-field"><span>{label}</span>{children}</label>;}
@@ -33,7 +33,7 @@ export default function BookingModule({activeUser,initialOutlet,request,companyL
   <nav className="spmb-tabs" aria-label="Booking sections">{tabs.map(name=><button type="button" key={name} className={tab===name?'selected':''} aria-current={tab===name?'page':undefined} onClick={()=>changeTab(name)}>{name}</button>)}</nav>
   {error&&<div className="spmb-error" role="alert">{error}<button type="button" onClick={()=>setRefresh(v=>v+1)}>Retry</button></div>}
   {notice&&<div className="spmb-notice" role="status">{notice}</div>}
-  {['Bookings','Calendar'].includes(tab)&&<div className="spmb-toolbar"><Field label="Date"><DateInput value={date} onChange={e=>{if(e.target.value){setDate(e.target.value);setPage(1);}}}/></Field><Field label="View"><select value={view} onChange={e=>{setView(e.target.value);setPage(1);}}><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></Field><Field label="Search"><input value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} placeholder="Name, phone, plate or reference"/></Field><Field label="Status"><select value={status} onChange={e=>{setStatus(e.target.value);setPage(1);}}><option value="">All statuses</option>{tab==='Bookings'&&<option value="deleted">Deleted bookings</option>}{STATUSES.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field><button type="button" onClick={()=>setRefresh(v=>v+1)} disabled={loading}>Refresh</button></div>}
+  {['Bookings','Calendar'].includes(tab)&&<div className="spmb-toolbar"><Field label="Date"><DateInput value={date} onChange={e=>{if(e.target.value){setDate(e.target.value);setPage(1);}}}/></Field><Field label="View"><select value={view} onChange={e=>{setView(e.target.value);setPage(1);}}><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select></Field><Field label="Search"><ListSearch value={query} onChange={v=>(e=>{setQuery(e.target.value);setPage(1);})({target:{value:v}})} placeholder={"Name, phone, plate or reference"}/></Field><Field label="Status"><select value={status} onChange={e=>{setStatus(e.target.value);setPage(1);}}><option value="">All statuses</option>{tab==='Bookings'&&<option value="deleted">Deleted bookings</option>}{STATUSES.map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field><button type="button" onClick={()=>setRefresh(v=>v+1)} disabled={loading}>Refresh</button></div>}
   {loading&&<p role="status" className="spmb-loading">Loading booking data…</p>}
   {!loading&&config&&<>
    {['Bookings','Calendar','Services'].includes(tab)&&!config.services.length&&<div className="spmb-empty"><h2>Set up your first booking service</h2>{settings&&<button type="button" className="spmb-primary" onClick={()=>changeTab('Services')}>Add a service</button>}</div>}

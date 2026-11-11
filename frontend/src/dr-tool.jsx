@@ -61,16 +61,18 @@ export const showDate=v=>/^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)
 // search row at the top and a pager row at the bottom (only when there is more than one page).
 export const LIST_PAGE_SIZE=25;
 const listText=v=>{if(v===null||v===undefined||typeof v==="boolean")return "";if(typeof v==="string"||typeof v==="number")return String(v);if(Array.isArray(v))return v.map(listText).join(" ");if(React.isValidElement(v))return listText(v.props?.children);if(typeof v==="object")return Object.values(v).map(x=>typeof x==="object"&&x!==null&&!Array.isArray(x)&&!React.isValidElement(x)?"":listText(x)).join(" ");return ""};
-export function ListSearch({value,onChange,placeholder="Search…"}){
- return <div className="list-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="search" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}/>{value&&<button type="button" className="list-search-clear" onClick={()=>onChange("")} aria-label="Clear search">×</button>}</div>;
+// The one search box used by every Management page (same size, icon, focus ring and clear button).
+export function ListSearch({value,onChange,placeholder="Search…",autoFocus=false}){
+ return <div className="sp-search"><svg className="sp-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input className="sp-search-input" type="text" inputMode="search" value={value??""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder} autoFocus={autoFocus}/>{value?<button type="button" className="sp-search-clear" onClick={()=>onChange("")} aria-label="Clear search" title="Clear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg></button>:null}</div>;
 }
 export function ListPager({page,pages,from,to,total,onPage}){
  if(pages<=1)return null;
  return <div className="list-pager"><span className="list-pager-info">{from}–{to} of {total}</span><div className="list-pager-nav"><button type="button" disabled={page<=1} onClick={()=>onPage(1)} aria-label="First page">«</button><button type="button" disabled={page<=1} onClick={()=>onPage(page-1)} aria-label="Previous page">‹</button><span className="list-pager-page">Page {page} of {pages}</span><button type="button" disabled={page>=pages} onClick={()=>onPage(page+1)} aria-label="Next page">›</button><button type="button" disabled={page>=pages} onClick={()=>onPage(pages)} aria-label="Last page">»</button></div></div>;
 }
-export function PagedRows({items,children,search=false,placeholder="Search…",pageSize=LIST_PAGE_SIZE,empty=null}){
+export function PagedRows({items,children,search=false,query,placeholder="Search…",pageSize=LIST_PAGE_SIZE,empty=null}){
  const list=Array.isArray(items)?items:[];
- const [q,setQ]=useState(""),[page,setPage]=useState(1);
+ const [own,setQ]=useState(""),[page,setPage]=useState(1);
+ const q=typeof query==="string"?query:own;
  const term=q.trim().toLowerCase();
  const filtered=useMemo(()=>term?list.filter(x=>listText(x).toLowerCase().includes(term)):list,[list,term]);
  useEffect(()=>{setPage(1)},[term,list.length]);

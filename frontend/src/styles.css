@@ -6754,14 +6754,6 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .hardware-remote .ph-table button.ph-cancel:hover{background:#f8fafc!important}
 
 /* Long lists: search row + pager row inside any table (PagedRows) */
-tr.list-tools-row>td{padding:8px 10px!important;background:var(--panel,#fff);border-bottom:1px solid var(--line,#e5e7eb)}
-.list-search{position:relative;display:flex;align-items:center;max-width:420px}
-.list-search svg{position:absolute;left:11px;width:15px;height:15px;fill:none;stroke:#94a3b8;stroke-width:2;stroke-linecap:round;pointer-events:none}
-.list-search input{width:100%;height:36px;padding:0 34px 0 34px;border:1px solid var(--line,#d1d5db);border-radius:9px;background:var(--panel,#fff);color:inherit;font:inherit;font-size:13px}
-.list-search input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
-.list-search input::-webkit-search-cancel-button{display:none}
-button.list-search-clear{position:absolute;right:6px;width:24px!important;height:24px!important;padding:0!important;border:0!important;border-radius:6px!important;background:transparent!important;color:#94a3b8!important;font-size:16px;line-height:1;box-shadow:none!important;cursor:pointer}
-button.list-search-clear:hover{background:#f1f5f9!important;color:#475569!important}
 tr.list-pager-row>td{padding:10px 12px!important;background:var(--panel,#fff);border-top:1px solid var(--line,#e5e7eb);border-bottom:0!important}
 tr.list-pager-row:hover>td{background:var(--panel,#fff)}
 .list-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:#64748b}
@@ -6771,3 +6763,22 @@ tr.list-pager-row:hover>td{background:var(--panel,#fff)}
 .list-pager-nav button:hover:not(:disabled){background:#f1f5f9!important;border-color:#cbd5e1!important}
 .list-pager-nav button:disabled{opacity:.4;cursor:default}
 tr.list-empty-row>td{padding:22px!important;text-align:center;color:#94a3b8}
+
+/* ===== Standard search box (ListSearch) – the same everywhere in Management ===== */
+.sp-search{position:relative!important;display:flex!important;align-items:center;width:100%;max-width:520px;min-width:0;margin:0;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.sp-search svg.sp-search-icon{position:absolute!important;left:12px;top:50%;transform:translateY(-50%);flex:none;width:16px!important;min-width:16px;height:16px!important;fill:none!important;stroke:#94a3b8!important;stroke-width:2;stroke-linecap:round;pointer-events:none;z-index:1}
+.sp-search input.sp-search-input{width:100%!important;min-width:0;height:40px!important;margin:0!important;padding:0 38px 0 38px!important;border:1px solid #d8e0e7!important;border-radius:10px!important;background:#fff!important;color:#0f172a!important;font:inherit;font-size:13.5px!important;line-height:40px;box-shadow:none!important;outline:none!important;transition:border-color .15s,box-shadow .15s}
+.sp-search input.sp-search-input::placeholder{color:#94a3b8;opacity:1}
+.sp-search input.sp-search-input:focus{border-color:#159bd4!important;box-shadow:0 0 0 3px rgba(21,155,212,.14)!important}
+.sp-search button.sp-search-clear{position:absolute!important;right:7px;top:50%;transform:translateY(-50%);display:inline-flex!important;align-items:center;justify-content:center;width:26px!important;min-width:26px;height:26px!important;margin:0!important;padding:0!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#94a3b8!important;box-shadow:none!important;cursor:pointer}
+.sp-search button.sp-search-clear:hover{background:#f1f5f9!important;color:#475569!important}
+.sp-search button.sp-search-clear svg{width:14px!important;min-width:14px;height:14px!important;fill:none!important;stroke:currentColor!important;stroke-width:2.2;stroke-linecap:round}
+.list-search-bar{display:flex;align-items:center;margin:0 0 12px}
+/* Old wrappers keep their layout only; the box itself comes from .sp-search */
+.named-order-search,.outlet-search,.payments-search-wrap{border:0!important;background:transparent!important;overflow:visible!important;padding:0!important;box-shadow:none!important}
+.customer-search{display:flex!important;align-items:center;gap:8px;border:0!important;overflow:visible!important;grid-template-columns:none!important}
+.customer-search>select{flex:none;width:110px;height:40px;border:1px solid #d8e0e7!important;border-radius:10px;background:#fff}
+.customer-search>.sp-search{max-width:none;flex:1}
+.reporting-catalog-head .sp-search{max-width:320px}
+.label-printing-toolbar>.sp-search{flex:1;max-width:420px;align-self:center}
+.payments-search-wrap .sp-search input.sp-search-input,.named-order-search .sp-search input.sp-search-input,.outlet-search .sp-search input.sp-search-input,.customer-search .sp-search input.sp-search-input,.label-printing-toolbar .sp-search input.sp-search-input{padding:0 38px!important;height:40px!important;border:1px solid #d8e0e7!important;border-radius:10px!important;background:#fff!important}
