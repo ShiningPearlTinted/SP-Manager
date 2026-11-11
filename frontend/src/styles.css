@@ -6697,3 +6697,58 @@ html:has(.cdx),body:has(.cdx),body:has(.cdx) #root{width:100%!important;height:1
 .hardware-remote-history-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .hardware-remote-history-head h3{margin:20px 0 8px}
 .hardware-remote-del{width:28px;height:28px;padding:0;border-radius:8px;line-height:1;font-size:16px;color:#b91c1c}
+
+/* Print history: modern card table */
+.ph-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:22px 0 10px}
+.ph-head>div{display:flex;align-items:baseline;gap:10px}
+.ph-head h3{margin:0!important;font-size:15px}
+.ph-count{font-size:12px;color:#6b7280}
+.settings-main .ph-clear,.ph-clear{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid #fecaca;border-radius:8px;background:#fff;color:#b91c1c;font:600 12.5px/1 inherit;cursor:pointer;box-shadow:none;transition:background .15s,border-color .15s}
+.ph-clear:hover{background:#fef2f2;border-color:#fca5a5}
+.ph-clear svg,.ph-icon svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ph-card{overflow-x:auto;border:1px solid var(--line,#e5e7eb);border-radius:12px;background:var(--panel,#fff)}
+.ph-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.ph-table th{position:sticky;top:0;padding:10px 14px;background:#f8fafc;color:#64748b;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;text-align:left;border-bottom:1px solid var(--line,#e5e7eb);white-space:nowrap}
+.ph-table td{padding:11px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle;color:#0f172a}
+.ph-table tbody tr:last-child td{border-bottom:0}
+.ph-table tbody tr{transition:background .12s}
+.ph-table tbody tr:hover{background:#f8fafc}
+.ph-main{display:block;font-weight:500;white-space:nowrap}
+.ph-doc{font-variant-numeric:tabular-nums}
+.ph-table td small{display:block;margin-top:2px;color:#64748b;font-size:11.5px;white-space:nowrap}
+.ph-by{font-weight:400;color:#334155}
+.ph-paper{display:inline-block;padding:2px 8px;border-radius:6px;background:#eef2ff;color:#3730a3;font-size:11.5px;font-weight:700}
+.ph-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.ph-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.ph-badge.printed{background:#ecfdf5;color:#047857}
+.ph-badge.cancelled{background:#f1f5f9;color:#475569}
+.ph-badge.failed,.ph-badge.expired{background:#fef2f2;color:#b91c1c}
+.ph-badge.queued,.ph-badge.printing{background:#eff6ff;color:#1d4ed8}
+.ph-table td small.ph-note{color:#94a3b8}
+.ph-table td small.ph-error{color:#b91c1c;white-space:normal;max-width:260px}
+.ph-actions{width:1%;text-align:right;white-space:nowrap}
+.settings-main .ph-icon,.ph-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:#94a3b8;cursor:pointer;box-shadow:none;opacity:.7;transition:background .15s,color .15s,opacity .15s}
+.ph-table tbody tr:hover .ph-icon{opacity:1}
+.ph-icon:hover{background:#fef2f2;color:#dc2626}
+.settings-main .ph-cancel,.ph-cancel{height:30px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font:600 12px/1 inherit;cursor:pointer;box-shadow:none}
+.ph-cancel:hover{background:#f8fafc}
+.ph-empty{padding:22px;border:1px dashed var(--line,#e5e7eb);border-radius:12px;color:#94a3b8;text-align:center;font-size:13px}
+/* Print history: fit the settings panel; actions always visible */
+.ph-table th,.ph-table td{padding:10px 12px}
+.ph-table td small{white-space:normal}
+.ph-table td small.ph-error{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:220px}
+.ph-table td:nth-child(3) .ph-main{white-space:normal}
+.ph-actions{position:sticky;right:0;background:inherit}
+.ph-table tbody tr{background:var(--panel,#fff)}
+.ph-table th:last-child{position:sticky;right:0}
+.settings-main .ph-icon,.ph-icon{opacity:1;color:#94a3b8;border:1px solid transparent}
+.ph-icon:hover{border-color:#fecaca}
+/* Print history buttons: win over the global management button/SVG rules */
+.hardware-remote .ph-table button.ph-icon{display:inline-flex!important;align-items:center;justify-content:center;width:32px!important;height:32px!important;min-width:32px;padding:0!important;border:1px solid transparent!important;border-radius:8px!important;background:transparent!important;color:#94a3b8!important;box-shadow:none!important}
+.hardware-remote .ph-table button.ph-icon:hover{background:#fef2f2!important;border-color:#fecaca!important;color:#dc2626!important}
+.hardware-remote .ph-table button.ph-icon svg,.hardware-remote button.ph-clear svg{flex:none;width:16px!important;min-width:16px;height:16px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.9}
+.hardware-remote .ph-table button.ph-icon svg path,.hardware-remote button.ph-clear svg path{stroke:currentColor!important;fill:none!important}
+.hardware-remote button.ph-clear{display:inline-flex!important;align-items:center;gap:6px;height:32px!important;padding:0 12px!important;border:1px solid #fecaca!important;border-radius:8px!important;background:#fff!important;color:#b91c1c!important;box-shadow:none!important;font-size:12.5px!important;font-weight:600!important}
+.hardware-remote button.ph-clear:hover{background:#fef2f2!important;border-color:#fca5a5!important}
+.hardware-remote .ph-table button.ph-cancel{height:30px!important;padding:0 12px!important;border:1px solid #cbd5e1!important;border-radius:8px!important;background:#fff!important;color:#334155!important;box-shadow:none!important;font-size:12px!important;font-weight:600!important}
+.hardware-remote .ph-table button.ph-cancel:hover{background:#f8fafc!important}
