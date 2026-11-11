@@ -234,7 +234,7 @@ function spReviseSale(PDO $pdo,int $outlet,array $sale):array {
 
 function spSetInventory(PDO $pdo,int $outlet,int $product,float $quantity,?float $expected=null):void {
  if(!spHasPermission('manageInventory'))throw new RuntimeException('Inventory permission required.');if(!$pdo->inTransaction())throw new LogicException('Inventory change requires a transaction.');
- $q=$pdo->prepare('SELECT po.stock_qty,COALESCE(po.cost_price,p.cost_price) AS cost,p.is_service FROM product_outlets po JOIN products p ON p.id=po.product_id WHERE po.product_id=? AND po.outlet_id=? FOR UPDATE');$q->execute([$product,$outlet]);$old=$q->fetch();if(!$old)throw new RuntimeException('Outlet assignment required.');
+ $q=$pdo->prepare('SELECT po.stock_qty,COALESCE(po.cost_price,p.cost_price,0) AS cost,p.is_service FROM product_outlets po JOIN products p ON p.id=po.product_id WHERE po.product_id=? AND po.outlet_id=? FOR UPDATE');$q->execute([$product,$outlet]);$old=$q->fetch();if(!$old)throw new RuntimeException('Outlet assignment required.');
  $before=(float)$old['stock_qty'];if(abs($quantity-$before)<0.0005)return;if($expected!==null&&abs($expected-$before)>0.0005)throw new RuntimeException('Stock changed on another terminal. Refresh before counting.');$delta=round($quantity-$before,3);if(abs($delta)<0.0005)return;
  if(!is_finite($quantity)||abs($quantity)>1000000)throw new InvalidArgumentException('Invalid stock count.');if($quantity<0&&!empty(spOutletSettings($pdo,$outlet)['order']['preventNegativeInventory']))throw new InvalidArgumentException('Negative stock is disabled.');
  $pdo->prepare('UPDATE product_outlets SET stock_qty=? WHERE product_id=? AND outlet_id=?')->execute([$quantity,$product,$outlet]);
