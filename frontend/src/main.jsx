@@ -2165,9 +2165,11 @@ function PriceTagsModal({products,money,onClose,setNotice,settings,priceTagSetti
  const lw=roll?contentW:Math.max(5,Math.min(labelW,(contentW-(cols-1)*cg)/cols)), lh=labelH, rg=rowGap;
  const rowsPerPage=Math.max(1,Math.floor((pageH-m.top-m.bottom+rg)/(lh+rg)));
  const perPage=rowsPerPage*cols;
- const pageChunks=useMemo(()=>{if(roll)return[labels];const out=[];for(let i=0;i<labels.length;i+=perPage)out.push(labels.slice(i,i+perPage));return out.length?out:[[]]},[labels,roll,perPage]);
+ // Roll paper: one label per page (roll width x label height). A single tall page made label printers with
+ // gap-sensing media (e.g. 40 x 30 mm rolls) split and rotate the print across several labels.
+ const pageChunks=useMemo(()=>{if(roll)return labels.length?labels.map(l=>[l]):[[]];const out=[];for(let i=0;i<labels.length;i+=perPage)out.push(labels.slice(i,i+perPage));return out.length?out:[[]]},[labels,roll,perPage]);
  const pages=pageChunks.length;
- const rollH=Math.max(lh,m.top+m.bottom+labels.length*lh+Math.max(0,labels.length-1)*rg);
+ const rollH=Math.max(1,m.top+m.bottom+lh);
  const sheetH=roll?rollH:pageH;
  useEffect(()=>{setPreviewPage(p=>Math.min(Math.max(1,p),pages))},[pages]);
 
