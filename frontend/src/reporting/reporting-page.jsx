@@ -4,7 +4,8 @@ import {ListSearch,DateInput} from "../dr-tool.jsx";
 
 function localDate(date=new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
 function Filter({label,value,onChange,items,disabled=false}) {return <label className="reporting-field"><span>{label}</span><select value={value} onChange={e=>onChange(e.target.value)} disabled={disabled}><option value="">{disabled?'Not applicable':'All'}</option>{items.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;}
-function formatted(value,type) {if(value===null||value===undefined)return '—';if(type==='money')return Number(value).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});if(type==='number')return Number(value).toLocaleString('en-MY',{maximumFractionDigits:3});return String(value);}
+function reportDate(v) {const m=/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(v));if(!m||String(v).length>25)return null;return m[3]+'/'+m[2]+'/'+m[1]+(m[4]?' '+m[4]+':'+m[5]:'');}
+function formatted(value,type) {if(value===null||value===undefined)return '—';if(type==='money')return Number(value).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});if(type==='number')return Number(value).toLocaleString('en-MY',{maximumFractionDigits:3});return reportDate(value)??String(value);}
 export default function ReportingPage({canView,apiBase,headers,outlet}) {
   const requestRef=useRef({apiBase,headers,outlet});requestRef.current={apiBase,headers,outlet};
   const [catalog,setCatalog]=useState([]),[options,setOptions]=useState({customers:[],suppliers:[],users:[],products:[],groups:[],terminals:[]});

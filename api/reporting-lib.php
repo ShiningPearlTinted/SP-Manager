@@ -27,6 +27,13 @@ function rpAllocate(int $amount,array $weights): array {
 function rpDate(string $v): string {$d=DateTimeImmutable::createFromFormat('!Y-m-d',$v);if(!$d||$d->format('Y-m-d')!==$v)throw new ReportingError('Invalid report date.');return $v;}
 function rpId(mixed $v): ?int {if($v===null||$v==='')return null;if(!is_scalar($v)||!preg_match('/^[1-9][0-9]{0,17}$/',(string)$v))throw new ReportingError('Invalid report filter.');return(int)$v;}
 function rpRows(PDO $db,string $sql,array $args=[]): array {$q=$db->prepare($sql);$q->execute($args);$out=[];while($r=$q->fetch(PDO::FETCH_ASSOC)){if(count($out)>=50000)throw new ReportingError('More than 50,000 source rows. Choose a shorter period.',422);$out[]=$r;}return $out;}
+// Stored timestamps are UTC (spDateTime/gmdate). Reports use Malaysia time for periods, dates and hours.
+function rpUtcBound(string $day): string {return (new DateTimeImmutable($day.' 00:00:00',new DateTimeZone('Asia/Kuala_Lumpur')))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');}
+function rpLocalTimes(array $rows): array {
+    static $keys=['sale_date','purchase_date','refund_date','created_at','updated_at','opened_at','closed_at','paid_at'];$utc=new DateTimeZone('UTC');$myt=new DateTimeZone('Asia/Kuala_Lumpur');
+    foreach($rows as &$r)foreach($keys as $k)if(isset($r[$k])&&is_string($r[$k])&&preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/',$r[$k]))$r[$k]=(new DateTimeImmutable($r[$k],$utc))->setTimezone($myt)->format('Y-m-d H:i:s');
+    unset($r);return $rows;
+}
 function rpJson(mixed $v): array {$x=json_decode((string)($v??''),true);return is_array($x)?$x:[];}
 function rpCatalog(): array {
     $groups=[
@@ -41,19 +48,21 @@ function rpCatalog(): array {
     }return $out;
 }
 final class ReportingEngine {
-    private array $cache=[];public array $warnings=[];public readonly string $start;public readonly string $end;private array $filter;
+    private array $cache=[];public array $warnings=[];public readonly string $start;public readonly string $end;private string $startUtc;private string $endUtc;private array $filter;
     public function __construct(private PDO $db,public readonly int $outlet,array $input){
         foreach($input as $value)if($value!==null&&!is_scalar($value))throw new ReportingError('Invalid report parameter.');
         $this->start=rpDate((string)($input['start']??date('Y-m-01')));$last=rpDate((string)($input['end']??date('Y-m-d')));
         if($last<$this->start)throw new ReportingError('End date must follow start date.');
         if((new DateTimeImmutable($this->start))->diff(new DateTimeImmutable($last))->days>3660)throw new ReportingError('Choose a period of ten years or less.');
-        $this->end=(new DateTimeImmutable($last))->modify('+1 day')->format('Y-m-d');$this->filter=[];
+        $this->end=(new DateTimeImmutable($last))->modify('+1 day')->format('Y-m-d');
+        // Times are stored in UTC; the period is Malaysia calendar days.
+        $this->startUtc=rpUtcBound($this->start);$this->endUtc=rpUtcBound($this->end);$this->filter=[];
         foreach(['customer','supplier','user','product','group','terminal'] as $k)$this->filter[$k]=rpId($input[$k]??null);
         $this->filter['include_subgroups']=($input['include_subgroups']??'1')==='1';
         $status=(string)($input['stock_status']??'');if(!in_array($status,['','attention','negative','out','low'],true))throw new ReportingError('Invalid report filter.');$this->filter['stock_status']=$status;
     }
     public function warning(string $v): void {$this->warnings[$v]=$v;}
-    private function rows(string $key,string $sql,array $args=[]): array {return $this->cache[$key]??=rpRows($this->db,$sql,$args);}
+    private function rows(string $key,string $sql,array $args=[]): array {return $this->cache[$key]??=rpLocalTimes(rpRows($this->db,$sql,$args));}
     public function options(): array {
         $o=$this->outlet;$m=spMasterOutletId($this->db);return [
             'customers'=>$this->rows('customers','SELECT c.id,c.name FROM customers c WHERE c.outlet_id=? OR c.outlet_id IS NULL OR EXISTS(SELECT 1 FROM sales s WHERE s.customer_id=c.id AND s.outlet_id=?) ORDER BY c.name',[$o,$o]),
@@ -76,13 +85,13 @@ final class ReportingEngine {
     }
     private function documents(bool $purchase=false,bool $all=false,bool $history=false): array {
         $t=$purchase?'purchases':'sales';$d=$purchase?'purchase_date':'sale_date';$p=$purchase?'supplier':'customer';
-        $rows=$this->rows($t.($history?'-history':''),"SELECT d.*,p.".($purchase?'supplier_name':'name')." AS party_name,u.name AS user_name FROM $t d LEFT JOIN ".($purchase?'suppliers':'customers')." p ON p.id=d.{$p}_id LEFT JOIN users u ON u.id=d.created_by WHERE d.outlet_id=?".($history?'':" AND d.$d>=? AND d.$d<?")." ORDER BY d.$d,d.id",$history?[$this->outlet]:[$this->outlet,$this->start,$this->end]);
+        $rows=$this->rows($t.($history?'-history':''),"SELECT d.*,p.".($purchase?'supplier_name':'name')." AS party_name,u.name AS user_name FROM $t d LEFT JOIN ".($purchase?'suppliers':'customers')." p ON p.id=d.{$p}_id LEFT JOIN users u ON u.id=d.created_by WHERE d.outlet_id=?".($history?'':" AND d.$d>=? AND d.$d<?")." ORDER BY d.$d,d.id",$history?[$this->outlet]:[$this->outlet,$this->startUtc,$this->endUtc]);
         return array_values(array_filter($rows,function($r)use($purchase,$all){if(!$all&&in_array(strtoupper($r['status']),['VOID','VOIDED','CANCELLED','CANCELED'],true))return false;if($this->filter['user']&&(int)$r['created_by']!==$this->filter['user'])return false;$p=$purchase?'supplier':'customer';return !$this->filter[$p]||(int)$r[$p.'_id']===$this->filter[$p];}));
     }
     private function facts(bool $purchase=false,bool $all=false,bool $history=false): array {
         $key=($purchase?'purchase':'sale').($all?'-all':'').($history?'-history':'').'-facts';if(isset($this->cache[$key]))return $this->cache[$key];
         $t=$purchase?'purchase_items':'sale_items';$p=$purchase?'purchases':'sales';$fk=$purchase?'purchase_id':'sale_id';$d=$purchase?'purchase_date':'sale_date';
-        $items=$this->rows($t.($history?'-history':''),"SELECT i.*,p.product_name AS current_name,p.sku,p.group_id,g.group_name FROM $t i JOIN $p d ON d.id=i.$fk LEFT JOIN products p ON p.id=i.product_id LEFT JOIN product_groups g ON g.id=p.group_id WHERE d.outlet_id=?".($history?'':" AND d.$d>=? AND d.$d<?")." ORDER BY d.id,i.id",$history?[$this->outlet]:[$this->outlet,$this->start,$this->end]);
+        $items=$this->rows($t.($history?'-history':''),"SELECT i.*,p.product_name AS current_name,p.sku,p.group_id,g.group_name FROM $t i JOIN $p d ON d.id=i.$fk LEFT JOIN products p ON p.id=i.product_id LEFT JOIN product_groups g ON g.id=p.group_id WHERE d.outlet_id=?".($history?'':" AND d.$d>=? AND d.$d<?")." ORDER BY d.id,i.id",$history?[$this->outlet]:[$this->outlet,$this->startUtc,$this->endUtc]);
         $by=[];foreach($items as $i)$by[(int)$i[$fk]][]=$i;$out=[];
         foreach($this->documents($purchase,$all,$history) as $doc){$lines=$by[(int)$doc['id']]??[];if(!$lines){$this->warning('Some documents have no item rows; item reports cannot include their totals.');continue;}
             $weights=array_map(fn($i)=>max(0,rpMoney($i[$purchase?'total':'line_total'])),$lines);$gross=rpAllocate(rpMoney($doc['total']),$weights);$tax=rpAllocate(rpMoney($doc['tax']),$weights);$disc=rpAllocate(rpMoney($doc['discount']),$weights);
@@ -102,7 +111,7 @@ final class ReportingEngine {
         foreach($out as &$r){foreach($r['unknown'] as $k=>$_)$r[$k]=null;unset($r['unknown']);}unset($r);return array_values($out);
     }
     private function salesPayments(bool $event=false): array {
-        $date=$event?'p.created_at':'s.sale_date';$rows=$this->rows('payments-'.(int)$event,"SELECT p.*,s.sale_date,s.status,s.customer_id,s.created_by,s.sale_no AS number,c.name AS party_name,u.name AS user_name FROM sale_payments p JOIN sales s ON s.id=p.sale_id LEFT JOIN customers c ON c.id=s.customer_id LEFT JOIN users u ON u.id=s.created_by WHERE s.outlet_id=? AND $date>=? AND $date<? ORDER BY p.created_at,p.id",[$this->outlet,$this->start,$this->end]);$out=[];
+        $date=$event?'p.created_at':'s.sale_date';$rows=$this->rows('payments-'.(int)$event,"SELECT p.*,s.sale_date,s.status,s.customer_id,s.created_by,s.sale_no AS number,c.name AS party_name,u.name AS user_name FROM sale_payments p JOIN sales s ON s.id=p.sale_id LEFT JOIN customers c ON c.id=s.customer_id LEFT JOIN users u ON u.id=s.created_by WHERE s.outlet_id=? AND $date>=? AND $date<? ORDER BY p.created_at,p.id",[$this->outlet,$this->startUtc,$this->endUtc]);$out=[];
         foreach($rows as $r){if(in_array(strtoupper($r['status']),['VOID','VOIDED','CANCELLED','CANCELED'],true))continue;
             if($this->filter['user']&&(int)$r['created_by']!==$this->filter['user'])continue;if($this->filter['customer']&&(int)$r['customer_id']!==$this->filter['customer'])continue;if(!$this->docMatches((int)$r['sale_id']))continue;
             if(in_array(strtoupper($r['status']),['REFUND','REFUNDED'],true))$this->warning('Refunds have no recorded tender split. Original receipt amounts are retained; refund payments are not assigned to a guessed method.');
@@ -124,8 +133,8 @@ final class ReportingEngine {
     }
     private function refundFacts(): array {
         if(isset($this->cache['refundFacts']))return $this->cache['refundFacts'];
-        $parents=$this->rows('refundParents',"SELECT r.*,s.customer_id,s.tax AS original_tax,s.total AS original_total,c.name AS party_name,u.name AS user_name FROM sale_refunds r JOIN sales s ON s.id=r.original_sale_id AND s.outlet_id=r.outlet_id LEFT JOIN customers c ON c.id=s.customer_id LEFT JOIN users u ON u.id=r.created_by WHERE r.outlet_id=? AND r.refund_date>=? AND r.refund_date<? AND UPPER(r.status) NOT IN ('VOID','VOIDED','CANCELLED','CANCELED') ORDER BY r.refund_date,r.id",[$this->outlet,$this->start,$this->end]);
-        $items=$this->rows('refundItems','SELECT ri.*,r.id AS parent_id,si.cost_snapshot,si.product_name,p.sku,p.group_id,g.group_name FROM sale_refund_items ri JOIN sale_refunds r ON r.id=ri.refund_id LEFT JOIN sale_items si ON si.id=ri.sale_item_id AND si.sale_id=r.original_sale_id LEFT JOIN products p ON p.id=ri.product_id LEFT JOIN product_groups g ON g.id=p.group_id WHERE r.outlet_id=? AND r.refund_date>=? AND r.refund_date<? ORDER BY r.id,ri.id',[$this->outlet,$this->start,$this->end]);
+        $parents=$this->rows('refundParents',"SELECT r.*,s.customer_id,s.tax AS original_tax,s.total AS original_total,c.name AS party_name,u.name AS user_name FROM sale_refunds r JOIN sales s ON s.id=r.original_sale_id AND s.outlet_id=r.outlet_id LEFT JOIN customers c ON c.id=s.customer_id LEFT JOIN users u ON u.id=r.created_by WHERE r.outlet_id=? AND r.refund_date>=? AND r.refund_date<? AND UPPER(r.status) NOT IN ('VOID','VOIDED','CANCELLED','CANCELED') ORDER BY r.refund_date,r.id",[$this->outlet,$this->startUtc,$this->endUtc]);
+        $items=$this->rows('refundItems','SELECT ri.*,r.id AS parent_id,si.cost_snapshot,si.product_name,p.sku,p.group_id,g.group_name FROM sale_refund_items ri JOIN sale_refunds r ON r.id=ri.refund_id LEFT JOIN sale_items si ON si.id=ri.sale_item_id AND si.sale_id=r.original_sale_id LEFT JOIN products p ON p.id=ri.product_id LEFT JOIN product_groups g ON g.id=p.group_id WHERE r.outlet_id=? AND r.refund_date>=? AND r.refund_date<? ORDER BY r.id,ri.id',[$this->outlet,$this->startUtc,$this->endUtc]);
         $by=[];foreach($items as $item)$by[(int)$item['parent_id']][]=$item;$out=[];
         foreach($parents as $doc){
             $lines=$by[(int)$doc['id']]??[];
@@ -141,11 +150,11 @@ final class ReportingEngine {
     private function eventReport(string $id): array {
         $rows=[];$columns=[];$money=[];$numbers=[];
         if($id==='sales-starting-cash'){
-            $source=$this->rows('registers','SELECT r.*,t.terminal_name,u.name AS user_name FROM register_sessions r LEFT JOIN terminals t ON t.id=r.terminal_id AND t.outlet_id=r.outlet_id LEFT JOIN users u ON u.id=r.opened_by WHERE r.outlet_id=? AND r.opened_at>=? AND r.opened_at<? ORDER BY r.opened_at,r.id',[$this->outlet,$this->start,$this->end]);
+            $source=$this->rows('registers','SELECT r.*,t.terminal_name,u.name AS user_name FROM register_sessions r LEFT JOIN terminals t ON t.id=r.terminal_id AND t.outlet_id=r.outlet_id LEFT JOIN users u ON u.id=r.opened_by WHERE r.outlet_id=? AND r.opened_at>=? AND r.opened_at<? ORDER BY r.opened_at,r.id',[$this->outlet,$this->startUtc,$this->endUtc]);
             foreach($source as $r){if($this->filter['user']&&(int)$r['opened_by']!==$this->filter['user'])continue;if($this->filter['terminal']&&(int)$r['terminal_id']!==$this->filter['terminal'])continue;$rows[]=['date'=>$r['opened_at'],'terminal'=>$r['terminal_name']?:'Unassigned','user_name'=>$r['user_name']?:'Unassigned','amount'=>rpMoney($r['opening_cash'])];}
             $columns=['date'=>'Opened','terminal'=>'Cash register','user_name'=>'User','amount'=>'Starting cash'];$money=['amount'];
         }elseif($id==='sales-stock-movement'||str_starts_with($id,'stock-return-')||str_starts_with($id,'loss-damage-')){
-            $source=$this->rows('movements','SELECT m.*,p.product_name,p.group_id,u.name AS user_name FROM stock_movements m LEFT JOIN products p ON p.id=m.product_id LEFT JOIN users u ON u.id=m.created_by WHERE m.outlet_id=? AND m.created_at>=? AND m.created_at<? ORDER BY m.created_at,m.id',[$this->outlet,$this->start,$this->end]);
+            $source=$this->rows('movements','SELECT m.*,p.product_name,p.group_id,u.name AS user_name FROM stock_movements m LEFT JOIN products p ON p.id=m.product_id LEFT JOIN users u ON u.id=m.created_by WHERE m.outlet_id=? AND m.created_at>=? AND m.created_at<? ORDER BY m.created_at,m.id',[$this->outlet,$this->startUtc,$this->endUtc]);
             foreach($source as $r){if(!$this->matches($r))continue;$type=strtoupper(str_replace([' ','-'],'_',$r['movement_type']));
                 $types=$id==='sales-stock-movement'?['SALE','SALE_REVERSAL','SALE_DELETE','REFUND','VOID']:(str_starts_with($id,'stock-return-')?['RETURN','STOCK_RETURN','PURCHASE_RETURN','RETURN_TO_SUPPLIER']:['LOSS','DAMAGE','LOSS_DAMAGE','LOSS_AND_DAMAGE']);
                 if(!in_array($type,$types,true))continue;$rows[]=['date'=>$r['created_at'],'product_name'=>$r['product_name'],'type'=>$r['movement_type'],'quantity'=>(float)$r['quantity'],'before'=>(float)$r['stock_before'],'after'=>(float)$r['stock_after'],'reference'=>$r['reference_no'],'user_name'=>$r['user_name']?:'Unassigned'];}
@@ -168,7 +177,7 @@ final class ReportingEngine {
                 if(!$this->matches($r)||(float)$r['stock_qty']>$threshold)continue;if($id==='stock-control-low-stock'&&!$enabled)continue;if($id==='stock-control-reorder'&&((float)$r['preferred_quantity']===(float)$r['min_stock']||(float)$r['preferred_quantity']<=(float)$r['stock_qty']))continue;$rows[]=['sku'=>$r['sku'],'product_name'=>$r['product_name'],'stock'=>(float)$r['stock_qty'],'minimum'=>$threshold,'preferred'=>(float)$r['preferred_quantity'],'reorder'=>max(0,(float)$r['preferred_quantity']-(float)$r['stock_qty'])];}
             $columns=['sku'=>'Code','product_name'=>'Product','stock'=>'On hand','minimum'=>'Minimum','preferred'=>'Preferred','reorder'=>'Reorder quantity'];$numbers=['reorder'];$this->warning('Stock control is a current stock snapshot. The date period does not apply.');
         }elseif($id==='sales-refunds'){
-            $source=$this->rows('refunds','SELECT r.*,s.sale_no,s.customer_id,c.name AS party_name,u.name AS user_name FROM sale_refunds r JOIN sales s ON s.id=r.original_sale_id AND s.outlet_id=r.outlet_id LEFT JOIN customers c ON c.id=s.customer_id LEFT JOIN users u ON u.id=r.created_by WHERE r.outlet_id=? AND r.refund_date>=? AND r.refund_date<? ORDER BY r.refund_date,r.id',[$this->outlet,$this->start,$this->end]);
+            $source=$this->rows('refunds','SELECT r.*,s.sale_no,s.customer_id,c.name AS party_name,u.name AS user_name FROM sale_refunds r JOIN sales s ON s.id=r.original_sale_id AND s.outlet_id=r.outlet_id LEFT JOIN customers c ON c.id=s.customer_id LEFT JOIN users u ON u.id=r.created_by WHERE r.outlet_id=? AND r.refund_date>=? AND r.refund_date<? ORDER BY r.refund_date,r.id',[$this->outlet,$this->startUtc,$this->endUtc]);
             foreach($source as $r){if(in_array(strtoupper($r['status']),['VOID','VOIDED','CANCELLED'],true))continue;if($this->filter['user']&&(int)$r['created_by']!==$this->filter['user'])continue;if($this->filter['customer']&&(int)$r['customer_id']!==$this->filter['customer'])continue;
                 if(($this->filter['product']||$this->filter['group'])){
                     $items=rpRows($this->db,'SELECT i.product_id,p.group_id FROM sale_refund_items i LEFT JOIN products p ON p.id=i.product_id WHERE i.refund_id=?',[$r['id']]);$match=false;
@@ -177,14 +186,14 @@ final class ReportingEngine {
                 $rows[]=['date'=>$r['refund_date'],'number'=>$r['refund_no'],'original'=>$r['sale_no'],'party_name'=>$r['party_name']?:'Walk-in','user_name'=>$r['user_name']?:'Unassigned','amount'=>rpMoney($r['amount']),'reason'=>$r['reason']];
             }$columns=['date'=>'Date','number'=>'Refund','original'=>'Original sale','party_name'=>'Customer','user_name'=>'User','amount'=>'Refund amount','reason'=>'Reason'];$money=['amount'];
         }elseif($id==='sales-credit-payments'){
-            $source=$this->rows('collections',"SELECT p.*,i.invoice_no,c.name AS party_name,u.name AS user_name FROM document_payments p JOIN invoices i ON i.id=p.invoice_id AND i.outlet_id=p.outlet_id LEFT JOIN customers c ON c.id=p.customer_id LEFT JOIN users u ON u.id=p.created_by WHERE p.outlet_id=? AND p.paid_at>=? AND p.paid_at<? AND UPPER(i.status) NOT IN ('VOID','VOIDED','CANCELLED') ORDER BY p.paid_at,p.id",[$this->outlet,$this->start,$this->end]);
+            $source=$this->rows('collections',"SELECT p.*,i.invoice_no,c.name AS party_name,u.name AS user_name FROM document_payments p JOIN invoices i ON i.id=p.invoice_id AND i.outlet_id=p.outlet_id LEFT JOIN customers c ON c.id=p.customer_id LEFT JOIN users u ON u.id=p.created_by WHERE p.outlet_id=? AND p.paid_at>=? AND p.paid_at<? AND UPPER(i.status) NOT IN ('VOID','VOIDED','CANCELLED') ORDER BY p.paid_at,p.id",[$this->outlet,$this->startUtc,$this->endUtc]);
             foreach($source as $r){if(!$this->matches($r))continue;$rows[]=['date'=>$r['paid_at'],'number'=>$r['invoice_no'],'party_name'=>$r['party_name']?:'Walk-in','user_name'=>$r['user_name']?:'Unassigned','payment_type'=>$r['payment_type_name'],'amount'=>rpMoney($r['amount']),'reference'=>$r['reference_no']];}
             $columns=['date'=>'Payment date','number'=>'Invoice','party_name'=>'Customer','user_name'=>'User','payment_type'=>'Payment type','amount'=>'Collected','reference'=>'Reference'];$money=['amount'];
             $this->warning('Shows explicit invoice collection records by payment date. POS tenders are not guessed to be credit collections because no credit-collection marker is stored.');
         }else{
             foreach($this->salesPayments(true) as $r)$rows[]=[...$r,'type'=>'Sales receipt'];
             if(!$this->filter['customer']){
-                $cash=$this->rows('cash','SELECT c.*,u.name AS user_name FROM cash_movements c LEFT JOIN users u ON u.id=c.created_by WHERE c.outlet_id=? AND c.created_at>=? AND c.created_at<? ORDER BY c.created_at,c.id',[$this->outlet,$this->start,$this->end]);
+                $cash=$this->rows('cash','SELECT c.*,u.name AS user_name FROM cash_movements c LEFT JOIN users u ON u.id=c.created_by WHERE c.outlet_id=? AND c.created_at>=? AND c.created_at<? ORDER BY c.created_at,c.id',[$this->outlet,$this->startUtc,$this->endUtc]);
                 foreach($cash as $r){if($this->filter['user']&&(int)$r['created_by']!==$this->filter['user'])continue;$sign=in_array(strtoupper($r['movement_type']),['OUT','CASH_OUT','WITHDRAWAL'],true)?-1:1;$rows[]=['date'=>$r['created_at'],'number'=>$r['reference_no'],'type'=>'Cash '.$r['movement_type'],'party_name'=>'','user_name'=>$r['user_name']?:'Unassigned','payment_type'=>'Cash','amount'=>$sign*rpMoney($r['amount']),'reference'=>$r['reason']];}
                 foreach($this->purchasePayments() as $r)$rows[]=[...$r,'amount'=>-$r['amount'],'type'=>'Supplier payment'];
             }
@@ -238,6 +247,8 @@ final class ReportingEngine {
         foreach($rows as &$r){$r=array_intersect_key($r,$columns);foreach($money as $m)if(isset($r[$m]))$r[$m]=rpDecimal((int)$r[$m]);}unset($r);foreach($money as $m)if(isset($totals[$m]))$totals[$m]=rpDecimal((int)$totals[$m]);
         $company=rpRows($this->db,'SELECT company_name,registration_no,street_name,building_number,postal_code,city,state,phone_number,logo_url,currency_code FROM company_settings WHERE outlet_id=? ORDER BY id LIMIT 1',[$this->outlet])[0]??['company_name'=>''];
         $outlet=rpRows($this->db,'SELECT outlet_code,outlet_name FROM outlets WHERE id=?',[$this->outlet])[0];
+        // Quantity columns that are not totalled (on hand, minimum, preferred, stock before/after) are still numbers: align them right.
+        foreach(array_keys($columns) as $k){if(in_array($k,$money,true)||in_array($k,$numbers,true))continue;$seen=false;$numeric=true;foreach($rows as $r){$v=$r[$k]??null;if($v===null)continue;if(!is_int($v)&&!is_float($v)){$numeric=false;break;}$seen=true;}if($numeric&&$seen)$numbers[]=$k;}
         return ['ok'=>true,'api_version'=>'V10','reporting_version'=>'R1','report'=>$definition,'outlet'=>$outlet,'company'=>$company,'period'=>['start'=>$this->start,'end'=>(new DateTimeImmutable($this->end))->modify('-1 day')->format('Y-m-d')],'columns'=>array_map(fn($k,$label)=>['key'=>$k,'label'=>$label,'type'=>in_array($k,$money,true)?'money':(in_array($k,$numbers,true)?'number':'text')],array_keys($columns),array_values($columns)),'rows'=>$rows,'totals'=>$totals,'warnings'=>array_values($this->warnings),'generated_at'=>date(DATE_ATOM),'row_count'=>count($rows)];
     }
 }
