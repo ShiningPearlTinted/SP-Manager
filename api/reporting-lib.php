@@ -32,11 +32,11 @@ function rpCatalog(): array {
     $groups=[
         'Sales'=>['products'=>'Products','product-groups'=>'Product groups','customers'=>'Customers','tax-rates'=>'Tax rates','users'=>'Users','item-list'=>'Item list','payment-types'=>'Payment types','payment-types-users'=>'Payment types by users','payment-types-customers'=>'Payment types by customers','refunds'=>'Refunds','invoice-list'=>'Invoice list','daily'=>'Daily sales','hourly'=>'Hourly sales','hourly-product-groups'=>'Hourly sales by product groups','order-number'=>'Table or order number','profit'=>'Profit & margin','unpaid'=>'Unpaid sales','starting-cash'=>'Starting cash entries','voided-items'=>'Voided items','credit-payments'=>'Collected credit payments','discounts'=>'Discounts granted','item-discounts'=>'Items discounts','stock-movement'=>'Stock movement'],
         'Purchase'=>['products'=>'Products','suppliers'=>'Suppliers','payment-types'=>'Payment types','payment-types-suppliers'=>'Payment types by supplier','unpaid'=>'Unpaid purchase','discounts'=>'Purchase discounts','item-discounts'=>'Purchased items discounts','invoice-list'=>'Purchase invoice list','tax-rates'=>'Tax rates','expiration-date'=>'Expiration date'],
-        'Stock return'=>['products'=>'Products'],'Loss and damage'=>['products'=>'Products'],'Finance'=>['transactions'=>'Transaction history'],'Stock control'=>['reorder'=>'Reorder product list','low-stock'=>'Low stock warning']
+        'Stock return'=>['products'=>'Products'],'Loss and damage'=>['products'=>'Products'],'Finance'=>['transactions'=>'Transaction history'],'Stock control'=>['order'=>'Order report','reorder'=>'Reorder product list','low-stock'=>'Low stock warning']
     ];$out=[];foreach($groups as $category=>$reports)foreach($reports as $key=>$title){
         $prefix=match($category){'Sales'=>'sales','Purchase'=>'purchase','Stock return'=>'stock-return','Loss and damage'=>'loss-damage','Finance'=>'finance',default=>'stock-control'};
         $filters=match($prefix){'sales'=>['customer','user','product','group'],'purchase'=>['supplier','user','product','group'],'finance'=>['customer','user'],'stock-control'=>['product','group'],default=>['user','product','group']};
-        if($key==='starting-cash')$filters=['user','terminal'];if($key==='credit-payments')$filters=['customer','user'];
+        if($key==='starting-cash')$filters=['user','terminal'];if($prefix==='stock-control'&&$key==='order')$filters=['product','group','stock_status'];if($key==='credit-payments')$filters=['customer','user'];
         $out[]=['id'=>$prefix.'-'.$key,'category'=>$category,'title'=>$title,'filters'=>$filters,'period'=>$prefix!=='stock-control'];
     }return $out;
 }
@@ -50,6 +50,7 @@ final class ReportingEngine {
         $this->end=(new DateTimeImmutable($last))->modify('+1 day')->format('Y-m-d');$this->filter=[];
         foreach(['customer','supplier','user','product','group','terminal'] as $k)$this->filter[$k]=rpId($input[$k]??null);
         $this->filter['include_subgroups']=($input['include_subgroups']??'1')==='1';
+        $status=(string)($input['stock_status']??'');if(!in_array($status,['','attention','negative','out','low'],true))throw new ReportingError('Invalid report filter.');$this->filter['stock_status']=$status;
     }
     public function warning(string $v): void {$this->warnings[$v]=$v;}
     private function rows(string $key,string $sql,array $args=[]): array {return $this->cache[$key]??=rpRows($this->db,$sql,$args);}
@@ -150,7 +151,19 @@ final class ReportingEngine {
                 if(!in_array($type,$types,true))continue;$rows[]=['date'=>$r['created_at'],'product_name'=>$r['product_name'],'type'=>$r['movement_type'],'quantity'=>(float)$r['quantity'],'before'=>(float)$r['stock_before'],'after'=>(float)$r['stock_after'],'reference'=>$r['reference_no'],'user_name'=>$r['user_name']?:'Unassigned'];}
             $columns=['date'=>'Date','product_name'=>'Product','type'=>'Type','quantity'=>'Quantity','before'=>'Stock before','after'=>'Stock after','reference'=>'Reference','user_name'=>'User'];$numbers=['quantity'];
         }elseif(str_starts_with($id,'stock-control-')){
-            $source=$this->rows('stock','SELECT p.id AS product_id,p.product_name,p.sku,p.group_id,p.metadata_json,po.stock_qty,po.min_stock,po.preferred_quantity FROM product_outlets po JOIN products p ON p.id=po.product_id WHERE po.outlet_id=? AND po.active=1 AND p.is_service=0 ORDER BY p.product_name',[$this->outlet]);
+            $source=$this->rows('stock','SELECT p.id AS product_id,p.product_name,p.sku,p.group_id,p.unit_name,p.metadata_json,g.group_name,po.stock_qty,po.min_stock,po.preferred_quantity FROM product_outlets po JOIN products p ON p.id=po.product_id LEFT JOIN product_groups g ON g.id=p.group_id WHERE po.outlet_id=? AND po.active=1 AND p.is_service=0 ORDER BY p.product_name',[$this->outlet]);
+            if($id==='stock-control-order'){
+                // Order report: every stocked product, negative and lowest stock first. No cost prices.
+                foreach($source as $r){if(!$this->matches($r))continue;$meta=rpJson($r['metadata_json']);$stock=(float)$r['stock_qty'];$min=(float)$r['min_stock'];$preferred=(float)$r['preferred_quantity'];
+                    $low=max($min,($meta['lowStockWarning']??false)?(float)($meta['lowStockWarningQuantity']??0):0);
+                    $status=$stock<0?'negative':($stock==0.0?'out':($low>0&&$stock<=$low?'low':'ok'));
+                    $want=$this->filter['stock_status'];if($want==='attention'&&$status==='ok')continue;if($want!==''&&$want!=='attention'&&$want!==$status)continue;
+                    $target=$preferred>0?$preferred:$low;
+                    $rows[]=['sku'=>$r['sku'],'product_name'=>$r['product_name'],'group_name'=>$r['group_name']?:'—','unit'=>$r['unit_name']?:'pcs','stock'=>$stock,'minimum'=>$low,'preferred'=>$preferred,'order'=>$status==='ok'?0:max(0,$target-$stock),'status'=>['negative'=>'Negative stock','out'=>'Out of stock','low'=>'Low stock','ok'=>'OK'][$status]];}
+                usort($rows,fn($a,$b)=>$a['stock']<=>$b['stock']?:strcasecmp((string)$a['product_name'],(string)$b['product_name']));
+                $columns=['sku'=>'Code','product_name'=>'Product','group_name'=>'Product group','unit'=>'Unit','stock'=>'On hand','minimum'=>'Low stock level','preferred'=>'Preferred','order'=>'Order quantity','status'=>'Status'];$numbers=['stock','order'];$this->warning('Stock control is a current stock snapshot. The date period does not apply.');
+                return [$rows,$columns,$money,$numbers];
+            }
             foreach($source as $r){$meta=rpJson($r['metadata_json']);$threshold=$id==='stock-control-low-stock'?(float)($meta['lowStockWarningQuantity']??$r['min_stock']):(float)$r['min_stock'];$enabled=$meta['lowStockWarning']??((float)$r['min_stock']>0);
                 if(!$this->matches($r)||(float)$r['stock_qty']>$threshold)continue;if($id==='stock-control-low-stock'&&!$enabled)continue;if($id==='stock-control-reorder'&&((float)$r['preferred_quantity']===(float)$r['min_stock']||(float)$r['preferred_quantity']<=(float)$r['stock_qty']))continue;$rows[]=['sku'=>$r['sku'],'product_name'=>$r['product_name'],'stock'=>(float)$r['stock_qty'],'minimum'=>$threshold,'preferred'=>(float)$r['preferred_quantity'],'reorder'=>max(0,(float)$r['preferred_quantity']-(float)$r['stock_qty'])];}
             $columns=['sku'=>'Code','product_name'=>'Product','stock'=>'On hand','minimum'=>'Minimum','preferred'=>'Preferred','reorder'=>'Reorder quantity'];$numbers=['reorder'];$this->warning('Stock control is a current stock snapshot. The date period does not apply.');
@@ -221,7 +234,7 @@ final class ReportingEngine {
             $this->warning('Header discount, tax and final totals are allocated across stored item values with cent-exact remainders. Product/group names reflect current master data.');
             if(!$purchase)$this->warning('Void/cancelled sales are excluded. Refunds are recorded on the refund date. Hourly reports show gross sales.');
         }
-        $totals=[];foreach(array_unique([...$money,...array_diff($numbers,['margin'])]) as $m){$totals[$m]=0;foreach($rows as $r){if(($r[$m]??null)===null){$totals[$m]=null;break;}$totals[$m]+=$r[$m];}}
+        $totals=[];foreach(array_unique([...$money,...array_diff($numbers,['margin','stock'])]) as $m){$totals[$m]=0;foreach($rows as $r){if(($r[$m]??null)===null){$totals[$m]=null;break;}$totals[$m]+=$r[$m];}}
         foreach($rows as &$r){$r=array_intersect_key($r,$columns);foreach($money as $m)if(isset($r[$m]))$r[$m]=rpDecimal((int)$r[$m]);}unset($r);foreach($money as $m)if(isset($totals[$m]))$totals[$m]=rpDecimal((int)$totals[$m]);
         $company=rpRows($this->db,'SELECT company_name,registration_no,street_name,building_number,postal_code,city,state,phone_number,logo_url,currency_code FROM company_settings WHERE outlet_id=? ORDER BY id LIMIT 1',[$this->outlet])[0]??['company_name'=>''];
         $outlet=rpRows($this->db,'SELECT outlet_code,outlet_name FROM outlets WHERE id=?',[$this->outlet])[0];

@@ -16,6 +16,7 @@ try {
     $labels=[];$options=$engine->options();
     foreach(['customer'=>'customers','supplier'=>'suppliers','user'=>'users','product'=>'products','group'=>'groups','terminal'=>'terminals'] as $key=>$list){$id=rpId($_GET[$key]??null);if($id)foreach($options[$list] as $option)if((int)$option['id']===$id)$labels[]=ucfirst($key).': '.$option['name'];}
     if(!empty($_GET['group']))$labels[]='Include subgroups: '.(($_GET['include_subgroups']??'1')==='1'?'Yes':'No');
+    $stockStatus=['attention'=>'Needs order','negative'=>'Negative stock','out'=>'Out of stock','low'=>'Low stock'][(string)($_GET['stock_status']??'')]??null;if($stockStatus)$labels[]='Stock status: '.$stockStatus;
     $report['applied_filter_labels']=$labels;
     $db->commit();
     if($action==='report-pdf'){

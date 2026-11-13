@@ -8,7 +8,7 @@ function formatted(value,type) {if(value===null||value===undefined)return '—';
 export default function ReportingPage({canView,apiBase,headers,outlet}) {
   const requestRef=useRef({apiBase,headers,outlet});requestRef.current={apiBase,headers,outlet};
   const [catalog,setCatalog]=useState([]),[options,setOptions]=useState({customers:[],suppliers:[],users:[],products:[],groups:[],terminals:[]});
-  const [selected,setSelected]=useState(''),[search,setSearch]=useState(''),[filters,setFilters]=useState({customer:'',supplier:'',user:'',terminal:'',product:'',group:'',include_subgroups:'1',start:localDate().slice(0,7)+'-01',end:localDate()});
+  const [selected,setSelected]=useState(''),[search,setSearch]=useState(''),[filters,setFilters]=useState({customer:'',supplier:'',user:'',terminal:'',product:'',group:'',stock_status:'',include_subgroups:'1',start:localDate().slice(0,7)+'-01',end:localDate()});
   const [result,setResult]=useState(null),[resultKey,setResultKey]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[exporting,setExporting]=useState(false),[page,setPage]=useState(1);
   const generation=useRef(0);
   const definition=catalog.find(report=>report.id===selected);
@@ -34,7 +34,7 @@ export default function ReportingPage({canView,apiBase,headers,outlet}) {
   },[catalog,search]);
   function choose(id) {
     generation.current++;setBusy(false);setError('');setSelected(id);setResult(null);setPage(1);
-    const report=catalog.find(r=>r.id===id);setFilters(previous=>{const next={...previous};for(const key of ['customer','supplier','user','terminal','product','group'])if(!report.filters.includes(key))next[key]='';return next;});
+    const report=catalog.find(r=>r.id===id);setFilters(previous=>{const next={...previous};for(const key of ['customer','supplier','user','terminal','product','group','stock_status'])if(!report.filters.includes(key))next[key]='';return next;});
   }
   function change(key,value) {generation.current++;setBusy(false);setError('');setFilters(previous=>({...previous,[key]:value}));}
   function payload() {const values={report:selected,...filters};for(const [key,value] of Object.entries(values))if(value==='')delete values[key];return values;}
@@ -75,6 +75,7 @@ export default function ReportingPage({canView,apiBase,headers,outlet}) {
         <Filter label="Cash register" value={filters.terminal} onChange={value=>change('terminal',value)} items={options.terminals} disabled={!applies('terminal')}/>
         <Filter label="Product" value={filters.product} onChange={value=>change('product',value)} items={options.products} disabled={!applies('product')}/>
         <Filter label="Product group" value={filters.group} onChange={value=>change('group',value)} items={options.groups} disabled={!applies('group')}/>
+        {applies('stock_status')&&<label className="reporting-field"><span>Stock status</span><select value={filters.stock_status} onChange={e=>change('stock_status',e.target.value)}><option value="">All products</option><option value="attention">Needs order (negative, out, low)</option><option value="negative">Negative stock</option><option value="out">Out of stock</option><option value="low">Low stock</option></select></label>}
         <label className="reporting-check"><input type="checkbox" checked={filters.include_subgroups==='1'} onChange={e=>change('include_subgroups',e.target.checked?'1':'0')} disabled={!applies('group')}/>Include subgroups</label>
         <div className="reporting-date-range"><label className="reporting-field"><span>From</span><DateInput required value={filters.start} max={filters.end} disabled={!definition?.period} onChange={e=>change('start',e.target.value)}/></label><label className="reporting-field"><span>To</span><DateInput required min={filters.start} value={filters.end} disabled={!definition?.period} onChange={e=>change('end',e.target.value)}/></label></div>
         <div className="reporting-actions"><button className="primary" type="submit" disabled={!definition||busy}>{busy?'Loading…':'⌕ Show report'}</button><button type="button" disabled={!ready||exporting} onClick={()=>exportFile('print')}>▤ Print</button><button type="button" disabled={!ready||exporting} onClick={()=>exportFile('excel')}>▦ Excel</button><button type="button" disabled={!ready||exporting} onClick={()=>exportFile('pdf')}>↓ PDF</button></div>
