@@ -19,14 +19,23 @@ function PayslipActionDialog({action,reason,onReasonChange,onCancel,onConfirm,bu
     <div className="hr-form-actions"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="button" className={isVoid?'danger':'primary'} disabled={busy||isVoid&&!reason.trim()} onClick={onConfirm}>{busy?'Processing…':isVoid?'Void Payslip':'Issue Payslip'}</button></div>
   </dialog>;
 }
-function PayslipShareDialog({channel,employee,onCancel,onConfirm,busy,error,pdfReady}) {
+const whatsappPhone=value=>{let phone=String(value||'').replace(/\D/g,'');if(phone.startsWith('00'))phone=phone.slice(2);else if(phone.startsWith('0'))phone='60'+phone.slice(1);return phone;};
+function PayslipShareDialog({channel,employee,payslipNo,onCancel,onConfirm,busy,error,pdfReady,loading,email:emailValue,phone,onChange}) {
   const dialog=useRef(null);
   useEffect(()=>{dialog.current?.showModal();return ()=>dialog.current?.close();},[]);
   const email=channel==='email';
   return <dialog ref={dialog} className="hr-dialog hr-module hr-confirm-dialog" aria-labelledby="payslip-share-title" onCancel={event=>{event.preventDefault();if(!busy)onCancel();}}>
     <div className="hr-dialog-head"><div className="hr-confirm-heading"><span className="hr-confirm-icon">{email?'✉':'↗'}</span><div><h2 id="payslip-share-title">{email?'Email payslip':'WhatsApp payslip notice'}</h2><p>{employee||'Employee'}</p></div></div><button type="button" aria-label="Close" disabled={busy} onClick={onCancel}>×</button></div>
-    <div className="hr-confirm-body">{error&&<div className="hr-error" role="alert">{error}</div>}</div>
-    <div className="hr-form-actions"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="button" className="primary" disabled={busy||!email&&!pdfReady} onClick={onConfirm}>{busy?'Preparing…':email?'Send email':'Share PDF with WhatsApp'}</button></div>
+    <div className="hr-confirm-body">{error&&<div className="hr-error" role="alert">{error}</div>}
+      {loading?<p role="status">Loading employee contact…</p>:email?<>
+        <label className="hr-field"><span>Send to email</span><input type="email" value={emailValue||''} maxLength={190} onChange={event=>onChange({email:event.target.value})} placeholder="employee@email.com" required/></label>
+        <p className="hr-muted">Payslip {payslipNo} will be emailed with the PDF attached. The address comes from the employee's HR record; changing it here applies to this email only.</p>
+      </>:<>
+        <label className="hr-field"><span>WhatsApp number</span><input type="tel" value={phone||''} maxLength={30} onChange={event=>onChange({phone:event.target.value})} placeholder="012-345 6789"/></label>
+        <p className="hr-muted">On a phone or tablet, the share window opens with the PDF so you can choose WhatsApp. On a computer, the PDF is downloaded and WhatsApp opens to this number with a message; attach the downloaded PDF and press Send. Leave the number empty to choose the contact in WhatsApp.</p>
+      </>}
+    </div>
+    <div className="hr-form-actions"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="button" className="primary" disabled={busy||loading||(email?!String(emailValue||'').trim():!pdfReady)} onClick={onConfirm}>{busy?'Preparing…':email?'Send email':'Share PDF with WhatsApp'}</button></div>
   </dialog>;
 }
 function LinesEditor({title,lines,onChange}) {
@@ -127,16 +136,19 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
     try {const response=await apiRef.current('payslip',{id:row.id});setSelected(response.payslip);}
     catch(e){setError(e.message);}finally{setBusy(false);}
   };
-  const sharePayslip=async channel=>{
-    if(!selected)return;setError('');
-    if(channel==='email'){setShareDialog({channel});return;}
-    setShareDialog({channel,loading:true});setBusy(true);
+  const sharePayslip=async(channel,row=null)=>{
+    if(busy)return;setError('');
+    let slip=selected;
+    setBusy(true);
     try {
-      const [pdf,contact]=await Promise.all([apiRef.current('payslip-pdf',{id:selected.id}),apiRef.current('payslip-contact',{id:selected.id})]);
-      const file=new File([pdf.blob],pdf.filename,{type:'application/pdf'});
-      let phone=String(contact.contact?.phone||'').replace(/\D/g,'');
-      if(phone.startsWith('00'))phone=phone.slice(2);else if(phone.startsWith('0'))phone='60'+phone.slice(1);
-      setShareDialog({channel,file,phone});
+      if(row&&String(row.id)!==String(selected?.id)){const response=await apiRef.current('payslip',{id:row.id});slip=response.payslip;setSelected(slip);}
+    } catch(e){setError(e.message);setBusy(false);return;}
+    if(!slip){setBusy(false);return;}
+    setShareDialog({channel,loading:true,email:'',phone:''});
+    try {
+      const [contact,pdf]=await Promise.all([apiRef.current('payslip-contact',{id:slip.id}),channel==='whatsapp'?apiRef.current('payslip-pdf',{id:slip.id}):Promise.resolve(null)]);
+      const file=pdf?new File([pdf.blob],pdf.filename,{type:'application/pdf'}):null;
+      setShareDialog({channel,file,email:String(contact.contact?.email||''),phone:String(contact.contact?.phone||'')});
     } catch(e){setShareDialog(current=>current?{...current,loading:false,error:e.message}:null);}
     finally{setBusy(false);}
   };
@@ -146,21 +158,23 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
     setBusy(true);setError('');
     try {
       if(channel==='email'){
-        await apiRef.current('email-payslip',{id:selected.id,request_id:crypto.randomUUID()},true);
-        setNotice('Payslip was sent to the employee’s registered email address.');
+        const recipient=String(shareDialog.email||'').trim();
+        await apiRef.current('email-payslip',{id:selected.id,email:recipient,request_id:crypto.randomUUID()},true);
+        setNotice(`Payslip ${selected.payslip_no} was emailed to ${recipient}.`);
       } else {
         const file=shareDialog.file;
         if(!file)throw new Error('The payslip PDF is not ready. Close this window and try again.');
-        const message=`Payslip ${selected.payslip_no} for ${selected.period_start} to ${selected.period_end} — ${selected.full_name_snapshot}`;
+        const message=`Hi ${selected.full_name_snapshot},\n\nYour payslip ${selected.payslip_no} for ${showDate(selected.period_start)} – ${showDate(selected.period_end)} is attached as a PDF.\n\n${outletName}`;
         let nativeFileShare=false;try{nativeFileShare=typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[file]});}catch{}
         if(nativeFileShare){
           await navigator.share({files:[file],title:`Payslip ${selected.payslip_no}`,text:message});
           setNotice('PDF shared. Choose WhatsApp and the employee in the device share window.');
         } else {
-          if(String(shareDialog.phone||'').length<8)throw new Error('The employee does not have a valid phone number in HR. The PDF is ready, but WhatsApp cannot be opened.');
+          const phone=whatsappPhone(shareDialog.phone);
+          if(phone&&phone.length<8)throw new Error('Enter a valid WhatsApp number, or leave it empty to choose the contact in WhatsApp.');
           const whatsappWindow=window.open('about:blank','_blank');if(!whatsappWindow)throw new Error('Allow pop-ups to open WhatsApp.');
           const downloadUrl=URL.createObjectURL(file);const link=document.createElement('a');link.href=downloadUrl;link.download=file.name;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(downloadUrl),60000);
-          whatsappWindow.location.href=`https://wa.me/${shareDialog.phone}?text=${encodeURIComponent(message)}`;
+          whatsappWindow.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
           setNotice('The payslip PDF was downloaded. Attach it in WhatsApp, review the message, then press Send.');
         }
       }
@@ -206,7 +220,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
       <div className="hr-form-actions"><button type="button" disabled={busy} onClick={resetForm}>Clear</button><button type="submit" className="primary" disabled={busy||net()<0}>{busy?'Saving…':editingId?'Update Draft':'Save Draft'}</button></div>
     </form>}
     <div className="panel hr-table-wrap"><h3>Payslips · {period}</h3>{loading?<p role="status">Loading payslips…</p>:<table className="hr-payslip-table"><thead><tr><th>Payslip</th><th>Employee</th><th>Pay date</th><th>Gross</th><th>Deductions</th><th>Net pay</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-      {rows.map(row=><tr key={row.id}><td>{row.payslip_no}</td><td>{row.staff_code_snapshot} · {row.full_name_snapshot}</td><td>{showDate(row.pay_date)}</td><td>{amount(row.gross_pay,row.currency_code)}</td><td>{amount(row.total_deductions,row.currency_code)}</td><td>{amount(row.net_pay,row.currency_code)}</td><td><span className={'hr-badge '+(row.status==='ISSUED'?'active':'')}>{row.status}</span></td><td><div className="hr-payslip-actions"><button type="button" disabled={busy} onClick={()=>openRow(row)}>View / Print</button>{row.status==='DRAFT'&&canManage&&<><button type="button" disabled={busy} onClick={()=>editDraft(row)}>Edit</button><button type="button" className="primary" disabled={busy} onClick={()=>issue(row)}>Issue</button></>}{row.status!=='VOID'&&canManage&&<button type="button" disabled={busy} onClick={()=>voidPayslip(row)}>Void</button>}</div></td></tr>)}
+      {rows.map(row=><tr key={row.id}><td>{row.payslip_no}</td><td>{row.staff_code_snapshot} · {row.full_name_snapshot}</td><td>{showDate(row.pay_date)}</td><td>{amount(row.gross_pay,row.currency_code)}</td><td>{amount(row.total_deductions,row.currency_code)}</td><td>{amount(row.net_pay,row.currency_code)}</td><td><span className={'hr-badge '+(row.status==='ISSUED'?'active':'')}>{row.status}</span></td><td><div className="hr-payslip-actions"><button type="button" disabled={busy} onClick={()=>openRow(row)}>View / Print</button>{row.status==='DRAFT'&&canManage&&<><button type="button" disabled={busy} onClick={()=>editDraft(row)}>Edit</button><button type="button" className="primary" disabled={busy} onClick={()=>issue(row)}>Issue</button></>}{row.status==='ISSUED'&&canManage&&<><button type="button" disabled={busy} onClick={()=>sharePayslip('email',row)}>Email</button><button type="button" disabled={busy} onClick={()=>sharePayslip('whatsapp',row)}>WhatsApp</button></>}{row.status!=='VOID'&&canManage&&<button type="button" disabled={busy} onClick={()=>voidPayslip(row)}>Void</button>}</div></td></tr>)}
       {!rows.length&&<tr><td colSpan="8">No payslips for this month yet.</td></tr>}</tbody></table>}</div>
     {selected&&<section className="panel hr-payslip-paper" aria-label="Payslip preview"><div className="hr-payslip-head"><div className="hr-payslip-title"><span>PAY STATEMENT</span><h2>PAYSLIP</h2><p>{outletName}</p><small>Reference: {selected.payslip_no}</small></div><div className="hr-payslip-actions-panel"><span className="hr-payslip-status">{selected.status}</span><div className="hr-payslip-tools"><button className="hr-no-print" type="button" disabled={busy||!canManage||selected.status!=='ISSUED'} title={selected.status!=='ISSUED'?'Issue this payslip before sharing it':'Email this payslip to the employee'} onClick={()=>sharePayslip('email')}>Email</button><button className="hr-no-print" type="button" disabled={busy||!canManage||selected.status!=='ISSUED'} title={selected.status!=='ISSUED'?'Issue this payslip before sharing it':'Open WhatsApp with a payslip notice'} onClick={()=>sharePayslip('whatsapp')}>WhatsApp</button><button className="hr-no-print" type="button" onClick={printPayslip}>Print payslip</button></div></div></div>
       <div className="hr-payslip-facts"><div><b>Employee</b><span>{selected.full_name_snapshot}</span></div><div><b>Staff code</b><span>{selected.staff_code_snapshot}</span></div><div><b>Department</b><span>{selected.department_snapshot||'—'}</span></div><div><b>Position</b><span>{selected.position_snapshot||'—'}</span></div><div><b>Pay period</b><span>{selected.period_start} – {selected.period_end}</span></div><div><b>Pay date</b><span>{selected.pay_date}</span></div></div>
@@ -215,6 +229,6 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
       <div className="hr-payslip-net"><span>Net pay</span><strong>{amount(selected.net_pay,selected.currency_code)}</strong></div>{selected.notes&&<p><b>Notes:</b> {selected.notes}</p>}{selected.void_reason&&<p><b>Void reason:</b> {selected.void_reason}</p>}
     </section>}
     {actionDialog&&<PayslipActionDialog action={actionDialog} reason={actionReason} onReasonChange={setActionReason} onCancel={()=>{if(!busy){setActionDialog(null);setError('');}}} onConfirm={confirmStatusChange} busy={busy} error={error}/>}
-    {shareDialog&&<PayslipShareDialog channel={shareDialog.channel} employee={selected?.full_name_snapshot} onCancel={()=>{if(!busy){setShareDialog(null);setError('');}}} onConfirm={confirmShare} busy={busy} error={shareDialog.error||''} pdfReady={Boolean(shareDialog.file)}/>}
+    {shareDialog&&<PayslipShareDialog channel={shareDialog.channel} employee={selected?.full_name_snapshot} payslipNo={selected?.payslip_no} loading={Boolean(shareDialog.loading)} email={shareDialog.email} phone={shareDialog.phone} onChange={patch=>setShareDialog(current=>current?{...current,...patch,error:''}:current)} onCancel={()=>{if(!busy){setShareDialog(null);setError('');}}} onConfirm={confirmShare} busy={busy} error={shareDialog.error||''} pdfReady={Boolean(shareDialog.file)}/>}
   </div>;
 }
