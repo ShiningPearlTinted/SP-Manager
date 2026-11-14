@@ -1561,7 +1561,7 @@ function OutletManagement({onBack}){
 const managementIconPaths={"HR Management":"M4 4h16v17H4zM8 8h8M8 12h8M8 16h5","Booking":"M8 3v3m8-3v3M4 6h16v15H4zM8 11h3m-3 4h8","View sales history":"M4 20V11h4v9m2 0V5h4v15m2 0V8h4v12","View open sales":"M8 4v16m-4-12 4-4 4 4m4 12V4m-4 12 4 4 4-4","Cash In / Out":"M3 6h18v13H3zM3 10h18m-13 5h4","Credit payments":"M3 6h18v13H3zM3 10h18m-13 5h4","User info":"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-2a8 8 0 0 1 16 0v2","Users & Permissions":"M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2 2m8.8 8.8 2 2m0-12.8-2 2m-8.8 8.8-2 2M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8","Outlet Management":"M3 9l2-6h14l2 6M4 9v12h16V9M9 21v-7h6v7","Products":"M12 3l9 5v8l-9 5-9-5V8zM3 8l9 5 9-5m-9 5v8","Inventory":"M3 4h18v17H3zM3 10h18M9 4v17m6-17v17","Customers":"M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6m6 0a3 3 0 1 0 0-6m-15 16v-2a6 6 0 0 1 12 0v2m2-6a5 5 0 0 1 5 5v1","Purchases":"M5 3h14v18H5zM8 8h8m-8 4h8m-8 4h5","Payments":"M3 6h18v13H3zM3 10h18m-13 5h4","Discount / Promotion":"M5 19 19 5M7 7h.01M17 17h.01M7 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6m10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6","Tax":"M9 3 7 21m10-18-2 18M3 8h18M2 16h18","Loyalty":"m12 3 3 6 6 1-4 5 1 6-6-3-6 3 1-6-4-5 6-1z","Reports":"M4 20V11h4v9m2 0V5h4v15m2 0V8h4v12","Settings":"M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2 2m8.8 8.8 2 2m0-12.8-2 2m-8.8 8.8-2 2M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8","Price Check":"M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M16 16l5 5"};
 function ManagementIcon({label}){return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={managementIconPaths[label]||managementIconPaths.Settings}/></svg>}function Management({activeUser,setPage}){
  const[view,setView]=useState("home");
- if(view==="outlets")return <OutletManagement onBack={()=>setView("home")}/>;
+ if(view==="outlets"&&isPermissionAllowed(activeUser,"accessOutletManagement"))return <OutletManagement onBack={()=>setView("home")}/>;
  const items=[
   ["♙","HR Management","HR Management","viewHrEmployees"],
   ["▦","Booking","Booking","viewBookings"],
@@ -1571,7 +1571,7 @@ function ManagementIcon({label}){return <svg aria-hidden="true" viewBox="0 0 24 
   ["▤","Credit payments","Credit payments","creditPayments"],
   ["♙","User info","Users & Permissions","userInfo"],
   ["⚙","Users & Permissions","Users & Permissions","manageUsers"],
-  ["◎","Outlet Management",null,"manageManagement"],
+  ["◎","Outlet Management",null,"accessOutletManagement"],
   ["◈","Products","Products","manageProducts"],
   ["◫","Inventory","Inventory","manageInventory"],
   ["♙","Customers","Customers","manageCustomers"],
