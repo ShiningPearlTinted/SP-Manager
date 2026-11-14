@@ -6801,3 +6801,11 @@ tr.list-empty-row>td{padding:22px!important;text-align:center;color:#94a3b8}
 @keyframes sp-toast-timer{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media (prefers-reduced-motion:reduce){.sp-toast-card,.sp-toast-card.leaving{animation-duration:1ms}.sp-toast-timer{display:none}}
 @media (max-width:600px){.sp-toast-stack{bottom:16px}}
+
+/* Database reset: HR Management sub-options */
+.database-reset .reset-group{display:grid;gap:8px}
+.database-reset .reset-sub-title{margin:2px 0 0 4px;font-size:13px;color:#64748b}
+.database-reset .reset-sub-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin-left:24px}
+.database-reset .reset-sub-option small{font-size:12px}
+.database-reset .reset-sub-option.is-included{opacity:.6}
+@media (max-width:640px){.database-reset .reset-sub-options{margin-left:0;grid-template-columns:1fr}}

@@ -1,7 +1,18 @@
 import React, {useRef, useState} from 'react';
 
+const HR_PARTS=[
+ ['hr_payslips','Payslips','Delete payslips. Repayments from issued payslips are returned to the salary advance balance.'],
+ ['hr_attendance','Attendance','Delete clock-in / clock-out records.'],
+ ['hr_shifts','Shift & Schedule','Delete scheduled shifts.'],
+ ['hr_leave','Leave Management','Delete leave requests and decisions.'],
+ ['hr_overtime','Overtime','Delete overtime requests and decisions.'],
+ ['hr_claims','Claims','Delete claims and receipts.'],
+ ['hr_advances','Salary advances','Delete salary advances. Select Payslips too if any payslip includes an advance repayment.'],
+ ['hr_documents','HR Documents','Delete uploaded HR documents.']
+];
+
 export default function DatabaseReset({request, onComplete}) {
- const [selection,setSelection]=useState({products:false,customers:false,documents:false,hr:false,finance:false});
+ const [selection,setSelection]=useState({products:false,customers:false,documents:false,hr:false,finance:false,...Object.fromEntries(HR_PARTS.map(([key])=>[key,false]))});
  const [preview,setPreview]=useState(null),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState(null);
  const pending=useRef(null);
@@ -22,7 +33,11 @@ export default function DatabaseReset({request, onComplete}) {
    <label className="reset-option"><input type="checkbox" checked={selection.products} onChange={e=>choose('products',e.target.checked)}/><span><strong>Products</strong><small>Deactivate outlet product assignments, zero outlet stock, and remove outlet prices, promotions, discounts, taxes and open orders. Shared product masters remain.</small></span></label>
    <label className="reset-option"><input type="checkbox" checked={selection.customers} onChange={e=>choose('customers',e.target.checked)}/><span><strong>Customers / suppliers</strong><small>Delete outlet-owned records and associated vehicles, notes and loyalty accounts. Shared customers remain. Retained document references block reset.</small></span></label>
    <label className="reset-option"><input type="checkbox" checked={selection.documents} onChange={e=>choose('documents',e.target.checked)}/><span><strong>Documents</strong><small>Delete outlet sales, purchases, invoices, quotations, orders, payments, refunds, warranties, maintenance and daily reports. Zero outlet stock and reset document counters and business day.</small></span></label>
-   <label className="reset-option"><input type="checkbox" checked={selection.hr} onChange={e=>choose('hr',e.target.checked)}/><span><strong>HR Management</strong><small>Delete this outlet's employees, attendance, shifts, leave, overtime, claims, payslips, salary history, salary advances and HR documents. Departments, positions and user logins remain. Employee records used by another outlet block reset.</small></span></label>
+   <div className="reset-group" role="group" aria-labelledby="reset-hr-title">
+    <label className="reset-option"><input type="checkbox" checked={selection.hr} onChange={e=>choose('hr',e.target.checked)}/><span><strong id="reset-hr-title">HR Management (all)</strong><small>Delete this outlet's employees, attendance, shifts, leave, overtime, claims, payslips, salary history, salary advances and HR documents. Departments, positions and user logins remain. Employee records used by another outlet block reset.</small></span></label>
+    <p className="reset-sub-title">Or reset only selected HR data. Employees, salary profiles and HR Settings are kept.</p>
+    <div className="reset-sub-options">{HR_PARTS.map(([key,label,help])=><label key={key} className={'reset-option reset-sub-option'+(selection.hr?' is-included':'')}><input type="checkbox" checked={selection.hr||selection[key]} disabled={selection.hr} onChange={e=>choose(key,e.target.checked)}/><span><strong>{label}</strong><small>{selection.hr?'Included in HR Management (all).':help}</small></span></label>)}</div>
+   </div>
    <label className="reset-option"><input type="checkbox" checked={selection.finance} onChange={e=>choose('finance',e.target.checked)}/><span><strong>Finance</strong><small>Delete this outlet's income and expense entries and Tax & Zakat settings. Sales figures in Finance follow Documents.</small></span></label>
    <button type="button" disabled={!Object.values(selection).some(Boolean)} onClick={inspect}>{busy?'Checking…':'Preview reset'}</button>
   </fieldset>
