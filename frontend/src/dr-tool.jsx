@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from "react";
+import {createPortal} from "react-dom";
 
 // Toolbar icons shared by every Management page (same set as the Products toolbar).
 export const DR_ICONS={
@@ -83,4 +84,27 @@ export function PagedRows({items,children,search=false,query,placeholder="Search
   {rows.length?rows.map((x,i)=>children(x,start+i)):term?<tr className="list-empty-row"><td colSpan={99}>No results for “{q.trim()}”.</td></tr>:empty}
   {filtered.length>pageSize&&<tr className="list-pager-row"><td colSpan={99}><ListPager page={cur} pages={pages} from={start+1} to={Math.min(start+pageSize,filtered.length)} total={filtered.length} onPage={setPage}/></td></tr>}
  </>;
+}
+
+
+// Standard success/info message: appears at the bottom of the screen and hides itself.
+// Messages that need an OK button (confirm dialogs) and the POS screen do not use this.
+const TOAST_ERROR=/fail|error|invalid|cannot|could not|can't|denied|not allowed|required|unable/i;
+const toastStack=()=>{let host=document.getElementById("sp-toast-stack");if(!host){host=document.createElement("div");host.id="sp-toast-stack";host.className="sp-toast-stack";document.body.appendChild(host);}return host;};
+export function Toast({message,onClose,kind,duration}){
+ const text=typeof message==="string"?message:String(message??"");
+ const type=kind||(TOAST_ERROR.test(text)?"error":"success");
+ const ms=Math.max(2000,Number(duration)||(type==="error"?8000:4000));
+ const [leaving,setLeaving]=useState(false),[paused,setPaused]=useState(false);
+ const close=useRef(onClose);close.current=onClose;
+ useEffect(()=>{setLeaving(false);},[text]);
+ useEffect(()=>{if(!text||paused)return;const hide=setTimeout(()=>setLeaving(true),ms);return()=>clearTimeout(hide);},[text,ms,paused]);
+ useEffect(()=>{if(!leaving)return;const done=setTimeout(()=>close.current?.(),220);return()=>clearTimeout(done);},[leaving]);
+ if(!text||typeof document==="undefined")return null;
+ return createPortal(<div className={"sp-toast-card "+type+(leaving?" leaving":"")+(paused?" paused":"")} role={type==="error"?"alert":"status"} aria-live={type==="error"?"assertive":"polite"} onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)}>
+  <span className="sp-toast-icon" aria-hidden="true">{type==="error"?"!":type==="info"?"i":"✓"}</span>
+  <span className="sp-toast-text">{text}</span>
+  <button type="button" aria-label="Dismiss message" onClick={()=>setLeaving(true)}>×</button>
+  <i className="sp-toast-timer" key={text+String(paused)} style={{animationDuration:ms+"ms"}} aria-hidden="true"/>
+ </div>,toastStack());
 }

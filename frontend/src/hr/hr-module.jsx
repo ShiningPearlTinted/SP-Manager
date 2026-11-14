@@ -1,7 +1,7 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import PayslipPanel from './payslip-panel.jsx';
 import OperationsPanel from './operations-panel.jsx';
-import {DateInput,showDate} from "../dr-tool.jsx";
+import {DateInput,showDate,Toast} from "../dr-tool.jsx";
 
 const permitted=(user,key)=>user?.role==='Administrator'||user?.permissions?.[key]===true;
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'});
@@ -87,7 +87,7 @@ export default function HrModule({activeUser,initialOutlet,request}) {
     </div>
     <div className="hr-workspace">
     <div className="hr-toolbar"><Select label="Outlet" value={outlet} onChange={value=>{if(value){setOutlet(value);setPage(1);setNotice('');}}} items={options.outlets.length?options.outlets:[{id:outlet,outlet_name:'Current outlet'}]} name="outlet_name" required/><button type="button" disabled={loading} onClick={()=>setRefresh(value=>value+1)}>Refresh</button></div>
-    <ErrorMessage error={error}/>{notice&&<div className="hr-success" role="status">{notice}<button type="button" aria-label="Dismiss" onClick={()=>setNotice('')}>×</button></div>}
+    <ErrorMessage error={error}/><Toast message={notice} onClose={()=>setNotice('')}/>
     {loading?<p role="status">Loading HR records…</p>:!error&&<>
       {tab==='HR Dashboard'&&<><div className="hr-stats"><div className="panel"><span>Total Employees</span><strong>{totals.all}</strong></div><div className="panel"><span>Active Employees</span><strong>{totals.active}</strong></div><div className="panel"><span>Contracts Expiring in 30 Days</span><strong>{summary.contract_expiry.length}</strong></div></div><div className="hr-grid"><div className="panel"><h3>Employment Status</h3>{summary.statuses.length?summary.statuses.map(row=><p key={row.name} className="hr-summary-row"><span>{row.name}</span><b>{row.total}</b></p>):<p>No employees in this outlet.</p>}</div><div className="panel"><h3>Contract Expiry</h3>{summary.contract_expiry.length?summary.contract_expiry.map(row=><p key={row.id} className="hr-summary-row"><span>{row.staff_code} · {row.full_name}</span><time>{showDate(row.contract_end)}</time></p>):<p>No contracts expiring within 30 days.</p>}</div></div></>}
       {tab==='Employees'&&<>

@@ -6782,3 +6782,22 @@ tr.list-empty-row>td{padding:22px!important;text-align:center;color:#94a3b8}
 .reporting-catalog-head .sp-search{max-width:320px}
 .label-printing-toolbar>.sp-search{flex:1;max-width:420px;align-self:center}
 .payments-search-wrap .sp-search input.sp-search-input,.named-order-search .sp-search input.sp-search-input,.outlet-search .sp-search input.sp-search-input,.customer-search .sp-search input.sp-search-input,.label-printing-toolbar .sp-search input.sp-search-input{padding:0 38px!important;height:40px!important;border:1px solid #d8e0e7!important;border-radius:10px!important;background:#fff!important}
+
+/* Standard toast messages (Management, HR, Booking, Price Check, Settings). POS keeps its own notice. */
+.sp-toast-stack{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483000;display:flex;flex-direction:column-reverse;align-items:center;gap:10px;width:min(460px,calc(100vw - 32px));pointer-events:none}
+.sp-toast-card{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:13px 12px 15px 14px;border-radius:12px;background:#1f2937;color:#f9fafb;font:500 14px/1.4 inherit;box-shadow:0 12px 32px rgba(15,23,42,.28),0 2px 6px rgba(15,23,42,.18);pointer-events:auto;animation:sp-toast-in .22s ease-out}
+.sp-toast-card.leaving{animation:sp-toast-out .22s ease-in forwards}
+.sp-toast-icon{flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;color:#fff;background:#16a34a}
+.sp-toast-card.error .sp-toast-icon{background:#dc2626}.sp-toast-card.info .sp-toast-icon{background:#0284c7}
+.sp-toast-text{flex:1;min-width:0;overflow-wrap:anywhere}
+.sp-toast-card button{flex:0 0 auto;width:28px;height:28px;min-height:0;padding:0;border:0;border-radius:8px;background:transparent;color:#cbd5e1;font-size:18px;line-height:1;cursor:pointer;box-shadow:none}
+.sp-toast-card button:hover{background:rgba(255,255,255,.12);color:#fff}
+.sp-toast-card button:focus-visible{outline:2px solid #38bdf8;outline-offset:1px}
+.sp-toast-timer{position:absolute;left:0;bottom:0;height:3px;width:100%;background:#22c55e;transform-origin:left;animation:sp-toast-timer linear forwards}
+.sp-toast-card.error .sp-toast-timer{background:#f87171}.sp-toast-card.info .sp-toast-timer{background:#38bdf8}
+.sp-toast-card.paused .sp-toast-timer{animation:none;transform:scaleX(1)}
+@keyframes sp-toast-in{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes sp-toast-out{to{opacity:0;transform:translateY(12px)}}
+@keyframes sp-toast-timer{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.sp-toast-card,.sp-toast-card.leaving{animation-duration:1ms}.sp-toast-timer{display:none}}
+@media (max-width:600px){.sp-toast-stack{bottom:16px}}

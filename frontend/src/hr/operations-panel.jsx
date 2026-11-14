@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from 'react';
-import {DateInput,showDate} from "../dr-tool.jsx";
+import {DateInput,showDate,Toast} from "../dr-tool.jsx";
 
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'});
 const currentMonth=()=>today().slice(0,7);
@@ -77,7 +77,7 @@ export default function OperationsPanel({tab,api,can,onNavigate}) {
  };
  if(isPayroll)return <div className="hr-ops">
    <div className="hr-toolbar"><label className="hr-field"><span>Pay month</span><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/></label>{tab==='Payroll'&&canSalary&&<button type="button" className="primary" onClick={()=>onNavigate('Payslip')}>Create / manage payslips</button>}<button type="button" onClick={exportCsv} disabled={!rows.length}>Export CSV</button></div>
-   {error&&<div className="hr-error" role="alert">{error}</div>}{notice&&<div className="hr-success" role="status">{notice}</div>}
+   {error&&<div className="hr-error" role="alert">{error}</div>}<Toast message={notice} onClose={()=>setNotice('')}/>
    <div className="hr-stats"><div className="panel"><span>Payslips</span><strong>{rows.length}</strong></div><div className="panel"><span>Gross payroll</span><strong>{money(totals.gross)}</strong></div><div className="panel"><span>Net payroll</span><strong>{money(totals.net)}</strong></div></div>
    <div className="panel hr-table-wrap"><h3>Payroll · {month}</h3>{loading?<p>Loading payroll…</p>:<table><thead><tr><th>Payslip</th><th>Employee</th><th>Pay date</th><th>Gross</th><th>Deductions</th><th>Net pay</th><th>Status</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td>{row.payslip_no}</td><td>{row.staff_code_snapshot} · {row.full_name_snapshot}</td><td>{showDate(row.pay_date)}</td><td>{money(row.gross_pay)}</td><td>{money(row.total_deductions)}</td><td>{money(row.net_pay)}</td><td><span className={'hr-badge '+(row.status==='ISSUED'?'active':'')}>{row.status}</span></td></tr>)}{!rows.length&&<tr><td colSpan="7">No payroll records for this month. Create payslip drafts first.</td></tr>}</tbody></table>}</div>
  </div>;
@@ -94,7 +94,7 @@ export default function OperationsPanel({tab,api,can,onNavigate}) {
      {module==='HR Documents'&&canManage&&<button type="button" className="primary" onClick={()=>{setForm({employee_id:'',document_type:'Employment contract',title:''});setReceipt(null);}}>Upload Document</button>}
      <button type="button" onClick={exportCsv} disabled={!rows.length}>Export CSV</button>
    </div>
-   {error&&<div className="hr-error" role="alert">{error}</div>}{notice&&<div className="hr-success" role="status">{notice}<button type="button" onClick={()=>setNotice('')}>×</button></div>}
+   {error&&<div className="hr-error" role="alert">{error}</div>}<Toast message={notice} onClose={()=>setNotice('')}/>
    {form&&<form className="panel hr-ops-form" onSubmit={save}><div className="hr-toolbar"><h3>{module==='HR Documents'?'Upload HR document':form.record_type==='ADVANCE'?'Record salary advance':editing?'Edit record':`New ${module==='Claims & Advances'?'claim':module==='Leave Management'?'leave request':module==='Overtime'?'overtime request':module==='Shift & Schedule'?'shift':'attendance record'}`}</h3><button type="button" onClick={()=>{setForm(null);setReceipt(null);}}>Close</button></div>
      <div className="hr-form-grid"><label className="hr-field"><span>Employee</span><select value={form.employee_id||''} onChange={e=>setForm({...form,employee_id:e.target.value})} required><option value="">Select employee</option>{employees.map(person=><option key={person.id} value={person.id}>{person.staff_code} · {person.full_name}</option>)}</select></label>
        {module==='HR Documents'?<><label className="hr-field"><span>Document type</span><select value={form.document_type} onChange={e=>setForm({...form,document_type:e.target.value})}>{['Employment contract','Identity document','Certificate','Bank document','Warning letter','Other'].map(x=><option key={x}>{x}</option>)}</select></label><label className="hr-field"><span>Document title</span><input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} maxLength="180" required/></label><label className="hr-field"><span>File (PDF, JPG or PNG · up to 5 MB)</span><input type="file" accept="application/pdf,image/jpeg,image/png" onChange={e=>setReceipt(e.target.files?.[0]||null)} required/></label></>:<>

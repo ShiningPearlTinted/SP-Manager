@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {DateInput,showDate} from "../dr-tool.jsx";
+import {DateInput,showDate,Toast} from "../dr-tool.jsx";
 
 const amount=(value,currency='MYR')=>Number(value||0).toLocaleString('en-MY',{style:'currency',currency});
 const monthStart=month=>`${month}-01`;
@@ -202,7 +202,7 @@ export default function PayslipPanel({api,outlet,outletName,can}) {
   if(!canView)return <div className="panel"><h3>Payslip</h3><p>You need HR Salary Access permission to view payslips.</p></div>;
   return <div className="hr-payslip-module">
     <div className="hr-toolbar"><PayslipField label="Pay month"><input type="month" value={period} onChange={event=>setPeriod(event.target.value)} required/></PayslipField></div>
-    {error&&<div className="hr-error" role="alert">{error}</div>}{notice&&<div className="hr-success" role="status">{notice}<button type="button" onClick={()=>setNotice('')}>×</button></div>}
+    {error&&<div className="hr-error" role="alert">{error}</div>}<Toast message={notice} onClose={()=>setNotice('')}/>
     {canManage&&<form className="panel hr-payslip-form" onSubmit={save}>
       <h3>{editingId?'Edit Draft Payslip':'Create Payslip Draft'}</h3>
       <div className="hr-form-grid">
