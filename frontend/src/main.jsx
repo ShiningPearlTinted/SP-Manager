@@ -8,6 +8,7 @@ import{createRoot}from"react-dom/client";
 import{createPortal}from"react-dom";
 import"./styles.css";
 import {ListSearch,PagedRows,DrTool,RowAction,DateInput,showDate,Toast} from "./dr-tool.jsx";
+import OutletSwitch from "./outlet-switch.jsx";
 import {localDate} from "./booking/booking-utils.js";
 
 import PriceCheck from "./price-check.jsx";
@@ -375,17 +376,8 @@ const switchActiveOutlet=async(user,outlet,openSale)=>{
  window.location.reload();
 };
 function OutletSwitcher({user,openSale=false,variant="pill"}){
- const [open,setOpen]=useState(false);const box=useRef(null);
- const list=userOutlets(user);const info=activeOutletInfo(user);const current=String(activeOutletId());
- const canSwitch=list.length>1&&sessionStorage.getItem("sp_auth_mode")!=="offline";
- useEffect(()=>{if(!open)return;const close=e=>{if(!box.current?.contains(e.target))setOpen(false)};const esc=e=>{if(e.key==="Escape")setOpen(false)};document.addEventListener("mousedown",close);document.addEventListener("keydown",esc);return()=>{document.removeEventListener("mousedown",close);document.removeEventListener("keydown",esc)}},[open]);
- const label=variant==="menu"?<><span className="ar-outlet-code">{info.code}</span><span><b>{info.name||"Outlet"}</b>{canSwitch&&<small>Switch outlet ▾</small>}</span></>:<><i/> Outlet: {info.code}{canSwitch&&<span className="outlet-switch-caret" aria-hidden="true">▾</span>}</>;
- const cls=variant==="menu"?"ar-menu-outlet":"header-status-pill";
- if(!canSwitch)return variant==="menu"?<div className={cls} aria-label="Current outlet">{label}</div>:<span className={cls} title={info.name||undefined}>{label}</span>;
- return <div className={"outlet-switch "+(variant==="menu"?"outlet-switch-pos":"outlet-switch-header")} ref={box}>
-  <button type="button" className={cls+" outlet-switch-button"} aria-haspopup="listbox" aria-expanded={open} title={info.name?`${info.name} — switch outlet`:"Switch outlet"} onClick={()=>setOpen(v=>!v)}>{label}</button>
-  {open&&<div className="outlet-switch-list" role="listbox" aria-label="Switch outlet">{list.map(o=>{const active=String(o.id)===current||String(o.outlet_code||"").toLowerCase()===current.toLowerCase();return <button type="button" role="option" aria-selected={active} key={o.id} className={active?"is-active":""} onClick={()=>{setOpen(false);if(!active)switchActiveOutlet(user,o,openSale)}}><b>{o.outlet_code}</b><span>{o.outlet_name}</span>{active&&<em aria-hidden="true">✓</em>}</button>})}</div>}
- </div>;
+ const list=userOutlets(user);
+ return <OutletSwitch variant={variant} outlets={list} info={activeOutletInfo(user)} current={String(activeOutletId())} canSwitch={list.length>1&&sessionStorage.getItem("sp_auth_mode")!=="offline"} onSelect={o=>switchActiveOutlet(user,o,openSale)}/>;
 }
 const handleApiUnauthorized=response=>{if(response?.status===401&&sessionStorage.getItem("sp_api_token")){sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.dispatchEvent(new Event("sp-api-session-expired"));}return response;};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
