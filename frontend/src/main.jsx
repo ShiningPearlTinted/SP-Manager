@@ -368,16 +368,15 @@ const chosenOutletId=u=>{try{if(sessionStorage.getItem("sp_auth_mode")==="offlin
 const clearChosenOutlet=()=>{try{sessionStorage.removeItem(ACTIVE_OUTLET_KEY)}catch{}};
 const activeOutletId=()=>{try{const u=JSON.parse(localStorage.getItem("sp_activeUser")||"null");const assigned=Array.isArray(u?.outlets)?u.outlets:[];const chosen=chosenOutletId(u);if(chosen!==null)return chosen;const v=u?.default_outlet_id??u?.outlet_id??u?.defaultOutletId??assigned.find(o=>o?.is_default)?.id??assigned[0]?.id;return(v!==undefined&&v!==null&&String(v).trim()!=="")?v:"SP01";}catch{return"SP01"}};
 const apiHeaders=(headers={})=>{const token=sessionStorage.getItem("sp_api_token");if(!token)return{...headers};let outlet="";try{outlet=String(activeOutletId()??"").trim()}catch{}return outlet?{...headers,Authorization:`Bearer ${token}`,"X-SP-Outlet":outlet}:{...headers,Authorization:`Bearer ${token}`};};
-const switchActiveOutlet=async(user,outlet,openSale)=>{
+// Confirmation (and the open-sale check) happens in the switcher before this is called.
+const switchActiveOutlet=(user,outlet)=>{
  if(!outlet||String(outlet.id)===String(activeOutletId()))return;
- if(openSale){await showActionMessage("Switch Outlet","Complete, save or void the current sale before switching outlet.");return}
- const ok=await showActionConfirm("Switch Outlet",`Switch to ${outlet.outlet_code||""}${outlet.outlet_name?" — "+outlet.outlet_name:""}? The app will reload with this outlet's data.`,"Switch");if(!ok)return;
  try{sessionStorage.setItem(ACTIVE_OUTLET_KEY,JSON.stringify({user:user?.dbId??user?.id,outlet:outlet.id}))}catch{}
  window.location.reload();
 };
 function OutletSwitcher({user,openSale=false,variant="pill"}){
  const list=userOutlets(user);
- return <OutletSwitch variant={variant} outlets={list} info={activeOutletInfo(user)} current={String(activeOutletId())} canSwitch={list.length>1&&sessionStorage.getItem("sp_auth_mode")!=="offline"} onSelect={o=>switchActiveOutlet(user,o,openSale)}/>;
+ return <OutletSwitch variant={variant} outlets={list} info={activeOutletInfo(user)} current={String(activeOutletId())} canSwitch={list.length>1&&sessionStorage.getItem("sp_auth_mode")!=="offline"} blocked={openSale} onSelect={o=>switchActiveOutlet(user,o)}/>;
 }
 const handleApiUnauthorized=response=>{if(response?.status===401&&sessionStorage.getItem("sp_api_token")){sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.dispatchEvent(new Event("sp-api-session-expired"));}return response;};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));

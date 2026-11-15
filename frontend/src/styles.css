@@ -6854,3 +6854,15 @@ button.header-status-pill.outlet-switch-button:hover{filter:brightness(.96)}
 .ar-user-card .ar-user-role.role-manager{background:#3b2f0b;color:#fde68a;border-color:#a16207}
 .ar-user-card .ar-user-role.role-cashier{background:#0c3a4a;color:#bae6fd;border-color:#0e7490}
 .ar-user-card .ar-user-role.role-staff{background:#14351f;color:#bbf7d0;border-color:#15803d}
+
+/* Outlet switcher: confirmation step */
+.outlet-switch-confirm{display:grid;gap:8px;padding:10px 8px 6px;color:inherit;font-size:14px;line-height:1.45}
+.outlet-switch-confirm p{margin:0}
+.outlet-switch-confirm small{color:#64748b;font-size:12px}
+.outlet-switch-list.is-dark .outlet-switch-confirm small{color:#9aa3ab}
+.outlet-switch-confirm div{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.outlet-switch-list .outlet-switch-confirm button{display:inline-flex;justify-content:center;width:auto;min-width:88px;min-height:40px;padding:8px 16px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-weight:600}
+.outlet-switch-list .outlet-switch-confirm button.primary{border-color:#0e7490;background:#0e7490;color:#fff}
+.outlet-switch-list .outlet-switch-confirm button:disabled{opacity:.6;cursor:default}
+.outlet-switch-list.is-dark .outlet-switch-confirm button:not(.primary){background:#343a40;border-color:#4b5157;color:#f3f5f7}
+.outlet-switch-list.is-sheet .outlet-switch-confirm div button{flex:1;min-height:48px}
