@@ -6832,3 +6832,15 @@ button.header-status-pill.outlet-switch-button:hover{filter:brightness(.96)}
 .outlet-switch-pos .outlet-switch-list button{color:#f3f5f7}
 .outlet-switch-pos .outlet-switch-list button:hover,.outlet-switch-pos .outlet-switch-list button.is-active{background:#343a40}
 .outlet-switch-pos .outlet-switch-list button b{background:#0c4a6e;color:#e0f2fe}
+
+/* POS menu: current user card (username + role) */
+.ar-user-identity.ar-user-card{justify-content:flex-start;gap:12px;padding:14px 16px;min-height:0}
+.ar-user-card .ar-user-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#0e7490;color:#fff;font-size:14px;font-weight:700;letter-spacing:.5px}
+.ar-user-card .ar-user-meta{flex:1;min-width:0;display:grid;gap:2px}
+.ar-user-card .ar-user-label{color:#9aa3ab;font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+.ar-user-card .ar-user-meta b{color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ar-user-card .ar-user-role{flex:0 0 auto;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#334155;color:#e2e8f0;border:1px solid #475569}
+.ar-user-card .ar-user-role.role-administrator{background:#4c1d24;color:#fecdd3;border-color:#9f1239}
+.ar-user-card .ar-user-role.role-manager{background:#3b2f0b;color:#fde68a;border-color:#a16207}
+.ar-user-card .ar-user-role.role-cashier{background:#0c3a4a;color:#bae6fd;border-color:#0e7490}
+.ar-user-card .ar-user-role.role-staff{background:#14351f;color:#bbf7d0;border-color:#15803d}
