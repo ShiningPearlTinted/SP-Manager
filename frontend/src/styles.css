@@ -6809,3 +6809,26 @@ tr.list-empty-row>td{padding:22px!important;text-align:center;color:#94a3b8}
 .database-reset .reset-sub-option small{font-size:12px}
 .database-reset .reset-sub-option.is-included{opacity:.6}
 @media (max-width:640px){.database-reset .reset-sub-options{margin-left:0;grid-template-columns:1fr}}
+
+/* Outlet switcher (header pill and POS menu) */
+.outlet-switch{position:relative;display:inline-flex}
+button.header-status-pill.outlet-switch-button{cursor:pointer;font:inherit;min-height:0}
+button.header-status-pill.outlet-switch-button:hover{filter:brightness(.96)}
+.outlet-switch-button:focus-visible{outline:2px solid #0284c7;outline-offset:2px}
+.outlet-switch-caret{margin-left:4px;font-size:10px;opacity:.7}
+.outlet-switch-list{position:absolute;top:calc(100% + 6px);right:0;z-index:5000;box-sizing:border-box;min-width:260px;max-height:320px;overflow:auto;padding:6px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.18);display:grid;gap:2px}
+.outlet-switch-list button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;width:100%;min-height:0;padding:9px 10px;border:0;border-radius:8px;background:transparent;color:#0f172a;text-align:left;font:inherit;font-size:13px;cursor:pointer;box-shadow:none}
+.outlet-switch-list button:hover,.outlet-switch-list button:focus-visible{background:#f1f5f9;outline:none}
+.outlet-switch-list button.is-active{background:#f0f9ff}
+.outlet-switch-list button b{padding:2px 6px;border-radius:6px;background:#e0f2fe;color:#075985;font-size:11px}
+.outlet-switch-list button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.outlet-switch-list button em{font-style:normal;color:#0284c7;font-weight:700}
+/* POS menu variant (dark panel) */
+.outlet-switch.outlet-switch-pos{display:block}
+.outlet-switch-pos>.ar-menu-outlet{box-sizing:border-box;width:calc(100% - 24px);text-align:left;cursor:pointer;font:inherit;min-height:0}
+.outlet-switch-pos>.ar-menu-outlet:hover{border-color:#159bd4}
+.outlet-switch-pos>.ar-menu-outlet small{color:#7dd3fc}
+.outlet-switch-pos .outlet-switch-list{top:calc(100% - 8px);left:12px;right:12px;min-width:0;background:#26292c;border-color:#4b5157}
+.outlet-switch-pos .outlet-switch-list button{color:#f3f5f7}
+.outlet-switch-pos .outlet-switch-list button:hover,.outlet-switch-pos .outlet-switch-list button.is-active{background:#343a40}
+.outlet-switch-pos .outlet-switch-list button b{background:#0c4a6e;color:#e0f2fe}
