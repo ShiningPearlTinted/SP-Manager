@@ -6879,3 +6879,19 @@ button.header-status-pill.outlet-switch-button:hover{filter:brightness(.96)}
 .outlet-switch-list .outlet-switch-confirm button:disabled{opacity:.6;cursor:default}
 .outlet-switch-list.is-dark .outlet-switch-confirm button:not(.primary){background:#343a40;border-color:#4b5157;color:#f3f5f7}
 .outlet-switch-list.is-sheet .outlet-switch-confirm div button{flex:1;min-height:48px}
+
+/* Price Check / Booking / Customers opened full screen from the POS menu (like End of day). */
+.pos-module-overlay{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;background:var(--mg-bg,#f4f6f9);color:var(--mg-ink,#102a43);overflow:hidden}
+.pos-module-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:68px;padding:12px 24px;border-bottom:1px solid #dce6ee;background:#fff;box-sizing:border-box}
+.pos-module-head>div{min-width:0}
+.app .pos-module-head .eyebrow{display:block!important;margin:0;color:#718397;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.app .pos-module-head h2{display:block!important;margin:2px 0 0;color:#102a43;font-size:22px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .pos-module-head button.pos-module-close{flex:0 0 auto;display:inline-flex!important;align-items:center;justify-content:center;gap:8px;width:auto!important;min-width:0!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0 16px 0 12px!important;border:1px solid #d5dee8!important;border-radius:10px!important;background:#fff!important;color:#102a43!important;font:600 14px/1 inherit!important;box-shadow:none!important;cursor:pointer}
+.app .pos-module-head button.pos-module-close:hover{background:#f1f5f9!important;border-color:#b8c6d6!important}
+.app .pos-module-head button.pos-module-close:focus-visible{outline:2px solid #0e7490;outline-offset:2px}
+.pos-module-close svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.pos-module-body{flex:1;min-height:0;overflow:auto;padding:0;box-sizing:border-box}
+/* Booking and Customers bring their own page padding; Price Check gets the same spacing here. */
+.app .pos-module-body>.pc-page{padding:20px 24px 32px}
+.pos-module-body>section{max-width:none;min-height:0}
+@media(max-width:650px){.pos-module-head{min-height:56px;padding:8px 12px}.app .pos-module-head h2{font-size:18px}.app .pos-module-head button.pos-module-close{height:38px!important;min-height:38px!important;padding:0 12px 0 10px!important}.app .pos-module-body>.pc-page{padding:12px}}
