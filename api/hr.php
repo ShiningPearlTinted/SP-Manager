@@ -141,7 +141,10 @@ try {
         if(($slip['status']??'')!=='ISSUED')throw new HrError('Only an issued payslip can be emailed.');
         $q=$pdo->prepare('SELECT e.email FROM hr_employees e JOIN hr_payslips p ON p.employee_id=e.id WHERE p.id=? AND p.outlet_id=? LIMIT 1');
         $q->execute([$id,$outlet]);$recipient=trim((string)$q->fetchColumn());
-        if(!filter_var($recipient,FILTER_VALIDATE_EMAIL))throw new HrError('The employee does not have a valid email address in their HR record.');
+        // An optional recipient chosen in the share dialog overrides the HR email (audited below).
+        $override=trim((string)($body['email']??''));
+        if($override!==''){if(strlen($override)>190||!filter_var($override,FILTER_VALIDATE_EMAIL))throw new HrError('Enter a valid email address.');$recipient=$override;}
+        if(!filter_var($recipient,FILTER_VALIDATE_EMAIL))throw new HrError('The employee does not have a valid email address in their HR record. Enter an email address to send to.');
         $q=$pdo->prepare('SELECT * FROM email_settings WHERE outlet_id=? AND enabled=1 LIMIT 1');$q->execute([$outlet]);$smtp=$q->fetch();
         if(!$smtp)throw new HrError('Email settings are not enabled. Configure SMTP in Settings > Email.');
         $q=$pdo->prepare('SELECT outlet_name FROM outlets WHERE id=?');$q->execute([$outlet]);$company=(string)($q->fetchColumn()?:'Company');
@@ -158,7 +161,7 @@ try {
             $mail->SMTPSecure=$mail->Port===465?\PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS:\PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->CharSet='UTF-8';$mail->setFrom((string)$smtp['from_email'],(string)$smtp['from_name']);$mail->addAddress($recipient,(string)$slip['full_name_snapshot']);$mail->Subject='Payslip '.$slip['payslip_no'].' · '.$slip['period_start'];$mail->isHTML(true);$mail->Body=$html;$mail->AltBody='Payslip '.$slip['payslip_no'].' for '.$slip['period_start'].' to '.$slip['period_end'].'. Net pay: '.$money($slip['net_pay']);$mail->addStringAttachment($pdf,'Payslip-'.$slip['payslip_no'].'.pdf','base64','application/pdf');$mail->send();
         } catch(Throwable $mailError) {error_log('SP payslip email failed: '.get_class($mailError));throw new HrError('Email could not be sent. Check the SMTP configuration in Settings > Email.',503);}
-        spAudit($pdo,'HR_PAYSLIP_EMAIL','hr_payslips',$id);
+        spAudit($pdo,'HR_PAYSLIP_EMAIL','hr_payslips',$id,null,['recipient'=>$recipient]);
         spApiRespond(['ok'=>true],200);
     }
     $key=spRequestKey($body,'hr:'.$action);

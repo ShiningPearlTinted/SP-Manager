@@ -226,5 +226,5 @@ try {
         throw $e;
     }
 } catch (Throwable $e) {
-    out(['ok' => false, 'api_version' => 'V1', 'error' => $e->getMessage()], 500);
+    out(['ok' => false, 'api_version' => 'V1', 'error' => spSafeErrorMessage($e)], 500);
 }

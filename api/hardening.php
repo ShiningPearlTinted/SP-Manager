@@ -188,7 +188,8 @@ function spCustomerRegisterKey(int $outlet): string {
 }
 
 function spThrottleLogin(PDO $pdo,string $username):void {
- $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');$now=time();$buckets=[[hash('sha256',strtolower($username).'|'.$ip),5],[hash('sha256','ip:'.$ip),100]];
+ $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');$now=time();// Per username + IP, per IP, and per username from any IP (stops guessing one account from many addresses).
+ $buckets=[[hash('sha256',strtolower($username).'|'.$ip),5],[hash('sha256','ip:'.$ip),100],[hash('sha256','user:'.strtolower($username)),20]];
  foreach($buckets as [$key,$limit]){$pdo->prepare('INSERT INTO sp_login_attempts(bucket_key,window_start,attempts) VALUES(?,?,1) ON DUPLICATE KEY UPDATE attempts=IF(window_start<? ,1,attempts+1),window_start=IF(window_start<? OR attempts>=?,VALUES(window_start),window_start)')->execute([$key,$now,$now-900,$now-900,$limit]);$q=$pdo->prepare('SELECT attempts FROM sp_login_attempts WHERE bucket_key=?');$q->execute([$key]);if((int)$q->fetchColumn()>$limit)spApiRespond(['ok'=>false,'error'=>'Too many sign-in attempts. Try again in 15 minutes.'],429);}
 }
 function spSaleTransition(PDO $pdo,int $outlet,int $id,array $old,array $sale): void {

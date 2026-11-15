@@ -401,5 +401,5 @@ try {
     throw new InvalidArgumentException('Unknown action.');
 } catch(Throwable $e) {
     if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();
-    out(['ok'=>false,'settings_version'=>'V3','error'=>$e->getMessage()],500);
+    out(['ok'=>false,'settings_version'=>'V3','error'=>spSafeErrorMessage($e)],500);
 }

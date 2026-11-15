@@ -79,7 +79,7 @@ function hrMasterTable(string $kind): string {
 }
 function hrMasters(PDO $pdo): array {
     $result = [];
-    foreach (['departments','positions','employment_types','employment_statuses'] as $kind) $result[$kind] = hrQuery($pdo,'SELECT * FROM '.hrMasterTable($kind).' ORDER BY name')->fetchAll();
+    foreach (['departments','positions','employment_types','employment_statuses'] as $kind) $result[$kind] = hrQuery($pdo,'SELECT * FROM '.hrMasterTable($kind).' ORDER BY LENGTH(code),code,name')->fetchAll();
     return $result;
 }
 function hrMasterRef(PDO $pdo, string $table, ?int $id, ?int $old = null): void {
@@ -108,6 +108,23 @@ function hrPublicEmployee(array $row, bool $sensitive = false): array {
     $row['primary_outlet_id'] = $row['current_outlet_id'];
     return $row;
 }
+function hrMasterCodePrefix(string $kind): int {
+    return match($kind) { 'departments'=>1,'positions'=>2,'employment_types'=>3,'employment_statuses'=>4,default=>throw new HrError('Unknown HR master.') };
+}
+function hrNextMasterCode(PDO $pdo, string $kind): string {
+    $table = hrMasterTable($kind); $prefix = hrMasterCodePrefix($kind);
+    $min = $prefix*1000+1; $max = $prefix*1000+999;
+    // Runs inside the save transaction; FOR UPDATE serialises concurrent saves and the
+    // unique `code` index rejects any remaining collision.
+    $codes = hrQuery($pdo,'SELECT code FROM '.$table.' FOR UPDATE')->fetchAll(PDO::FETCH_COLUMN);
+    $used = [];
+    foreach ($codes as $c) if (preg_match('/^\d+$/',(string)$c)) $used[(int)$c] = true;
+    $next = $min;
+    foreach (array_keys($used) as $n) if ($n >= $min && $n <= $max && $n >= $next) $next = $n+1;
+    while (isset($used[$next]) && $next <= $max) $next++;
+    if ($next > $max) throw new HrError('No more automatic codes are available for this HR master.');
+    return (string)$next;
+}
 function hrSaveMaster(PDO $pdo, array $body): array {
     hrRequire('manageHrSettings');
     if (!hrHq()) throw new HrError('Global HR settings require HQ access.',403);
@@ -115,8 +132,10 @@ function hrSaveMaster(PDO $pdo, array $body): array {
     $id = hrId($body['id'] ?? null,'Master id',true);
     $old = $id ? hrQuery($pdo,'SELECT * FROM '.$table.' WHERE id=? FOR UPDATE',[$id])->fetch() : null;
     if ($id && !$old) throw new HrError('Master record not found.',404);
-    $code = strtoupper(hrText($body['code'] ?? null,'Code',50,true));
-    if (!preg_match('/^[A-Z0-9_-]+$/',$code)) throw new HrError('Code may contain letters, numbers, underscores and hyphens.');
+    // Codes are system generated: new records get the next number in the master's
+    // series (Departments 1xxx, Positions 2xxx, Employment Types 3xxx, Employment
+    // Statuses 4xxx); existing records keep their code.
+    $code = $old ? (string)$old['code'] : hrNextMasterCode($pdo,$kind);
     $values = ['code'=>$code,'name'=>hrText($body['name'] ?? null,'Name',150,true),'active'=>hrBool($body['active'] ?? true)];
     if ($kind === 'positions') {
         $values['department_id'] = hrId($body['department_id'] ?? null,'Department',true);

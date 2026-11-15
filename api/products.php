@@ -579,4 +579,4 @@ try {
     respond(['ok'=>true,'id'=>$savedId,'outletId'=>$outletId,'category_id'=>isset($p['category_id'])?(int)$p['category_id']:null,'group_id'=>isset($p['group_id'])?(int)$p['group_id']:null,'selling_price'=>isset($p['price'])?(float)$p['price']:null]);
   }
   respond(['ok'=>false,'error'=>'Unknown action.'],404);
-}catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();respond(['ok'=>false,'error'=>$e->getMessage()],500);}
+}catch(Throwable $e){if(isset($pdo)&&$pdo->inTransaction())$pdo->rollBack();respond(['ok'=>false,'error'=>spSafeErrorMessage($e)],500);}

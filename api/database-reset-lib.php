@@ -2,8 +2,14 @@
 declare(strict_types=1);
 require_once __DIR__.'/database-backup-lib.php';
 
+/** Individual HR Management parts that can be reset without deleting employees. */
+function spResetHrParts(): array {
+    return ['hr_payslips'=>['hr_payslips'],'hr_attendance'=>['hr_attendance'],'hr_shifts'=>['hr_shifts'],'hr_leave'=>['hr_leave_requests'],'hr_overtime'=>['hr_overtime'],'hr_claims'=>['hr_claims'],'hr_advances'=>['hr_salary_advances'],'hr_documents'=>['hr_documents']];
+}
 function spResetSelection(array $input): array {
-    $out=[];foreach(['products','customers','documents','hr','finance'] as $key){$value=$input[$key]??false;if(!is_bool($value))throw new InvalidArgumentException('Select Products, Customers, Documents, HR Management or Finance.');$out[$key]=$value;}
+    $out=[];foreach(['products','customers','documents','hr','finance',...array_keys(spResetHrParts())] as $key){$value=$input[$key]??false;if(!is_bool($value))throw new InvalidArgumentException('Select Products, Customers, Documents, HR Management or Finance.');$out[$key]=$value;}
+    // "HR Management (all)" already includes every HR part.
+    if($out['hr'])foreach(array_keys(spResetHrParts()) as $key)$out[$key]=false;
     if(!in_array(true,$out,true))throw new InvalidArgumentException('Select at least one entity.');return $out;
 }
 /** Every deletion is explicit. Incoming references are checked even for SET NULL / CASCADE. */
@@ -19,7 +25,10 @@ function spResetPlan(PDO $pdo,array $snapshot,int $outlet,array $selected): arra
     }
     // HR and Finance tables may be missing on an older database, so an absent table is skipped.
     $hrTables=['hr_attendance','hr_claims','hr_documents','hr_leave_requests','hr_overtime','hr_payslips','hr_salary_advances','hr_shifts'];
-    $optional=array_merge($selected['hr']?$hrTables:[],$selected['finance']?['sp_finance_entries']:[]);
+    $hrSelected=$selected['hr']?$hrTables:[];
+    foreach(spResetHrParts() as $key=>$partTables)if(!empty($selected[$key]))$hrSelected=array_merge($hrSelected,$partTables);
+    $hrSelected=array_values(array_unique($hrSelected));
+    $optional=array_merge($hrSelected,$selected['finance']?['sp_finance_entries']:[]);
     foreach($optional as $table)if(isset($tables[$table]))foreach($tables[$table]['rows'] as $row)if((int)($row['outlet_id']??0)===$outlet)$delete[$table][(int)$row['id']]=$row;
     // Employees belong to their primary outlet; salary and outlet history follow them through employee_id.
     if($selected['hr']&&isset($tables['hr_employees']))foreach($tables['hr_employees']['rows'] as $row)if((int)($row['primary_outlet_id']??0)===$outlet)$delete['hr_employees'][(int)$row['id']]=$row;
@@ -28,6 +37,14 @@ function spResetPlan(PDO $pdo,array $snapshot,int $outlet,array $selected): arra
     if($selected['documents'])$allowedChildren=array_merge($allowedChildren,$roots);
     // hr_employees is deliberately not a child: an employee of another outlet is never deleted through a reference.
     if($selected['hr'])$allowedChildren=array_merge($allowedChildren,$hrTables,['hr_outlet_history','hr_payslip_salary_advances','hr_salary_history']);
+    else{
+        $allowedChildren=array_merge($allowedChildren,$hrSelected);
+        // Advance repayment links belong to their payslip; they go only when payslips are reset.
+        if(in_array('hr_payslips',$hrSelected,true))$allowedChildren[]='hr_payslip_salary_advances';
+    }
+    $blockMessage=static fn(string $child,string $parent):string=>str_starts_with($child,'hr_')||str_starts_with($parent,'hr_')
+        ?'Retained '.$child.' records reference '.$parent.'. Also select the related HR item (for example Payslips together with Salary advances) or HR Management (all).'
+        :'Retained '.$child.' records reference '.$parent.'. Select Documents where applicable; cross-outlet references must be resolved first.';
     // Known application references are checked in addition to physical foreign keys.
     $parents=['sale_id'=>'sales','original_sale_id'=>'sales','sale_item_id'=>'sale_items','refund_id'=>'sale_refunds','purchase_id'=>'purchases','invoice_id'=>'invoices','quotation_id'=>'quotations','open_order_id'=>'open_orders','maintenance_id'=>'maintenance','warranty_id'=>'warranties','customer_id'=>'customers','supplier_id'=>'suppliers','loyalty_account_id'=>'loyalty_accounts','register_session_id'=>'register_sessions'];
     if(isset($tables['hr_employees']))$parents+=['employee_id'=>'hr_employees','reporting_manager_id'=>'hr_employees','payslip_id'=>'hr_payslips','salary_advance_id'=>'hr_salary_advances','salary_history_id'=>'hr_salary_history'];
@@ -44,7 +61,7 @@ function spResetPlan(PDO $pdo,array $snapshot,int $outlet,array $selected): arra
             foreach($tables[$child]['rows'] as $row){
                 if($row[$column]===null||!isset($values[(string)$row[$column]]))continue;
                 $id=(int)($row['id']??0);if($id&&isset($delete[$child][$id]))continue;
-                if(!$id||!in_array($child,$allowedChildren,true)||(isset($row['outlet_id'])&&(int)$row['outlet_id']!==$outlet)){$blocked[$child.'|'.$parent]='Retained '.$child.' records reference '.$parent.'. Select Documents where applicable; cross-outlet references must be resolved first.';continue;}
+                if(!$id||!in_array($child,$allowedChildren,true)||(isset($row['outlet_id'])&&(int)$row['outlet_id']!==$outlet)){$blocked[$child.'|'.$parent]=$blockMessage($child,$parent);continue;}
                 $delete[$child][$id]=$row;$changed=true;
             }
         }
@@ -53,7 +70,21 @@ function spResetPlan(PDO $pdo,array $snapshot,int $outlet,array $selected): arra
     $blocked=[];
     foreach($edges as [$child,$column,$parent,$parentCol])if(!empty($delete[$parent])){
         $values=array_fill_keys(array_map(fn($r)=>(string)$r[$parentCol],$delete[$parent]),true);
-        foreach($tables[$child]['rows'] as $row)if($row[$column]!==null&&isset($values[(string)$row[$column]])&&!isset($delete[$child][(int)($row['id']??0)]))$blocked[$child.'|'.$parent]='Retained '.$child.' records reference '.$parent.'. Select Documents where applicable; cross-outlet references must be resolved first.';
+        foreach($tables[$child]['rows'] as $row)if($row[$column]!==null&&isset($values[(string)$row[$column]])&&!isset($delete[$child][(int)($row['id']??0)]))$blocked[$child.'|'.$parent]=$blockMessage($child,$parent);
+    }
+    // Deleting an ISSUED payslip while keeping its salary advance gives the repayment back,
+    // exactly as Void / Reset Issued Payslip would.
+    if(!empty($delete['hr_payslips'])&&isset($tables['hr_salary_advances'])){
+        $cents=static fn($v):int=>(int)round(((float)$v)*100);$restore=[];$linked=[];
+        foreach($tables['hr_payslip_salary_advances']['rows']??[] as $link)if(isset($delete['hr_payslips'][(int)$link['payslip_id']])){
+            $linked[(int)$link['payslip_id']]=true;
+            if(($delete['hr_payslips'][(int)$link['payslip_id']]['status']??'')==='ISSUED')$restore[(int)$link['salary_advance_id']]=($restore[(int)$link['salary_advance_id']]??0)+$cents($link['repayment']);
+        }
+        foreach($delete['hr_payslips'] as $pid=>$slip)if(!isset($linked[$pid])&&($slip['status']??'')==='ISSUED'&&!empty($slip['salary_advance_id'])&&$cents($slip['salary_advance_repayment']??0)>0)$restore[(int)$slip['salary_advance_id']]=($restore[(int)$slip['salary_advance_id']]??0)+$cents($slip['salary_advance_repayment']);
+        foreach($tables['hr_salary_advances']['rows'] as $r){$id=(int)$r['id'];if(empty($restore[$id])||isset($delete['hr_salary_advances'][$id]))continue;
+            $balance=min($cents($r['amount']),$cents($r['balance'])+$restore[$id]);
+            $updates['hr_salary_advances'][$id]=['before'=>$r,'values'=>['balance'=>number_format($balance/100,2,'.',''),'status'=>$balance>0?'OPEN':'SETTLED']];
+        }
     }
     if($selected['documents']||$selected['products']){
         foreach($tables['product_outlets']['rows'] as $r)if((int)$r['outlet_id']===$outlet)$updates['product_outlets'][(int)$r['id']]=['before'=>$r,'values'=>$selected['products']?['stock_qty'=>0,'active'=>0]:['stock_qty'=>0]];

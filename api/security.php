@@ -159,9 +159,10 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
         default=>'viewHrEmployees',
     };
     if ($file === 'customer-display.php' && in_array($action, ['terminals','terminal','image'], true)) return 'manageSettings';
-    // POS users who can process payments may publish the live cart/payment state.
-    // Keep terminal pairing and display configuration restricted to managers.
-    if ($file === 'customer-display.php' && $action === 'state' && $method === 'POST') return 'managePayments';
+    // Any POS user (including Cashier) may publish the live cart/payment state to the
+    // Customer Display paired on this PC. Terminal pairing and display configuration
+    // stay restricted to users with Settings access (rule above).
+    if ($file === 'customer-display.php' && $action === 'state' && $method === 'POST') return 'accessPosSales';
     if ($file === 'car-batteries.php') return $method==='GET' && in_array($action,['','list'],true) ? 'accessPriceCheck' : 'manageProducts';
     if ($file === 'users.php') return in_array($action, ['logout','change-password'], true) ? '' : 'manageUsers';
     if ($file === 'orders.php') return $method==='GET'?'viewOpenSales':'managePayments';
@@ -242,7 +243,7 @@ function spInstallCorsAndGuard(): void {
         header('Access-Control-Allow-Origin: '.$origin);
         header('Vary: Origin');
     }
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, X-SP-Outlet');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('X-Content-Type-Options: nosniff');
@@ -319,6 +320,13 @@ function spInstallCorsAndGuard(): void {
                 spApiRespond(['ok'=>false,'error'=>'Outlet identifiers do not match across request parameters.'], 400);
             }
             $outletId = $candidateOutletId;
+        }
+        // The outlet chosen in the app (outlet switcher) applies when the request names no outlet.
+        // It is checked against the user's outlet assignment below like any other outlet input.
+        $headerOutlet = trim((string)($_SERVER['HTTP_X_SP_OUTLET'] ?? ''));
+        if ($outletId <= 0 && $headerOutlet !== '') {
+            $outletId = spResolveOutlet($pdo, $headerOutlet);
+            if ($outletId <= 0) spApiRespond(['ok'=>false,'error'=>'Outlet not found or inactive.'], 403);
         }
         if ($outletId <= 0) $outletId = spResolveOutlet($pdo, $defaultOutlet);
         if($offline&&(int)($claims['outlet']??0)!==$outletId)spApiRespond(['ok'=>false,'error'=>'Offline access is limited to its registered outlet.'],403);

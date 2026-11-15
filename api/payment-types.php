@@ -180,5 +180,5 @@ try {
     ptOut(['ok'=>false,'error'=>'Unsupported action.'],400);
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
-    ptOut(['ok'=>false,'api_version'=>'V1','error'=>$e->getMessage()],500);
+    ptOut(['ok'=>false,'api_version'=>'V1','error'=>spSafeErrorMessage($e)],500);
 }

@@ -54,4 +54,4 @@ try{
   $q=$pdo->prepare('UPDATE outlets SET active=? WHERE id=?');$q->execute([$active,$id]);out(['ok'=>true,'api_version'=>'V1','id'=>$id,'active'=>$active===1]);
  }
  throw new InvalidArgumentException('Unknown action.');
-}catch(Throwable $e){out(['ok'=>false,'api_version'=>'V1','error'=>$e->getMessage()],500);}
+}catch(Throwable $e){out(['ok'=>false,'api_version'=>'V1','error'=>spSafeErrorMessage($e)],500);}
