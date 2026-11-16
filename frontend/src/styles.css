@@ -6899,3 +6899,16 @@ button.header-status-pill.outlet-switch-button:hover{filter:brightness(.96)}
 /* Login password drawn as dots without type="password" (no browser saved-password list). */
 .login-masked{-webkit-text-security:disc;text-security:disc}
 .login-masked::placeholder{-webkit-text-security:none}
+
+/* Install app (PWA) */
+.pwa-install{display:grid;gap:8px}
+.pwa-install-login{margin-top:12px}
+.pwa-install-menu{margin:10px 12px 4px}
+button.pwa-install-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:42px;padding:0 14px;border-radius:10px;font:600 14px/1 inherit;cursor:pointer}
+.pwa-install-login button.pwa-install-button{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.6);color:#e2e8f0}
+.pwa-install-login button.pwa-install-button:hover{background:rgba(30,41,59,.9);border-color:#38bdf8}
+.pwa-install-menu button.pwa-install-button{border:1px solid #4b5157;background:#26292c;color:#f3f5f7}
+.pwa-install-menu button.pwa-install-button:hover{border-color:#159bd4}
+.pwa-install-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Installed app: respect the phone notch / status bar */
+@media (display-mode: standalone){body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}}
