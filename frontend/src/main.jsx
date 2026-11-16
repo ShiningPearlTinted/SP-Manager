@@ -68,7 +68,7 @@ const ALL_PERMISSIONS=Object.fromEntries(PERMISSION_KEYS.map(k=>[k,true]));
 const CASHIER_PERMISSIONS={accessPosSales:true,accessPriceCheck:true,viewDashboard:true,accessPaymentTypes:true,accessRefundVoid:true,accessOutletManagement:false,accessXzReport:true,accessNamedOrder:false,accessCompanySettings:false,viewSalesHistory:false,viewOpenSales:false,cashInOut:true,creditPayments:false,endOfDay:true,userInfo:false,manageUsers:false,manageProducts:false,manageInventory:false,manageCustomers:true,managePurchases:false,manageQuotation:false,manageInvoice:false,manageDocuments:false,managePayments:true,manageSettings:false,manageReports:false,manageTax:false,manageDiscount:true,manageLoyalty:false,manageManagement:false};
 
 const defaultSettings={
- general:{language:"English",direction:"ltr",colorScheme:"Light",layout:"Visual",rows:3,columns:3,virtualKeyboard:false,zoom:100,showClose:true,clickToClose:false,slideIn:true,messageDuration:5,messagePosition:"Top",showCashIn:false,selectBusinessDay:false,buttonBar:{search:true,transfer:true,customer:true,discount:true,comment:false,newSale:true,refund:true,cashDrawer:true,serviceType:true,orderName:true},
+ general:{language:"English",direction:"ltr",colorScheme:"Light",layout:"Visual",rows:5,columns:5,virtualKeyboard:false,zoom:100,showClose:true,clickToClose:false,slideIn:true,messageDuration:5,messagePosition:"Top",showCashIn:false,selectBusinessDay:false,buttonBar:{search:true,transfer:true,customer:true,discount:true,comment:false,newSale:true,refund:true,cashDrawer:true,serviceType:true,orderName:true},
     notificationPosition:"Top"},
  order:{floorPlans:false,sounds:false,soundNavigation:false,soundItemAdded:true,soundItemNotFound:true,defaultSearch:"Name",showSearchOptions:true,defaultQuantity:1,defaultDiscountType:"Percentage",separateRow:false,preventSaleBelowCost:false,preventNegativeInventory:false,singleUser:true,showReceiptDialog:true,defaultDueDate:0,mergeItemsOnReceipt:true,singleItemDiscount:true,shortcutPaymentConfirmation:true,requireVoidReason:false,trackUnconfirmedVoids:false,customOrderName:true,orderNameRequired:false,requestOrderName:false,resetOrderNumberOnClose:false,showItemsOnPayment:true,paymentRows:0,showAllOccupiedTables:false},
  products:{taxInclusive:false,discountRule:"After tax",sorting:"Name",allowNegativePrice:false,costMarkup:false,autoUpdateCost:false,updateSalePriceMarkup:false,movingAverage:false},
@@ -88,9 +88,9 @@ const money=n=>"RM "+Number(n||0).toFixed(2);
 
 // Prints a popup window from the app. Print popups contain no inline scripts, so the app's
 // Content-Security-Policy can forbid inline JavaScript.
-// POS picture menu: 3 columns x 3 rows (Aronium style). Outlets still on the old default layout (5 x 5)
-// are moved once; a layout chosen in Settings is kept, and can still be changed there afterwards.
-const upgradePosLayout=s=>{const g=s?.general||{};if(g.posLayoutPreset==="3x3-v1")return{settings:s,changed:false};const old=Number(g.rows||5)===5&&Number(g.columns||5)===5;return{settings:{...s,general:{...g,...(old?{rows:3,columns:3}:{}),posLayoutPreset:"3x3-v1"}},changed:old}};
+// The 3 x 3 POS layout update was withdrawn: settings it changed (3 x 3 with its marker) go back to 5 x 5.
+// A layout chosen in Settings (no marker) is left as it is.
+const upgradePosLayout=s=>{const g=s?.general||{};if(g.posLayoutPreset!=="3x3-v1")return{settings:s,changed:false};const {posLayoutPreset,...rest}=g;const ours=Number(g.rows)===3&&Number(g.columns)===3;return{settings:{...s,general:{...rest,...(ours?{rows:5,columns:5}:{})}},changed:true}};
 const spAutoPrint=(w,delay=180)=>{if(!w)return;const run=()=>setTimeout(()=>{try{w.focus();w.print()}catch{}},delay);try{if(w.document.readyState==="complete")run();else w.addEventListener("load",run,{once:true})}catch{run()}};
 const escapeHtml=value=>String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 const openPrintDocument=(title,html)=>{
