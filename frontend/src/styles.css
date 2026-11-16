@@ -6912,3 +6912,34 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 .pwa-install-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* Installed app: respect the phone notch / status bar */
 @media (display-mode: standalone){body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}}
+
+/* POS top bar (tablet/desktop, normal and full screen): the menu button and the notification bell stay
+   pinned at the right end of the bar, side by side, while the action buttons scroll underneath on narrow
+   screens. Full screen no longer moves the menu button on top of the bell. Phone layout keeps its own rules. */
+@media (min-width:701px){
+  .ar-pos-shell .ar-topbar > .ar-menu-btn,
+  .ar-pos-shell:fullscreen .ar-topbar > .ar-menu-btn,
+  .ar-pos-shell:-webkit-full-screen .ar-topbar > .ar-menu-btn,
+  .ar-pos-shell.pos-browser-fullscreen .ar-topbar > .ar-menu-btn,
+  html:fullscreen .ar-pos-shell .ar-topbar > .ar-menu-btn,
+  html:-webkit-full-screen .ar-pos-shell .ar-topbar > .ar-menu-btn{
+    position:sticky !important;
+    top:auto !important;right:0 !important;left:auto !important;bottom:auto !important;
+    flex:0 0 48px !important;width:48px !important;min-width:48px !important;
+    height:auto !important;min-height:0 !important;max-height:none !important;
+    align-self:stretch !important;
+    margin:0 !important;
+    background:#1f2224 !important;
+    z-index:5 !important;
+  }
+  .ar-pos-shell .ar-topbar > .ar-pos-notification-slot,
+  .ar-pos-shell:fullscreen .ar-topbar > .ar-pos-notification-slot,
+  .ar-pos-shell:-webkit-full-screen .ar-topbar > .ar-pos-notification-slot,
+  .ar-pos-shell.pos-browser-fullscreen .ar-topbar > .ar-pos-notification-slot{
+    position:sticky !important;top:auto !important;left:auto !important;right:48px !important;
+    margin-left:auto !important;flex:0 0 56px !important;width:56px !important;min-width:56px !important;height:auto !important;
+    align-self:stretch !important;
+    background:#1f2224 !important;box-shadow:-10px 0 12px -6px rgba(0,0,0,.55);
+    z-index:5 !important;
+  }
+}
