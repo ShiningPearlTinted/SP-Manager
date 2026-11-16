@@ -2013,7 +2013,7 @@ function POS({saleProcessing,displayIdleImage,setCustomersLocal,notificationCent
  const selectedTransfer=cart.filter(i=>transferSelection.has(i.lineId||i.id));
  const makeTransfer=async()=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before transferring items.");return}if(!selectedTransfer.length){setNoticeLocal("Select at least one item to transfer.");return}const order={id:Date.now(),name:"Transfer "+String(Date.now()).slice(-6),date:new Date().toISOString(),customerId:customer,items:selectedTransfer,status:"Open",transferred:true};try{await save("orders",[...orders,order]);setOrders([...orders,order]);selectedTransfer.forEach(i=>changeQty(i.lineId||i.id,-Number(i.qty||0)));setTransferSelection(new Set());setTransferScreen(false);setNoticeLocal("Selected items transferred to "+order.name+".")}catch{setNoticeLocal("The transfer could not be completed because the database could not complete the request.")}};
  useEffect(()=>{
-   const syncFullscreen=()=>setPosFullscreen(Boolean(document.fullscreenElement));
+   const syncFullscreen=()=>setPosFullscreen(Boolean(document.fullscreenElement||document.webkitFullscreenElement));
    document.addEventListener("fullscreenchange",syncFullscreen);
    document.addEventListener("webkitfullscreenchange",syncFullscreen);
    syncFullscreen();
@@ -2033,10 +2033,12 @@ function POS({saleProcessing,displayIdleImage,setCustomersLocal,notificationCent
  },[]);
  const togglePosFullscreen=async()=>{
    try{
-     const shell=document.querySelector(".ar-pos-shell");
-     if(document.fullscreenElement){await document.exitFullscreen?.();setPosFullscreen(false);return}
-     if(shell?.requestFullscreen){await shell.requestFullscreen({navigationUI:"hide"});setPosFullscreen(true);return}
-     if(shell?.webkitRequestFullscreen){shell.webkitRequestFullscreen();setPosFullscreen(true);return}
+     // Full screen is applied to the whole app (not only the POS screen), so it stays on when moving to
+     // Management, Booking, Customers or any other page.
+     const root=document.documentElement;
+     if(document.fullscreenElement||document.webkitFullscreenElement){await (document.exitFullscreen?.()||document.webkitExitFullscreen?.());setPosFullscreen(false);return}
+     if(root.requestFullscreen){await root.requestFullscreen({navigationUI:"hide"});setPosFullscreen(true);return}
+     if(root.webkitRequestFullscreen){root.webkitRequestFullscreen();setPosFullscreen(true);return}
      setPosFullscreen(v=>!v);
    }catch(e){
      setPosFullscreen(v=>!v);
