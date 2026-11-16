@@ -34,7 +34,7 @@ function OutletStock({product,load,onClose}){
  const meta=[product.code,[product.category,product.group].filter(Boolean).join(' / '),(product.barcodes||[product.barcode]).filter(Boolean)[0]].filter(Boolean).join(' · ');
  return <div className="pcs-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
   <section ref={ref} className="pcs-dialog" role="dialog" aria-modal="true" aria-label={'Stock on hand: '+product.name}>
-   <header className="pcs-head"><div><small>{meta}</small><h2>{product.name}</h2></div><button type="button" className="pcs-close" aria-label="Close" onClick={onClose}>×</button></header>
+   <header className="pcs-head"><div><small>{meta}</small><h2>{product.name}</h2></div><button type="button" className="pcs-close" aria-label="Close" onClick={onClose}><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg></button></header>
    <div className="pcs-sum"><div className="pcs-price"><span>Price</span><b>{currency(product.price)}</b></div><div><span>This outlet{here?' ('+here.outlet_code+')':''}</span><b>{loading&&!data?'…':here?qty(here.stock):'—'}</b></div><div><span>All outlets</span><b>{loading&&!data?'…':error||!data?'—':qty(total)}</b></div></div>
    <div className="pcs-title">Stock on hand by outlet</div>
    {error?<div className="pcs-error" role="alert">{error} <button type="button" onClick={fetchStock}>Try again</button></div>:

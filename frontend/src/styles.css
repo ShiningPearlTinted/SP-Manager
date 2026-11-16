@@ -7021,3 +7021,14 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 .pcs-dialog small,.pcs-dialog span{letter-spacing:normal}
 .pcs-dialog .pcs-sum span{letter-spacing:.06em}
 .pcs-dialog th,.pcs-dialog td{white-space:normal}
+/* Close button: icon centred in a square button, aligned with the product name. */
+.pcs-dialog .pcs-close{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;margin:0;align-self:flex-start;color:#344054;font-size:0}
+.pcs-dialog .pcs-close svg{display:block;flex:none}
+.pcs-dialog .pcs-close:focus-visible{outline:2px solid #0b7a9a;outline-offset:2px}
+
+/* POS menu pictures: a little smaller than the full tile, with some space round them. */
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile .ar-cat-icon img.group-tile-image,
+:is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image img{max-width:90%;max-height:88%}
+@media (max-width:700px){
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image img{max-width:90%!important;max-height:88%!important}
+}
