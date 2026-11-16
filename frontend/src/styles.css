@@ -6895,3 +6895,7 @@ button.header-status-pill.outlet-switch-button:hover{filter:brightness(.96)}
 .app .pos-module-body>.pc-page{padding:20px 24px 32px}
 .pos-module-body>section{max-width:none;min-height:0}
 @media(max-width:650px){.pos-module-head{min-height:56px;padding:8px 12px}.app .pos-module-head h2{font-size:18px}.app .pos-module-head button.pos-module-close{height:38px!important;min-height:38px!important;padding:0 12px 0 10px!important}.app .pos-module-body>.pc-page{padding:12px}}
+
+/* Login password drawn as dots without type="password" (no browser saved-password list). */
+.login-masked{-webkit-text-security:disc;text-security:disc}
+.login-masked::placeholder{-webkit-text-security:none}
