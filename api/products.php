@@ -381,6 +381,7 @@ try {
   // "list" feeds POS and every module (active products only). "list-inactive" returns the outlet's
   // inactive products so Product Master can show them with Active unchecked, like Aronium.
   if(($action==='list'||$action==='list-inactive') && $_SERVER['REQUEST_METHOD']==='GET'){
+    spShareProductsWithAllOutlets($pdo);
     $outletCol=isset($columns['outlet_id']);
     $hasCategoryId=isset($columns['category_id']); $hasGroupId=isset($columns['group_id']);
     $select='p.*, po.id AS outlet_assignment_id, po.active AS outlet_active, po.selling_price AS outlet_selling_price, po.cost_price AS outlet_cost_price, po.stock_qty AS outlet_stock_qty, po.min_stock AS outlet_min_stock, po.preferred_quantity AS outlet_preferred_quantity, po.allow_price_change AS outlet_allow_price_change, po.last_purchase_price AS outlet_last_purchase_price, po.rank AS outlet_rank';
@@ -400,6 +401,7 @@ try {
   }
 
   if($action==='master-list' && $_SERVER['REQUEST_METHOD']==='GET'){
+    spShareProductsWithAllOutlets($pdo);
     $rows=allMasterRows($pdo,$outletId);hydrateOutletFields($pdo,$outletId,$rows);hydrateProductRelations($pdo,$rows);
     respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows]);
   }
@@ -575,7 +577,7 @@ try {
     // for this outlet. This prevents Edit + Save from creating/retaining twins.
     // Product Master codes are global. Never delete another outlet's master row as a side effect of save.
     syncProductRelations($pdo,$outletId,$savedId,$p);
-    $assignment=upsertProductOutlet($pdo,$savedId,$outletId,$p);spAudit($pdo,'PRODUCT_SAVE','products',$savedId);$pdo->commit();
+    $assignment=upsertProductOutlet($pdo,$savedId,$outletId,$p);spShareProductsWithAllOutlets($pdo,$savedId);spAudit($pdo,'PRODUCT_SAVE','products',$savedId);$pdo->commit();
     respond(['ok'=>true,'id'=>$savedId,'outletId'=>$outletId,'category_id'=>isset($p['category_id'])?(int)$p['category_id']:null,'group_id'=>isset($p['group_id'])?(int)$p['group_id']:null,'selling_price'=>isset($p['price'])?(float)$p['price']:null]);
   }
   respond(['ok'=>false,'error'=>'Unknown action.'],404);

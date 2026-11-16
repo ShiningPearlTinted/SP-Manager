@@ -125,6 +125,17 @@ function spEnsureProductMetadata(PDO $pdo): void { spRequireColumns($pdo,'produc
 
 function spEnsureStockMovementMetadata(PDO $pdo): void { spRequireColumns($pdo,'stock_movements',['reference_no']); }
 
+// Every outlet sells the same products: a product with no row for an outlet gets one there (stock 0),
+// so only stock on hand differs per outlet. A row an outlet switched off (active=0) is left as it is.
+function spShareProductsWithAllOutlets(PDO $pdo, ?int $productId = null): int {
+    if (!spTableExists($pdo, 'product_outlets') || !spTableExists($pdo, 'outlets') || !spTableExists($pdo, 'products')) return 0;
+    $sql = "INSERT IGNORE INTO product_outlets (product_id,outlet_id,active,selling_price,cost_price,stock_qty,min_stock,preferred_quantity,`rank`)
+            SELECT p.id,o.id,1,NULL,p.cost_price,0,0,0,0 FROM products p JOIN outlets o ON o.active=1
+            LEFT JOIN product_outlets po ON po.product_id=p.id AND po.outlet_id=o.id
+            WHERE po.id IS NULL" . ($productId ? ' AND p.id=?' : '');
+    $q = $pdo->prepare($sql); $q->execute($productId ? [$productId] : []);
+    return $q->rowCount();
+}
 function spEnsureProductOutletTable(PDO $pdo): void { spRequireColumns($pdo,'product_outlets',['active', 'selling_price', 'cost_price', 'stock_qty', 'allow_price_change']); }
 
 function spResolveOutlet(PDO $pdo, string $value): int {
