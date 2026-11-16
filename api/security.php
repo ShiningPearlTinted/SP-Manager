@@ -171,6 +171,8 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'outlets.php' || $file === 'outlet-provision.php') return 'accessOutletManagement';
     if ($file === 'reports.php') return 'manageReports';
     if ($file === 'loyalty.php') return 'manageLoyalty';
+    // Price tag layout and selection belong to Products: a save that only carries priceTagSettings needs Products access.
+    if ($file === 'settings.php' && $method !== 'GET') { $b = spReadRequestBody(); $keys = array_diff(array_keys(is_array($b) ? $b : []), ['outlet_id','action','request_id']); if (array_values($keys) === ['priceTagSettings']) return 'manageProducts'; }
     if ($file === 'settings.php') return $method === 'GET' ? '' : 'manageSettings';
     if ($file === 'database-reset.php') return 'administrator';
     if ($file === 'database.php') return in_array($action, ['restore','backup'], true) ? 'administrator' : '';

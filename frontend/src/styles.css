@@ -6972,3 +6972,8 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
   .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > :is(.ar-category-tile,.ar-product-tile){padding:2px 2px 4px!important;gap:1px!important}
   .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image img{max-width:100%!important}
 }
+
+/* ===== price-tags-by-group ===== */
+.ptx-group-pick{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:12px;color:var(--ptx-muted,#aaa)}
+.ptx-group-pick span{flex:none}
+.ptx-group-pick select{flex:1;min-width:0;height:32px;padding:0 8px;border:1px solid #4a4a4d;border-radius:4px;background:#2b2b2d;color:#eee;font-size:13px}
