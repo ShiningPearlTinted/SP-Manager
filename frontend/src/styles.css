@@ -6959,3 +6959,13 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 .spmanager-dashboard .monthly-total.total-sales-card .top-month-label{border-top:0 !important;padding-top:4px !important;font-size:13px !important}
 .spmanager-dashboard .monthly-total.total-sales-card .top-month-label b{font-size:17px !important;font-weight:800 !important;letter-spacing:.3px;margin-top:8px !important}
 .spmanager-dashboard .monthly-total.total-sales-card .top-month-label strong{font-size:24px !important;font-weight:800 !important;font-variant-numeric:tabular-nums;margin-top:2px !important}
+
+/* POS picture menu, 3 x 3 (Aronium style): bigger picture and name (tablet / PC; phones keep their layout). */
+@media (min-width:701px){
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile{padding:10px 10px 14px !important;gap:8px !important}
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile strong{font-size:clamp(13px,1.15vw,18px) !important;font-weight:700 !important}
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-category-tile .ar-cat-icon img.group-tile-image{max-width:70% !important;max-height:100% !important}
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile{padding:8px 8px 12px !important;gap:6px !important}
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image img{max-width:70% !important}
+  .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .product-card-body strong{font-size:clamp(12px,1vw,15px) !important;font-weight:700 !important}
+}
