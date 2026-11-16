@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {DateInput,showDate,Toast} from "../dr-tool.jsx";
+import {saveExcelTable} from "../excel-file.js";
 
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'});
 const currentMonth=()=>today().slice(0,7);
@@ -72,8 +73,8 @@ export default function OperationsPanel({tab,api,can,onNavigate}) {
  };
  const exportCsv=()=>{
    const columns=module==='Attendance'?['work_date','staff_code','full_name','clock_in','clock_out','attendance_status','notes']:module==='Shift & Schedule'?['shift_date','staff_code','full_name','start_time','end_time','break_minutes','notes']:module==='Leave Management'?['start_date','end_date','staff_code','full_name','leave_type','days','status','reason']:module==='Overtime'?['work_date','staff_code','full_name','hours','status','reason']:module==='Claims & Advances'?['date','staff_code','full_name','category','amount','status','description']:module==='HR Documents'?['created_at','staff_code','full_name','document_type','title','file_name']:['payslip_no','staff_code_snapshot','full_name_snapshot','pay_date','gross_pay','total_deductions','net_pay','status'];
-   const cell=value=>{let text=String(value??'');if(/^[=+\-@\t\r]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';};
-   const csv=[columns.map(cell).join(','),...rows.map(row=>columns.map(key=>cell(row[key])).join(','))].join('\r\n');const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`HR-${module.replaceAll(' ','-')}-${month}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+   saveExcelTable(`HR-${module.replaceAll(' ','-')}-${month}`,columns.map(k=>k.replace(/_snapshot$/,'').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())),rows.map(r=>columns.map(k=>r[k]??'')),{sheet:module.slice(0,31)}).catch(e=>setError?.(e?.message||'Export failed.'));
  };
  if(isPayroll)return <div className="hr-ops">
    <div className="hr-toolbar"><label className="hr-field"><span>Pay month</span><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/></label>{tab==='Payroll'&&canSalary&&<button type="button" className="primary" onClick={()=>onNavigate('Payslip')}>Create / manage payslips</button>}<button type="button" onClick={exportCsv} disabled={!rows.length}>Export CSV</button></div>
