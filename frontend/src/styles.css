@@ -6939,7 +6939,15 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
     position:sticky !important;top:auto !important;left:auto !important;right:48px !important;
     margin-left:auto !important;flex:0 0 56px !important;width:56px !important;min-width:56px !important;height:auto !important;
     align-self:stretch !important;
-    background:#1f2224 !important;box-shadow:-10px 0 12px -6px rgba(0,0,0,.55);
+    background:#1f2224 !important;box-shadow:none !important;
     z-index:5 !important;
   }
+}
+
+/* While the notification panel is open, lift the POS top bar above the product area (normal and full
+   screen), so the panel is shown in front instead of behind the category grid. */
+@media (min-width:701px){
+  .ar-pos-shell .ar-topbar:has(.spn-panel),
+  .ar-pos-shell:fullscreen .ar-topbar:has(.spn-panel),
+  .ar-pos-shell.pos-browser-fullscreen .ar-topbar:has(.spn-panel){position:relative !important;z-index:2147483000 !important}
 }
