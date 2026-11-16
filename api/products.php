@@ -420,6 +420,15 @@ try {
     respond(['ok'=>true,'product_id'=>$productId,'outlet_id'=>$outletId,'unassigned'=>true]);
   }
 
+  // Price Check: stock on hand at every outlet that sells the product. Stock only, no cost figures.
+  if($action==='stock-by-outlet' && $_SERVER['REQUEST_METHOD']==='GET'){
+    $productId=(int)($_GET['product_id']??0);if($productId<=0)throw new InvalidArgumentException('Product id is required.');
+    spShareProductsWithAllOutlets($pdo,$productId);
+    $q=$pdo->prepare('SELECT o.id,o.outlet_code,o.outlet_name,po.stock_qty FROM outlets o JOIN product_outlets po ON po.outlet_id=o.id AND po.product_id=? AND po.active=1 WHERE o.active=1 ORDER BY o.outlet_code ASC,o.id ASC');$q->execute([$productId]);
+    $rows=array_map(fn($r)=>['id'=>(int)$r['id'],'outlet_code'=>(string)$r['outlet_code'],'outlet_name'=>(string)$r['outlet_name'],'stock'=>round((float)$r['stock_qty'],3),'current'=>(int)$r['id']===$outletId],$q->fetchAll());
+    respond(['ok'=>true,'product_id'=>$productId,'outlet_id'=>$outletId,'outlets'=>$rows,'read_at'=>gmdate('c')]);
+  }
+
   if($action==='outlet-summary' && $_SERVER['REQUEST_METHOD']==='GET'){
     $productId=(int)($_GET['product_id']??0);if($productId<=0)throw new InvalidArgumentException('Product id is required.');
     $q=$pdo->prepare('SELECT o.id,o.outlet_code,o.outlet_name,o.active AS outlet_status,po.active AS product_active,po.selling_price,po.cost_price,po.stock_qty,po.min_stock,po.preferred_quantity,po.last_purchase_price FROM outlets o LEFT JOIN product_outlets po ON po.outlet_id=o.id AND po.product_id=? WHERE o.active=1 ORDER BY o.id ASC');$q->execute([$productId]);
