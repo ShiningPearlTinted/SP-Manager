@@ -96,7 +96,7 @@ function normalizeUser(PDO $pdo,array $u,int $outletId,bool $matchByUsername=fal
  $permissions=is_array($u['permissions']??null)?$u['permissions']:[];global $permissionLabels;
  if($roleName==='Administrator')$permissions=array_fill_keys(array_keys($permissionLabels),true);
  [$assignedOutletIds,$defaultOutletId]=normalizeAssignedOutlets($pdo,$u,$outletId);
- $roleId=role($pdo,$roleName);$rq=$pdo->prepare('SELECT role_name FROM roles WHERE id=?');$rq->execute([$roleId]);$roleName=(string)$rq->fetchColumn();$hash='';$plain=(string)($u['password']??'');if($plain!==''&&strlen($plain)<12)throw new InvalidArgumentException('Use a password of at least 12 characters.');if($plain!=='')$hash=password_hash($plain,PASSWORD_DEFAULT);
+ $roleId=role($pdo,$roleName);$rq=$pdo->prepare('SELECT role_name FROM roles WHERE id=?');$rq->execute([$roleId]);$roleName=(string)$rq->fetchColumn();$hash='';$plain=(string)($u['password']??'');if($plain!==''&&strlen($plain)<4)throw new InvalidArgumentException('Use a password of at least 4 characters.');if($plain!=='')$hash=password_hash($plain,PASSWORD_DEFAULT);
  $id=(int)($u['dbId']??0);if(!$id)$id=(int)($u['id']??0);
  if($id){$q=$pdo->prepare('SELECT id FROM users WHERE id=? LIMIT 1');$q->execute([$id]);if(!(int)($q->fetchColumn()?:0))$id=0;}
  // Only batch sync may match an existing account by username. A new user from the Add user
@@ -175,7 +175,7 @@ try{
   if(!$r)out(['ok'=>false,'error'=>'A valid signed-in session is required.'],401);
   spThrottleLogin($pdo,'password-change:'.strtolower((string)$r['username']));
   if(!password_verify($current,(string)$r['password_hash']))out(['ok'=>false,'error'=>'Current password is incorrect.'],400);
-  if(strlen($next)<12)throw new InvalidArgumentException('Use a new password of at least 12 characters.');
+  if(strlen($next)<4)throw new InvalidArgumentException('Use a new password of at least 4 characters.');
   if(strlen($next)>200)throw new InvalidArgumentException('The new password is too long.');
   if(hash_equals($current,$next))throw new InvalidArgumentException('Choose a password that is different from the current one.');
   $pdo->prepare('DELETE FROM sp_login_attempts WHERE bucket_key=?')->execute([hash('sha256','password-change:'.strtolower((string)$r['username']).'|'.($_SERVER['REMOTE_ADDR']??'unknown'))]);

@@ -48,10 +48,10 @@ try {
     if ($name === '' || !preg_match('/^[a-z0-9._-]{3,100}$/', $username)) {
         throw new InvalidArgumentException('Enter a name and a username with 3–100 letters, numbers, dots, underscores, or hyphens.');
     }
-    $password = askSecret('Administrator password (minimum 12 characters): ');
+    $password = askSecret('Administrator password (minimum 4 characters): ');
     $confirm = askSecret('Confirm password: ');
-    if (strlen($password) < 12 || !hash_equals($password, $confirm)) {
-        throw new InvalidArgumentException('Password must be at least 12 characters and both entries must match.');
+    if (strlen($password) < 4 || !hash_equals($password, $confirm)) {
+        throw new InvalidArgumentException('Password must be at least 4 characters and both entries must match.');
     }
 
     $pdo->beginTransaction();
