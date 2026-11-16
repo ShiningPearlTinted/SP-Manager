@@ -6951,3 +6951,11 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
   .ar-pos-shell:fullscreen .ar-topbar:has(.spn-panel),
   .ar-pos-shell.pos-browser-fullscreen .ar-topbar:has(.spn-panel){position:relative !important;z-index:2147483000 !important}
 }
+
+/* Dashboard: Total Sales card (compact total, Aronium style) */
+.spmanager-dashboard .monthly-total.total-sales-card{justify-content:flex-start;gap:14px;container-type:inline-size;min-width:0;overflow:hidden}
+.spmanager-dashboard .monthly-total.total-sales-card h3{font-size:20px !important;font-weight:400 !important;letter-spacing:0}
+.spmanager-dashboard .monthly-total.total-sales-card>div:first-child strong{font-size:clamp(30px,19cqi,72px) !important;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-weight:800 !important;line-height:1 !important;letter-spacing:-.5px !important;margin-top:14px !important;font-variant-numeric:tabular-nums;white-space:nowrap}
+.spmanager-dashboard .monthly-total.total-sales-card .top-month-label{border-top:0 !important;padding-top:4px !important;font-size:13px !important}
+.spmanager-dashboard .monthly-total.total-sales-card .top-month-label b{font-size:17px !important;font-weight:800 !important;letter-spacing:.3px;margin-top:8px !important}
+.spmanager-dashboard .monthly-total.total-sales-card .top-month-label strong{font-size:24px !important;font-weight:800 !important;font-variant-numeric:tabular-nums;margin-top:2px !important}

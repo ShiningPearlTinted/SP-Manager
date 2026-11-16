@@ -1648,7 +1648,10 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  const max=Math.max(1,...monthly,...(showPreviousYear?previousMonthly:[]));
  const topMonthValue=Math.max(...monthly,0);
  const topMonthIndex=monthly.indexOf(topMonthValue);
- const topMonth=topMonthValue?new Date(dashboardYear,topMonthIndex,1).toLocaleString("en-GB",{month:"short"}).toUpperCase():"-";
+ const topMonth=topMonthValue?new Date(dashboardYear,topMonthIndex,1).toLocaleString("en-GB",{month:"long"}).toUpperCase():"-";
+ // Total Sales card: compact total (172.61K) and plain amounts (42,612.50), like the Aronium dashboard.
+ const compactAmount=v=>{const n=Number(v||0),a=Math.abs(n);return a>=1e6?(n/1e6).toFixed(2)+"M":a>=1e3?(n/1e3).toFixed(2)+"K":n.toFixed(2)};
+ const plainAmount=v=>Number(v||0).toLocaleString("en-MY",{minimumFractionDigits:2,maximumFractionDigits:2});
  const topProducts=[...products].map(p=>({p,total:periodSales.reduce((sum,s)=>sum+s.items.filter(i=>i.id===p.id).reduce((q,i)=>q+Number(i.price||0)*Number(i.qty||0),0),0)})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total).slice(0,5);
  const topGroups=Object.entries(periodSales.flatMap(s=>s.items).reduce((acc,item)=>{const p=products.find(x=>x.id===item.id);const g=item.group||p?.group||item.category||p?.category||"Uncategorised";acc[g]=(acc[g]||0)+Number(item.price||0)*Number(item.qty||0);return acc},{})).sort((a,b)=>b[1]-a[1]);
  const groupTotal=topGroups.reduce((a,[,v])=>a+v,0);
@@ -1672,7 +1675,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
     </div>
     <div className="monthly-legend"><label><input type="checkbox" checked={showPreviousYear} onChange={e=>setShowPreviousYear(e.target.checked)}/> Previous year ({dashboardYear-1})</label><span><i className="legend-dot current-dot"></i>{dashboardYear}</span><span><i className="legend-dot previous-dot"></i>{dashboardYear-1}</span></div>
    </div>
-   <div className="panel monthly-total"><div><h3>Total Sales</h3><strong>{money(yearTotal)}</strong></div><div className="top-month-label">Top performing month:<b>{topMonth}</b><strong>{money(topMonthValue)}</strong></div></div>
+   <div className="panel monthly-total total-sales-card"><div><h3>Total Sales</h3><strong title={money(yearTotal)}>{compactAmount(yearTotal)}</strong></div><div className="top-month-label">Top performing month:<b>{topMonth}</b><strong>{topMonthValue?plainAmount(topMonthValue):"-"}</strong></div></div>
   </div>
   <div className="periodic-heading"><h3>Periodic Reports ({formatDate(periodStart)} - {formatDate(periodEnd)})</h3><div className="period-controls"><label>From <DateInput value={periodStart} onChange={e=>setPeriodStart(e.target.value)}/></label><label>To <DateInput value={periodEnd} onChange={e=>setPeriodEnd(e.target.value)}/></label></div></div>
   <div className="ar-dashboard-grid">
