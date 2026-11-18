@@ -7032,3 +7032,74 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 @media (max-width:700px){
   .ar-pos-shell :is(.ar-category-grid,.ar-grid-wrap) > .ar-product-tile .ar-product-image img{max-width:90%!important;max-height:88%!important}
 }
+
+/* ===== price-check-phone (battery finder, product cards, More menu) ===== */
+.pc-page .pcf-phone .pc-list-head>div:first-child{display:none}
+.pc-page .pcf-phone .pc-list-head{border-bottom:0;padding:12px 12px 4px}
+.pc-page .pcf-finder-mode{background:transparent!important;border:0!important;box-shadow:none!important}
+.pc-page .pcf-finder-mode .pc-list-head{padding:0 0 4px}
+.pc-page .pcf{padding:10px 0 4px;color:#1d2433}
+.pc-page .pcf-hero{background:#fff;border:1px solid #e6e9ef;border-radius:16px;padding:20px 16px}
+.pc-page .pcf-icon{width:44px;height:44px;border-radius:12px;background:#fde8eb;color:#c8102e;display:grid;place-items:center;margin-bottom:10px}
+.pc-page .pcf-hero h2{margin:0;font-size:21px;line-height:1.2;font-weight:800;color:#1d2433}
+.pc-page .pcf-hero p{margin:6px 0 16px;color:#667085;font-size:13.5px;line-height:1.45}
+.pc-page .pcf-hero .pcf-note{margin:12px 0 0;font-size:12px;color:#98a2b3;text-align:center;font-style:italic}
+.pc-page .pcf-step{width:100%;display:flex;gap:10px;align-items:center;text-align:left;border:1px solid #d5dae3;border-radius:12px;padding:12px 14px;margin:0 0 10px;background:#fff;color:#1d2433;font:inherit;font-size:15px;min-height:52px;cursor:pointer}
+.pc-page .pcf-step i{font-style:normal;width:24px;height:24px;border-radius:50%;background:#c8102e;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;flex:none}
+.pc-page .pcf-step span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-page .pcf-step small{display:block;font-size:11px;color:#667085;margin:0}
+.pc-page .pcf-step em{font-style:normal;color:#98a2b3}
+.pc-page .pcf-step.off,.pc-page .pcf-step:disabled{background:#f8f9fb;color:#98a2b3;cursor:not-allowed}
+.pc-page .pcf-step.off i,.pc-page .pcf-step:disabled i{background:#d0d5dd}
+.pc-page .pcf-step.done{border-color:#f0b7c0}
+.pc-page .pcf-go{width:100%;border:0;border-radius:12px;background:#c8102e;color:#fff;font-weight:800;font-size:15px;letter-spacing:.06em;padding:15px;margin-top:4px;cursor:pointer}
+.pc-page .pcf-go:disabled{background:#f4b4bd;cursor:not-allowed}
+.pc-page .pcf-recent{margin-top:14px}
+.pc-page .pcf-recent h3{font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
+.pc-page .pcf-recent div{display:flex;gap:8px;flex-wrap:wrap}
+.pc-page .pcf-recent button{background:#fff;border:1px solid #e3e7ee;border-radius:999px;padding:8px 12px;font-size:13px;color:#1d2433;cursor:pointer}
+.pc-page .pcf-car{background:#1d2433;color:#fff;border-radius:16px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pc-page .pcf-car small{color:#aab3c2;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.pc-page .pcf-car b{display:block;font-size:19px;margin-top:2px;color:#fff}
+.pc-page .pcf-car button{flex:none;color:#fff;background:transparent;font-size:13px;border:1px solid #ffffff55;border-radius:9px;padding:8px 10px;cursor:pointer}
+.pc-page .pcf-opt{width:100%;text-align:left;font:inherit;background:#fff;border:1px solid #e6e9ef;border-radius:14px;padding:14px;margin-top:10px;display:flex;align-items:center;gap:12px;color:#1d2433;cursor:pointer}
+.pc-page .pcf-opt:disabled{cursor:default;opacity:1}
+.pc-page .pcf-opt.best{border-color:#c8102e;box-shadow:0 0 0 3px #c8102e14}
+.pc-page .pcf-n{width:30px;height:30px;border-radius:9px;background:#f2f4f7;font-weight:700;font-size:13px;display:grid;place-items:center;color:#475467;flex:none}
+.pc-page .pcf-t{flex:1;min-width:0}
+.pc-page .pcf-t b{display:block;font-size:17px;line-height:1.25;word-break:break-word}
+.pc-page .pcf-t small{display:block;color:#667085;font-size:12px;margin-top:2px}
+.pc-page .pcf-badge{display:block;font-style:normal;font-size:10px;font-weight:800;color:#c8102e;letter-spacing:.06em}
+.pc-page .pcf-p{flex:none;color:#0b7a9a;font-weight:800;font-size:16px;text-align:right;white-space:nowrap}
+.pc-page .pcf-p small{display:block;font-size:11.5px;font-weight:600;margin-top:2px}
+.pc-page .pcf-ok{color:#15803d}.pc-page .pcf-zero{color:#98a2b3}.pc-page .pcf-neg{color:#b91c1c}
+.pc-page .pcf-foot{margin:12px 0 0;font-size:12px;color:#98a2b3;text-align:center;line-height:1.5}
+.pc-page .pcf-cards{padding:4px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.pc-page .pcf-card{width:100%;text-align:left;font:inherit;background:#fff;border:1px solid #e6e9ef;border-radius:14px;padding:12px 12px 12px 14px;display:flex;gap:10px;align-items:center;color:#1d2433;cursor:pointer}
+.pc-page .pcf-card .pcf-t b{font-size:14.5px;font-weight:700}
+.pc-page .pcf-card .pcf-p{font-size:15px}
+.pc-page .pcf-chev{color:#c0c6d0;font-size:22px;flex:none}
+.pc-page .pcf-more{margin-top:4px;border:1px dashed #d0d5dd;background:#fff;border-radius:12px;padding:12px;font-size:14px;color:#475467;cursor:pointer}
+/* Bottom sheets (car make / model, matching batteries, More) */
+.pcf-sheet{max-height:80vh;display:flex;flex-direction:column}
+.pcf-sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 10px}
+.pcf-sheet-head h3{margin:0;font-size:15px;color:#1d2433}
+.pcf-filter{padding:0 16px 8px}
+.pcf-filter input{width:100%;height:44px;border:1px solid #d5dae3;border-radius:10px;padding:0 12px;font-size:15px;color:#1d2433;background:#fff}
+.pcf-pick{list-style:none;margin:0;padding:0 8px 16px;overflow:auto}
+.pcf-pick button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 8px;border:0;border-bottom:1px solid #f0f2f5;background:transparent;font:inherit;font-size:15px;color:#1d2433;text-align:left;cursor:pointer}
+.pcf-pick button.on{color:#c8102e;font-weight:700}
+.pcf-pick em{font-style:normal;color:#98a2b3;font-size:13px;flex:none}
+.pcf-pick small{display:block;font-size:12px;color:#667085;margin-top:2px}
+.pcf-pick .pcf-price{color:#0b7a9a;font-weight:800;font-size:15px}
+.pcf-none{padding:16px 8px;color:#98a2b3;font-size:14px}
+.pcf-menu{padding:0 12px 16px;display:flex;flex-direction:column}
+.pcf-menu button{display:flex;align-items:center;gap:12px;padding:13px 8px;border:0;border-bottom:1px solid #f0f2f5;background:transparent;font:inherit;font-size:15px;color:#1d2433;text-align:left;cursor:pointer}
+.pcf-menu button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pcf-menu button.danger{color:#b42318}
+.pcf-menu button:disabled{color:#c0c6d0;cursor:not-allowed}
+.pcf-menu p{font-size:12px;color:#98a2b3;margin:10px 8px 0}
+.pc-page .pcf-more-btn svg{fill:none;stroke:currentColor}
+.app .pc-page .pcf small.pcf-ok,.app .pc-page .pcf-cards small.pcf-ok,.app .pc-page .pcf .pcf-ok{color:#15803d}
+.app .pc-page .pcf small.pcf-zero,.app .pc-page .pcf-cards small.pcf-zero,.app .pc-page .pcf .pcf-zero{color:#98a2b3}
+.app .pc-page .pcf small.pcf-neg,.app .pc-page .pcf-cards small.pcf-neg,.app .pc-page .pcf .pcf-neg{color:#b91c1c}

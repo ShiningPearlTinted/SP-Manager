@@ -592,7 +592,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const [posModule,setPosModule]=useState(null);
  const openPosModule=name=>{if(POS_MODULES[name]&&isPermissionAllowed(activeUser,POS_MODULES[name]))setPosModule(name)};
  const closePosModule=()=>setPosModule(null);
- useEffect(()=>{if(!posModule)return;const key=e=>{if(e.key==="Escape"&&!document.querySelector(".sp-action-dialog-backdrop,dialog[open]"))setPosModule(null)};window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key)},[posModule]);
+ useEffect(()=>{if(!posModule)return;const key=e=>{if(e.key==="Escape"&&!document.querySelector(".sp-action-dialog-backdrop,dialog[open],.pc-backdrop,.pcs-backdrop"))setPosModule(null)};window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key)},[posModule]);
  useEffect(()=>{if(page!=="POS / Sales")setPosModule(null)},[page]);
  const[mobileNavOpen,setMobileNavOpen]=useState(false);
  useEffect(()=>{setPosMenu(false);setMobileNavOpen(false);if(page==="End of day"&&sessionStorage.getItem("sp_eod_source")!=="pos"){setPage("POS / Sales")}},[page]);
