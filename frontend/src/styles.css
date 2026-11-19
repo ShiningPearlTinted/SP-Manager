@@ -7103,3 +7103,7 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 .app .pc-page .pcf small.pcf-ok,.app .pc-page .pcf-cards small.pcf-ok,.app .pc-page .pcf .pcf-ok{color:#15803d}
 .app .pc-page .pcf small.pcf-zero,.app .pc-page .pcf-cards small.pcf-zero,.app .pc-page .pcf .pcf-zero{color:#98a2b3}
 .app .pc-page .pcf small.pcf-neg,.app .pc-page .pcf-cards small.pcf-neg,.app .pc-page .pcf .pcf-neg{color:#b91c1c}
+
+/* Confirm / message dialogs are added at the end of <body>. On phones the POS screen also uses the top z-index,
+   so the dialog needs the same top value (and wins by coming later), otherwise it opens hidden behind the POS. */
+.sp-action-dialog-backdrop{z-index:2147483647!important}

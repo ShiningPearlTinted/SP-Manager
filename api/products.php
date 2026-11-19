@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/media-lib.php';
 header('Content-Type: application/json; charset=utf-8');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
@@ -345,12 +346,14 @@ try {
     $cats=$q->fetchAll();
     $groupSql='SELECT g.*, c.category_name AS category_name, parent.group_name AS parent_name FROM product_groups g LEFT JOIN product_categories c ON c.id=g.category_id LEFT JOIN product_groups parent ON parent.id=g.parent_id WHERE g.active=1 ORDER BY g.sort_order ASC,g.id ASC';
     $q=$pdo->query($groupSql); $groups=$q->fetchAll();
+    spMediaRows($cats,'c');spMediaRows($groups,'g');
     respond(['ok'=>true,'outletId'=>$outletId,'categories'=>$cats,'groups'=>$groups]);
   }
 
   if($action==='save-category' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody(); $c=$b['category']??$b;
     if(!is_array($c)) throw new InvalidArgumentException('category is required.');
+    foreach(['image_url','image'] as $k)if(isset($c[$k]))$c[$k]=spMediaResolveInput($pdo,$c[$k]);
     $name=trim((string)($c['category_name']??$c['name']??'')); if($name==='') throw new InvalidArgumentException('Category name is required.');
     $id=(int)($c['id']??0);
     $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? ORDER BY id ASC LIMIT 1');
@@ -363,6 +366,7 @@ try {
   if($action==='save-group' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=jsonBody(); $g=$b['group']??$b;
     if(!is_array($g)) throw new InvalidArgumentException('group is required.');
+    foreach(['image_url','image'] as $k)if(isset($g[$k]))$g[$k]=spMediaResolveInput($pdo,$g[$k]);
     $name=trim((string)($g['group_name']??$g['name']??'')); if($name==='') throw new InvalidArgumentException('Product group name is required.');
     $categoryId=ensureCategory($pdo,$outletId,$g['category_id']??null,$g['category']??$g['category_name']??null);
     $parentName=trim((string)($g['parent']??$g['parent_name']??'')); $parentId=(int)($g['parent_id']??0);
@@ -396,13 +400,16 @@ try {
     hydrateOutletFields($pdo,$outletId,$rows); hydrateProductRelations($pdo,$rows);
     $device=trim((string)($_GET['device_id']??''));$signedDevice=(string)($_SERVER['SP_AUTH_DEVICE_ID']??'');if($device!==''&&$signedDevice!==''&&!hash_equals($signedDevice,$device))throw new RuntimeException('Terminal identity does not match this signed-in session.');$quotas=[];
     if($device!==''&&spTableExists($pdo,'sp_offline_stock_quotas')){$q=$pdo->prepare("SELECT product_id,GREATEST(0,reserved_qty-consumed_qty) remaining FROM sp_offline_stock_quotas WHERE outlet_id=? AND device_id=?");$q->execute([$outletId,$device]);foreach($q->fetchAll() as $quota)$quotas[(string)$quota['product_id']]=(float)$quota['remaining'];}
-    foreach($rows as &$product){$pid=(int)($product['id']??0);$product['stock_on_hand']=round((float)($product['stock']??0),3);$physical=max(0,(float)($product['stock']??0));if($device!==''&&spTableExists($pdo,'sp_offline_stock_quotas')){$q=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(0,q.reserved_qty-q.consumed_qty)),0) FROM sp_offline_stock_quotas q JOIN sp_offline_devices d ON d.device_id=q.device_id WHERE q.outlet_id=? AND q.product_id=? AND d.status='ACTIVE' AND d.expires_at>NOW()");$q->execute([$outletId,$pid]);$held=(float)$q->fetchColumn();$own=$quotas[(string)$pid]??0;$product['stock']=max(0,$physical-$held+$own);$product['offline_quota_remaining']=$own;}}
-    unset($product);respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows,'product_source'=>'PRODUCT_MASTER+PRODUCT_OUTLETS']);
+    // Stock held by offline terminals: one grouped query for the outlet instead of one query per product.
+    $useQuotas=$device!==''&&spTableExists($pdo,'sp_offline_stock_quotas');$heldBy=[];
+    if($useQuotas){$q=$pdo->prepare("SELECT q.product_id,COALESCE(SUM(GREATEST(0,q.reserved_qty-q.consumed_qty)),0) held FROM sp_offline_stock_quotas q JOIN sp_offline_devices d ON d.device_id=q.device_id WHERE q.outlet_id=? AND d.status='ACTIVE' AND d.expires_at>NOW() GROUP BY q.product_id");$q->execute([$outletId]);foreach($q->fetchAll() as $h)$heldBy[(string)$h['product_id']]=(float)$h['held'];}
+    foreach($rows as &$product){$pid=(int)($product['id']??0);$product['stock_on_hand']=round((float)($product['stock']??0),3);$physical=max(0,(float)($product['stock']??0));if($useQuotas){$held=$heldBy[(string)$pid]??0.0;$own=$quotas[(string)$pid]??0;$product['stock']=max(0,$physical-$held+$own);$product['offline_quota_remaining']=$own;}}
+    unset($product);spMediaRows($rows,'p');respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows,'product_source'=>'PRODUCT_MASTER+PRODUCT_OUTLETS']);
   }
 
   if($action==='master-list' && $_SERVER['REQUEST_METHOD']==='GET'){
     spShareProductsWithAllOutlets($pdo);
-    $rows=allMasterRows($pdo,$outletId);hydrateOutletFields($pdo,$outletId,$rows);hydrateProductRelations($pdo,$rows);
+    $rows=allMasterRows($pdo,$outletId);hydrateOutletFields($pdo,$outletId,$rows);hydrateProductRelations($pdo,$rows);spMediaRows($rows,'p');
     respond(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'products'=>$rows]);
   }
 
@@ -494,6 +501,7 @@ try {
   if($action==='save'  && $_SERVER['REQUEST_METHOD']==='POST'){$pdo->beginTransaction();spLockOutlet($pdo,$outletId);
     $b=jsonBody();$p=$b['product']??$b;
     if(!is_array($p)) throw new InvalidArgumentException('product is required.');
+    foreach(['image_url','image'] as $k)if(isset($p[$k]))$p[$k]=spMediaResolveInput($pdo,$p[$k]);
     $id=isset($p['id'])&&ctype_digit((string)$p['id'])?(int)$p['id']:0;
     $code=trim((string)($p['code']??''));
     $nameValue=trim((string)($p['name']??''));

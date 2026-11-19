@@ -110,9 +110,14 @@ function spDecodeApiToken(string $token): int {
     return max(0,(int)($data['sub']??0));
 }
 function spTableExists(PDO $pdo, string $table): bool {
+    // information_schema is slow on shared hosting: remember tables found during this request.
+    // A missing table is checked again, because a request may create it.
+    static $found = [];
+    if (isset($found[$table])) return true;
     $q = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
     $q->execute([$table]);
-    return (int)$q->fetchColumn() > 0;
+    if ((int)$q->fetchColumn() > 0) { $found[$table] = true; return true; }
+    return false;
 }
 
 function spEnsureEndOfDayMetadata(PDO $pdo): void { spRequireColumns($pdo,'end_of_day',['report_number', 'total_transactions', 'report_json']); }
@@ -284,6 +289,9 @@ function spInstallCorsAndGuard(): void {
 
     // The outlet QR registration page has no session: customer-register.php checks its own signed link and rate limit.
     if ($file === 'customer-register.php') return;
+
+    // Product pictures: media.php serves only signed links that the API itself issued (see media-lib.php).
+    if ($file === 'media.php') return;
 
     // Print PCs have no user session: print-agent.php checks its own pairing code / agent token.
     if ($file === 'print-agent.php') return;
