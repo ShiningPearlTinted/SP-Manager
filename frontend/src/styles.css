@@ -7107,3 +7107,8 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 /* Confirm / message dialogs are added at the end of <body>. On phones the POS screen also uses the top z-index,
    so the dialog needs the same top value (and wins by coming later), otherwise it opens hidden behind the POS. */
 .sp-action-dialog-backdrop{z-index:2147483647!important}
+
+/* Customer details: Delete next to + New */
+.customer-summary-actions{display:flex;gap:8px;align-items:center;flex:none}
+.app .customer-summary-head .customer-summary-actions .customer-summary-delete{background:#fff!important;color:#b42318!important;border:1px solid #fda29b!important;box-shadow:none!important}
+.app .customer-summary-head .customer-summary-actions .customer-summary-delete:hover{background:#fef3f2!important}

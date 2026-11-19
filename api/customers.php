@@ -204,7 +204,7 @@ try {
     $q=$pdo->prepare('SELECT * FROM customers WHERE outlet_id=? OR outlet_id IS NULL ORDER BY id ASC');
     $q->execute([$outletId]); $rows=$q->fetchAll();
     $totals=spCustomerVisitTotals($pdo,authorized_outlets($pdo,$outletId));
-    foreach($rows as &$row){$total=$totals[(int)$row['id']] ?? null;$row['total_visits']=$total['visits'] ?? 0;$row['last_visit_at']=$total['last_visit'] ?? null;}
+    foreach($rows as &$row){$total=$totals[(int)$row['id']] ?? null;$row['total_visits']=$total['visits'] ?? 0;$row['last_visit_at']=$total['last_visit'] ?? null;$meta=json_decode((string)($row['metadata_json']??''),true);$row['archived']=is_array($meta)&&!empty($meta['archived'])?1:0;}
     unset($row);
     echo json_encode(['ok'=>true,'outletId'=>$outletId,'count'=>count($rows),'customers'=>$rows],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE); exit;
   }
@@ -229,7 +229,21 @@ try {
   }
   if($action==='delete' && $_SERVER['REQUEST_METHOD']==='POST'){
     $b=body_json(); $id=(int)($b['id']??0); $code=trim((string)($b['code']??''));
-    if($id>0){$metaNeedle='%\"customerId\":'.$id.'%';$pdo->prepare('UPDATE suppliers SET active=0 WHERE outlet_id=? AND metadata_json LIKE ?')->execute([$outletId,$metaNeedle]);$q=$pdo->prepare('DELETE FROM customers WHERE id=? AND outlet_id=?');$q->execute([$id,$outletId]);}
+    if($id<=0&&$code!==''){$f=$pdo->prepare('SELECT id FROM customers WHERE code=? AND outlet_id=? LIMIT 1');$f->execute([$code,$outletId]);$id=(int)($f->fetchColumn()?:0);if($id<=0){echo json_encode(['ok'=>true,'deleted'=>0]);exit;}}
+    if($id>0){
+      $f=$pdo->prepare('SELECT id,name FROM customers WHERE id=? AND outlet_id=? LIMIT 1');$f->execute([$id,$outletId]);if(!$f->fetch())throw new RuntimeException('Customer was not found in this outlet.');
+      // Sales, quotations, invoices and bookings keep only the customer id. A customer used there is archived
+      // (hidden from lists, kept for history) instead of deleted, so old documents and reports keep the name.
+      $used=[];
+      $t=$pdo->query("SELECT DISTINCT TABLE_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='customer_id' AND TABLE_NAME NOT IN ('customers','customer_notes','customer_vehicles','loyalty_accounts','customer_display_sessions')")->fetchAll(PDO::FETCH_COLUMN);
+      foreach($t as $table){$c=$pdo->prepare('SELECT COUNT(*) FROM `'.str_replace('`','``',(string)$table).'` WHERE customer_id=?');$c->execute([$id]);$n=(int)$c->fetchColumn();if($n>0)$used[(string)$table]=$n;}
+      $metaNeedle='%\"customerId\":'.$id.'%';$pdo->prepare('UPDATE suppliers SET active=0 WHERE outlet_id=? AND metadata_json LIKE ?')->execute([$outletId,$metaNeedle]);
+      if($used){
+        $pdo->prepare("UPDATE customers SET enabled=0,metadata_json=JSON_SET(IF(JSON_VALID(metadata_json),metadata_json,'{}'),'$.archived',true,'$.archived_at',?),updated_at=CURRENT_TIMESTAMP WHERE id=? AND outlet_id=?")->execute([gmdate('c'),$id,$outletId]);
+        echo json_encode(['ok'=>true,'deleted'=>0,'archived'=>true,'used'=>$used]);exit;
+      }
+      $q=$pdo->prepare('DELETE FROM customers WHERE id=? AND outlet_id=?');$q->execute([$id,$outletId]);
+    }
     elseif($code!==''){$q=$pdo->prepare('DELETE FROM customers WHERE code=? AND outlet_id=?');$q->execute([$code,$outletId]);}
     else throw new InvalidArgumentException('id or code is required.');
     echo json_encode(['ok'=>true,'deleted'=>$q->rowCount()]); exit;
