@@ -1,0 +1,135 @@
+name: Deploy SP-Manager Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          SP_BASE: /SP-Manager/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Check build output
+        run: |
+          test -f frontend/dist/index.html || { echo "frontend/dist/index.html is missing, the build produced no site."; exit 1; }
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  # Deploy runs as its own job after the upload has finished, as GitHub's Pages template does.
+  # In the same job the "github-pages" artifact may not be listed yet ("No artifacts named github-pages were found").
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # Hostinger: apps.shiningpearltinted.com is served from public_html/apps.
+  # Runs only after the three HOSTINGER_FTP_* secrets are added in GitHub (Settings > Secrets and variables > Actions).
+  hostinger:
+    runs-on: ubuntu-latest
+    env:
+      FTP_SERVER: ${{ secrets.HOSTINGER_FTP_SERVER }}
+
+    steps:
+      - name: Checkout
+        if: env.FTP_SERVER != ''
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: env.FTP_SERVER != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        if: env.FTP_SERVER != ''
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Build frontend for the domain root
+        if: env.FTP_SERVER != ''
+        working-directory: frontend
+        run: npm run build
+        env:
+          SP_BASE: /
+
+      - name: Add Apache settings
+        if: env.FTP_SERVER != ''
+        run: |
+          cat > frontend/dist/.htaccess <<'HTACCESS'
+          # SP-Manager on Hostinger (apps.shiningpearltinted.com)
+          Options -Indexes
+          DirectoryIndex index.html
+
+          <IfModule mod_rewrite.c>
+            RewriteEngine On
+            RewriteCond %{HTTPS} !=on
+            RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+          </IfModule>
+
+          <IfModule mod_headers.c>
+            # Pages and the service worker must always be fresh so a new upload is used at once.
+            <FilesMatch "(^index\.html$|^sw\.js$)">
+              Header set Cache-Control "no-cache, no-store, must-revalidate"
+            </FilesMatch>
+            # Built files have a content hash in their name, so they can be cached for a year.
+            <FilesMatch "\.(js|css)$">
+              Header set Cache-Control "public, max-age=31536000, immutable"
+            </FilesMatch>
+            <FilesMatch "^sw\.js$">
+              Header set Cache-Control "no-cache, no-store, must-revalidate"
+            </FilesMatch>
+          </IfModule>
+          HTACCESS
+          test -f frontend/dist/index.html
+
+      - name: Upload to Hostinger
+        if: env.FTP_SERVER != ''
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: frontend/dist/
+          server-dir: ./
