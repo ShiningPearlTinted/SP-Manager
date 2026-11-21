@@ -205,6 +205,7 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'finance.php') return 'manageReports';
     if ($file === 'products.php' && $action==='stock-adjust') return 'manageInventory';
     if ($file === 'products.php' && $action==='stock-by-outlet') return 'accessPriceCheck';
+    if ($file === 'warranty.php') return 'accessPriceCheck';
     if ($file === 'products.php') return in_array($action, ['save','assign','unassign','delete','save-category','delete-category','save-group','delete-group','list-inactive'], true) ? 'manageProducts' : '';
     if ($file === 'sales-delete.php') return 'managePayments';
     if ($file === 'promotions.php') return in_array($action, ['save','delete'], true) ? 'manageDiscount' : '';
