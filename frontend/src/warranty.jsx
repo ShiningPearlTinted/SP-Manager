@@ -46,9 +46,9 @@ export default function WarrantyCheck({lookup}){
  const name=result?.customer?.name||'';
  const showName=name&&name.replace(/\s/g,'').toUpperCase()!==result?.plate?name:(result?.plate||'');
  const initials=(showName||'?').replace(/[^A-Za-z0-9 ]/g,'').split(' ').filter(Boolean).slice(0,2).map(w=>w.slice(0,showName.includes(' ')?1:2)).join('').toUpperCase()||'?';
- return <section className="wa-page">
-  <div className="wa-hero">
-   {!result&&<div className="wa-intro"><span className="wa-kicker"><Shield size={14}/> Warranty check</span><h2>Check a vehicle's warranty</h2><p>Enter the plate number to see every tint, battery, coating and PPF job, with how long each warranty has left.</p></div>}
+ return <section className={result?"wa-page":"wa-page wa-page-start"}>
+  <div className={result?"wa-hero":"wa-hero wa-start"}>
+   {!result&&<div className="wa-intro"><h2>Check a vehicle's warranty</h2><p>Enter the plate number to see every tint, battery, coating and PPF job, with how long each warranty has left.</p></div>}
    <form className="wa-search" onSubmit={search} role="search">
     <input id="wa-plate-input" ref={inputRef} value={plate} onChange={e=>setPlate(plateText(e.target.value))} placeholder="WXY 1234" autoComplete="off" autoCapitalize="characters" spellCheck={false} aria-label="Vehicle plate number"/>
     <button type="submit" className="wa-check" disabled={busy}>{busy?'Checking…':'Check'}</button>

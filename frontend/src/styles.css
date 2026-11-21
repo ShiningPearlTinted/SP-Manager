@@ -7189,3 +7189,16 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
  .wa-hero{margin:0;border-radius:22px}
  .wa-ring>span{width:54px;height:54px}
 }
+/* Search screen before a result: centred on the page, no dark panel. */
+.wa-page-start{min-height:calc(100vh - 190px);display:flex;flex-direction:column;justify-content:center}
+.wa-hero.wa-start{background:transparent;box-shadow:none;color:#111827;padding:0 12px}
+.app .wa-page .wa-start .wa-intro h2,.wa-page .wa-start .wa-intro h2{color:#111827!important;font-size:28px}
+.app .wa-page .wa-start .wa-intro p,.wa-page .wa-start .wa-intro p{color:#667085!important}
+.wa-start .wa-search{background:#fff;border:1px solid #d0d5dd;box-shadow:0 10px 30px rgba(16,24,40,.08)}
+.wa-start .wa-search:focus-within{border-color:#e11d2e;box-shadow:0 0 0 4px #e11d2e22,0 10px 30px rgba(16,24,40,.08)}
+.wa-start #wa-plate-input{color:#111827!important}
+.wa-start #wa-plate-input::placeholder{color:#c0c6d0}
+.wa-start .wa-error{color:#b42318}
+@media (max-width:600px){.wa-page-start{min-height:calc(100vh - 160px)}.app .wa-page .wa-start .wa-intro h2,.wa-page .wa-start .wa-intro h2{font-size:23px}}
+.wa-page.wa-page-start{min-height:calc(100vh - 190px)!important}
+.pos-module-body>.wa-page.wa-page-start{min-height:100%!important}
