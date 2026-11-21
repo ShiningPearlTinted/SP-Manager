@@ -41,11 +41,24 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Check build output
+        run: |
+          test -f frontend/dist/index.html || { echo "frontend/dist/index.html is missing, the build produced no site."; exit 1; }
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
 
+  # Deploy runs as its own job after the upload has finished, as GitHub's Pages template does.
+  # In the same job the "github-pages" artifact may not be listed yet ("No artifacts named github-pages were found").
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
