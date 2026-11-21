@@ -41,11 +41,24 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Check build output
+        run: |
+          test -f frontend/dist/index.html || { echo "frontend/dist/index.html is missing, the build produced no site."; exit 1; }
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
 
+  # Deploy runs as its own job after the upload has finished, as GitHub's Pages template does.
+  # In the same job the "github-pages" artifact may not be listed yet ("No artifacts named github-pages were found").
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
@@ -87,6 +100,8 @@ jobs:
           # SP-Manager on Hostinger (apps.shiningpearltinted.com)
           Options -Indexes
           DirectoryIndex index.html
+          # Installable app (PWA) manifest
+          AddType application/manifest+json .webmanifest
 
           <IfModule mod_rewrite.c>
             RewriteEngine On
@@ -95,8 +110,16 @@ jobs:
           </IfModule>
 
           <IfModule mod_headers.c>
+            # Security headers. No inline JavaScript is used (print windows are printed by the app),
+            # so scripts are limited to this site. The API runs on *.shiningpearltinted.com.
+            Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.shiningpearltinted.com; worker-src 'self'; manifest-src 'self'; media-src 'self' data: blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+            Header always set X-Frame-Options "DENY"
+            Header always set X-Content-Type-Options "nosniff"
+            Header always set Referrer-Policy "strict-origin-when-cross-origin"
+            Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+            Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
             # Pages and the service worker must always be fresh so a new upload is used at once.
-            <FilesMatch "(^index\.html$|^sw\.js$)">
+            <FilesMatch "(^index\.html$|^sw\.js$|^manifest\.webmanifest$)">
               Header set Cache-Control "no-cache, no-store, must-revalidate"
             </FilesMatch>
             # Built files have a content hash in their name, so they can be cached for a year.
