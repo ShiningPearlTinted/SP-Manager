@@ -3,8 +3,12 @@ declare(strict_types=1);
 // Warranty check by vehicle plate. Finds every sale for the vehicle (all outlets) and lists the items that carry
 // a warranty (tint, battery, coating, PPF and any other product with one), with the expiry date and status.
 require_once __DIR__.'/security.php';
+require_once __DIR__.'/invoice-pdf.php';
 
 const SP_WARRANTY_SOON_DAYS = 30;
+
+// A receipt can be opened only from a warranty search result: the search hands out a signed key per sale.
+function spWarrantyReceiptKey(int $saleId): string { return substr(hash_hmac('sha256', 'warranty-receipt|'.$saleId, spAuthSecret()), 0, 24); }
 
 function spPlateKey(string $v): string { return strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $v) ?? ''); }
 // Same normalisation in SQL: upper case, no spaces, dashes or dots.
@@ -31,6 +35,15 @@ function spWarrantyTerm(array $r): ?array {
 try {
     $pdo = spApiDatabase();
     $action = strtolower(trim((string)($_GET['action'] ?? 'search')));
+    if ($action === 'receipt' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+        $saleId = (int)($_GET['sale_id'] ?? 0); $key = (string)($_GET['key'] ?? '');
+        if ($saleId <= 0 || !hash_equals(spWarrantyReceiptKey($saleId), $key)) spApiRespond(['ok' => false, 'error' => 'Receipt link is not valid. Search the plate again.'], 403);
+        $q = $pdo->prepare('SELECT outlet_id FROM sales WHERE id=? LIMIT 1'); $q->execute([$saleId]); $saleOutlet = (int)($q->fetchColumn() ?: 0);
+        if ($saleOutlet <= 0) spApiRespond(['ok' => false, 'error' => 'Sale not found.'], 404);
+        $file = spSaleReceiptPdf($pdo, $saleOutlet, $saleId);
+        spAudit($pdo, 'RECEIPT_VIEW_WARRANTY', 'sales', $saleId);
+        spApiRespond(['ok' => true, 'filename' => $file['filename'], 'pdf' => base64_encode($file['pdf'])], 200);
+    }
     if ($action !== 'search' || ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') spApiRespond(['ok' => false, 'error' => 'Unknown action.'], 400);
     $raw = trim((string)($_GET['plate'] ?? $_GET['q'] ?? ''));
     $key = spPlateKey($raw);
@@ -69,7 +82,7 @@ try {
         $daysLeft = (int)floor(($expiry->getTimestamp() - $now->getTimestamp()) / 86400);
         $total = max(1, (int)floor(($expiry->getTimestamp() - $start->getTimestamp()) / 86400));
         $items[] = [
-            'line_id' => (int)$r['line_id'], 'sale_id' => (int)$r['sale_id'], 'sale_no' => (string)$r['sale_no'],
+            'line_id' => (int)$r['line_id'], 'sale_id' => (int)$r['sale_id'], 'sale_no' => (string)$r['sale_no'], 'receipt_key' => spWarrantyReceiptKey((int)$r['sale_id']),
             'installed_at' => $start->format('c'), 'expires_at' => $expiry->format('c'),
             'outlet_code' => (string)($r['outlet_code'] ?? ''), 'outlet_name' => (string)($r['outlet_name'] ?? ''),
             'product' => (string)$r['product_name'], 'quantity' => (float)$r['quantity'],

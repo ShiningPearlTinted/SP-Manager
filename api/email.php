@@ -5,12 +5,6 @@ require_once __DIR__.'/vendor/PHPMailer/src/Exception.php';
 require_once __DIR__.'/vendor/PHPMailer/src/SMTP.php';
 require_once __DIR__.'/vendor/PHPMailer/src/PHPMailer.php';
 require_once __DIR__.'/invoice-pdf.php';
-/** The invoice PDF for one sale in this outlet. */
-function spSaleReceiptPdf(PDO $pdo,int $outlet,int $sale):array {
- $q=$pdo->prepare('SELECT * FROM sales WHERE id=? AND outlet_id=?');$q->execute([$sale,$outlet]);$saleRow=$q->fetch();if(!$saleRow)throw new InvalidArgumentException('Sale not found.');$q=$pdo->prepare('SELECT * FROM sale_items WHERE sale_id=? ORDER BY id');$q->execute([$sale]);$items=$q->fetchAll();$q=$pdo->prepare('SELECT * FROM customers WHERE id=?');$q->execute([$saleRow['customer_id']]);$customer=$q->fetch()?:[];$q=$pdo->prepare('SELECT * FROM company_settings WHERE outlet_id=?');$q->execute([$outlet]);$company=$q->fetch()?:[];$q=$pdo->prepare('SELECT address FROM outlets WHERE id=?');$q->execute([(int)$saleRow['outlet_id']]);$company=spInvoiceOutletCompany($company,$q->fetch()?:[]);$q=$pdo->prepare('SELECT COALESCE(SUM(amount),0) FROM sale_payments WHERE sale_id=?');$q->execute([$sale]);$paid=(float)$q->fetchColumn();
- $q=$pdo->prepare('SELECT payment_type_name,amount FROM sale_payments WHERE sale_id=? ORDER BY id');$q->execute([$sale]);$payments=$q->fetchAll();
- return ['pdf'=>spReceiptPdf($company,$saleRow,$customer,$items,$paid,$payments,(string)(spApiConfig()['business_timezone']??'Asia/Kuala_Lumpur')),'filename'=>'Invoice-'.preg_replace('/[^A-Za-z0-9_-]/','_',(string)$saleRow['sale_no']).'.pdf'];
-}
 try {
  if(($_SERVER['REQUEST_METHOD']??'')!=='POST')spApiRespond(['ok'=>false,'error'=>'POST required.'],405);
  $pdo=spApiDatabase();$body=spReadRequestBody();$outlet=(int)$_SERVER['SP_AUTH_OUTLET_ID'];$sale=(int)($body['sale_id']??0);

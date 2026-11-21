@@ -28,9 +28,24 @@ function Ring({item}){
  </span>;
 }
 
-export default function WarrantyCheck({lookup}){
+const pdfUrl=b64=>{const bin=atob(b64),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));};
+const DocIcon=({d})=><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d}/></svg>;
+
+export default function WarrantyCheck({lookup,loadReceipt}){
  const [plate,setPlate]=useState(''),[result,setResult]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[filter,setFilter]=useState('All'),[open,setOpen]=useState(null);
  const inputRef=useRef(null),seq=useRef(0);
+ const [receiptBusy,setReceiptBusy]=useState(''),[receiptError,setReceiptError]=useState('');
+ // View opens the PDF in a new tab (the tab is opened at the click so pop-up blockers allow it); Download saves it.
+ const receipt=async(item,mode)=>{
+  if(!loadReceipt||receiptBusy)return;setReceiptError('');setReceiptBusy(item.line_id+mode);
+  const win=mode==='view'?window.open('','_blank'):null;
+  try{const r=await loadReceipt(item);const url=pdfUrl(r.pdf);
+   if(win&&!win.closed){win.location.href=url;}
+   else{const a=document.createElement('a');a.href=url;a.download=r.filename||`Receipt-${item.sale_no}.pdf`;document.body.appendChild(a);a.click();a.remove();}
+   setTimeout(()=>URL.revokeObjectURL(url),120000);}
+  catch(e){if(win&&!win.closed)win.close();setReceiptError(e.message||'The receipt could not be opened.');}
+  finally{setReceiptBusy('');}
+ };
  const search=async e=>{
   e?.preventDefault();const value=plate.trim();
   if(value.replace(/\s/g,'').length<2){setError('Enter the vehicle plate number.');inputRef.current?.focus();return;}
@@ -80,6 +95,12 @@ export default function WarrantyCheck({lookup}){
      <div><dt>Outlet</dt><dd>{i.outlet_code||'—'}{i.outlet_name?' · '+i.outlet_name:''}</dd></div>
      {i.maintenance>0&&<div><dt>Maintenance</dt><dd>{i.maintenance} service{i.maintenance===1?'':'s'}</dd></div>}
     </dl>}
+    {expanded&&loadReceipt&&i.receipt_key&&<div className="wa-receipt">
+     <span className="wa-receipt-name"><DocIcon d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h6M9 17h4"/>Receipt {i.sale_no}</span>
+     <button type="button" onClick={()=>receipt(i,'view')} disabled={!!receiptBusy}><DocIcon d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>{receiptBusy===i.line_id+'view'?'Opening…':'View receipt'}</button>
+     <button type="button" className="wa-primary" onClick={()=>receipt(i,'download')} disabled={!!receiptBusy}><DocIcon d="M12 3v12M7 10l5 5 5-5M4 21h16"/>{receiptBusy===i.line_id+'download'?'Preparing…':'Download'}</button>
+     {receiptError&&<p className="wa-receipt-error" role="alert">{receiptError}</p>}
+    </div>}
    </li>})}</ul>}
    <p className="wa-note">Warranty runs from the sale date. Tap a card for details. Checked {fmtDate(result.checked_at)}.</p>
   </div>}
