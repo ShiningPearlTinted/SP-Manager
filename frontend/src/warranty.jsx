@@ -54,7 +54,7 @@ export default function WarrantyCheck({lookup}){
     <button type="submit" className="wa-check" disabled={busy}>{busy?'Checking…':'Check'}</button>
    </form>
    {error&&<p className="wa-error" role="alert">{error}</p>}
-   {result&&<>
+   {result&&(result.customer||result.sales>0)&&<>
     <div className="wa-who"><span className="wa-avatar" aria-hidden="true">{initials}</span><div><b>{showName}</b><small>{[result.customer?.phone,result.sales?`${result.sales} visit${result.sales===1?'':'s'}`:null].filter(Boolean).join(' · ')||'No customer details'}</small></div></div>
     <div className="wa-stats"><div><b className="wa-g">{sum.active}</b><small>Active</small></div><div><b className="wa-y">{sum.expiring}</b><small>Expiring</small></div><div><b className="wa-r">{sum.expired}</b><small>Expired</small></div></div>
    </>}

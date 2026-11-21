@@ -7202,3 +7202,24 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 @media (max-width:600px){.wa-page-start{min-height:calc(100vh - 160px)}.app .wa-page .wa-start .wa-intro h2,.wa-page .wa-start .wa-intro h2{font-size:23px}}
 .wa-page.wa-page-start{min-height:calc(100vh - 190px)!important}
 .pos-module-body>.wa-page.wa-page-start{min-height:100%!important}
+
+/* Light result header (no dark panel) */
+.wa-hero:not(.wa-start){background:#fff;color:#111827;border:1px solid #eaecf0;box-shadow:0 12px 32px rgba(16,24,40,.07);padding:18px}
+.wa-hero:not(.wa-start) .wa-search{background:#f9fafb;border:1px solid #d0d5dd;box-shadow:none;max-width:none}
+.wa-hero:not(.wa-start) .wa-search:focus-within{border-color:#e11d2e;box-shadow:0 0 0 4px #e11d2e1f;background:#fff}
+.wa-hero:not(.wa-start) #wa-plate-input{color:#111827!important}
+.wa-hero:not(.wa-start) #wa-plate-input::placeholder{color:#c0c6d0}
+.wa-hero:not(.wa-start) .wa-error{color:#b42318}
+.wa-hero:not(.wa-start) .wa-who{padding-top:16px;margin-top:16px;border-top:1px solid #f2f4f7}
+.wa-hero:not(.wa-start) .wa-avatar{width:44px;height:44px;border-radius:14px;background:#fee2e2;color:#c8102e}
+.wa-hero:not(.wa-start) .wa-who b{color:#111827}
+.wa-hero:not(.wa-start) .wa-who small{color:#667085}
+.wa-hero:not(.wa-start) .wa-stats div{border:0;border-radius:14px;padding:12px 14px}
+.wa-hero:not(.wa-start) .wa-stats div:nth-child(1){background:#ecfdf3}
+.wa-hero:not(.wa-start) .wa-stats div:nth-child(2){background:#fffaeb}
+.wa-hero:not(.wa-start) .wa-stats div:nth-child(3){background:#fef3f2}
+.wa-hero:not(.wa-start) .wa-stats .wa-g{color:#15803d}.wa-hero:not(.wa-start) .wa-stats .wa-y{color:#b54708}.wa-hero:not(.wa-start) .wa-stats .wa-r{color:#c8102e}
+.wa-hero:not(.wa-start) .wa-stats small{color:#475467;font-weight:600}
+.wa-chips button.on{background:#c8102e!important;color:#fff!important}
+.wa-card{border:1px solid #eef0f4;box-shadow:0 4px 14px rgba(16,24,40,.05)}
+@media (max-width:600px){.wa-hero:not(.wa-start){border-radius:20px;padding:14px}}
