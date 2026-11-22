@@ -112,7 +112,7 @@ jobs:
           <IfModule mod_headers.c>
             # Security headers. No inline JavaScript is used (print windows are printed by the app),
             # so scripts are limited to this site. The API runs on *.shiningpearltinted.com.
-            Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.shiningpearltinted.com; worker-src 'self'; manifest-src 'self'; media-src 'self' data: blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+            Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.shiningpearltinted.com http://127.0.0.1:18765 http://localhost:18765; worker-src 'self'; manifest-src 'self'; media-src 'self' data: blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
             Header always set X-Frame-Options "DENY"
             Header always set X-Content-Type-Options "nosniff"
             Header always set Referrer-Policy "strict-origin-when-cross-origin"
