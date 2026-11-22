@@ -3,9 +3,9 @@
 Tarikh: 26 Oktober 2026. Modul ini berada dalam menu Reports sedia ada, bukan HR Management. Production belum dikemas kini.
 
 ## Kandungan
-38 pilihan laporan mengikut enam kategori Aronium: Sales (23), Purchase (10), Stock return (1), Loss and damage (1), Finance (1), Stock control (2). Termasuk carian laporan, penapis yang sesuai untuk setiap jenis, subgroups, date range, preview SQL, pagination, totals semua rekod, Print, XLSX sebenar dan PDF A4 landscape.
+38 pilihan laporan mengikut enam kategori: Sales (23), Purchase (10), Stock return (1), Loss and damage (1), Finance (1), Stock control (2). Termasuk carian laporan, penapis yang sesuai untuk setiap jenis, subgroups, date range, preview SQL, pagination, totals semua rekod, Print, XLSX sebenar dan PDF A4 landscape.
 
-Rujukan sebenar: gambar 001.PNG/002.PNG; language catalogue dan template .frx di Aronium.zip. Template SQLite digunakan untuk memahami fungsi dan tanda refund, kemudian dipadankan kepada skema MySQL SP-Manager. Tiada DLL/installer Aronium dimasukkan ke pakej ini.
+Rujukan sebenar: gambar 001.PNG/002.PNG; language catalogue dan template .frx rujukan. Template SQLite digunakan untuk memahami fungsi dan tanda refund, kemudian dipadankan kepada skema MySQL SP-Manager. Tiada DLL atau installer pihak ketiga dimasukkan ke pakej ini.
 
 ## Fail perubahan
 Dua fail asal diubah:
@@ -37,14 +37,14 @@ Backend: PHP 8.1+ 64-bit, PDO MySQL dan iconv. Enjin menggunakan auth/permission
 - Header total/diskaun/cukai diagih kepada item mengikut nilai baris tersimpan, dengan integer cents dan remainder tepat. Jumlah item reconcile dengan header.
 - Profit menggunakan cost_snapshot sejarah sahaja. Jika snapshot tiada, cost/profit dipaparkan sebagai unknown; harga kos semasa tidak mengganti sejarah.
 - Refund ialah event negatif pada refund_date untuk product/group/customer/user/daily/profit dan item-list. Original sales kekal pada sale_date. Cukai refund diagih berkadar daripada cukai dokumen asal kerana tiada refund-tax table; jumlah refund sebenar tetap reconcile. Diskaun refund terperinci tidak direka.
-- Hourly dan hourly by groups menunjukkan gross sales events seperti template Aronium hourly. Tender report menunjukkan receipt yang direkod, tanpa meneka kaedah cash refund yang tiada tender split.
+- Hourly dan hourly by groups menunjukkan gross sales events seperti template laporan hourly. Tender report menunjukkan receipt yang direkod, tanpa meneka kaedah cash refund yang tiada tender split.
 - Invoice/unpaid lists berdasarkan dokumen asal dan payment yang direkod. Partial refund bukan automatic credit allocation kepada baki asal, kerana allocation tersebut tidak disimpan.
 - Purchase payments/unpaid menggunakan purchases.data_json. Rekod lama tanpa paid/payment metadata kekal unknown, bukan dianggap paid atau unpaid secara automatik. Item discounts menggunakan metadata tersimpan sahaja.
 - Collected credit payments menunjukkan explicit invoice collections dalam document_payments mengikut paid_at. POS creditPayment flag dalam frontend tidak disimpan sebagai marker relasional khusus; jangan menganggap laporan ini senarai lengkap POS credit collections lama. Tiada perubahan skrin Sales/Payments dibuat untuk menambah marker tersebut.
 - Finance menggabungkan canonical sale_payments, recorded supplier payments dan cash movements. Invoice/deposit collections berasingan dilaporkan dalam Collected credit payments untuk mengelakkan pengiraan data yang berpotensi mirror dua kali. Ini transaction history sumber tersebut, bukan general ledger lengkap.
 - Tarikh luput menggunakan metadata expirationDate/expiryDate/expiration_date yang sudah direkod. Penapis menggunakan tarikh luput, bukan purchase date. Kuantiti ialah batch yang dibeli; remaining per-batch stock tidak dapat diketahui kerana skema tiada batch allocation.
 - Stock return/loss/damage memerlukan movement_type yang jelas; notes biasa tidak diteka sebagai transaksi loss/return.
-- Reorder menggunakan min_stock sebagai reorder point dan preferred_quantity sebagai target, mengikut template Aronium. Low stock warning menggunakan metadata warning flag/quantity jika wujud, atau konfigurasi min_stock. Stock ialah snapshot semasa, bukan baki sejarah pada tarikh pilihan.
+- Reorder menggunakan min_stock sebagai reorder point dan preferred_quantity sebagai target, mengikut template laporan rujukan. Low stock warning menggunakan metadata warning flag/quantity jika wujud, atau konfigurasi min_stock. Stock ialah snapshot semasa, bukan baki sejarah pada tarikh pilihan.
 - Historical tax-rate IDs tiada. Tax rates report menunjukkan effective rates daripada recorded net/tax, bukan current tax master. Product/group names menggunakan master semasa kecuali nama item jualan yang ada snapshot.
 - Cash register filter hanya digunakan untuk starting cash kerana sale schema tiada terminal/register link yang boleh dipercayai. Penapis tidak sesuai dinyahaktifkan dan backend menolaknya jika dihantar secara manual.
 - Document/tender lists dengan product/group filter menunjukkan full document/payment amount apabila ada item sepadan; item-based reports menunjukkan allocated selected amounts. Nota ini dipaparkan dalam report.
@@ -67,7 +67,7 @@ Build frontend disahkan melalui esbuild CLI 0.28.2; React/ReactDOM yang digunaka
 - Browser: search, Sales/Purchase selection, filter swap customer/supplier, selected product, stale export guard, Show report, download XLSX/PDF berjaya. XLSX yang dimuat turun dibaca semula dan numeric total disahkan.
 - Print HTML: numeric headings/details/totals right-aligned pada tepi lajur yang sama; alignment preview turut disahkan melalui computed styles. PDF single/multipage 15 halaman diparse, dirender dan disemak pada halaman pertama/akhir. Footer/page size A4 landscape sah.
 - Responsive viewport 390x844: satu kolum; body 375px, tiada horizontal body overflow. Jadual laporan boleh scroll secara mendatar dalam container bila perlu.
-- Physical printer, transaksi jualan sebenar dan production deployment belum diuji/dilakukan. Ini bukan dakwaan semua data sejarah setara sepenuhnya dengan Aronium jika medan asal tidak disimpan dalam SP-Manager.
+- Physical printer, transaksi jualan sebenar dan production deployment belum diuji/dilakukan. Ini bukan dakwaan semua data sejarah setara sepenuhnya dengan sistem POS asal jika medan asal tidak disimpan dalam SP-Manager.
 
 ## Ulang tests dan rollback
 Tests tidak boleh menggunakan production config. reporting-engine.php memerlukan REPORT_TEST_API_DIR kepada API copy dengan localhost DB prefix spm_reporting_test dan REPORT_TEST_OUTPUT_DIR. Ia menjangka fresh clone SQL tanpa fixture REPORT_A/REPORT_B. reporting-http.mjs memerlukan folder output fixture yang sama dan REPORT_TEST_BASE localhost. reporting-regression.py memerlukan REPORT_ORIGINAL_ZIP kepada ZIP input dan pilihan REPORT_PROJECT_ROOT.

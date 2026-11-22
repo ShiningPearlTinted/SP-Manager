@@ -383,7 +383,7 @@ try {
   }
 
   // "list" feeds POS and every module (active products only). "list-inactive" returns the outlet's
-  // inactive products so Product Master can show them with Active unchecked, like Aronium.
+  // inactive products so Product Master can show them with Active unchecked.
   if(($action==='list'||$action==='list-inactive') && $_SERVER['REQUEST_METHOD']==='GET'){
     spShareProductsWithAllOutlets($pdo);
     $outletCol=isset($columns['outlet_id']);
@@ -449,7 +449,7 @@ try {
     if($id<=0){$q=$pdo->prepare('SELECT id FROM product_groups WHERE group_name=? ORDER BY id ASC LIMIT 1');$q->execute([$name]);$id=(int)($q->fetchColumn()?:0);}
     if($id<=0) respond(['ok'=>true,'deleted'=>false,'id'=>0]);
     // The branch is the group plus every subgroup below it (cycle-safe). With "cascade" the whole
-    // branch is deleted in one step, like Aronium, but only when no product in any outlet uses it.
+    // branch is deleted in one step, but only when no product in any outlet uses it.
     $branch=[$id];$queue=[$id];$seen=[$id=>true];$children=$pdo->prepare('SELECT id FROM product_groups WHERE parent_id=?');
     while($queue){$children->execute([array_shift($queue)]);foreach($children->fetchAll(PDO::FETCH_COLUMN) as $child){$child=(int)$child;if(isset($seen[$child]))continue;$seen[$child]=true;$branch[]=$child;$queue[]=$child;}}
     if(count($branch)>1&&empty($b['cascade']))throw new RuntimeException('Cannot delete group because it still has child groups.');
@@ -477,7 +477,7 @@ try {
     $b=jsonBody();$id=(int)($b['id']??0);if($id<=0)throw new InvalidArgumentException('Product id is required.');
     $q=$pdo->prepare('SELECT id,metadata_json FROM products WHERE id=? LIMIT 1');$q->execute([$id]);$row=$q->fetch();
     if(!$row)respond(['ok'=>true,'id'=>$id,'deleted'=>false]);
-    // Delete is a real delete, like Aronium. A product already used in documents, stock or
+    // Delete is a real delete. A product already used in documents, stock or
     // promotions cannot be removed without breaking history, so it is archived instead:
     // inactive and flagged, hidden from POS and Product Master, and it no longer blocks group deletes.
     $used=productHistoryCount($pdo,$id);

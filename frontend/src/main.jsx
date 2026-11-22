@@ -105,7 +105,7 @@ const openPrintDocument=(title,html)=>{
   w.document.close();spAutoPrint(w,180);return true;
  }catch(e){window.alert("Unable to open print preview: "+e.message);return false}
 };
-// Printed lists (Products, Stock, Customers, Payment types). Layout follows the Aronium list templates:
+// Printed lists (Products, Stock, Customers, Payment types). Layout follows the standard POS list templates:
 // upper-case title, company name and address, numbered rows, totals row, date and page number.
 // columns: [{label, align:"right"?}], rows: arrays of cell values, totals: array aligned to columns (optional).
 const printListReport=({title,columns,rows,totals=null,landscape=false})=>{
@@ -453,7 +453,7 @@ const centralReportsApi=()=>centralApiBase().replace(/\/app-state\.php$/i,"")+"/
 const customerPhoneKey=v=>{let d=String(v||"").replace(/\D+/g,"");if(d.startsWith("0060"))d=d.slice(2);if(d.startsWith("60")&&d.length>=11)d="0"+d.slice(2);return d.length>=9&&d.length<=15?d:""};
 const customerPlateKey=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9]+/g,"");
 const isWalkInName=c=>String(c?.name||"").trim().toLowerCase()==="walk-in customer";
-// Walk-in is "no customer selected" (null). Customer id 1 is an ordinary customer (after the Aronium import it is a real person).
+// Walk-in is "no customer selected" (null). Customer id 1 is an ordinary customer (a real person after the data import).
 const WALK_IN_CUSTOMER=null;
 const isWalkInCustomer=(list,id)=>id==null||!list.some(c=>c.id===id&&!isWalkInName(c));
 const centralCustomerToApp=c=>{if(!c||typeof c!=="object")return null;const n=(v)=>v===null||v===undefined?"":String(v);return {id:Number(c.id)||c.id,dbId:Number(c.id)||null,code:n(c.code),name:n(c.name),taxNumber:n(c.tax_number),country:n(c.country||"Malaysia")||"Malaysia",streetName:n(c.street_name),buildingNumber:n(c.building_number),additionalStreetName:n(c.additional_street_name),plotIdentification:n(c.plot_identification),district:n(c.district),postalCode:n(c.postal_code),city:n(c.city),state:n(c.state),phone:n(c.phone),email:n(c.email),vehicleNumber:n(c.vehicle_number),carBrand:n(c.car_brand),totalVisits:Number(c.total_visits||0),lastVisitAt:n(c.last_visit_at),enabled:Number(c.enabled)!==0,isCustomer:Number(c.is_customer)!==0,isSupplier:Number(c.is_supplier)===1,taxExempt:Number(c.tax_exempt)===1,discount:Number(c.discount_percent||0),dueDatePeriod:Number(c.due_date_period||0),loyaltyCard:n(c.loyalty_card),loyaltyPoints:Number(c.loyalty_points||0),visits:Number(c.visits||0),spend:Number(c.spend||0),archived:Number(c.archived)===1};};
@@ -964,7 +964,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
     const syncedCustomers=(lr?.customers||[]).map(centralCustomerToApp).filter(Boolean);
     if(syncedCustomers.length){cacheSetJSON("customers",JSON.stringify(syncedCustomers));setCustomers(syncedCustomers);}
   }catch(e){console.warn("Post-sale loyalty refresh failed:",e?.message||e)}
-  // Match the Aronium payment flow: complete the document first, then present
+  // Payment flow: complete the document first, then present
   // the post-payment receipt choices. The payment screen is only closed by
   // finishPayment after this async operation confirms success.
   if(settings.order.showReceiptDialog===false){setLastSale(null);if(paymentInfo.printReceipt!==false)printReceipt(syncedSale)}else setLastSale(syncedSale);
@@ -1663,7 +1663,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  const topMonthValue=Math.max(...monthly,0);
  const topMonthIndex=monthly.indexOf(topMonthValue);
  const topMonth=topMonthValue?new Date(dashboardYear,topMonthIndex,1).toLocaleString("en-GB",{month:"long"}).toUpperCase():"-";
- // Total Sales card: compact total (172.61K) and plain amounts (42,612.50), like the Aronium dashboard.
+ // Total Sales card: compact total (172.61K) and plain amounts (42,612.50).
  const compactAmount=v=>{const n=Number(v||0),a=Math.abs(n);return a>=1e6?(n/1e6).toFixed(2)+"M":a>=1e3?(n/1e3).toFixed(2)+"K":n.toFixed(2)};
  const plainAmount=v=>Number(v||0).toLocaleString("en-MY",{minimumFractionDigits:2,maximumFractionDigits:2});
  const topProducts=[...products].map(p=>({p,total:periodSales.reduce((sum,s)=>sum+s.items.filter(i=>i.id===p.id).reduce((q,i)=>q+Number(i.price||0)*Number(i.qty||0),0),0)})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total).slice(0,5);
@@ -1671,13 +1671,21 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  const groupTotal=topGroups.reduce((a,[,v])=>a+v,0);
  const groupColors=["#1b9fd1","#4b9bc8","#8bc34a","#76a843","#a8c66c","#f28aa8","#f47f7f","#7890a8","#46a7df","#d18ac4","#48a6a0","#7a8dd8"];
  const donutGradient=groupTotal?(()=>{let cursor=0;return topGroups.slice(0,12).map(([,v],i)=>{const next=cursor+(v/groupTotal)*100;const part=`${groupColors[i%groupColors.length]} ${cursor}% ${next}%`;cursor=next;return part}).join(",")})():"#e2e8f0 0 100%";
- const customerTotals=Object.entries(periodSales.reduce((acc,s)=>{const customer=customers.find(c=>c.id===s.customerId);const name=s.customerName||s.customer||customer?.name||"Walk-in Customer";acc[name]=(acc[name]||0)+Number(s.total||0);return acc},{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ // Top customers: sales carry the customer id as text, the customer list as a number, so compare as text.
+ // Walk-in sales (no customer) are not a customer and are left out of the ranking.
+ const customerTotals=Object.entries(periodSales.reduce((acc,s)=>{const id=String(s.customerId??s.customerDbId??"").trim();const customer=id?customers.find(c=>String(c.id)===id||String(c.dbId??"")===id):null;const name=customer?.name||s.customerName||"";if(!name||isWalkInName({name}))return acc;const key=customer?"c"+customer.id:"n"+name;if(!acc[key])acc[key]={name,total:0};acc[key].total+=Number(s.total||0);return acc},{})).map(([,v])=>[v.name,v.total]).sort((a,b)=>b[1]-a[1]).slice(0,5);
  const customerMax=Math.max(1,...customerTotals.map(([,v])=>v));
  const hourly=Array.from({length:24},(_,h)=>periodSales.filter(s=>new Date(s.date).getHours()===h));
  const hourlyValues=hourly.map(items=>hourOption==="Count"?items.length:items.reduce((a,s)=>a+s.total,0));
  const hourlyMax=Math.max(1,...hourlyValues);
  const periodTotal=periodSales.reduce((a,s)=>a+s.total,0);
  const compactPeriodTotal=(periodTotal/1000).toFixed(2)+"K";
+ // Total sales today (this device's date), shown large; the selected period total sits underneath.
+ const todayKey=(()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")})();
+ const saleDayKey=s=>{const d=new Date(s.date);return isNaN(d)?"":d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+ const todaySales=activeSales.filter(s=>saleDayKey(s)===todayKey);
+ const todayTotal=todaySales.reduce((a,s)=>a+Number(s.total||0),0);
+ const todayText=todayTotal>=100000?(todayTotal/1000).toFixed(2)+"K":todayTotal.toLocaleString("en-MY",{minimumFractionDigits:2,maximumFractionDigits:2});
  const formatDate=d=>new Date(d).toLocaleDateString("en-GB");
  return <section className="content dashboard-modern spmanager-dashboard">
   <div className="ar-dashboard-monthly">
@@ -1695,7 +1703,7 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
   <div className="ar-dashboard-grid">
    <div className="panel ar-panel top-products-panel"><div className="panel-title"><div><h3>Top Products</h3></div><span className="report-limit">5</span></div>{topProducts.length?topProducts.map(x=><div className="report-row" key={x.p.id}><div><b>{x.p.name}</b></div><strong>{money(x.total).replace("RM ","")}</strong></div>):<Empty text="No data to display"/>}</div>
    <div className="panel ar-panel hourly-panel"><div className="panel-title"><div><h3>Hourly Sales</h3><small>Sales data grouped by hours</small></div><select value={hourOption} onChange={e=>setHourOption(e.target.value)}><option>Amount</option><option>Count</option></select></div><div className="hourly-chart">{hourlyValues.map((v,h)=><div className="hour-col" key={h}><div className="hour-bar" style={{height:(v/hourlyMax)*100+"%"}}><span>{v?hourOption==="Count"?v:Math.round(v):""}</span></div><small>{String(h).padStart(2,"0")}</small></div>)}</div></div>
-  <div className="panel ar-panel total-sales-panel"><div className="panel-title"><h3>Total Sales (Amount)</h3></div><div className="big-sales-value">{compactPeriodTotal}</div></div>
+  <div className="panel ar-panel total-sales-panel"><div className="panel-title"><h3>Total Sales Today</h3><small>{todaySales.length} sale{todaySales.length===1?"":"s"} today</small></div><div className="big-sales-value" title={"RM "+todayTotal.toFixed(2)}>{todayText}</div><div className="period-sales-sub"><span>Total Sales (Amount)</span><b title={"RM "+periodTotal.toFixed(2)}>{compactPeriodTotal}</b></div></div>
    <div className="panel ar-panel groups-panel"><div className="panel-title"><div><h3>Top Product Groups</h3><small>Top selling product groups in selected period</small></div></div><div className="groups-content"><div className="donut" style={{background:`conic-gradient(${donutGradient})`}}><div className="donut-hole"></div></div><div className="group-legend">{topGroups.slice(0,12).map(([g,v],i)=><div key={g}><i style={{background:groupColors[i%groupColors.length]}}></i><span>{g}</span><b>{money(v).replace("RM ","")}</b></div>)}</div></div></div>
    <div className="panel ar-panel customers-panel"><div className="panel-title"><div><h3>Top Customers</h3><small>Lead customers in selected period (top 5)</small></div></div><div className="customer-bars">{customerTotals.length?customerTotals.map(([name,v])=><div className="customer-bar-row" key={name}><span title={name}>{name}</span><div><i style={{width:(v/customerMax)*100+"%"}}></i><b>{Math.round(v)}</b></div></div>):<Empty text="No data to display"/>}</div></div>
   </div>
@@ -1788,7 +1796,7 @@ function POS({saleProcessing,displayIdleImage,setCustomersLocal,notificationCent
  };
  const addResolvedProduct=(product,qty)=>{if(!product)return;setNextQuantity(Math.max(1,Number(qty||1)));if(product.ageRestriction){setAgeGateProduct({product,qty});return}if(priceChangeAllowedFor(product)){setPendingPriceProduct(product);setPendingPriceQuantity(Math.max(1,Number(qty||1)));setPriceValue(String(Number(product.price||0)));setPriceScreen(true);return}const ok=add(product,qty);if(ok){setNextQuantity(1);setSelectedLineId(product?.id??null);if(settings.order.sounds&&settings.order.soundItemAdded)playPosBeep("ok")}};
  const addPos=p=>{if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before changing items.");return}const product=products.find(x=>String(x.id)===String(p?.productId??p?.id))||p;addResolvedProduct(product,nextQuantity)};
- // Barcode scanners type the code and press Enter. Like Aronium, an exact barcode (or code) match goes straight
+ // Barcode scanners type the code and press Enter. An exact barcode (or code) match goes straight
  // into the order whatever the search mode; otherwise a single search result is added.
  const scanMatch=value=>{const v=String(value||"").trim().toLowerCase();if(!v)return null;const act=products.filter(p=>p.active!==false);const byBarcode=()=>act.find(p=>[p.barcode,...(Array.isArray(p.barcodes)?p.barcodes:[])].some(b=>b&&String(b).trim().toLowerCase()===v));const byCode=()=>act.find(p=>String(p.code||"").trim().toLowerCase()===v);const byName=()=>act.find(p=>String(p.name||"").trim().toLowerCase()===v);const mode=posSearchMode||"All";return mode==="Code"?byCode()||byBarcode():mode==="Name"?byName()||byBarcode()||byCode():byBarcode()||byCode()};
  const submitPosSearch=raw=>{const value=String(raw??q??"").trim();if(!value)return;const weighed=resolveWeighingBarcode(value);if(weighed){if(saleLocked){setNoticeLocal("Sale is locked. Unlock the sale before changing items.");return}addResolvedProduct(weighed.product,weighed.qty);setQ("");return}const hit=scanMatch(value)||(filtered.length===1?filtered[0]:null);if(hit){addPos(hit);setQ("");return}if(settings.order.sounds&&settings.order.soundItemNotFound!==false)playPosBeep("error");setNoticeLocal(filtered.length>1?"Select a product from the search results.":"Product not found: "+value);if(filtered.length<=1)setTimeout(()=>document.querySelector('.ar-search-input')?.select(),0)};
@@ -1821,7 +1829,7 @@ function POS({saleProcessing,displayIdleImage,setCustomersLocal,notificationCent
    if(e.key==="Escape"){restoreCustomerCart();setPaymentScreen(false);setSplitScreen(false);setDiscountScreen(false);setTransferScreen(false);setSavedScreen(false);setQuantityScreen(false);setPriceScreen(false);setPendingPriceProduct(null);setPendingPriceQuantity(1);setSelectedLineId(null);document.querySelector('.ar-search-input')?.focus()}
    if(!e.ctrlKey)return;const key=e.key.toUpperCase();const pt=paymentTypes.find(x=>x.enabled&&x.shortcutKey&&x.shortcutKey.toUpperCase()===key);if(pt){e.preventDefault();selectPayment(pt);setPaymentScreen(true)}
  };window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[cart,defaultPayment,payment,sale,saveOpenOrder,paymentTypes,changeQty,grand,amountDue,selectPayment,restoreCustomerCart]);
- // Like Aronium, only categories that hold at least one active product are shown, sorted by name.
+ // Only categories that hold at least one active product are shown, sorted by name.
  // Root level ignores the last opened category: count every active product in the group and all its subgroups.
  const branchHasActive=name=>{const branch=new Set();const walk=n=>{if(branch.has(n))return;branch.add(n);childrenOf(n).forEach(walk)};walk(name);return products.some(p=>p.active!==false&&branch.has(String(p.group||p.category||"")))};
  const rootGroupHasActive=name=>allGroupNames.includes(name)&&!parentOf(name)&&branchHasActive(name);
@@ -1831,7 +1839,7 @@ function POS({saleProcessing,displayIdleImage,setCustomersLocal,notificationCent
  // IMPORTANT: Product Management stores the hierarchy in productGroups + productGroupMeta.
  // productGroups must be included here; using only groupMeta makes a root group such as
  // "Tinted Film" disappear from the POS navigation even though Product Management shows it.
- // Inactive products never reach the POS screen (Aronium behaviour), even from an older cache.
+ // Inactive products never reach the POS screen, even from an older cache.
  // A product belongs to a category through its own category or through the root of its group tree.
  const posRootGroupOf=name=>{let cur=String(name||"");const seen=new Set();while(cur&&groupMeta?.[cur]?.parent&&!seen.has(cur)){seen.add(cur);cur=String(groupMeta[cur].parent)}return cur};
  const categoryProducts=products.filter(p=>p.active!==false).filter(p=>posCategory==="All Categories"||posRootGroupOf(p.group)===posCategory||(p.category||p.group||"")===posCategory||(p.group||"")===posCategory);
@@ -1871,7 +1879,7 @@ function POS({saleProcessing,displayIdleImage,setCustomersLocal,notificationCent
    setPosCategory("All Categories");
    setCatLevel("root");
  };
- // Aronium paging: one page holds rows x columns tiles (Settings > General > Number of rows / columns);
+ // Paging: one page holds rows x columns tiles (Settings > General > Number of rows / columns);
  // the Back tile takes the first slot. Tiles fill the panel, so their size follows the rows/columns setting.
  const posRows=posScreen.phone?(posScreen.landscape?2:3):Math.max(1,Number(settings.general.rows||5)),posCols=posScreen.phone?(posScreen.landscape?3:2):Math.max(1,Number(settings.general.columns||5));
  const posGridStyle={gridTemplateColumns:`repeat(${posCols},minmax(0,1fr))`,gridTemplateRows:`repeat(${posRows},minmax(0,1fr))`};
@@ -2527,14 +2535,14 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
  const[groupError,setGroupError]=useState("");
  
  const[showEditor,setShowEditor]=useState(false);
- // Inactive products are kept out of the shared list (POS and other modules), but Product Master shows them like Aronium.
+ // Inactive products are kept out of the shared list (POS and other modules), but Product Master shows them.
  const[inactiveProducts,setInactiveProducts]=useState([]);
  const loadInactiveProducts=async()=>{try{const r=await centralProductsRequest("list-inactive",{outlet_id:activeOutletId()});setInactiveProducts((r.products||[]).map(centralProductToApp).filter(Boolean).map(x=>({...x,active:false})))}catch(e){setInactiveProducts([])}};
  useEffect(()=>{loadInactiveProducts()},[]);
  const catalog=[...products,...inactiveProducts.filter(x=>!products.some(p=>String(p.id)===String(x.id)))];
  const[editorTab,setEditorTab]=useState("General");
  const groups=[...new Set([...(Array.isArray(productGroups)?productGroups:[]),...products.map(p=>p.group||p.category).filter(Boolean),...Object.keys(groupMeta||{})])];
- // Product groups form one tree under the "Products" root, like Aronium: sorted by rank, then name.
+ // Product groups form one tree under the "Products" root, sorted by rank, then name.
  const groupParent=name=>{const parent=String(groupMeta?.[name]?.parent||"");return parent&&parent!==name&&groups.includes(parent)?parent:""};
  const byGroupRank=(a,b)=>(Number(groupMeta?.[a]?.rank)||0)-(Number(groupMeta?.[b]?.rank)||0)||String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:"base"});
  const childrenOf=name=>groups.filter(g=>groupParent(g)===String(name)).sort(byGroupRank);
@@ -2546,11 +2554,11 @@ function Products({products,setProducts,addProduct,updateProduct,editing,setEdit
  const groupDescendants=name=>{const out=[];const seen=new Set([name]);const walk=n=>{childrenOf(n).forEach(c=>{if(seen.has(c))return;seen.add(c);out.push(c);walk(c)})};walk(name);return out};
  const groupScope=name=>new Set([name,...groupDescendants(name)]);
  const groupProductCount=name=>{const scope=groupScope(name);return catalog.filter(p=>scope.has(p.group)).length};
- // Depth-first list with full paths, used by every group picker (Aronium shows "Products/Accessories/Car Door Visor/Premium").
+ // Depth-first list with full paths, used by every group picker (e.g. "Products/Accessories/Car Door Visor/Premium").
  const groupOptions=(()=>{const out=[];const walk=(n,depth)=>{out.push({name:n,depth,path:groupPath(n)});childrenOf(n).forEach(c=>walk(c,depth+1))};mainGroups.forEach(g=>walk(g,0));return out})();
  const selectGroup=name=>{setSelectedCategory("All Products");setSelectedGroup(name);setSelectedProductId(null);if(name!=="All Groups")setExpandedCategories(a=>{const n=new Set(a);groupAncestors(name).forEach(x=>n.add(x));return n})};
  const toggleGroup=name=>setExpandedCategories(a=>{const n=new Set(a);n.has(name)?n.delete(name):n.add(name);return n});
- // Folder icon instead of group photos, like the Aronium tree.
+ // Folder icon instead of group photos in the tree.
  const treeFolder=<svg className="tree-folder" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.6c0-.6.4-1.1 1-1.1h3.7l1.5 1.6h5.8c.6 0 1 .5 1 1.1v7.2c0 .6-.4 1.1-1 1.1h-11c-.6 0-1-.5-1-1.1z" fill="currentColor"/></svg>;
  const renderGroupTree=(name,level=0)=>{const kids=childrenOf(name);const expanded=expandedCategories.has(name);return <div key={name} className="tree-category"><div className="tree-row" style={{paddingLeft:`${4+(level+1)*20}px`}}>{kids.length?<button type="button" className="tree-toggle" aria-label={expanded?"Collapse "+name:"Expand "+name} aria-expanded={expanded} onClick={()=>toggleGroup(name)}>{expanded?"−":"+"}</button>:<span className="tree-toggle-spacer"/>}<button type="button" className={selectedGroup===name?"tree-item selected":"tree-item"} onClick={()=>selectGroup(name)} onDoubleClick={()=>kids.length&&toggleGroup(name)}>{treeFolder}<span className="tree-name">{name}</span><em>{groupProductCount(name)}</em></button></div>{expanded&&kids.map(child=>renderGroupTree(child,level+1))}</div>};
  const rootExpanded=!expandedCategories.has("__products_root_collapsed__");

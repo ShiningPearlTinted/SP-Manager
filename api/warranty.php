@@ -49,7 +49,7 @@ try {
     $key = spPlateKey($raw);
     if (strlen($key) < 2 || strlen($key) > 15) spApiRespond(['ok' => false, 'error' => 'Enter a vehicle plate number.'], 422);
 
-    // Customers for this vehicle: plate field, a registered vehicle, or the plate used as the customer name (Aronium).
+    // Customers for this vehicle: plate field, a registered vehicle, or the plate used as the customer name (imported data).
     $ids = [];
     $q = $pdo->prepare('SELECT id FROM customers WHERE '.spPlateSql('vehicle_number').'=? OR '.spPlateSql('name').'=?');
     $q->execute([$key, $key]); foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $id) $ids[(int)$id] = true;
