@@ -7231,3 +7231,13 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 .wa-receipt button:disabled{opacity:.6;cursor:wait}
 .wa-receipt-error{flex-basis:100%;margin:4px 0 0;font-size:12.5px;color:#b42318}
 @media (max-width:600px){.wa-receipt-name{flex-basis:100%}.wa-receipt button{flex:1;justify-content:center}}
+
+/* POS menu: swipe left / right between pages (touch screens) */
+.ar-product-panel :is(.ar-category-grid,.ar-grid-wrap){touch-action:pan-y}
+.ar-product-panel.pos-slide-next :is(.ar-category-grid,.ar-grid-wrap){animation:posSlideNext .22s ease-out}
+.ar-product-panel.pos-slide-prev :is(.ar-category-grid,.ar-grid-wrap){animation:posSlidePrev .22s ease-out}
+.ar-product-panel.pos-slide-edge :is(.ar-category-grid,.ar-grid-wrap){animation:posSlideEdge .25s ease-out}
+@keyframes posSlideNext{from{transform:translateX(28%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes posSlidePrev{from{transform:translateX(-28%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes posSlideEdge{0%,100%{transform:none}35%{transform:translateX(-12px)}70%{transform:translateX(8px)}}
+@media (prefers-reduced-motion:reduce){.ar-product-panel[class*="pos-slide-"] :is(.ar-category-grid,.ar-grid-wrap){animation:none}}
