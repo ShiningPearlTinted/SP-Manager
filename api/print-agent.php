@@ -29,6 +29,8 @@ try{
         $pdo->prepare("UPDATE sp_print_agents SET status='ACTIVE',token_hash=?,pairing_code_hash=NULL,pairing_expires_at=NULL,machine_name=?,agent_version=?,printers_json=?,last_seen_at=NOW() WHERE id=?")
             ->execute([hash('sha256',$token),$machine?:null,$version?:null,json_encode(spPrintSanitizePrinters($body['printers']??[]),JSON_UNESCAPED_UNICODE),(int)$agent['id']]);
         $pdo->commit();
+        $_SERVER['SP_AUTH_OUTLET_ID']=(string)(int)$agent['outlet_id'];
+        spAudit($pdo,'PRINT_AGENT_PAIRED','sp_print_agents',(int)$agent['id'],null,['agent_name'=>(string)$agent['agent_name'],'machine_name'=>$machine,'agent_version'=>$version]);
         // The token is returned once; the server keeps only its hash.
         spApiRespond(['ok'=>true,'agent_id'=>(int)$agent['id'],'agent_name'=>(string)$agent['agent_name'],'outlet_id'=>(int)$agent['outlet_id'],'agent_token'=>$token,'poll_seconds'=>5],200);
     }
@@ -39,7 +41,7 @@ try{
     $q=$pdo->prepare("SELECT id,outlet_id,agent_name FROM sp_print_agents WHERE token_hash=? AND status='ACTIVE' LIMIT 1");
     $q->execute([hash('sha256',$token)]);$agent=$q->fetch();
     if(!$agent)spApiRespond(['ok'=>false,'error'=>'This print PC was removed or its pairing is no longer valid. Pair it again.','code'=>'NOT_PAIRED'],401);
-    $agentId=(int)$agent['id'];$outlet=(int)$agent['outlet_id'];
+    $agentId=(int)$agent['id'];$outlet=(int)$agent['outlet_id'];$_SERVER['SP_AUTH_OUTLET_ID']=(string)$outlet;$v2=spPrintV2($pdo);
     spPrintHousekeeping($pdo,$outlet);
 
     if($action==='heartbeat'){
@@ -47,6 +49,10 @@ try{
         if(array_key_exists('printers',$body)){$set[]='printers_json=?';$args[]=json_encode(spPrintSanitizePrinters($body['printers']),JSON_UNESCAPED_UNICODE);}
         if(isset($body['agent_version'])){$set[]='agent_version=?';$args[]=substr(preg_replace('/[^0-9A-Za-z.\-]/','',(string)$body['agent_version'])??'',0,30);}
         if(isset($body['machine_name'])){$set[]='machine_name=?';$args[]=spPrintCleanName($body['machine_name'])?:null;}
+        if($v2&&is_array($body['device']??null)){$dev=spPrintSanitizeDevice($body['device']);$dev['reportedAt']=time();$set[]='device_json=?';$args[]=json_encode($dev,JSON_UNESCAPED_UNICODE);}
+        // A connection or print problem the PC had since its last heartbeat goes to History.
+        $lastError=mb_substr(trim((string)($body['last_error']??'')),0,300);
+        if($lastError!=='')spAudit($pdo,'PRINT_AGENT_ERROR','sp_print_agents',$agentId,null,['agent_name'=>(string)$agent['agent_name'],'error'=>$lastError]);
         $args[]=$agentId;
         $pdo->prepare('UPDATE sp_print_agents SET '.implode(',',$set).' WHERE id=?')->execute($args);
         $q=$pdo->prepare("SELECT COUNT(*) FROM sp_print_jobs WHERE agent_id=? AND status='QUEUED' AND expires_at>NOW()");$q->execute([$agentId]);
@@ -58,17 +64,25 @@ try{
         $q=$pdo->prepare("SELECT id,printer_name,document_type,document_id,document_no,paper_size,copies,content_html FROM sp_print_jobs WHERE agent_id=? AND status='QUEUED' AND expires_at>NOW() ORDER BY id LIMIT 1 FOR UPDATE");
         $q->execute([$agentId]);$job=$q->fetch();
         if(!$job){$pdo->commit();spApiRespond(['ok'=>true,'job'=>null],200);}
-        $pdo->prepare("UPDATE sp_print_jobs SET status='PRINTING',claimed_at=NOW() WHERE id=?")->execute([(int)$job['id']]);
+        // v2: the PC has the job (Received); it reports Printing when it starts.
+        $pdo->prepare("UPDATE sp_print_jobs SET status=?,claimed_at=NOW() WHERE id=?")->execute([$v2?'RECEIVED':'PRINTING',(int)$job['id']]);
         $pdo->commit();
         spApiRespond(['ok'=>true,'job'=>['id'=>(int)$job['id'],'outlet_id'=>$outlet,'printer'=>(string)$job['printer_name'],'document_type'=>(string)$job['document_type'],
             'document_id'=>(string)($job['document_id']??''),'document_no'=>(string)($job['document_no']??''),'paper_size'=>(string)$job['paper_size'],
             'copies'=>(int)$job['copies'],'html'=>(string)$job['content_html']]],200);
     }
+    if($action==='progress'){
+        $id=(int)($body['job_id']??0);
+        if(strtoupper(trim((string)($body['status']??'')))!=='PRINTING')spApiRespond(['ok'=>false,'error'=>'Status must be PRINTING.'],400);
+        $q=$pdo->prepare("UPDATE sp_print_jobs SET status='PRINTING' WHERE id=? AND agent_id=? AND status='RECEIVED'");$q->execute([$id,$agentId]);
+        spApiRespond(['ok'=>true,'updated'=>$q->rowCount()],200);
+    }
     if($action==='report'){
         $id=(int)($body['job_id']??0);$status=strtoupper(trim((string)($body['status']??'')));
         if(!in_array($status,['PRINTED','FAILED'],true))spApiRespond(['ok'=>false,'error'=>'Status must be PRINTED or FAILED.'],400);
         $error=$status==='FAILED'?mb_substr(trim((string)($body['error']??'Printing failed.')),0,500):null;
-        $q=$pdo->prepare("UPDATE sp_print_jobs SET status=?,error_message=?,content_html=NULL,completed_at=NOW() WHERE id=? AND agent_id=? AND status='PRINTING'");
+        // v2 keeps the document for Retry / Reprint (cleared after SP_PRINT_KEEP_DAYS).
+        $q=$pdo->prepare("UPDATE sp_print_jobs SET status=?,error_message=?,".($v2?'':'content_html=NULL,')."completed_at=NOW() WHERE id=? AND agent_id=? AND status IN ('RECEIVED','PRINTING')");
         $q->execute([$status,$error,$id,$agentId]);
         if(!$q->rowCount())spApiRespond(['ok'=>false,'error'=>'This job is not being printed by this PC.'],409);
         spApiRespond(['ok'=>true],200);
@@ -77,8 +91,9 @@ try{
         // The PC removes itself (Unpair on that PC). Its queued jobs are cancelled.
         $pdo->beginTransaction();
         $pdo->prepare("UPDATE sp_print_agents SET status='REVOKED',token_hash=NULL WHERE id=?")->execute([$agentId]);
-        $pdo->prepare("UPDATE sp_print_jobs SET status='CANCELLED',error_message='The print PC was unpaired.',content_html=NULL,completed_at=NOW() WHERE agent_id=? AND status IN ('QUEUED','PRINTING')")->execute([$agentId]);
+        $pdo->prepare("UPDATE sp_print_jobs SET status='CANCELLED',error_message='The print PC was unpaired.',content_html=NULL,completed_at=NOW() WHERE agent_id=? AND status IN (".SP_PRINT_ACTIVE.")")->execute([$agentId]);
         $pdo->commit();
+        spAudit($pdo,'PRINT_AGENT_UNPAIRED','sp_print_agents',$agentId,['agent_name'=>(string)$agent['agent_name']],null);
         spApiRespond(['ok'=>true],200);
     }
     spApiRespond(['ok'=>false,'error'=>'Unknown print agent request.'],400);

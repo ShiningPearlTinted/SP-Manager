@@ -201,7 +201,12 @@ function spPermissionForRequest(string $file, string $action, string $stateKey, 
     if ($file === 'customers.php') return in_array($action, ['save','save-batch','delete','register-link'], true) ? 'manageCustomers' : '';
     if ($file === 'label-printing.php') return 'manageProducts';
     // Remote Printing: registering/removing print PCs and the history are settings; sending a job only needs a signed-in user.
-    if ($file === 'print-jobs.php') return in_array($action, ['create-job','job','agents','cancel-job'], true) ? '' : 'manageSettings';
+    if ($file === 'print-jobs.php') {
+        if (in_array($action, ['create-job','job','agents','cancel-job','print-settings'], true)) return '';
+        if (in_array($action, ['retry-job','reprint-job'], true)) return 'manageRemotePrint';
+        if (in_array($action, ['devices','events'], true)) return 'viewHardwareDevices';
+        return 'manageSettings';
+    }
     if ($file === 'finance.php') return 'manageReports';
     if ($file === 'products.php' && $action==='stock-adjust') return 'manageInventory';
     if ($file === 'products.php' && $action==='stock-by-outlet') return 'accessPriceCheck';

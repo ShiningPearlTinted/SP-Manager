@@ -2701,6 +2701,8 @@ CREATE TABLE IF NOT EXISTS `sp_print_agents` (
   `token_hash` char(64) DEFAULT NULL,
   `agent_version` varchar(30) DEFAULT NULL,
   `printers_json` longtext DEFAULT NULL,
+  `device_json` longtext DEFAULT NULL,
+  `remote_name` varchar(120) DEFAULT NULL,
   `last_seen_at` datetime DEFAULT NULL,
   `created_by` bigint(20) UNSIGNED DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
@@ -2724,16 +2726,20 @@ CREATE TABLE IF NOT EXISTS `sp_print_jobs` (
   `paper_size` enum('A4','A5') NOT NULL,
   `copies` tinyint(3) UNSIGNED NOT NULL DEFAULT 1,
   `content_html` mediumtext DEFAULT NULL,
-  `status` enum('QUEUED','PRINTING','PRINTED','FAILED','CANCELLED','EXPIRED') NOT NULL DEFAULT 'QUEUED',
+  `status` enum('QUEUED','PRINTING','PRINTED','FAILED','CANCELLED','EXPIRED','RECEIVED') NOT NULL DEFAULT 'QUEUED',
   `error_message` varchar(500) DEFAULT NULL,
   `requested_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `retry_of_job_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `request_key` char(64) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `claimed_at` datetime DEFAULT NULL,
   `completed_at` datetime DEFAULT NULL,
   `expires_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_print_job_agent_queue` (`agent_id`,`status`,`id`),
-  KEY `idx_print_job_outlet_history` (`outlet_id`,`created_at`)
+  KEY `idx_print_job_outlet_history` (`outlet_id`,`created_at`),
+  UNIQUE KEY `uq_print_job_request` (`request_key`),
+  KEY `idx_print_job_document` (`outlet_id`,`document_type`,`document_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 COMMIT;

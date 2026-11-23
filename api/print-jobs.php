@@ -16,6 +16,8 @@ try{
     $body=$method==='POST'?spReadRequestBody():[];
     $action=strtolower(trim((string)($_GET['action']??$body['action']??'')));
     spPrintHousekeeping($pdo,$outlet);
+    $v2=spPrintV2($pdo);
+    $needV2=function() use($v2){if(!$v2)spApiRespond(['ok'=>false,'error'=>'Run database/migrations/remote-printing-v2.sql first.','code'=>'PRINT_V2_REQUIRED'],409);};
 
     if($method==='GET'&&$action==='agents'){
         $q=$pdo->prepare("SELECT id,agent_name,machine_name,status,agent_version,printers_json,UNIX_TIMESTAMP(last_seen_at) last_seen,UNIX_TIMESTAMP(created_at) created,UNIX_TIMESTAMP(pairing_expires_at) pairing_expires FROM sp_print_agents WHERE outlet_id=? AND status<>'REVOKED' ORDER BY agent_name,id");
@@ -24,10 +26,30 @@ try{
     }
     if($method==='GET'&&$action==='history'){
         $limit=max(1,min(200,(int)($_GET['limit']??50)));
-        $q=$pdo->prepare("SELECT j.id,j.agent_id,a.agent_name,j.printer_name,j.document_type,j.document_id,j.document_no,j.paper_size,j.copies,j.status,j.error_message,u.name requested_by_name,UNIX_TIMESTAMP(j.created_at) created,UNIX_TIMESTAMP(j.completed_at) completed FROM sp_print_jobs j LEFT JOIN sp_print_agents a ON a.id=j.agent_id LEFT JOIN users u ON u.id=j.requested_by WHERE j.outlet_id=? ORDER BY j.id DESC LIMIT ".$limit);
+        $extra=$v2?',j.retry_of_job_id,(j.content_html IS NOT NULL) has_content,UNIX_TIMESTAMP(j.expires_at) expires':'';
+        $q=$pdo->prepare("SELECT j.id,j.agent_id,a.agent_name,j.printer_name,j.document_type,j.document_id,j.document_no,j.paper_size,j.copies,j.status,j.error_message,u.name requested_by_name,UNIX_TIMESTAMP(j.created_at) created,UNIX_TIMESTAMP(j.completed_at) completed$extra FROM sp_print_jobs j LEFT JOIN sp_print_agents a ON a.id=j.agent_id LEFT JOIN users u ON u.id=j.requested_by WHERE j.outlet_id=? ORDER BY j.id DESC LIMIT ".$limit);
         $q->execute([$outlet]);
         spApiRespond(['ok'=>true,'jobs'=>array_map('spPrintJobOut',$q->fetchAll())],200);
     }
+    // Device Status: every print PC of the outlet (removed ones too) with what the agent last reported.
+    if($method==='GET'&&$action==='devices'){
+        $q=$pdo->prepare("SELECT id,agent_name,machine_name,status,agent_version,printers_json,".($v2?'device_json,':'')."UNIX_TIMESTAMP(last_seen_at) last_seen,UNIX_TIMESTAMP(created_at) created,NULL pairing_expires FROM sp_print_agents WHERE outlet_id=? AND status<>'PENDING' ORDER BY status='REVOKED',agent_name,id");
+        $q->execute([$outlet]);
+        spApiRespond(['ok'=>true,'agents'=>array_map('spPrintAgentOut',$q->fetchAll()),'now'=>time(),'v2'=>$v2],200);
+    }
+    // History: registration, removal, connection / print errors, retry and reprint of this outlet.
+    if($method==='GET'&&$action==='events'){
+        $from=preg_match('/^\d{4}-\d{2}-\d{2}$/',(string)($_GET['from']??''))?(string)$_GET['from']:date('Y-m-d',strtotime('-30 days'));
+        $to=preg_match('/^\d{4}-\d{2}-\d{2}$/',(string)($_GET['to']??''))?(string)$_GET['to']:date('Y-m-d');
+        $q=$pdo->prepare("SELECT l.id,l.action_name,l.entity_id,l.old_data,l.new_data,UNIX_TIMESTAMP(l.created_at) created,u.name user_name FROM audit_logs l LEFT JOIN users u ON u.id=l.user_id WHERE l.outlet_id=? AND l.action_name LIKE 'PRINT\\_%' AND l.created_at>=? AND l.created_at<DATE_ADD(?,INTERVAL 1 DAY) ORDER BY l.id DESC LIMIT 300");
+        $q->execute([$outlet,$from,$to]);$names=[];
+        $n=$pdo->prepare('SELECT id,agent_name FROM sp_print_agents WHERE outlet_id=?');$n->execute([$outlet]);foreach($n->fetchAll() as $a)$names[(int)$a['id']]=(string)$a['agent_name'];
+        $events=[];foreach($q->fetchAll() as $r){$old=json_decode((string)$r['old_data'],true)?:[];$new=json_decode((string)$r['new_data'],true)?:[];$id=(int)$r['entity_id'];
+            $events[]=['id'=>(int)$r['id'],'action'=>(string)$r['action_name'],'created'=>(int)$r['created'],'user'=>(string)($r['user_name']??''),'entityId'=>$id?:null,
+                'pc'=>(string)($new['agent_name']??$old['agent_name']??(str_starts_with((string)$r['action_name'],'PRINT_AGENT')?($names[$id]??''):'')),'detail'=>$new+array_diff_key($old,$new)];}
+        spApiRespond(['ok'=>true,'events'=>$events,'from'=>$from,'to'=>$to],200);
+    }
+    if($method==='GET'&&$action==='print-settings')spApiRespond(['ok'=>true,'v2'=>$v2,'hold_minutes'=>spPrintHoldMinutes($pdo,$outlet),'choices'=>$v2?SP_PRINT_HOLD_CHOICES:[SP_PRINT_JOB_MINUTES],'keep_days'=>SP_PRINT_KEEP_DAYS],200);
     if($method==='GET'&&$action==='job'){
         $q=$pdo->prepare('SELECT j.id,j.agent_id,a.agent_name,j.printer_name,j.document_type,j.document_id,j.document_no,j.paper_size,j.copies,j.status,j.error_message,NULL requested_by_name,UNIX_TIMESTAMP(j.created_at) created,UNIX_TIMESTAMP(j.completed_at) completed FROM sp_print_jobs j LEFT JOIN sp_print_agents a ON a.id=j.agent_id WHERE j.id=? AND j.outlet_id=? LIMIT 1');
         $q->execute([(int)($_GET['id']??0),$outlet]);$row=$q->fetch();
@@ -36,6 +58,14 @@ try{
     }
     if($method!=='POST')spApiRespond(['ok'=>false,'error'=>'Method not allowed.'],405);
 
+    if($action==='save-print-settings'){
+        $needV2();$minutes=(int)($body['hold_minutes']??0);
+        if(!in_array($minutes,SP_PRINT_HOLD_CHOICES,true))spApiRespond(['ok'=>false,'error'=>'Choose one of the listed waiting times.'],400);
+        $old=spPrintHoldMinutes($pdo,$outlet);
+        $pdo->prepare("INSERT INTO outlet_settings(outlet_id,setting_group,setting_key,setting_value) VALUES(?,'remote_print','hold_minutes',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)")->execute([$outlet,(string)$minutes]);
+        spAudit($pdo,'PRINT_SETTINGS','outlet_settings',null,['hold_minutes'=>$old],['hold_minutes'=>$minutes]);
+        spApiRespond(['ok'=>true,'hold_minutes'=>$minutes],200);
+    }
     if($action==='create-pairing'){
         $name=spPrintCleanName($body['agent_name']??'');
         if($name==='')spApiRespond(['ok'=>false,'error'=>'Enter a name for this PC, for example "Counter PC".'],400);
@@ -62,7 +92,7 @@ try{
         }
         $pdo->beginTransaction();
         $pdo->prepare("UPDATE sp_print_agents SET status='REVOKED',token_hash=NULL,pairing_code_hash=NULL WHERE id=? AND outlet_id=?")->execute([$id,$outlet]);
-        $pdo->prepare("UPDATE sp_print_jobs SET status='CANCELLED',error_message='The print PC was removed.',content_html=NULL,completed_at=NOW() WHERE agent_id=? AND outlet_id=? AND status IN ('QUEUED','PRINTING')")->execute([$id,$outlet]);
+        $pdo->prepare("UPDATE sp_print_jobs SET status='CANCELLED',error_message='The print PC was removed.',content_html=NULL,completed_at=NOW() WHERE agent_id=? AND outlet_id=? AND status IN (".SP_PRINT_ACTIVE.")")->execute([$id,$outlet]);
         $pdo->commit();
         spAudit($pdo,'PRINT_AGENT_REVOKE','sp_print_agents',$id,['agent_name'=>$agent['agent_name']],null);
         spApiRespond(['ok'=>true],200);
@@ -85,27 +115,56 @@ try{
         if(!$match)spApiRespond(['ok'=>false,'error'=>'Printer "'.$printer.'" was not found on '.$agent['agent_name'].'. Refresh the printer list on that PC.','code'=>'PRINTER_NOT_FOUND'],409);
         if($match['paperSizes']&&!in_array($paper,$match['paperSizes'],true))spApiRespond(['ok'=>false,'error'=>'Printer "'.$match['name'].'" does not support '.$paper.'. Supported: '.implode(', ',$match['paperSizes']).'. Choose another paper size.','code'=>'PAPER_NOT_SUPPORTED','supported'=>$match['paperSizes']],409);
         $pdo->prepare('INSERT INTO sp_print_jobs(outlet_id,agent_id,printer_name,document_type,document_id,document_no,paper_size,copies,content_html,status,requested_by,expires_at) VALUES(?,?,?,?,?,?,?,?,?,\'QUEUED\',?,DATE_ADD(NOW(),INTERVAL ? MINUTE))')
-            ->execute([$outlet,$agentId,$match['name'],$type,substr(trim((string)($body['document_id']??'')),0,64)?:null,substr(trim((string)($body['document_no']??'')),0,80)?:null,$paper,$copies,$html,$user?:null,SP_PRINT_JOB_MINUTES]);
+            ->execute([$outlet,$agentId,$match['name'],$type,substr(trim((string)($body['document_id']??'')),0,64)?:null,substr(trim((string)($body['document_no']??'')),0,80)?:null,$paper,$copies,$html,$user?:null,$hold=spPrintHoldMinutes($pdo,$outlet)]);
         $id=(int)$pdo->lastInsertId();
         $online=(int)($agent['last_seen']??0)>=time()-SP_PRINT_ONLINE_SECONDS;
-        spApiRespond(['ok'=>true,'job_id'=>$id,'agent_online'=>$online,'message'=>$online?'Sent to '.$agent['agent_name'].'.':'Queued. '.$agent['agent_name'].' is offline; it prints when it reconnects within '.SP_PRINT_JOB_MINUTES.' minutes.'],200);
+        spApiRespond(['ok'=>true,'job_id'=>$id,'agent_online'=>$online,'message'=>$online?'Sent to '.$agent['agent_name'].'.':'Queued. '.$agent['agent_name'].' is offline; it prints when it reconnects within '.spPrintHoldText($hold).'.'],200);
+    }
+    // Retry (failed, expired or cancelled job) and Reprint (printed job): a new job with the same document on the same printer.
+    if($action==='retry-job'||$action==='reprint-job'){
+        $needV2();
+        $raw=(string)($body['request_key']??'');if(!preg_match('/^[A-Za-z0-9_-]{8,64}$/',$raw))spApiRespond(['ok'=>false,'error'=>'A request key is required.'],400);
+        $key=hash('sha256','print-repeat|'.$outlet.'|'.$raw);
+        $q=$pdo->prepare('SELECT id FROM sp_print_jobs WHERE request_key=? AND outlet_id=? LIMIT 1');$q->execute([$key,$outlet]);
+        if($done=(int)($q->fetchColumn()?:0))spApiRespond(['ok'=>true,'job_id'=>$done,'repeated'=>true,'message'=>'Already sent.'],200);
+        $pdo->beginTransaction();
+        $q=$pdo->prepare('SELECT * FROM sp_print_jobs WHERE id=? AND outlet_id=? LIMIT 1 FOR UPDATE');$q->execute([(int)($body['job_id']??0),$outlet]);$job=$q->fetch();
+        if(!$job){$pdo->rollBack();spApiRespond(['ok'=>false,'error'=>'Print job not found.'],404);}
+        $allowed=$action==='retry-job'?['FAILED','EXPIRED','CANCELLED']:['PRINTED'];
+        if(!in_array($job['status'],$allowed,true)){$pdo->rollBack();spApiRespond(['ok'=>false,'error'=>$action==='retry-job'?'Only a failed, expired or cancelled job can be retried.':'Only a printed job can be reprinted.'],409);}
+        if($job['content_html']===null||$job['content_html']===''){$pdo->rollBack();spApiRespond(['ok'=>false,'error'=>'This document is no longer kept (jobs older than '.SP_PRINT_KEEP_DAYS.' days, or the print PC was removed). Print it again from the document.','code'=>'CONTENT_GONE'],410);}
+        $q=$pdo->prepare("SELECT id,agent_name,printers_json,UNIX_TIMESTAMP(last_seen_at) last_seen FROM sp_print_agents WHERE id=? AND outlet_id=? AND status='ACTIVE' LIMIT 1");$q->execute([(int)$job['agent_id'],$outlet]);$agent=$q->fetch();
+        if(!$agent){$pdo->rollBack();spApiRespond(['ok'=>false,'error'=>'The print PC of this job was removed. Print it again from the document.'],409);}
+        $found=false;foreach(spPrintDecodePrinters($agent['printers_json']) as $p)if(strcasecmp($p['name'],(string)$job['printer_name'])===0&&(!$p['paperSizes']||in_array($job['paper_size'],$p['paperSizes'],true)))$found=true;
+        if(!$found){$pdo->rollBack();spApiRespond(['ok'=>false,'error'=>'Printer "'.$job['printer_name'].'" with '.$job['paper_size'].' is no longer available on '.$agent['agent_name'].'.'],409);}
+        // The same document is not sent twice while one copy is still waiting or printing.
+        $dup=$pdo->prepare('SELECT id FROM sp_print_jobs WHERE outlet_id=? AND status IN ('.SP_PRINT_ACTIVE.') AND (retry_of_job_id=? OR id=? OR (document_id IS NOT NULL AND document_id=? AND document_type=? AND printer_name=?)) LIMIT 1');
+        $dup->execute([$outlet,(int)$job['id'],(int)$job['id'],(string)($job['document_id']??''),(string)$job['document_type'],(string)$job['printer_name']]);
+        if($dup->fetchColumn()){$pdo->rollBack();spApiRespond(['ok'=>false,'error'=>'This document is already waiting to print or printing.','code'=>'ALREADY_QUEUED'],409);}
+        $hold=spPrintHoldMinutes($pdo,$outlet);
+        $pdo->prepare("INSERT INTO sp_print_jobs(outlet_id,agent_id,printer_name,document_type,document_id,document_no,paper_size,copies,content_html,status,requested_by,retry_of_job_id,request_key,expires_at) VALUES(?,?,?,?,?,?,?,?,?,'QUEUED',?,?,?,DATE_ADD(NOW(),INTERVAL ? MINUTE))")
+            ->execute([$outlet,(int)$job['agent_id'],$job['printer_name'],$job['document_type'],$job['document_id'],$job['document_no'],$job['paper_size'],(int)$job['copies'],$job['content_html'],$user?:null,(int)$job['id'],$key,$hold]);
+        $id=(int)$pdo->lastInsertId();$pdo->commit();
+        spAudit($pdo,$action==='retry-job'?'PRINT_JOB_RETRY':'PRINT_JOB_REPRINT','sp_print_jobs',$id,null,['retry_of'=>(int)$job['id'],'document_no'=>(string)($job['document_no']??''),'agent_name'=>(string)$agent['agent_name'],'printer'=>(string)$job['printer_name']]);
+        $online=(int)($agent['last_seen']??0)>=time()-SP_PRINT_ONLINE_SECONDS;
+        spApiRespond(['ok'=>true,'job_id'=>$id,'agent_online'=>$online,'message'=>$online?'Sent to '.$agent['agent_name'].'.':'Queued. '.$agent['agent_name'].' is offline; it prints when it reconnects within '.spPrintHoldText($hold).'.'],200);
     }
     if($action==='cancel-job'){
         $id=(int)($body['job_id']??0);
-        $q=$pdo->prepare("UPDATE sp_print_jobs SET status='CANCELLED',error_message='Cancelled by user.',content_html=NULL,completed_at=NOW() WHERE id=? AND outlet_id=? AND status='QUEUED'");$q->execute([$id,$outlet]);
+        $q=$pdo->prepare("UPDATE sp_print_jobs SET status='CANCELLED',error_message='Cancelled by user.',".($v2?'':'content_html=NULL,')."completed_at=NOW() WHERE id=? AND outlet_id=? AND status='QUEUED'");$q->execute([$id,$outlet]);
         if(!$q->rowCount())spApiRespond(['ok'=>false,'error'=>'Only a queued job can be cancelled.'],409);
         spApiRespond(['ok'=>true],200);
     }
     // Print history clean-up (Settings permission). Jobs still queued or printing are never removed.
     if($action==='delete-job'){
         $id=(int)($body['job_id']??0);
-        $q=$pdo->prepare("DELETE FROM sp_print_jobs WHERE id=? AND outlet_id=? AND status NOT IN ('QUEUED','PRINTING')");$q->execute([$id,$outlet]);
+        $q=$pdo->prepare("DELETE FROM sp_print_jobs WHERE id=? AND outlet_id=? AND status NOT IN (".SP_PRINT_ACTIVE.")");$q->execute([$id,$outlet]);
         if(!$q->rowCount())spApiRespond(['ok'=>false,'error'=>'This job is still queued or printing, or it was already removed.'],409);
         spAudit($pdo,'PRINT_JOB_DELETE','sp_print_jobs',$id,null,null);
         spApiRespond(['ok'=>true,'deleted'=>1],200);
     }
     if($action==='clear-history'){
-        $q=$pdo->prepare("DELETE FROM sp_print_jobs WHERE outlet_id=? AND status NOT IN ('QUEUED','PRINTING')");$q->execute([$outlet]);
+        $q=$pdo->prepare("DELETE FROM sp_print_jobs WHERE outlet_id=? AND status NOT IN (".SP_PRINT_ACTIVE.")");$q->execute([$outlet]);
         $n=$q->rowCount();
         spAudit($pdo,'PRINT_HISTORY_CLEAR','sp_print_jobs',null,null,['deleted'=>$n]);
         spApiRespond(['ok'=>true,'deleted'=>$n],200);
