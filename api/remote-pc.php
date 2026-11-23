@@ -9,6 +9,18 @@ require_once __DIR__.'/print-lib.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 const SP_REMOTE_PC_URL='https://remotedesktop.google.com/access';
+// Google account used for Chrome Remote Desktop: saved in Remote PC, otherwise the company e-mail (My company).
+function spRemotePcAccount(PDO $pdo): array {
+    if(spTableExists($pdo,'app_settings')){$q=$pdo->prepare("SELECT setting_value FROM app_settings WHERE setting_group='remote_pc' AND setting_key='google_account' LIMIT 1");$q->execute();$v=trim((string)($q->fetchColumn()?:''));if($v!=='')return ['email'=>$v,'saved'=>true];}
+    if(spTableExists($pdo,'company_settings')){$q=$pdo->query("SELECT email FROM company_settings WHERE email IS NOT NULL AND email<>'' ORDER BY outlet_id IS NOT NULL,id LIMIT 1");$v=trim((string)($q->fetchColumn()?:''));if(filter_var($v,FILTER_VALIDATE_EMAIL))return ['email'=>$v,'saved'=>false];}
+    return ['email'=>'','saved'=>false];
+}
+// Opens Chrome Remote Desktop with that Google account selected, or asks to sign in with the address filled in.
+function spRemotePcUrl(string $email): string {
+    if($email==='')return SP_REMOTE_PC_URL;
+    $target=SP_REMOTE_PC_URL.'?authuser='.rawurlencode($email);
+    return 'https://accounts.google.com/AccountChooser?'.http_build_query(['Email'=>$email,'continue'=>$target]);
+}
 try{
     $method=strtoupper((string)($_SERVER['REQUEST_METHOD']??'GET'));
     $pdo=spApiDatabase();
@@ -34,9 +46,20 @@ try{
         $q=$pdo->prepare("SELECT a.id,a.outlet_id,o.outlet_code,o.outlet_name,a.agent_name,a.machine_name,a.remote_name,a.agent_version,UNIX_TIMESTAMP(a.last_seen_at) last_seen FROM sp_print_agents a LEFT JOIN outlets o ON o.id=a.outlet_id WHERE a.status='ACTIVE' AND a.outlet_id IN ($in) ORDER BY o.outlet_code,a.agent_name,a.id");
         $q->execute($outlets);$pcs=[];
         foreach($q->fetchAll() as $r){$seen=(int)($r['last_seen']??0);$pcs[]=['id'=>(int)$r['id'],'outletId'=>(int)$r['outlet_id'],'outletCode'=>(string)($r['outlet_code']??''),'outletName'=>(string)($r['outlet_name']??''),'name'=>(string)$r['agent_name'],'machineName'=>(string)($r['machine_name']??''),'remoteName'=>(string)($r['remote_name']??''),'version'=>(string)($r['agent_version']??''),'lastSeen'=>$seen?:null,'online'=>$seen>=time()-SP_PRINT_ONLINE_SECONDS];}
-        spApiRespond(['ok'=>true,'pcs'=>$pcs,'url'=>SP_REMOTE_PC_URL],200);
+        $acc=spRemotePcAccount($pdo);
+        spApiRespond(['ok'=>true,'pcs'=>$pcs,'url'=>spRemotePcUrl($acc['email']),'account'=>$acc['email'],'account_saved'=>$acc['saved']],200);
     }
     if($method!=='POST')spApiRespond(['ok'=>false,'error'=>'Method not allowed.'],405);
+    if($action==='save-account'){
+        $email=strtolower(trim((string)($body['email']??'')));
+        if($email!==''&&!filter_var($email,FILTER_VALIDATE_EMAIL))spApiRespond(['ok'=>false,'error'=>'Enter a valid Google e-mail address.'],400);
+        if(!spTableExists($pdo,'app_settings'))spApiRespond(['ok'=>false,'error'=>'The app_settings table is missing.'],409);
+        $old=spRemotePcAccount($pdo)['email'];
+        $pdo->prepare("INSERT INTO app_settings(setting_group,setting_key,setting_value) VALUES('remote_pc','google_account',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)")->execute([$email]);
+        spAudit($pdo,'REMOTE_PC_ACCOUNT','app_settings',null,['email'=>$old],['email'=>$email]);
+        $acc=spRemotePcAccount($pdo);
+        spApiRespond(['ok'=>true,'account'=>$acc['email'],'account_saved'=>$acc['saved'],'url'=>spRemotePcUrl($acc['email'])],200);
+    }
     if($action==='set-name'){
         $a=$find((int)($body['agent_id']??0));
         $name=spPrintCleanName($body['remote_name']??'');
@@ -47,7 +70,7 @@ try{
     if($action==='open'){
         $a=$find((int)($body['agent_id']??0));
         $audit('REMOTE_PC_OPEN',$a,['remote_name'=>(string)($a['remote_name']??''),'machine_name'=>(string)($a['machine_name']??''),'outlet'=>(string)($a['outlet_code']??'')]);
-        spApiRespond(['ok'=>true,'url'=>SP_REMOTE_PC_URL],200);
+        spApiRespond(['ok'=>true,'url'=>spRemotePcUrl(spRemotePcAccount($pdo)['email'])],200);
     }
     spApiRespond(['ok'=>false,'error'=>'Unknown remote PC request.'],400);
 }catch(Throwable $e){
