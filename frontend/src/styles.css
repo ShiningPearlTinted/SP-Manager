@@ -7347,3 +7347,4 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
  /* Documents filters: search buttons on one line. */
  .dr-filter-actions{display:flex!important;justify-content:space-around!important}
 }
+.hw-rpc-self{font-style:normal;margin-left:8px;padding:1px 8px;border-radius:999px;background:#e8f1ff;color:#1d4ed8;font-size:11px;font-weight:600;vertical-align:middle}
