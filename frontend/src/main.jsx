@@ -599,6 +599,13 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[offlinePendingCount,setOfflinePendingCount]=useState(0);
  useEffect(()=>{const expired=()=>{setSignedIn(false);setDbOnline(false)};window.addEventListener("sp-api-session-expired",expired);return()=>window.removeEventListener("sp-api-session-expired",expired)},[]);
  const[page,setPage]=useState(()=>bookingEmailTarget()?"Booking":"POS / Sales");
+ // Phones: a page always opens at the top.
+ useEffect(()=>{try{window.scrollTo(0,0)}catch{}},[page]);
+ // Phones: wide list tables become labelled cards (CSS table.m-cards). Tables with inputs, POS, Dashboard, Finance and Price Tags are left as they are.
+ useEffect(()=>{const mq=window.matchMedia("(max-width:760px)");let raf=0;const skip=".ar-pos-shell,.price-tags-overlay,.spmanager-dashboard,.finance-page,.pcs-table";
+  const label=()=>{raf=0;document.querySelectorAll("main table").forEach(t=>{const ok=mq.matches&&!!t.tHead&&!t.closest(skip)&&!t.querySelector("tbody input:not([type=checkbox]),tbody select,tbody textarea");if(t.classList.contains("m-cards")!==ok)t.classList.toggle("m-cards",ok);if(!ok)return;const hr=t.tHead.rows[t.tHead.rows.length-1];if(!hr)return;const heads=[...hr.cells].map(c=>c.textContent.trim());for(const body of t.tBodies)for(const tr of body.rows){let col=0;for(const td of tr.cells){const l=td.colSpan>1?"":(heads[col]||"");if(td.getAttribute("data-label")!==l)td.setAttribute("data-label",l);col+=td.colSpan||1}}})};
+  const queue=()=>{if(!raf)raf=requestAnimationFrame(label)};const mo=new MutationObserver(queue);mo.observe(document.body,{childList:true,subtree:true});mq.addEventListener?.("change",queue);queue();
+  return()=>{mo.disconnect();if(raf)cancelAnimationFrame(raf);mq.removeEventListener?.("change",queue)}},[]);
  // A booking link opens Booking once. Booking has read it by now, so a later reload starts at POS as usual.
  useEffect(()=>{if(signedIn&&bookingEmailTarget())window.history.replaceState(null,"",window.location.pathname+window.location.search)},[signedIn]);
  const[customerDraft,setCustomerDraft]=useState(null);
