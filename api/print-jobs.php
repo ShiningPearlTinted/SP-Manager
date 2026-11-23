@@ -41,12 +41,12 @@ try{
     if($method==='GET'&&$action==='events'){
         $from=preg_match('/^\d{4}-\d{2}-\d{2}$/',(string)($_GET['from']??''))?(string)$_GET['from']:date('Y-m-d',strtotime('-30 days'));
         $to=preg_match('/^\d{4}-\d{2}-\d{2}$/',(string)($_GET['to']??''))?(string)$_GET['to']:date('Y-m-d');
-        $q=$pdo->prepare("SELECT l.id,l.action_name,l.entity_id,l.old_data,l.new_data,UNIX_TIMESTAMP(l.created_at) created,u.name user_name FROM audit_logs l LEFT JOIN users u ON u.id=l.user_id WHERE l.outlet_id=? AND l.action_name LIKE 'PRINT\\_%' AND l.created_at>=? AND l.created_at<DATE_ADD(?,INTERVAL 1 DAY) ORDER BY l.id DESC LIMIT 300");
+        $q=$pdo->prepare("SELECT l.id,l.action_name,l.entity_id,l.old_data,l.new_data,UNIX_TIMESTAMP(l.created_at) created,u.name user_name FROM audit_logs l LEFT JOIN users u ON u.id=l.user_id WHERE l.outlet_id=? AND (l.action_name LIKE 'PRINT\\_%' OR l.action_name LIKE 'REMOTE\\_PC\\_%') AND l.created_at>=? AND l.created_at<DATE_ADD(?,INTERVAL 1 DAY) ORDER BY l.id DESC LIMIT 300");
         $q->execute([$outlet,$from,$to]);$names=[];
         $n=$pdo->prepare('SELECT id,agent_name FROM sp_print_agents WHERE outlet_id=?');$n->execute([$outlet]);foreach($n->fetchAll() as $a)$names[(int)$a['id']]=(string)$a['agent_name'];
         $events=[];foreach($q->fetchAll() as $r){$old=json_decode((string)$r['old_data'],true)?:[];$new=json_decode((string)$r['new_data'],true)?:[];$id=(int)$r['entity_id'];
             $events[]=['id'=>(int)$r['id'],'action'=>(string)$r['action_name'],'created'=>(int)$r['created'],'user'=>(string)($r['user_name']??''),'entityId'=>$id?:null,
-                'pc'=>(string)($new['agent_name']??$old['agent_name']??(str_starts_with((string)$r['action_name'],'PRINT_AGENT')?($names[$id]??''):'')),'detail'=>$new+array_diff_key($old,$new)];}
+                'pc'=>(string)($new['agent_name']??$old['agent_name']??(preg_match('/^(PRINT_AGENT|REMOTE_PC)/',(string)$r['action_name'])?($names[$id]??''):'')),'detail'=>$new+array_diff_key($old,$new)];}
         spApiRespond(['ok'=>true,'events'=>$events,'from'=>$from,'to'=>$to],200);
     }
     if($method==='GET'&&$action==='print-settings')spApiRespond(['ok'=>true,'v2'=>$v2,'hold_minutes'=>spPrintHoldMinutes($pdo,$outlet),'choices'=>$v2?SP_PRINT_HOLD_CHOICES:[SP_PRINT_JOB_MINUTES],'keep_days'=>SP_PRINT_KEEP_DAYS],200);

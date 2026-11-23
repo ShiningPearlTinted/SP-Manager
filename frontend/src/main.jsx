@@ -64,8 +64,8 @@ const PERMISSION_LABELS={accessPosSales:"POS / Sales",accessPriceCheck:"Price Ch
 PERMISSION_KEYS.push("manageHrEmployees","transferHrEmployees","viewHrSalary","manageHrSalary","manageHrSettings","viewHrSensitive");
 Object.assign(PERMISSION_LABELS,{"viewHrEmployees":"HR Management","manageHrEmployees":"HR Employee Management","transferHrEmployees":"HR Outlet Transfers","viewHrSalary":"HR Salary Access","manageHrSalary":"HR Salary Revisions","manageHrSettings":"HR Settings","viewHrSensitive":"HR IC / Passport Access"});
 PERMISSION_KEYS.push("manageBookings","manageBookingSettings");
-PERMISSION_KEYS.push("viewHardwareDevices","manageRemotePrint");
-Object.assign(PERMISSION_LABELS,{viewHardwareDevices:"Hardware: Device Status & History",manageRemotePrint:"Remote Print: Retry & Reprint"});
+PERMISSION_KEYS.push("viewHardwareDevices","manageRemotePrint","accessRemotePc");
+Object.assign(PERMISSION_LABELS,{viewHardwareDevices:"Hardware: Device Status & History",manageRemotePrint:"Remote Print: Retry & Reprint",accessRemotePc:"Remote PC (Chrome Remote Desktop)"});
 Object.assign(PERMISSION_LABELS,{viewBookings:"Booking",manageBookings:"Manage Booking",manageBookingSettings:"Booking Services & Schedule"});
 const ALL_PERMISSIONS=Object.fromEntries(PERMISSION_KEYS.map(k=>[k,true]));
 const CASHIER_PERMISSIONS={accessPosSales:true,accessPriceCheck:true,viewDashboard:true,accessPaymentTypes:true,accessRefundVoid:true,accessOutletManagement:false,accessXzReport:true,accessNamedOrder:false,accessCompanySettings:false,viewSalesHistory:false,viewOpenSales:false,cashInOut:true,creditPayments:false,endOfDay:true,userInfo:false,manageUsers:false,manageProducts:false,manageInventory:false,manageCustomers:true,managePurchases:false,manageQuotation:false,manageInvoice:false,manageDocuments:false,managePayments:true,manageSettings:false,manageReports:false,manageTax:false,manageDiscount:true,manageLoyalty:false,manageManagement:false};
@@ -2974,7 +2974,7 @@ const PRINT_JOB_ACTIVE=["QUEUED","RECEIVED","PRINTING"];
 const hwCan=key=>{try{return isPermissionAllowed(JSON.parse(localStorage.getItem("sp_activeUser")||"null"),key)}catch{return false}};
 const uptimeText=s=>{s=Number(s||0);const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${m}m`};
 const HOLD_LABEL=m=>m<60?`${m} minutes`:m===60?"1 hour":`${m/60} hours`;
-const PRINT_EVENT_LABEL={PRINT_AGENT_PAIRING:"Pairing code created",PRINT_AGENT_PAIRED:"PC registered",PRINT_AGENT_RENAME:"PC renamed",PRINT_AGENT_REVOKE:"PC removed",PRINT_AGENT_UNPAIRED:"PC unpaired itself",PRINT_AGENT_ERROR:"Connection / print error",PRINT_JOB_RETRY:"Job retried",PRINT_JOB_REPRINT:"Job reprinted",PRINT_JOB_DELETE:"Job deleted",PRINT_HISTORY_CLEAR:"History cleared",PRINT_SETTINGS:"Waiting time changed"};
+const PRINT_EVENT_LABEL={PRINT_AGENT_PAIRING:"Pairing code created",PRINT_AGENT_PAIRED:"PC registered",PRINT_AGENT_RENAME:"PC renamed",PRINT_AGENT_REVOKE:"PC removed",PRINT_AGENT_UNPAIRED:"PC unpaired itself",PRINT_AGENT_ERROR:"Connection / print error",PRINT_JOB_RETRY:"Job retried",PRINT_JOB_REPRINT:"Job reprinted",PRINT_JOB_DELETE:"Job deleted",PRINT_HISTORY_CLEAR:"History cleared",PRINT_SETTINGS:"Waiting time changed",REMOTE_PC_OPEN:"Remote session opened",REMOTE_PC_NAME:"Remote PC name set"};
 const epochText=v=>v?formatDisplayDateTime(new Date(Number(v)*1000)):"—";
 // Local Agent on this computer (same rules as Settings > Hardware: pairing token from this browser).
 const localAgentRequest=async(base,path,body)=>{const r=await fetch(String(base||"http://127.0.0.1:18765").replace(/\/$/,"")+path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(localStorage.getItem("sp_agent_pairing_token")||"")},body:body?JSON.stringify(body):undefined});let data=null;try{data=await r.json()}catch{};if(!r.ok)throw Error((data&&data.error)||("HTTP "+r.status));return data||{ok:true}};
@@ -3012,10 +3012,38 @@ function HardwarePrinterList({agentUrl,connected,names,receiptPrinter,labelPrint
   <span className="hw-printer-actions">{sizes.length?sizes.map(x=><button key={x} type="button" onClick={()=>test(p,x)} disabled={!!busy}>{busy===p.name+x?"Printing…":"Test "+x}</button>):<button type="button" onClick={()=>test(p,"")} disabled={!!busy}>{busy===p.name?"Printing…":"Test print"}</button>}</span>
  </li>})}</ul>;
 }
-// Settings > Hardware > Remote PC (Administrator only). Remote sessions use Chrome Remote Desktop; this tab lists the outlet's PCs.
-function HardwareRemotePc(){
- return <section className="hardware-remote"><div className="hardware-remote-head"><div><h2>Remote PC</h2></div></div>
-  <p className="settings-help">Remote access to outlet PCs with Chrome Remote Desktop is being added in a later update. No remote connection is possible from SP-Manager yet.</p></section>;
+// Settings > Hardware > Remote PC (accessRemotePc). Sessions run in Chrome Remote Desktop (Google); SP-Manager lists the
+// registered PCs of the user's outlets, keeps each PC's Chrome Remote Desktop name and records who opened a session.
+const remotePcRequest=async(action,payload)=>{const base=centralApiBase().replace(/app-state\.php$/i,"remote-pc.php");const write=!!payload;const r=handleApiUnauthorized(await fetch(base+"?"+new URLSearchParams({action,outlet_id:String(activeOutletId())}),{method:write?"POST":"GET",cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"}),...(write?{body:JSON.stringify({action,outlet_id:activeOutletId(),...payload})}:{})}));const data=await r.json().catch(()=>null);if(!r.ok||data?.ok!==true)throw new Error(data?.error||`Remote PC request failed (HTTP ${r.status})`);return data};
+function HardwareRemotePc({setNotice}){
+ const [pcs,setPcs]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[edit,setEdit]=useState(null),[busy,setBusy]=useState(0),[guide,setGuide]=useState(false);
+ const load=useCallback(async(quiet=false)=>{if(!quiet)setLoading(true);try{const r=await remotePcRequest("list");setPcs(r.pcs||[]);setError("")}catch(e){setError(e.message)}finally{setLoading(false)}},[]);
+ useEffect(()=>{load();const id=setInterval(()=>{if(document.visibilityState==="visible")load(true)},30000);return()=>clearInterval(id)},[load]);
+ const saveName=async pc=>{try{await remotePcRequest("set-name",{agent_id:pc.id,remote_name:edit.value});setEdit(null);load(true)}catch(e){setNotice?.(e.message)}};
+ // The tab is opened at the click so pop-up blockers allow it; the address is set once the open is recorded.
+ const open=async pc=>{if(busy)return;const w=window.open("about:blank","_blank");setBusy(pc.id);try{const r=await remotePcRequest("open",{agent_id:pc.id});if(w&&!w.closed){w.opener=null;w.location.href=r.url}else window.open(r.url,"_blank","noopener");setNotice?.(`Choose "${pc.remoteName||pc.name}" in Chrome Remote Desktop and enter its PIN.`)}catch(e){if(w&&!w.closed)w.close();setNotice?.(e.message)}finally{setBusy(0)}};
+ const outlets=[...new Set(pcs.map(p=>p.outletCode||"—"))];
+ return <section className="hardware-remote hw-rpc">
+  <div className="hardware-remote-head"><div><h2>Remote PC</h2><small className="settings-help">Help outlet PCs with Chrome Remote Desktop. The outlet PC shows a sharing notice with Stop Sharing for the whole session.</small></div><div className="hw-rpc-head-actions"><button type="button" onClick={()=>setGuide(g=>!g)} aria-expanded={guide}>{guide?"Hide setup guide":"Setup guide"}</button><button type="button" onClick={()=>load()} disabled={loading}>{loading?"Loading…":"↻ Refresh"}</button></div></div>
+  {guide&&<ol className="hw-rpc-guide">
+   <li>On the outlet PC, open Google Chrome and go to <b>remotedesktop.google.com/access</b>. Sign in with the company Google account.</li>
+   <li>Under <b>Set up remote access</b>, click Download and install Chrome Remote Desktop.</li>
+   <li>Name the PC (for example <i>SP01-COUNTER</i>) and choose a PIN of at least 6 digits. Only HQ keeps the PIN.</li>
+   <li>Type the same name in the <b>Chrome Remote Desktop name</b> column below.</li>
+   <li>Turn on <b>2-Step Verification</b> for the company Google account (myaccount.google.com → Security).</li>
+   <li>In Windows, set <b>Sleep</b> to Never so the PC can be reached while it is on.</li>
+  </ol>}
+  {error?<div className="hardware-remote-error" role="alert">{error}</div>:
+   !pcs.length?<p className="settings-help">{loading?"Loading…":"No registered PC yet. Register each outlet PC in Remote Print first."}</p>:
+   outlets.map(o=><div key={o} className="hw-rpc-outlet"><h3>{o}<small>{pcs.find(p=>(p.outletCode||"—")===o)?.outletName||""}</small></h3>
+    <ul className="hw-rpc-list">{pcs.filter(p=>(p.outletCode||"—")===o).map(pc=><li key={pc.id}>
+     <div className="hw-rpc-main"><b>{pc.name}</b><small>{pc.machineName||"Windows PC"} · last connected {epochText(pc.lastSeen)}</small></div>
+     <span className={"hardware-remote-state "+(pc.online?"ok":"off")}>● {pc.online?"Online":"Offline"}</span>
+     <div className="hw-rpc-name">{edit?.id===pc.id?<><input value={edit.value} maxLength={120} autoFocus aria-label={"Chrome Remote Desktop name for "+pc.name} onChange={e=>setEdit({...edit,value:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")saveName(pc);if(e.key==="Escape")setEdit(null)}}/><button type="button" onClick={()=>saveName(pc)}>Save</button></>:<button type="button" className="hw-rpc-rename" title="Chrome Remote Desktop name" onClick={()=>setEdit({id:pc.id,value:pc.remoteName||""})}>{pc.remoteName||<i>Set Chrome Remote Desktop name</i>}</button>}</div>
+     <button type="button" className="primary" onClick={()=>open(pc)} disabled={!!busy}>{busy===pc.id?"Opening…":"Open remote session"}</button>
+    </li>)}</ul></div>)}
+  <p className="settings-help hw-rpc-note">Online / Offline is the SP-Manager agent on that PC. SP-Manager records who opened a session and when (History → Device events); Google does not report when a session ends.</p>
+ </section>;
 }
 function RemotePrintingPanel({setNotice,draft,patch,agentUrl,localAgentConnected,view="remote"}){const [listQ,setListQ]=useState("");
  const [local,setLocal]=useState(null),[localBusy,setLocalBusy]=useState(""),[pcName,setPcName]=useState(""),[testPrinter,setTestPrinter]=useState(""),[testPaper,setTestPaper]=useState("A4");
@@ -3266,8 +3294,7 @@ function Settings({settings,setSettings,businessDay,toggleBusiness,taxRate,setTa
  const [tab,setTab]=useState("General");
  const [printTab,setPrintTab]=useState("Printer selection");
  const [hwTab,setHwTab]=useState("Printers");
- const isAdministrator=(()=>{try{return JSON.parse(localStorage.getItem("sp_activeUser")||"null")?.role==="Administrator"}catch{return false}})();
- const hwTabs=["Printers","Paper Size","Remote Print",...(isAdministrator?["Remote PC"]:[]),...(hwCan("viewHardwareDevices")?["Device Status"]:[]),"History"];
+const hwTabs=["Printers","Paper Size","Remote Print",...(hwCan("accessRemotePc")?["Remote PC"]:[]),...(hwCan("viewHardwareDevices")?["Device Status"]:[]),"History"];
  const [printOperation,setPrintOperation]=useState("receipt");
  const [draft,setDraft]=useState(settings);
  const [notice,setNotice]=useState("");
@@ -3478,7 +3505,7 @@ const saveTerminalPairing=async()=>{const ok=await showActionConfirm("Confirm Te
     <Field label="Default paper size"><select value={defaultDocumentPaper(draft)} onChange={e=>patch("print","printA5",e.target.value==="A5")}>{enabledDocumentPapers(draft).map(p=><option key={p} value={p}>{p}</option>)}</select></Field></div>
     </section>}
    {tab==="Hardware"&&["Remote Print","Device Status","History"].includes(hwTab)&&<RemotePrintingPanel key={hwTab} view={hwTab==="Remote Print"?"remote":hwTab==="Device Status"?"status":"history"} setNotice={setNotice} draft={draft} patch={patch} agentUrl={hw.agentUrl||"http://127.0.0.1:18765"} localAgentConnected={!!hardwareStatus?.connected}/>}
-   {tab==="Hardware"&&hwTab==="Remote PC"&&isAdministrator&&<HardwareRemotePc/>}
+   {tab==="Hardware"&&hwTab==="Remote PC"&&hwCan("accessRemotePc")&&<HardwareRemotePc setNotice={setNotice}/>}
    {tab==="Database"&&<><h2>Database</h2><div className="settings-database-actions"><button onClick={backup}>▣ Backup SQL database</button><button type="button" onClick={showRestoreGuidance}>↥ Restore instructions</button></div><h2>Automatic backups</h2><div className="settings-grid"><Field label="Enable automatic backups"><Toggle checked={db.autoBackup} onChange={v=>patch("database","autoBackup",v)}/></Field><Field label="Backup database on application start"><Toggle checked={db.backupOnStart} onChange={v=>patch("database","backupOnStart",v)}/></Field><Field label="Backup database on application close"><Toggle checked={db.backupOnClose} onChange={v=>patch("database","backupOnClose",v)}/></Field><Field label="Back up automatically every (hours)"><input type="number" min="1" value={db.backupEveryHours??24} onChange={e=>patch("database","backupEveryHours",Math.max(1,Number(e.target.value)))}/></Field><Field label="Delete old backups automatically"><Toggle checked={db.deleteOldBackups} onChange={v=>patch("database","deleteOldBackups",v)}/></Field><Field label="Delete backups older than (days)"><input type="number" min="1" value={db.deleteAfterDays??30} onChange={e=>patch("database","deleteAfterDays",Math.max(1,Number(e.target.value)))}/></Field></div><div className="settings-business"><b>Last backup:</b> {db.lastBackup?new Date(db.lastBackup).toLocaleString("en-MY"):"Never"}</div><h2>Maintenance</h2><button onClick={async()=>{try{await setSettings(draft);await centralDatabaseHealth(activeOutletId());setNotice("Database connection and required SQL tables verified successfully.")}catch(e){setNotice(String(e?.message||"Database verification could not be completed."))}}}>⚙ Verify / save database settings</button><p className="settings-help">This action saves the current settings to the SQL database and verifies the database connection.</p></>}
    {tab==="License"&&<><h2>License</h2><div className="settings-info-card"><b>SP-Manager</b><span>Business Management System</span><p>Local / Development mode.</p><div className="license-status">● Active local application</div></div></>}
    {tab==="About"&&<><h2>About SP-Manager</h2><div className="settings-info-card"><b>SP-Manager</b><span>Shining Pearl Tinted</span><p>Retail and service management system.</p><div className="settings-grid settings-about-version"><Field label="Version"><input value={draft.about?.version??""} onChange={e=>patch("about","version",e.target.value)} maxLength={30} placeholder="1.0.70"/></Field></div><p>Company: {company?.name||"Shining Pearl Tinted"}</p></div></>}
