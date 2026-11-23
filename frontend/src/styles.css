@@ -7295,3 +7295,20 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 .hw-rpc-note{margin-top:6px}
 @media (max-width:760px){.hw-rpc-list li{grid-template-columns:minmax(0,1fr) auto}.hw-rpc-name,.hw-rpc-list li>button.primary{grid-column:1/-1}}
 @media (min-width:761px){.hw-rpc-head-actions{flex-wrap:nowrap;flex-shrink:0}}
+
+/* One tab style for the management screens, matching Booking (soft accent on the current tab, no underline).
+   POS, Dashboard, Finance and Price Tags keep their own tabs. */
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.print-settings-tabs,.customer-tabs,.purchase-tabs,.product-editor-tabs,.print-printer-modal-tabs,.eod-tabs){
+ display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:4px!important;overflow-x:auto!important;
+ background:transparent!important;border:0!important;border-bottom:1px solid var(--mg-border)!important;border-radius:0!important;box-shadow:none!important;
+ padding-top:8px!important;padding-bottom:6px!important;scrollbar-width:none;position:static!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.print-settings-tabs,.customer-tabs,.purchase-tabs,.product-editor-tabs,.print-printer-modal-tabs,.eod-tabs)::-webkit-scrollbar{display:none}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.print-settings-tabs,.customer-tabs,.purchase-tabs,.product-editor-tabs,.print-printer-modal-tabs,.eod-tabs)>button{
+ flex:none!important;height:auto!important;min-height:40px!important;padding:9px 16px!important;margin:0!important;
+ border:0!important;border-radius:var(--mg-radius,8px)!important;background:transparent!important;box-shadow:none!important;
+ color:var(--mg-muted)!important;font-size:14px!important;font-weight:600!important;line-height:1.4!important;white-space:nowrap!important;cursor:pointer;
+ transition:background .15s ease,color .15s ease}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.print-settings-tabs,.customer-tabs,.purchase-tabs,.product-editor-tabs,.print-printer-modal-tabs,.eod-tabs)>button::after{content:none!important;display:none!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.print-settings-tabs,.customer-tabs,.purchase-tabs,.product-editor-tabs,.print-printer-modal-tabs,.eod-tabs)>button:hover{background:var(--mg-hover)!important;color:var(--mg-ink)!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.print-settings-tabs,.customer-tabs,.purchase-tabs,.product-editor-tabs,.print-printer-modal-tabs,.eod-tabs)>button:is(.active,.selected,[aria-selected="true"]){background:var(--mg-accent-soft)!important;color:var(--mg-accent-soft-ink)!important}
+.app[data-ui="management"]:not(:has(.price-tags-overlay)) :is(.company-tabs,.print-settings-tabs,.customer-tabs,.purchase-tabs,.product-editor-tabs,.print-printer-modal-tabs,.eod-tabs)>button:focus-visible{outline:2px solid var(--mg-accent)!important;outline-offset:-2px}
