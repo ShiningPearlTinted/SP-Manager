@@ -359,6 +359,8 @@ try {
     $q=$pdo->prepare('SELECT id FROM product_categories WHERE category_name=? ORDER BY id ASC LIMIT 1');
     $q->execute([$name]); $existing=(int)($q->fetchColumn()?:0); if($existing>0)$id=$existing;
     $data=['outlet_id'=>null,'category_name'=>$name,'category_code'=>trim((string)($c['category_code']??$c['code']??'')),'image_url'=>(string)($c['image_url']??$c['image']??''),'sort_order'=>(int)($c['sort_order']??$c['rank']??0),'active'=>($c['active']??true)?1:0];
+    // Saving an existing category by name only keeps its code, picture and order.
+    if($id>0){if(!array_key_exists('category_code',$c)&&!array_key_exists('code',$c))unset($data['category_code']);if(!array_key_exists('image_url',$c)&&!array_key_exists('image',$c))unset($data['image_url']);if(!array_key_exists('sort_order',$c)&&!array_key_exists('rank',$c))unset($data['sort_order']);}
     if($id>0){$sets=[];$vals=[];foreach($data as $col=>$v){$sets[]='`'.$col.'`=?';$vals[]=$v;}$vals[]=$id;$q=$pdo->prepare('UPDATE product_categories SET '.implode(',',$sets).' WHERE id=? LIMIT 1');$q->execute($vals);}else{$q=$pdo->prepare('INSERT INTO product_categories (`'.implode('`,`',array_keys($data)).'`) VALUES ('.implode(',',array_fill(0,count($data),'?')).')');$q->execute(array_values($data));$id=(int)$pdo->lastInsertId();}
     respond(['ok'=>true,'id'=>$id,'category_name'=>$name]);
   }
