@@ -7247,3 +7247,8 @@ button.pwa-install-button{display:inline-flex;align-items:center;justify-content
 .total-sales-panel .period-sales-sub{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:2px 14px 12px;padding-top:10px;border-top:1px solid rgba(148,163,184,.18)}
 .total-sales-panel .period-sales-sub span{font-size:12.5px;opacity:.75}
 .total-sales-panel .period-sales-sub b{font-size:20px;font-weight:700}
+
+/* Group image: file picker on the first line, Download and Clear image together underneath */
+.group-image-row>div:last-child{flex:1;min-width:0}
+.group-image-row>div:last-child input[type=file]{flex:1 1 100%;min-width:0}
+.group-image-row>div:last-child .group-image-download{margin-left:0}
