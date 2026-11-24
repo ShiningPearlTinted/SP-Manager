@@ -600,25 +600,31 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  useEffect(()=>{const expired=()=>{setSignedIn(false);setDbOnline(false)};window.addEventListener("sp-api-session-expired",expired);return()=>window.removeEventListener("sp-api-session-expired",expired)},[]);
  const[page,setPage]=useState(()=>bookingEmailTarget()?"Booking":"POS / Sales");
  // Phones and tablets: the Back button never closes SP-Manager by accident. On another screen it returns to POS;
- // on POS it asks before closing. Chrome skips history entries that a page adds without a user touch, so the
- // guard entries (up to 3, numbered in history.state.spBack) are added while the user touches the screen.
+ // on POS it asks before closing. Chrome (Android) catches Back with a CloseWatcher, which adds no history entry,
+ // so "Yes" can close the installed app (a window may close itself only while its history has one entry).
+ // Older browsers fall back to guard history entries (added on a touch, because Chrome skips entries added without one).
  const backPageRef=useRef(page);backPageRef.current=page;
  useEffect(()=>{if(!signedIn||!window.matchMedia("(pointer:coarse)").matches)return;
-  const GUARDS=3;const depth=()=>Number(window.history.state?.spBack||0);
-  const topUp=()=>{if(leaving)return;try{for(let d=depth();d<GUARDS;d++)window.history.pushState({spBack:d+1},"")}catch{}};
   let asking=false,leaving=false;
-  topUp();
-  const onTouch=()=>{if(!asking)topUp()};
-  const onPop=async()=>{if(leaving)return;
-   if(asking||document.querySelector(".sp-action-dialog"))return;
-   if(backPageRef.current!=="POS / Sales"){setPage("POS / Sales");return}
-   asking=true;
+  const exitApp=leave=>{leaving=true;try{window.close()}catch{}setTimeout(leave,300)};
+  // Returns true when the app should close.
+  const onBack=async rearm=>{if(leaving)return false;
+   if(asking||document.querySelector(".sp-action-dialog")){rearm();return false}
+   if(backPageRef.current!=="POS / Sales"){setPage("POS / Sales");rearm();return false}
+   asking=true;rearm();
    const ok=await showActionConfirm("Close SP-Manager","Do you want to close SP-Manager?","Yes");
-   asking=false;
-   if(ok){leaving=true;window.removeEventListener("popstate",onPop);const d=depth();if(d>0)window.history.go(-(d+1));else window.history.back();setTimeout(()=>{try{window.close()}catch{}},400)}
-   else topUp()};
-  window.addEventListener("popstate",onPop);window.addEventListener("pointerdown",onTouch,true);window.addEventListener("keydown",onTouch,true);
-  return()=>{window.removeEventListener("popstate",onPop);window.removeEventListener("pointerdown",onTouch,true);window.removeEventListener("keydown",onTouch,true)}},[signedIn]);
+   asking=false;return ok};
+  if(typeof window.CloseWatcher==="function"){
+   let watcher=null;
+   const arm=()=>{if(leaving)return;try{watcher?.destroy()}catch{}try{watcher=new window.CloseWatcher();watcher.onclose=async()=>{if(await onBack(arm)){try{watcher?.destroy()}catch{}exitApp(()=>{try{window.history.back()}catch{}})}}}catch{watcher=null}};
+   arm();const onTouch=()=>{if(!watcher&&!leaving)arm()};window.addEventListener("pointerdown",onTouch,true);
+   return()=>{leaving=true;try{watcher?.destroy()}catch{}window.removeEventListener("pointerdown",onTouch,true)}}
+  const GUARDS=3;const depth=()=>Number(window.history.state?.spBack||0);
+  const topUp=()=>{if(leaving||asking)return;try{for(let d=depth();d<GUARDS;d++)window.history.pushState({spBack:d+1},"")}catch{}};
+  topUp();
+  const onPop=async()=>{if(await onBack(()=>{})){window.removeEventListener("popstate",onPop);const d=depth();exitApp(()=>{try{if(d>0)window.history.go(-(d+1));else window.history.back()}catch{}})}else if(!asking)topUp()};
+  window.addEventListener("popstate",onPop);window.addEventListener("pointerdown",topUp,true);window.addEventListener("keydown",topUp,true);
+  return()=>{window.removeEventListener("popstate",onPop);window.removeEventListener("pointerdown",topUp,true);window.removeEventListener("keydown",topUp,true)}},[signedIn]);
  // Phones: a page always opens at the top.
  useEffect(()=>{try{window.scrollTo(0,0)}catch{}},[page]);
  // Phones: wide list tables become labelled cards (CSS table.m-cards). Tables with inputs, POS, Dashboard, Finance and Price Tags are left as they are.
