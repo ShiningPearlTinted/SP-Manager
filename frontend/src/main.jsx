@@ -599,6 +599,20 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[offlinePendingCount,setOfflinePendingCount]=useState(0);
  useEffect(()=>{const expired=()=>{setSignedIn(false);setDbOnline(false)};window.addEventListener("sp-api-session-expired",expired);return()=>window.removeEventListener("sp-api-session-expired",expired)},[]);
  const[page,setPage]=useState(()=>bookingEmailTarget()?"Booking":"POS / Sales");
+ // Phones and tablets: the Back button never closes SP-Manager by accident. On another screen it returns to POS;
+ // on POS it asks before closing. A history entry is kept in front of the app so Back lands here first.
+ const backPageRef=useRef(page);backPageRef.current=page;
+ useEffect(()=>{if(!signedIn||!window.matchMedia("(pointer:coarse)").matches)return;
+  const guard=()=>{try{if(!window.history.state?.spBack)window.history.pushState({spBack:1},"")}catch{}};
+  let asking=false,leaving=false;guard();
+  const onPop=async()=>{if(leaving)return;
+   if(asking||document.querySelector(".sp-action-dialog")){guard();return}
+   if(backPageRef.current!=="POS / Sales"){setPage("POS / Sales");guard();return}
+   asking=true;guard();
+   const ok=await showActionConfirm("Close SP-Manager","Do you want to close SP-Manager?","Yes");
+   asking=false;
+   if(ok){leaving=true;window.removeEventListener("popstate",onPop);window.history.go(-2);setTimeout(()=>{try{window.close()}catch{}},400)}};
+  window.addEventListener("popstate",onPop);return()=>window.removeEventListener("popstate",onPop)},[signedIn]);
  // Phones: a page always opens at the top.
  useEffect(()=>{try{window.scrollTo(0,0)}catch{}},[page]);
  // Phones: wide list tables become labelled cards (CSS table.m-cards). Tables with inputs, POS, Dashboard, Finance and Price Tags are left as they are.
