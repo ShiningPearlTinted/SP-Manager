@@ -600,19 +600,25 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  useEffect(()=>{const expired=()=>{setSignedIn(false);setDbOnline(false)};window.addEventListener("sp-api-session-expired",expired);return()=>window.removeEventListener("sp-api-session-expired",expired)},[]);
  const[page,setPage]=useState(()=>bookingEmailTarget()?"Booking":"POS / Sales");
  // Phones and tablets: the Back button never closes SP-Manager by accident. On another screen it returns to POS;
- // on POS it asks before closing. A history entry is kept in front of the app so Back lands here first.
+ // on POS it asks before closing. Chrome skips history entries that a page adds without a user touch, so the
+ // guard entries (up to 3, numbered in history.state.spBack) are added while the user touches the screen.
  const backPageRef=useRef(page);backPageRef.current=page;
  useEffect(()=>{if(!signedIn||!window.matchMedia("(pointer:coarse)").matches)return;
-  const guard=()=>{try{if(!window.history.state?.spBack)window.history.pushState({spBack:1},"")}catch{}};
-  let asking=false,leaving=false;guard();
+  const GUARDS=3;const depth=()=>Number(window.history.state?.spBack||0);
+  const topUp=()=>{if(leaving)return;try{for(let d=depth();d<GUARDS;d++)window.history.pushState({spBack:d+1},"")}catch{}};
+  let asking=false,leaving=false;
+  topUp();
+  const onTouch=()=>{if(!asking)topUp()};
   const onPop=async()=>{if(leaving)return;
-   if(asking||document.querySelector(".sp-action-dialog")){guard();return}
-   if(backPageRef.current!=="POS / Sales"){setPage("POS / Sales");guard();return}
-   asking=true;guard();
+   if(asking||document.querySelector(".sp-action-dialog"))return;
+   if(backPageRef.current!=="POS / Sales"){setPage("POS / Sales");return}
+   asking=true;
    const ok=await showActionConfirm("Close SP-Manager","Do you want to close SP-Manager?","Yes");
    asking=false;
-   if(ok){leaving=true;window.removeEventListener("popstate",onPop);window.history.go(-2);setTimeout(()=>{try{window.close()}catch{}},400)}};
-  window.addEventListener("popstate",onPop);return()=>window.removeEventListener("popstate",onPop)},[signedIn]);
+   if(ok){leaving=true;window.removeEventListener("popstate",onPop);const d=depth();if(d>0)window.history.go(-(d+1));else window.history.back();setTimeout(()=>{try{window.close()}catch{}},400)}
+   else topUp()};
+  window.addEventListener("popstate",onPop);window.addEventListener("pointerdown",onTouch,true);window.addEventListener("keydown",onTouch,true);
+  return()=>{window.removeEventListener("popstate",onPop);window.removeEventListener("pointerdown",onTouch,true);window.removeEventListener("keydown",onTouch,true)}},[signedIn]);
  // Phones: a page always opens at the top.
  useEffect(()=>{try{window.scrollTo(0,0)}catch{}},[page]);
  // Phones: wide list tables become labelled cards (CSS table.m-cards). Tables with inputs, POS, Dashboard, Finance and Price Tags are left as they are.
