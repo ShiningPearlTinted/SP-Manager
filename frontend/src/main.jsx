@@ -383,7 +383,7 @@ const apiHeaders=(headers={})=>{const token=sessionStorage.getItem("sp_api_token
 const switchActiveOutlet=(user,outlet)=>{
  if(!outlet||String(outlet.id)===String(activeOutletId()))return;
  try{sessionStorage.setItem(ACTIVE_OUTLET_KEY,JSON.stringify({user:user?.dbId??user?.id,outlet:outlet.id}))}catch{}
- window.location.reload();
+ window.__spLeaveOk=true;window.location.reload();
 };
 function OutletSwitcher({user,openSale=false,variant="pill"}){
  const list=userOutlets(user);
@@ -599,6 +599,11 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  const[offlinePendingCount,setOfflinePendingCount]=useState(0);
  useEffect(()=>{const expired=()=>{setSignedIn(false);setDbOnline(false)};window.addEventListener("sp-api-session-expired",expired);return()=>window.removeEventListener("sp-api-session-expired",expired)},[]);
  const[page,setPage]=useState(()=>bookingEmailTarget()?"Booking":"POS / Sales");
+ // Desktop: closing the window or tab (or reloading) asks first. Browsers only allow their own "Leave site?" box here,
+ // so its wording cannot be changed. Sign out, outlet switch and other reloads made by SP-Manager set __spLeaveOk.
+ useEffect(()=>{if(!signedIn||window.matchMedia("(pointer:coarse)").matches)return;window.__spLeaveOk=false;
+  const warn=e=>{if(window.__spLeaveOk)return;e.preventDefault();e.returnValue="";return ""};
+  window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn)},[signedIn]);
  // Phones and tablets: the Back button never closes SP-Manager by accident. On another screen it returns to POS;
  // on POS it asks before closing. Chrome (Android) catches Back with a CloseWatcher, which adds no history entry,
  // so "Yes" can close the installed app (a window may close itself only while its history has one entry).
@@ -879,7 +884,7 @@ const[signedIn,setSignedIn]=useState(()=>sessionStorage.getItem("sp_auth")==="1"
  
  useEffect(()=>{if(signedIn)save("posSearchMode",posSearchMode)},[posSearchMode,signedIn]);
  useEffect(()=>{const def=settings.order.defaultSearch||"Name";const mode=def==="All fields"?"All":def;if(["All","Barcode","Code","Name"].includes(mode))setPosSearchMode(mode)},[settings.order.defaultSearch]);
- useEffect(()=>{if(!signedIn||activeUser?.role!=="Administrator"||!settings.database.backupOnClose)return;const run=()=>{try{const base=centralReportsApi().replace(/\/reports\.php$/i,"");const url=base+"/database.php?action=backup&outlet_id="+encodeURIComponent(activeOutletId());fetch(url,{method:"POST",keepalive:true,cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"}),body:JSON.stringify({outlet_id:activeOutletId(),store:true,prune_days:(settings.database.deleteOldBackups?Math.max(1,Number(settings.database.deleteAfterDays||30)):36500)})}).catch(e=>console.warn("SQL backup on close failed",e?.message||e));}catch(e){console.warn("SQL backup on close failed",e?.message||e)}};window.addEventListener("beforeunload",run);return()=>window.removeEventListener("beforeunload",run)},[signedIn,activeUser?.role,settings.database.backupOnClose,settings.database.deleteOldBackups,settings.database.deleteAfterDays]);
+ useEffect(()=>{if(!signedIn||activeUser?.role!=="Administrator"||!settings.database.backupOnClose)return;const run=()=>{try{const base=centralReportsApi().replace(/\/reports\.php$/i,"");const url=base+"/database.php?action=backup&outlet_id="+encodeURIComponent(activeOutletId());fetch(url,{method:"POST",keepalive:true,cache:"no-store",headers:apiHeaders({"Content-Type":"application/json"}),body:JSON.stringify({outlet_id:activeOutletId(),store:true,prune_days:(settings.database.deleteOldBackups?Math.max(1,Number(settings.database.deleteAfterDays||30)):36500)})}).catch(e=>console.warn("SQL backup on close failed",e?.message||e));}catch(e){console.warn("SQL backup on close failed",e?.message||e)}};window.addEventListener("pagehide",run);return()=>window.removeEventListener("pagehide",run)},[signedIn,activeUser?.role,settings.database.backupOnClose,settings.database.deleteOldBackups,settings.database.deleteAfterDays]);
  useEffect(()=>{if(!signedIn||activeUser?.role!=="Administrator"||!settings.database.autoBackup)return;const every=Math.max(1,Number(settings.database.backupEveryHours||24))*3600000;const run=()=>{centralDatabaseRequest("backup",{outlet_id:activeOutletId(),store:true,prune_days:(settings.database.deleteOldBackups?Math.max(1,Number(settings.database.deleteAfterDays||30)):36500)}).then(()=>{const stamp=new Date().toISOString();setSettings(prev=>{const next={...prev,database:{...prev.database,lastBackup:stamp}};save("settings",next).catch(()=>{});return next;});}).catch(e=>console.warn("Automatic SQL backup failed",e?.message||e));};if(settings.database.backupOnStart)run();const timer=setInterval(run,every);return()=>clearInterval(timer)},[signedIn,activeUser?.role,settings.database.autoBackup,settings.database.backupEveryHours,settings.database.backupOnStart,settings.database.deleteOldBackups,settings.database.deleteAfterDays]);
  const recordStockHistory=(entries)=>{if(!entries.length)return;const next=[...entries,...stockHistory].slice(0,2000);persist("stockHistory",next,setStockHistory)};
  const promotionPrice=(p,qty=1)=>{
@@ -1499,7 +1504,7 @@ function MyCompany({company,setCompany,activeUser}){
   sessionStorage.setItem("sp_last_reset_receipt",JSON.stringify(receipt));
   Object.keys(localStorage).filter(k=>k.startsWith(POS_DRAFT_PREFIX)).forEach(k=>localStorage.removeItem(k));
   await showActionMessage("Outlet reset completed",`Verified backup: ${receipt.backup_file}. Sign in again before continuing.`);
-  sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.location.reload();
+  sessionStorage.removeItem("sp_api_token");sessionStorage.removeItem("sp_auth");sessionStorage.removeItem("sp_auth_version");window.__spLeaveOk=true;window.location.reload();
  };
 
  const[draft,setDraft]=useState(()=>({...company}));

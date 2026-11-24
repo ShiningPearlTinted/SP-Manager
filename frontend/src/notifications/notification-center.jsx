@@ -84,7 +84,7 @@ export default function NotificationCenter({base,headers,user,outletId,online}){
  const openBooking=item=>{
   const reference=item.data?.reference;if(!reference)return;
   const url=new URL(window.location.href);url.hash='booking?reference='+encodeURIComponent(reference)+'&outlet='+encodeURIComponent(item.data?.outlet_id||outletId);
-  window.location.assign(url.href);window.location.reload();
+  window.__spLeaveOk=true;window.location.assign(url.href);window.location.reload();
  };
  const statusText=inboxError?'Inbox unavailable':!online?'Offline':!available?'Push not configured':permission==='denied'?'Permission blocked':subscribed?'Push enabled':'Push disabled';
  return <div className="spn-center">
