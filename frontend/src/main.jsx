@@ -1736,7 +1736,8 @@ function Dashboard({sales,total,products,customers,lowStock,setPage,businessDay,
  const saleDayKey=s=>{const d=new Date(s.date);return isNaN(d)?"":d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
  const todaySales=activeSales.filter(s=>saleDayKey(s)===todayKey);
  const todayTotal=todaySales.reduce((a,s)=>a+Number(s.total||0),0);
- const todayText=todayTotal>=100000?(todayTotal/1000).toFixed(2)+"K":todayTotal.toLocaleString("en-MY",{minimumFractionDigits:2,maximumFractionDigits:2});
+ // 1,234.56 -> "1.23K", 1,234,567 -> "1.23M", under 1,000 -> whole number ("959").
+ const todayText=todayTotal>=999995?(todayTotal/1e6).toFixed(2)+"M":todayTotal>=999.5?(todayTotal/1000).toFixed(2)+"K":String(Math.round(todayTotal));
  const formatDate=d=>new Date(d).toLocaleDateString("en-GB");
  return <section className="content dashboard-modern spmanager-dashboard">
   <div className="ar-dashboard-monthly">
